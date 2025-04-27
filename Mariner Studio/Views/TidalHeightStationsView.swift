@@ -4,6 +4,7 @@ struct TidalHeightStationsView: View {
     // MARK: - Properties
     @StateObject private var viewModel: TidalHeightStationsViewModel
     @State private var isRefreshing = false
+    private let databaseService: DatabaseService
     
     // MARK: - Initialization
     init(
@@ -11,6 +12,7 @@ struct TidalHeightStationsView: View {
         locationService: LocationService = LocationServiceImpl(),
         databaseService: DatabaseService
     ) {
+        self.databaseService = databaseService
         _viewModel = StateObject(wrappedValue: TidalHeightStationsViewModel(
             tidalHeightService: tidalHeightService,
             locationService: locationService,
@@ -101,7 +103,8 @@ struct TidalHeightStationsView: View {
             ForEach(viewModel.stations) { stationWithDistance in
                 NavigationLink(destination: TidalHeightPredictionView(
                     stationId: stationWithDistance.station.id,
-                    stationName: stationWithDistance.station.name
+                    stationName: stationWithDistance.station.name,
+                    databaseService: databaseService
                 )) {
                     StationRow(stationWithDistance: stationWithDistance)
                 }
