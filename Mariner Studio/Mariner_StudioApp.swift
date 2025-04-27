@@ -11,7 +11,8 @@ import SwiftUI
 struct Mariner_StudioApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            MainView()
+                .preferredColorScheme(.light) // Force light mode
         }
     }
 }
