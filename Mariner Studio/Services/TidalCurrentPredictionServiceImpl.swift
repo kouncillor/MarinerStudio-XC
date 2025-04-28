@@ -239,7 +239,8 @@ class XMLParserHelper: NSObject, XMLParserDelegate {
     }
 }
 
+// Remove the extension that was causing the conflict
 // MARK: - Extend NetworkError with new error types
-extension NetworkError {
-    static let parsingError = NetworkError(0, "Failed to parse response")
-}
+// extension NetworkError {
+//     static let parsingError = NetworkError(0, "Failed to parse response")
+// }

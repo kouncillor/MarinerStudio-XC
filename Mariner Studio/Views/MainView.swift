@@ -30,11 +30,12 @@ struct MainView: View {
                     }
                     
                     // CURRENTS
-                    NavigationButton(
-                        icon: "csixseven",
-                        title: "CURRENTS",
-                        action: { print("Currents tapped") }
-                    )
+                    NavigationLink(destination: TidalCurrentStationsView(databaseService: databaseService)) {
+                        NavigationButtonContent(
+                            icon: "csixseven",
+                            title: "CURRENTS"
+                        )
+                    }
                     
                     // NAV UNITS
                     NavigationButton(

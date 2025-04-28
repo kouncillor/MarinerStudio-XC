@@ -1,5 +1,3 @@
-// TidalCurrentStationsView.swift
-
 import SwiftUI
 
 struct TidalCurrentStationsView: View {
@@ -77,7 +75,7 @@ struct TidalCurrentStationsView: View {
             Button(action: {
                 viewModel.toggleFavorites()
             }) {
-                Image(systemName: viewModel.showOnlyFavorites ? "star.fill" : "star")
+                Image(systemName: viewModel.favoritesFilterIcon)
                     .foregroundColor(viewModel.showOnlyFavorites ? .yellow : .gray)
                     .frame(width: 44, height: 44)
             }
@@ -104,7 +102,6 @@ struct TidalCurrentStationsView: View {
                     stationId: stationWithDistance.station.id,
                     bin: stationWithDistance.station.currentBin ?? 0,
                     stationName: stationWithDistance.station.name,
-                    predictionService: TidalCurrentPredictionServiceImpl(),
                     databaseService: viewModel.databaseService
                 )) {
                     CurrentStationRow(stationWithDistance: stationWithDistance)
@@ -161,5 +158,13 @@ struct CurrentStationRow: View {
             }
         }
         .padding(.vertical, 5)
+    }
+}
+
+#Preview {
+    NavigationView {
+        TidalCurrentStationsView(
+            databaseService: MockDatabaseService()
+        )
     }
 }

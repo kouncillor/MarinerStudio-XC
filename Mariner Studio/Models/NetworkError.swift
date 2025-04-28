@@ -1,5 +1,3 @@
-// NetworkError.swift
-
 import Foundation
 
 // MARK: - NetworkError Definition
@@ -8,20 +6,19 @@ enum NetworkError: Error {
     case invalidResponse
     case serverError(statusCode: Int)
     case decodingError(Error)
-}
-
-// MARK: - NetworkError Extensions
-extension NetworkError {
+    case parsingError
+    case dataError
+    case timeoutError
+    
+    // MARK: - Initialization
+    
     // Custom initializer for easier creation of network errors
     init(_ code: Int, _ message: String) {
         // Using serverError as a fallback for all custom error cases
         self = .serverError(statusCode: code)
     }
     
-    // Additional error types
-    static let parsingError = NetworkError(1001, "Failed to parse response")
-    static let dataError = NetworkError(1002, "Invalid data format")
-    static let timeoutError = NetworkError(1003, "Request timed out")
+    // MARK: - Properties
     
     // User-friendly error descriptions
     var localizedDescription: String {
@@ -34,6 +31,12 @@ extension NetworkError {
             return "Server error with status code: \(statusCode)"
         case .decodingError(let error):
             return "Failed to decode response: \(error.localizedDescription)"
+        case .parsingError:
+            return "Failed to parse response"
+        case .dataError:
+            return "Invalid data format"
+        case .timeoutError:
+            return "Request timed out"
         }
     }
     
@@ -54,17 +57,17 @@ extension NetworkError {
                 return "The requested resource could not be found."
             case 500...599:
                 return "The server encountered an error. Please try again later."
-            case 1001:
-                return "Failed to parse the server response. Please try again later."
-            case 1002:
-                return "The data format received was invalid. Please try again later."
-            case 1003:
-                return "The request timed out. Please check your internet connection and try again."
             default:
                 return "An error occurred (code: \(statusCode)). Please try again later."
             }
         case .decodingError(let error):
             return "Failed to process the data: \(error.localizedDescription)"
+        case .parsingError:
+            return "Failed to parse the server response. Please try again later."
+        case .dataError:
+            return "The data format received was invalid. Please try again later."
+        case .timeoutError:
+            return "The request timed out. Please check your internet connection and try again."
         }
     }
 }

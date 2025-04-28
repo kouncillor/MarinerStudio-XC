@@ -1,26 +1,21 @@
-// TidalCurrentPredictionView.swift
-
 import SwiftUI
 
 struct TidalCurrentPredictionView: View {
     // MARK: - Properties
     @StateObject private var viewModel: TidalCurrentPredictionViewModel
-    let stationId: String
-    let bin: Int
-    let stationName: String
     
     // MARK: - Initialization
     init(
         stationId: String,
         bin: Int,
         stationName: String,
-        predictionService: TidalCurrentPredictionService,
+        predictionService: TidalCurrentPredictionService = TidalCurrentPredictionServiceImpl(),
         databaseService: DatabaseService
     ) {
-        self.stationId = stationId
-        self.bin = bin
-        self.stationName = stationName
         _viewModel = StateObject(wrappedValue: TidalCurrentPredictionViewModel(
+            stationId: stationId,
+            bin: bin,
+            stationName: stationName,
             predictionService: predictionService,
             databaseService: databaseService
         ))
@@ -38,10 +33,18 @@ struct TidalCurrentPredictionView: View {
                 }
                 
                 // Date Selection
-                dateSelector
+                dateSelectionView
                 
                 // Graph
-                graphView
+                TidalCurrentGraphView(
+                    predictions: viewModel.allPredictions,
+                    selectedTime: viewModel.currentPrediction?.timestamp,
+                    stationName: viewModel.stationName
+                )
+                .background(
+                    RoundedRectangle(cornerRadius: 10)
+                        .strokeBorder(Color(.lightGray), lineWidth: 1)
+                )
                 
                 // Current Data
                 currentDataView
@@ -55,27 +58,37 @@ struct TidalCurrentPredictionView: View {
             .padding()
         }
         .navigationTitle("Current Predictions")
-        .task {
-            await viewModel.initialize(stationId: stationId, bin: bin, stationName: stationName)
+        .overlay {
+            if viewModel.isLoading {
+                ProgressView()
+                    .scaleEffect(1.5)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color(.systemBackground))
+                            .shadow(radius: 3)
+                            .frame(width: 100, height: 100)
+                    )
+            }
         }
     }
     
     // MARK: - View Components
-    private var dateSelector: some View {
+    private var dateSelectionView: some View {
         HStack {
             Button(action: {
                 Task {
                     await viewModel.previousDay()
                 }
             }) {
-                Image(systemName: "arrow.left")
-                    .frame(width: 44, height: 44)
+                Image(systemName: "arrow.left.circle.fill")
+                    .resizable()
+                    .frame(width: 40, height: 40)
                     .foregroundColor(.red)
             }
             
             Spacer()
             
-            Text(viewModel.selectedDate, format: .dateTime.day().month())
+            Text(viewModel.formattedSelectedDate)
                 .font(.title2)
             
             Spacer()
@@ -85,32 +98,13 @@ struct TidalCurrentPredictionView: View {
                     await viewModel.nextDay()
                 }
             }) {
-                Image(systemName: "arrow.right")
-                    .frame(width: 44, height: 44)
+                Image(systemName: "arrow.right.circle.fill")
+                    .resizable()
+                    .frame(width: 40, height: 40)
                     .foregroundColor(.green)
             }
         }
-    }
-    
-    private var graphView: some View {
-        VStack {
-            if viewModel.isLoading {
-                ProgressView()
-                    .frame(height: 300)
-            } else {
-                TidalCurrentGraphView(
-                    predictions: viewModel.allPredictions,
-                    selectedTime: viewModel.currentPrediction?.timestamp,
-                    stationName: viewModel.stationName
-                )
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .strokeBorder(Color(.lightGray), lineWidth: 1)
-                .background(RoundedRectangle(cornerRadius: 10).fill(Color.white))
-        )
+        .padding(.horizontal)
     }
     
     private var currentDataView: some View {
@@ -118,7 +112,8 @@ struct TidalCurrentPredictionView: View {
             // Station name and favorite button
             HStack {
                 Text(viewModel.stationName)
-                    .font(.title)
+                    .font(.title2)
+                    .fontWeight(.bold)
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
                 
@@ -129,11 +124,11 @@ struct TidalCurrentPredictionView: View {
                         await viewModel.toggleFavorite()
                     }
                 }) {
-                    Image(systemName: viewModel.favoriteIcon)
-                        .font(.title2)
-                        .foregroundColor(viewModel.favoriteIcon == "star.fill" ? .yellow : .gray)
+                    Image(systemName: viewModel.isFavorite ? "star.fill" : "star")
+                        .resizable()
+                        .frame(width: 30, height: 30)
+                        .foregroundColor(viewModel.isFavorite ? .yellow : .gray)
                 }
-                .frame(width: 44, height: 44)
             }
             
             // Navigation buttons
@@ -141,8 +136,9 @@ struct TidalCurrentPredictionView: View {
                 Button(action: {
                     viewModel.previousPrediction()
                 }) {
-                    Image(systemName: "arrow.left")
-                        .frame(width: 44, height: 44)
+                    Image(systemName: "arrow.left.circle.fill")
+                        .resizable()
+                        .frame(width: 40, height: 40)
                         .foregroundColor(viewModel.canGoBackward ? .red : .gray.opacity(0.5))
                 }
                 .disabled(!viewModel.canGoBackward)
@@ -152,8 +148,9 @@ struct TidalCurrentPredictionView: View {
                 Button(action: {
                     viewModel.nextPrediction()
                 }) {
-                    Image(systemName: "arrow.right")
-                        .frame(width: 44, height: 44)
+                    Image(systemName: "arrow.right.circle.fill")
+                        .resizable()
+                        .frame(width: 40, height: 40)
                         .foregroundColor(viewModel.canGoForward ? .green : .gray.opacity(0.5))
                 }
                 .disabled(!viewModel.canGoForward)
@@ -178,11 +175,10 @@ struct TidalCurrentPredictionView: View {
             }
         }
         .padding()
-        .frame(maxWidth: .infinity)
         .background(
             RoundedRectangle(cornerRadius: 10)
                 .strokeBorder(Color(.lightGray), lineWidth: 1)
-                .background(RoundedRectangle(cornerRadius: 10).fill(Color.white))
+                .background(RoundedRectangle(cornerRadius: 10).fill(Color(.systemBackground)))
         )
     }
     
@@ -244,28 +240,36 @@ struct TidalCurrentPredictionView: View {
             .frame(height: 200)
         }
         .padding()
-        .frame(maxWidth: .infinity)
         .background(
             RoundedRectangle(cornerRadius: 10)
                 .strokeBorder(Color(.lightGray), lineWidth: 1)
-                .background(RoundedRectangle(cornerRadius: 10).fill(Color.white))
+                .background(RoundedRectangle(cornerRadius: 10).fill(Color(.systemBackground)))
         )
     }
     
     private var webViewButton: some View {
-        NavigationLink(destination: TidalCurrentStationWebView(
-            stationId: stationId,
-            bin: bin,
-            stationName: stationName
-        )) {
+        Button(action: {
+            viewModel.viewStationWebsite()
+        }) {
             Text("View Station Website")
+                .font(.headline)
+                .foregroundColor(.white)
                 .padding()
                 .frame(maxWidth: .infinity)
-                .background(
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(Color.blue)
-                )
-                .foregroundColor(.white)
+                .background(Color.blue)
+                .cornerRadius(10)
         }
+    }
+}
+
+// MARK: - Preview Provider
+#Preview {
+    NavigationView {
+        TidalCurrentPredictionView(
+            stationId: "t01010",
+            bin: 1,
+            stationName: "Sample Current Station",
+            databaseService: MockDatabaseService()
+        )
     }
 }

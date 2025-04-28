@@ -36,24 +36,3 @@ class TidalHeightServiceImpl: TidalHeightService {
         }
     }
 }
-
-// MARK: - Network Error Types
-enum NetworkError: Error {
-    case invalidURL
-    case invalidResponse
-    case serverError(statusCode: Int)
-    case decodingError(Error)
-    
-    var localizedDescription: String {
-        switch self {
-        case .invalidURL:
-            return "Invalid URL"
-        case .invalidResponse:
-            return "Invalid response from server"
-        case .serverError(let statusCode):
-            return "Server error with status code: \(statusCode)"
-        case .decodingError(let error):
-            return "Failed to decode response: \(error.localizedDescription)"
-        }
-    }
-}
