@@ -106,7 +106,14 @@ struct TidalHeightStationsView: View {
                     stationName: stationWithDistance.station.name,
                     databaseService: databaseService
                 )) {
-                    StationRow(stationWithDistance: stationWithDistance)
+                    StationRow(
+                        stationWithDistance: stationWithDistance,
+                        onToggleFavorite: {
+                            Task {
+                                await viewModel.toggleStationFavorite(stationId: stationWithDistance.station.id)
+                            }
+                        }
+                    )
                 }
             }
         }
@@ -119,6 +126,7 @@ struct TidalHeightStationsView: View {
 
 struct StationRow: View {
     let stationWithDistance: StationWithDistance<TidalHeightStation>
+    let onToggleFavorite: () -> Void
     
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
@@ -126,9 +134,9 @@ struct StationRow: View {
                 Text(stationWithDistance.station.name)
                     .font(.headline)
                 Spacer()
-                if stationWithDistance.station.isFavorite {
-                    Image(systemName: "star.fill")
-                        .foregroundColor(.yellow)
+                Button(action: onToggleFavorite) {
+                    Image(systemName: stationWithDistance.station.isFavorite ? "star.fill" : "star")
+                        .foregroundColor(stationWithDistance.station.isFavorite ? .yellow : .gray)
                 }
             }
             
@@ -154,5 +162,13 @@ struct StationRow: View {
             }
         }
         .padding(.vertical, 5)
+    }
+}
+
+#Preview {
+    NavigationView {
+        TidalHeightStationsView(
+            databaseService: MockDatabaseService()
+        )
     }
 }

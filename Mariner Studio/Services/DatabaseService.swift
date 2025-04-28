@@ -77,39 +77,7 @@ protocol DatabaseService {
     
     /// Delete a photo
     func deleteNavUnitPhotoAsync(photoId: Int) async throws -> Int
-    
-    /// Initialize tug-related tables
-    func initializeTugTablesAsync() async throws
-    
-    /// Get photos for a tug
-    func getTugPhotosAsync(tugId: String) async throws -> [TugPhoto]
-    
-    /// Add a new photo for a tug
-    func addTugPhotoAsync(photo: TugPhoto) async throws -> Int
-    
-    /// Delete a tug photo
-    func deleteTugPhotoAsync(photoId: Int) async throws -> Int
-    
-    /// Get notes for a tug
-    func getTugNotesAsync(tugId: String) async throws -> [TugNote]
-    
-    /// Add a new note for a tug
-    func addTugNoteAsync(note: TugNote) async throws -> Int
-    
-    /// Update a tug note
-    func updateTugNoteAsync(note: TugNote) async throws -> Int
-    
-    /// Delete a tug note
-    func deleteTugNoteAsync(noteId: Int) async throws -> Int
-    
-    /// Get change recommendations for a tug
-    func getTugChangeRecommendationsAsync(tugId: String) async throws -> [TugChangeRecommendation]
-    
-    /// Add a change recommendation for a tug
-    func addTugChangeRecommendationAsync(recommendation: TugChangeRecommendation) async throws -> Int
-    
-    /// Update tug change recommendation status
-    func updateTugChangeRecommendationStatusAsync(recommendationId: Int, status: RecommendationStatus) async throws -> Int
+
     
     /// Initialize barge photos table
     func initializeBargePhotosTableAsync() async throws

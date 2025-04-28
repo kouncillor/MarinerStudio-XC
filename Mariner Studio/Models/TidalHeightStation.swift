@@ -12,7 +12,7 @@ struct TidalHeightStation: Identifiable, Codable {
     let timezoneCorrection: Int?
     let timeMeridian: Int?
     let tidePredOffsets: TidePredOffsets?
-    var isFavorite: Bool = false
+    var isFavorite: Bool = false  // This is already marked as 'var' which is good
     
     // MARK: - Coding Keys
     enum CodingKeys: String, CodingKey {
@@ -27,13 +27,5 @@ struct TidalHeightStation: Identifiable, Codable {
         case timeMeridian = "timemeridian"
         case tidePredOffsets = "tidepredoffsets"
         // isFavorite is not included as it will be set locally, not decoded from API
-    }
-}
-
-struct TidePredOffsets: Codable {
-    let selfUrl: String
-    
-    enum CodingKeys: String, CodingKey {
-        case selfUrl = "self"
     }
 }

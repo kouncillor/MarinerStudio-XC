@@ -3,7 +3,7 @@ import CoreLocation
 
 struct StationWithDistance<T>: Identifiable where T: Identifiable {
     // MARK: - Properties
-    let station: T
+    let station: T  // This is a 'let' constant, so we can't modify its properties directly
     let distanceFromUser: Double
     
     // MARK: - Computed Properties
@@ -43,12 +43,3 @@ struct StationWithDistance<T>: Identifiable where T: Identifiable {
         return StationWithDistance<S>(station: station, distanceFromUser: distance)
     }
 }
-
-// Protocol for any station type that has coordinates
-protocol StationCoordinates {
-    var latitude: Double { get }
-    var longitude: Double { get }
-}
-
-// Make TidalHeightStation conform to StationCoordinates
-extension TidalHeightStation: StationCoordinates {}

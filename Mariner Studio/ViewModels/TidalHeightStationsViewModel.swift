@@ -60,7 +60,6 @@ class TidalHeightStationsViewModel: ObservableObject {
                 )
             }
             
-            
             await MainActor.run {
                 allStations = stationsWithDistance
                 filterStations()
@@ -114,6 +113,34 @@ class TidalHeightStationsViewModel: ObservableObject {
     func clearSearch() {
         searchText = ""
         filterStations()
+    }
+    
+    // New method to toggle the favorite status of a station in the database
+    func toggleStationFavorite(stationId: String) async {
+        // Call the database service to toggle favorite status
+        let newFavoriteStatus = await databaseService.toggleTideStationFavorite(id: stationId)
+        
+        // Update our local data
+        await MainActor.run {
+            // We need to recreate the station objects with updated favorite status
+            // Update in allStations
+            allStations = allStations.map { stationWithDistance in
+                if stationWithDistance.station.id == stationId {
+                    // Create a new station with updated favorite status
+                    var updatedStation = stationWithDistance.station
+                    updatedStation.isFavorite = newFavoriteStatus
+                    // Create a new StationWithDistance with the updated station
+                    return StationWithDistance(
+                        station: updatedStation,
+                        distanceFromUser: stationWithDistance.distanceFromUser
+                    )
+                }
+                return stationWithDistance
+            }
+            
+            // Re-apply filters to update the filtered stations list
+            filterStations()
+        }
     }
     
     // MARK: - Private Methods

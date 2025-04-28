@@ -79,22 +79,33 @@ class DatabaseServiceImpl: DatabaseService {
     
     public func initializeAsync() async throws {
         let fileManager = FileManager.default
-        let appSupportDir = try fileManager.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
-        let dbPath = appSupportDir.appendingPathComponent("SS1.db").path
+        
+        // Use Documents directory for persistent storage instead of app support
+        let documentsDirectory = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let dbPath = documentsDirectory.appendingPathComponent("SS1.db").path
+        
+        print("📊 Database path: \(dbPath)")
         
         if !fileManager.fileExists(atPath: dbPath) {
-            print("Database not found in app support directory. Attempting to copy from resources.")
+            print("📊 Database not found in documents directory. Attempting to copy from resources.")
             try copyDatabaseFromBundle(to: dbPath)
-            print("Database successfully copied to app support directory.")
+            print("📊 Database successfully copied to documents directory.")
         } else {
-            print("Database already exists in app support directory.")
+            print("📊 Database already exists in documents directory.")
+        }
+        
+        // Check if we have write permissions
+        if fileManager.isWritableFile(atPath: dbPath) {
+            print("📊 Database file is writable")
+        } else {
+            print("❌ Database file is not writable")
         }
         
         if fileManager.fileExists(atPath: dbPath) {
             if let attributes = try? fileManager.attributesOfItem(atPath: dbPath),
                let fileSize = attributes[.size] as? UInt64 {
-                print("Database file confirmed at: \(dbPath)")
-                print("File size: \(fileSize) bytes")
+                print("📊 Database file confirmed at: \(dbPath)")
+                print("📊 File size: \(fileSize) bytes")
             }
         } else {
             throw NSError(domain: "DatabaseService", code: 1, userInfo: [NSLocalizedDescriptionKey: "Database file not found after copy attempt."])
@@ -102,8 +113,40 @@ class DatabaseServiceImpl: DatabaseService {
         
         try openConnection(atPath: dbPath)
         
+        // Create favorites tables if they don't exist
+        try await initializeTideStationFavoritesTableAsync()
+        try await initializeCurrentStationFavoritesTableAsync()
+        print("📊 Tables initialized")
+        
+        // Test database operations
+        if let db = connection {
+            do {
+                // Try to read a record first to check if table exists
+                let testQuery = tideStationFavorites.filter(colStationId == "TEST_ID")
+                if let testRecord = try? db.pluck(testQuery) {
+                    print("📊 Found existing test record: \(testRecord[colIsFavorite])")
+                } else {
+                    // Insert a test record
+                    try db.run(tideStationFavorites.insert(
+                        colStationId <- "TEST_ID",
+                        colIsFavorite <- true
+                    ))
+                    print("📊 Wrote test record to database")
+                
+                    // Verify it was written
+                    if let testRecord = try? db.pluck(testQuery) {
+                        print("📊 Successfully read test record: \(testRecord[colIsFavorite])")
+                    } else {
+                        print("❌ Could not read test record")
+                    }
+                }
+            } catch {
+                print("❌ Test database operation failed: \(error.localizedDescription)")
+            }
+        }
+        
         let tableNames = try await getTableNamesAsync()
-        print("Tables in the database: \(tableNames.joined(separator: ", "))")
+        print("📊 Tables in the database: \(tableNames.joined(separator: ", "))")
     }
     
     private func copyDatabaseFromBundle(to path: String) throws {
@@ -117,8 +160,9 @@ class DatabaseServiceImpl: DatabaseService {
     private func openConnection(atPath path: String) throws {
         do {
             connection = try Connection(path)
+            print("📊 Successfully opened database connection")
         } catch {
-            print("Error opening database connection: \(error.localizedDescription)")
+            print("❌ Error opening database connection: \(error.localizedDescription)")
             throw error
         }
     }
@@ -126,6 +170,7 @@ class DatabaseServiceImpl: DatabaseService {
     // MARK: - Table Names
     public func getTableNamesAsync() async throws -> [String] {
         guard let db = connection else {
+            print("❌ Database connection not initialized when getting table names")
             return []
         }
         
@@ -138,9 +183,10 @@ class DatabaseServiceImpl: DatabaseService {
                     tableNames.append(tableName)
                 }
             }
+            print("📊 Found \(tableNames.count) tables in database")
             return tableNames
         } catch {
-            print("Error getting table names: \(error.localizedDescription)")
+            print("❌ Error getting table names: \(error.localizedDescription)")
             throw error
         }
     }
@@ -148,18 +194,25 @@ class DatabaseServiceImpl: DatabaseService {
     // MARK: - Tide Station Favorites
     public func initializeTideStationFavoritesTableAsync() async throws {
         guard let db = connection else {
+            print("❌ Database connection not initialized when initializing tide station favorites table")
             throw NSError(domain: "DatabaseService", code: 3, userInfo: [NSLocalizedDescriptionKey: "Database connection not initialized"])
         }
         
-        try db.run(tideStationFavorites.create(ifNotExists: true) { table in
-            table.column(colStationId, primaryKey: true)
-            table.column(colIsFavorite)
-        })
+        do {
+            try db.run(tideStationFavorites.create(ifNotExists: true) { table in
+                table.column(colStationId, primaryKey: true)
+                table.column(colIsFavorite)
+            })
+            print("📊 TideStationFavorites table created or already exists")
+        } catch {
+            print("❌ Error creating TideStationFavorites table: \(error.localizedDescription)")
+            throw error
+        }
     }
     
     public func isTideStationFavorite(id: String) async -> Bool {
         guard let db = connection else {
-            print("Database connection not initialized")
+            print("❌ Database connection not initialized when checking tide station favorite")
             return false
         }
         
@@ -167,18 +220,21 @@ class DatabaseServiceImpl: DatabaseService {
             let query = tideStationFavorites.filter(colStationId == id)
             
             if let favorite = try db.pluck(query) {
-                return favorite[colIsFavorite]
+                let result = favorite[colIsFavorite]
+                print("📊 Found favorite status for station \(id): \(result)")
+                return result
             }
+            print("📊 No favorite status found for station \(id)")
             return false
         } catch {
-            print("Error checking tide station favorite: \(error.localizedDescription)")
+            print("❌ Error checking tide station favorite: \(error.localizedDescription)")
             return false
         }
     }
     
     public func toggleTideStationFavorite(id: String) async -> Bool {
         guard let db = connection else {
-            print("Database connection not initialized")
+            print("❌ Database connection not initialized when toggling tide station favorite")
             return false
         }
         
@@ -190,18 +246,20 @@ class DatabaseServiceImpl: DatabaseService {
                 let newValue = !currentValue
                 
                 let updatedRow = tideStationFavorites.filter(colStationId == id)
-                try db.run(updatedRow.update(colIsFavorite <- newValue))
+                let count = try db.run(updatedRow.update(colIsFavorite <- newValue))
                 
+                print("📊 Updated favorite status for station \(id) to \(newValue), affected rows: \(count)")
                 return newValue
             } else {
-                try db.run(tideStationFavorites.insert(
+                let rowId = try db.run(tideStationFavorites.insert(
                     colStationId <- id,
                     colIsFavorite <- true
                 ))
+                print("📊 Inserted new favorite for station \(id), row ID: \(rowId)")
                 return true
             }
         } catch {
-            print("Error toggling tide station favorite: \(error.localizedDescription)")
+            print("❌ Error toggling tide station favorite: \(error.localizedDescription)")
             return false
         }
     }
@@ -209,20 +267,27 @@ class DatabaseServiceImpl: DatabaseService {
     // MARK: - Current Station Favorites
     public func initializeCurrentStationFavoritesTableAsync() async throws {
         guard let db = connection else {
+            print("❌ Database connection not initialized when initializing current station favorites table")
             throw NSError(domain: "DatabaseService", code: 3, userInfo: [NSLocalizedDescriptionKey: "Database connection not initialized"])
         }
         
-        try db.run(tidalCurrentStationFavorites.create(ifNotExists: true) { table in
-            table.column(colStationId)
-            table.column(colCurrentBin)
-            table.column(colIsFavorite)
-            table.primaryKey(colStationId, colCurrentBin)
-        })
+        do {
+            try db.run(tidalCurrentStationFavorites.create(ifNotExists: true) { table in
+                table.column(colStationId)
+                table.column(colCurrentBin)
+                table.column(colIsFavorite)
+                table.primaryKey(colStationId, colCurrentBin)
+            })
+            print("📊 TidalCurrentStationFavorites table created or already exists")
+        } catch {
+            print("❌ Error creating TidalCurrentStationFavorites table: \(error.localizedDescription)")
+            throw error
+        }
     }
     
     public func isCurrentStationFavorite(id: String, bin: Int) async -> Bool {
         guard let db = connection else {
-            print("Database connection not initialized")
+            print("❌ Database connection not initialized when checking current station favorite")
             return false
         }
         
@@ -230,18 +295,21 @@ class DatabaseServiceImpl: DatabaseService {
             let query = tidalCurrentStationFavorites.filter(colStationId == id && colCurrentBin == bin)
             
             if let favorite = try db.pluck(query) {
-                return favorite[colIsFavorite]
+                let result = favorite[colIsFavorite]
+                print("📊 Found favorite status for current station \(id), bin \(bin): \(result)")
+                return result
             }
+            print("📊 No favorite status found for current station \(id), bin \(bin)")
             return false
         } catch {
-            print("Error checking current station favorite: \(error.localizedDescription)")
+            print("❌ Error checking current station favorite: \(error.localizedDescription)")
             return false
         }
     }
     
     public func toggleCurrentStationFavorite(id: String, bin: Int) async -> Bool {
         guard let db = connection else {
-            print("Database connection not initialized")
+            print("❌ Database connection not initialized when toggling current station favorite")
             return false
         }
         
@@ -253,19 +321,21 @@ class DatabaseServiceImpl: DatabaseService {
                 let newValue = !currentValue
                 
                 let updatedRow = tidalCurrentStationFavorites.filter(colStationId == id && colCurrentBin == bin)
-                try db.run(updatedRow.update(colIsFavorite <- newValue))
+                let count = try db.run(updatedRow.update(colIsFavorite <- newValue))
                 
+                print("📊 Updated favorite status for current station \(id), bin \(bin) to \(newValue), affected rows: \(count)")
                 return newValue
             } else {
-                try db.run(tidalCurrentStationFavorites.insert(
+                let rowId = try db.run(tidalCurrentStationFavorites.insert(
                     colStationId <- id,
                     colCurrentBin <- bin,
                     colIsFavorite <- true
                 ))
+                print("📊 Inserted new favorite for current station \(id), bin \(bin), row ID: \(rowId)")
                 return true
             }
         } catch {
-            print("Error toggling current station favorite: \(error.localizedDescription)")
+            print("❌ Error toggling current station favorite: \(error.localizedDescription)")
             return false
         }
     }
@@ -305,22 +375,22 @@ class DatabaseServiceImpl: DatabaseService {
         }
     }
     
-    public func toggleFavoriteNavUnitAsync(navUnitId id: String) async throws -> Bool {
+    public func toggleFavoriteNavUnitAsync(navUnitId: String) async throws -> Bool {
         guard let db = connection else {
             throw NSError(domain: "DatabaseService", code: 3, userInfo: [NSLocalizedDescriptionKey: "Database connection not initialized"])
         }
         
         do {
-            let query = navUnits.filter(colNavUnitId == id)
+            let query = navUnits.filter(colNavUnitId == navUnitId)
             
             guard let unit = try db.pluck(query) else {
                 return false
             }
             
-            let currentValue = try unit.get(colNavUnitIsFavorite)
+            let currentValue = unit[colNavUnitIsFavorite]
             let newValue = !currentValue
             
-            let updatedRow = navUnits.filter(colNavUnitId == id)
+            let updatedRow = navUnits.filter(colNavUnitId == navUnitId)
             try db.run(updatedRow.update(colNavUnitIsFavorite <- newValue))
             
             return newValue
@@ -342,8 +412,8 @@ class DatabaseServiceImpl: DatabaseService {
             
             for row in try db.prepare(query) {
                 let tug = Tug(
-                    tugId: try row.get(colVesselId),
-                    vesselName: try row.get(colVesselName)
+                    tugId: row[colVesselId],
+                    vesselName: row[colVesselName]
                 )
                 results.append(tug)
             }
@@ -366,8 +436,8 @@ class DatabaseServiceImpl: DatabaseService {
             
             for row in try db.prepare(query) {
                 let barge = Barge(
-                    bargeId: try row.get(colVesselId),
-                    vesselName: try row.get(colVesselName)
+                    bargeId: row[colVesselId],
+                    vesselName: row[colVesselName]
                 )
                 results.append(barge)
             }
@@ -380,22 +450,22 @@ class DatabaseServiceImpl: DatabaseService {
     }
     
     // MARK: - Personal Notes
-    public func getPersonalNotesAsync(navUnitId id: String) async throws -> [PersonalNote] {
+    public func getPersonalNotesAsync(navUnitId: String) async throws -> [PersonalNote] {
         guard let db = connection else {
             throw NSError(domain: "DatabaseService", code: 3, userInfo: [NSLocalizedDescriptionKey: "Database connection not initialized"])
         }
         
         do {
-            let query = personalNotes.filter(colNavUnitId == id).order(colCreatedAt.desc)
+            let query = personalNotes.filter(colNavUnitId == navUnitId).order(colCreatedAt.desc)
             var results: [PersonalNote] = []
             
             for row in try db.prepare(query) {
                 let note = PersonalNote(
-                    id: try row.get(colId),
-                    navUnitId: try row.get(colNavUnitId),
-                    noteText: try row.get(colNoteText),
-                    createdAt: try row.get(colCreatedAt),
-                    modifiedAt: try row.get(colModifiedAt)
+                    id: row[colId],
+                    navUnitId: row[colNavUnitId],
+                    noteText: row[colNoteText],
+                    createdAt: row[colCreatedAt],
+                    modifiedAt: row[colModifiedAt]
                 )
                 results.append(note)
             }
@@ -446,13 +516,13 @@ class DatabaseServiceImpl: DatabaseService {
         }
     }
     
-    public func deletePersonalNoteAsync(noteId id: Int) async throws -> Int {
+    public func deletePersonalNoteAsync(noteId: Int) async throws -> Int {
         guard let db = connection else {
             throw NSError(domain: "DatabaseService", code: 3, userInfo: [NSLocalizedDescriptionKey: "Database connection not initialized"])
         }
         
         do {
-            let query = personalNotes.filter(colId == id)
+            let query = personalNotes.filter(colId == noteId)
             try db.run(query.delete())
             return 1
         } catch {
@@ -462,24 +532,24 @@ class DatabaseServiceImpl: DatabaseService {
     }
     
     // MARK: - Change Recommendations
-    public func getChangeRecommendationsAsync(navUnitId id: String) async throws -> [ChangeRecommendation] {
+    public func getChangeRecommendationsAsync(navUnitId: String) async throws -> [ChangeRecommendation] {
         guard let db = connection else {
             throw NSError(domain: "DatabaseService", code: 3, userInfo: [NSLocalizedDescriptionKey: "Database connection not initialized"])
         }
         
         do {
-            let query = changeRecommendations.filter(colNavUnitId == id).order(colCreatedAt.desc)
+            let query = changeRecommendations.filter(colNavUnitId == navUnitId).order(colCreatedAt.desc)
             var results: [ChangeRecommendation] = []
             
             for row in try db.prepare(query) {
-                let statusInt = try row.get(colStatus)
+                let statusInt = row[colStatus]
                 let status = RecommendationStatus(rawValue: statusInt) ?? .pending
                 
                 let recommendation = ChangeRecommendation(
-                    id: try row.get(colId),
-                    navUnitId: try row.get(colNavUnitId),
-                    recommendationText: try row.get(colRecommendationText),
-                    createdAt: try row.get(colCreatedAt),
+                    id: row[colId],
+                    navUnitId: row[colNavUnitId],
+                    recommendationText: row[colRecommendationText],
+                    createdAt: row[colCreatedAt],
                     status: status
                 )
                 results.append(recommendation)
@@ -544,23 +614,23 @@ class DatabaseServiceImpl: DatabaseService {
         })
     }
     
-    public func getNavUnitPhotosAsync(navUnitId id: String) async throws -> [NavUnitPhoto] {
+    public func getNavUnitPhotosAsync(navUnitId: String) async throws -> [NavUnitPhoto] {
         guard let db = connection else {
             throw NSError(domain: "DatabaseService", code: 3, userInfo: [NSLocalizedDescriptionKey: "Database connection not initialized"])
         }
         
         do {
-            let query = navUnitPhotos.filter(colNavUnitId == id).order(colCreatedAt.desc)
+            let query = navUnitPhotos.filter(colNavUnitId == navUnitId).order(colCreatedAt.desc)
             var results: [NavUnitPhoto] = []
             
             for row in try db.prepare(query) {
                 let photo = NavUnitPhoto(
-                    id: try row.get(colId),
-                    navUnitId: try row.get(colNavUnitId),
-                    filePath: try row.get(colFilePath),
-                    fileName: try row.get(colFileName),
-                    thumbPath: try row.get(colThumbPath),
-                    createdAt: try row.get(colCreatedAt)
+                    id: row[colId],
+                    navUnitId: row[colNavUnitId],
+                    filePath: row[colFilePath],
+                    fileName: row[colFileName],
+                    thumbPath: row[colThumbPath],
+                    createdAt: row[colCreatedAt]
                 )
                 results.append(photo)
             }
@@ -594,127 +664,17 @@ class DatabaseServiceImpl: DatabaseService {
         }
     }
     
-    public func deleteNavUnitPhotoAsync(photoId id: Int) async throws -> Int {
+    public func deleteNavUnitPhotoAsync(photoId: Int) async throws -> Int {
         guard let db = connection else {
             throw NSError(domain: "DatabaseService", code: 3, userInfo: [NSLocalizedDescriptionKey: "Database connection not initialized"])
         }
         
         do {
             // First get the photo to delete the file
-            let photoQuery = navUnitPhotos.filter(colId == id)
+            let photoQuery = navUnitPhotos.filter(colId == photoId)
             
             if let photo = try db.pluck(photoQuery) {
-                let filePath = try photo.get(colFilePath)
-                
-                // Delete the file if it exists
-                if FileManager.default.fileExists(atPath: filePath) {
-                    try FileManager.default.removeItem(atPath: filePath)
-                }
-                
-                // Delete the database record
-                try db.run(photoQuery.delete())
-            }
-            
-            return 1
-        } catch {
-            print("Error deleting nav unit photo: \(error.localizedDescription)")
-            throw error
-        }
-    }
-    
-    // MARK: - Tug Operations
-    public func initializeTugTablesAsync() async throws {
-        guard let db = connection else {
-            throw NSError(domain: "DatabaseService", code: 3, userInfo: [NSLocalizedDescriptionKey: "Database connection not initialized"])
-        }
-        
-        try db.run(tugPhotos.create(ifNotExists: true) { table in
-            table.column(colId, primaryKey: .autoincrement)
-            table.column(colVesselId)
-            table.column(colFilePath)
-            table.column(colFileName)
-            table.column(colThumbPath)
-            table.column(colCreatedAt)
-        })
-        
-        try db.run(tugNotes.create(ifNotExists: true) { table in
-            table.column(colId, primaryKey: .autoincrement)
-            table.column(colVesselId)
-            table.column(colNoteText)
-            table.column(colCreatedAt)
-            table.column(colModifiedAt)
-        })
-        
-        try db.run(tugChangeRecommendations.create(ifNotExists: true) { table in
-            table.column(colId, primaryKey: .autoincrement)
-            table.column(colVesselId)
-            table.column(colRecommendationText)
-            table.column(colCreatedAt)
-            table.column(colStatus)
-        })
-    }
-    
-    public func getTugPhotosAsync(tugId id: String) async throws -> [TugPhoto] {
-        guard let db = connection else {
-            throw NSError(domain: "DatabaseService", code: 3, userInfo: [NSLocalizedDescriptionKey: "Database connection not initialized"])
-        }
-        
-        do {
-            let query = tugPhotos.filter(colVesselId == id).order(colCreatedAt.desc)
-            var results: [TugPhoto] = []
-            
-            for row in try db.prepare(query) {
-                let photo = TugPhoto(
-                    id: try row.get(colId),
-                    tugId: try row.get(colVesselId),
-                    filePath: try row.get(colFilePath),
-                    fileName: try row.get(colFileName),
-                    thumbPath: try row.get(colThumbPath),
-                    createdAt: try row.get(colCreatedAt)
-                )
-                results.append(photo)
-            }
-            
-            return results
-        } catch {
-            print("Error fetching tug photos: \(error.localizedDescription)")
-            throw error
-        }
-    }
-    
-    public func addTugPhotoAsync(photo: TugPhoto) async throws -> Int {
-        guard let db = connection else {
-            throw NSError(domain: "DatabaseService", code: 3, userInfo: [NSLocalizedDescriptionKey: "Database connection not initialized"])
-        }
-        
-        do {
-            let insert = tugPhotos.insert(
-                colVesselId <- photo.tugId,
-                colFilePath <- photo.filePath,
-                colFileName <- photo.fileName,
-                colThumbPath <- photo.thumbPath,
-                colCreatedAt <- photo.createdAt
-            )
-            
-            let rowId = try db.run(insert)
-            return Int(rowId)
-        } catch {
-            print("Error adding tug photo: \(error.localizedDescription)")
-            throw error
-        }
-    }
-    
-    public func deleteTugPhotoAsync(photoId id: Int) async throws -> Int {
-        guard let db = connection else {
-            throw NSError(domain: "DatabaseService", code: 3, userInfo: [NSLocalizedDescriptionKey: "Database connection not initialized"])
-        }
-        
-        do {
-            // First get the photo to delete the file
-            let photoQuery = tugPhotos.filter(colId == id)
-            
-            if let photo = try db.pluck(photoQuery) {
-                let filePath = try photo.get(colFilePath)
+                let filePath = photo[colFilePath]
                 
                 // Delete the file if it exists
                 if FileManager.default.fileExists(atPath: filePath) {
@@ -732,22 +692,22 @@ class DatabaseServiceImpl: DatabaseService {
         }
     }
     
-    public func getTugNotesAsync(tugId id: String) async throws -> [TugNote] {
+    public func getTugNotesAsync(tugId: String) async throws -> [TugNote] {
         guard let db = connection else {
             throw NSError(domain: "DatabaseService", code: 3, userInfo: [NSLocalizedDescriptionKey: "Database connection not initialized"])
         }
         
         do {
-            let query = tugNotes.filter(colVesselId == id).order(colCreatedAt.desc)
+            let query = tugNotes.filter(colVesselId == tugId).order(colCreatedAt.desc)
             var results: [TugNote] = []
             
             for row in try db.prepare(query) {
                 let note = TugNote(
-                    id: try row.get(colId),
-                    tugId: try row.get(colVesselId),
-                    noteText: try row.get(colNoteText),
-                    createdAt: try row.get(colCreatedAt),
-                    modifiedAt: try row.get(colModifiedAt)
+                    id: row[colId],
+                    tugId: row[colVesselId],
+                    noteText: row[colNoteText],
+                    createdAt: row[colCreatedAt],
+                    modifiedAt: row[colModifiedAt]
                 )
                 results.append(note)
             }
@@ -798,13 +758,13 @@ class DatabaseServiceImpl: DatabaseService {
         }
     }
     
-    public func deleteTugNoteAsync(noteId id: Int) async throws -> Int {
+    public func deleteTugNoteAsync(noteId: Int) async throws -> Int {
         guard let db = connection else {
             throw NSError(domain: "DatabaseService", code: 3, userInfo: [NSLocalizedDescriptionKey: "Database connection not initialized"])
         }
         
         do {
-            let query = tugNotes.filter(colId == id)
+            let query = tugNotes.filter(colId == noteId)
             try db.run(query.delete())
             return 1
         } catch {
@@ -813,24 +773,24 @@ class DatabaseServiceImpl: DatabaseService {
         }
     }
     
-    public func getTugChangeRecommendationsAsync(tugId id: String) async throws -> [TugChangeRecommendation] {
+    public func getTugChangeRecommendationsAsync(tugId: String) async throws -> [TugChangeRecommendation] {
         guard let db = connection else {
             throw NSError(domain: "DatabaseService", code: 3, userInfo: [NSLocalizedDescriptionKey: "Database connection not initialized"])
         }
         
         do {
-            let query = tugChangeRecommendations.filter(colVesselId == id).order(colCreatedAt.desc)
+            let query = tugChangeRecommendations.filter(colVesselId == tugId).order(colCreatedAt.desc)
             var results: [TugChangeRecommendation] = []
             
             for row in try db.prepare(query) {
-                let statusInt = try row.get(colStatus)
+                let statusInt = row[colStatus]
                 let status = RecommendationStatus(rawValue: statusInt) ?? .pending
                 
                 let recommendation = TugChangeRecommendation(
-                    id: try row.get(colId),
-                    tugId: try row.get(colVesselId),
-                    recommendationText: try row.get(colRecommendationText),
-                    createdAt: try row.get(colCreatedAt),
+                    id: row[colId],
+                    tugId: row[colVesselId],
+                    recommendationText: row[colRecommendationText],
+                    createdAt: row[colCreatedAt],
                     status: status
                 )
                 results.append(recommendation)
@@ -895,23 +855,23 @@ class DatabaseServiceImpl: DatabaseService {
         })
     }
     
-    public func getBargePhotosAsync(bargeId id: String) async throws -> [BargePhoto] {
+    public func getBargePhotosAsync(bargeId: String) async throws -> [BargePhoto] {
         guard let db = connection else {
             throw NSError(domain: "DatabaseService", code: 3, userInfo: [NSLocalizedDescriptionKey: "Database connection not initialized"])
         }
         
         do {
-            let query = bargePhotos.filter(colVesselId == id).order(colCreatedAt.desc)
+            let query = bargePhotos.filter(colVesselId == bargeId).order(colCreatedAt.desc)
             var results: [BargePhoto] = []
             
             for row in try db.prepare(query) {
                 let photo = BargePhoto(
-                    id: try row.get(colId),
-                    bargeId: try row.get(colVesselId),
-                    filePath: try row.get(colFilePath),
-                    fileName: try row.get(colFileName),
-                    thumbPath: try row.get(colThumbPath),
-                    createdAt: try row.get(colCreatedAt)
+                    id: row[colId],
+                    bargeId: row[colVesselId],
+                    filePath: row[colFilePath],
+                    fileName: row[colFileName],
+                    thumbPath: row[colThumbPath],
+                    createdAt: row[colCreatedAt]
                 )
                 results.append(photo)
             }
@@ -945,17 +905,17 @@ class DatabaseServiceImpl: DatabaseService {
         }
     }
     
-    public func deleteBargePhotoAsync(photoId id: Int) async throws -> Int {
+    public func deleteBargePhotoAsync(photoId: Int) async throws -> Int {
         guard let db = connection else {
             throw NSError(domain: "DatabaseService", code: 3, userInfo: [NSLocalizedDescriptionKey: "Database connection not initialized"])
         }
         
         do {
             // First get the photo to delete the file
-            let photoQuery = bargePhotos.filter(colId == id)
+            let photoQuery = bargePhotos.filter(colId == photoId)
             
             if let photo = try db.pluck(photoQuery) {
-                let filePath = try photo.get(colFilePath)
+                let filePath = photo[colFilePath]
                 
                 // Delete the file if it exists
                 if FileManager.default.fileExists(atPath: filePath) {
@@ -974,17 +934,17 @@ class DatabaseServiceImpl: DatabaseService {
     }
     
     // MARK: - Buoy Station Favorites
-    public func isBuoyStationFavoriteAsync(stationId id: String) async -> Bool {
+    public func isBuoyStationFavoriteAsync(stationId: String) async -> Bool {
         guard let db = connection else {
             print("Database connection not initialized")
             return false
         }
         
         do {
-            let query = buoyStationFavorites.filter(colStationId == id)
+            let query = buoyStationFavorites.filter(colStationId == stationId)
             
             if let favorite = try db.pluck(query) {
-                return try favorite.get(colIsFavorite)
+                return favorite[colIsFavorite]
             }
             return false
         } catch {
@@ -993,26 +953,26 @@ class DatabaseServiceImpl: DatabaseService {
         }
     }
     
-    public func toggleBuoyStationFavoriteAsync(stationId id: String) async -> Bool {
+    public func toggleBuoyStationFavoriteAsync(stationId: String) async -> Bool {
         guard let db = connection else {
             print("Database connection not initialized")
             return false
         }
         
         do {
-            let query = buoyStationFavorites.filter(colStationId == id)
+            let query = buoyStationFavorites.filter(colStationId == stationId)
             
             if let favorite = try db.pluck(query) {
-                let currentValue = try favorite.get(colIsFavorite)
+                let currentValue = favorite[colIsFavorite]
                 let newValue = !currentValue
                 
-                let updatedRow = buoyStationFavorites.filter(colStationId == id)
+                let updatedRow = buoyStationFavorites.filter(colStationId == stationId)
                 try db.run(updatedRow.update(colIsFavorite <- newValue))
                 
                 return newValue
             } else {
                 try db.run(buoyStationFavorites.insert(
-                    colStationId <- id,
+                    colStationId <- stationId,
                     colIsFavorite <- true
                 ))
                 return true
@@ -1034,8 +994,8 @@ class DatabaseServiceImpl: DatabaseService {
             
             if let row = try db.pluck(query) {
                 let phase = MoonPhase(
-                    date: try row.get(colDate),
-                    phase: try row.get(colPhase)
+                    date: row[colDate],
+                    phase: row[colPhase]
                 )
                 print("Looking up moon phase for date: \(date)")
                 print("Found: \(phase.phase)")
@@ -1069,17 +1029,17 @@ class DatabaseServiceImpl: DatabaseService {
         })
     }
     
-    public func isWeatherLocationFavoriteAsync(latitude lat: Double, longitude lon: Double) async -> Bool {
+    public func isWeatherLocationFavoriteAsync(latitude: Double, longitude: Double) async -> Bool {
         guard let db = connection else {
             print("Database connection not initialized")
             return false
         }
         
         do {
-            let query = weatherLocationFavorites.filter(colLatitude == lat && colLongitude == lon)
+            let query = weatherLocationFavorites.filter(colLatitude == latitude && colLongitude == longitude)
             
             if let favorite = try db.pluck(query) {
-                return try favorite.get(colIsFavorite)
+                return favorite[colIsFavorite]
             }
             return false
         } catch {
@@ -1088,31 +1048,31 @@ class DatabaseServiceImpl: DatabaseService {
         }
     }
     
-    public func toggleWeatherLocationFavoriteAsync(latitude lat: Double, longitude lon: Double, locationName name: String) async -> Bool {
+    public func toggleWeatherLocationFavoriteAsync(latitude: Double, longitude: Double, locationName: String) async -> Bool {
         guard let db = connection else {
             print("Database connection not initialized")
             return false
         }
         
         do {
-            let query = weatherLocationFavorites.filter(colLatitude == lat && colLongitude == lon)
+            let query = weatherLocationFavorites.filter(colLatitude == latitude && colLongitude == longitude)
             
             if let favorite = try db.pluck(query) {
-                let currentValue = try favorite.get(colIsFavorite)
+                let currentValue = favorite[colIsFavorite]
                 let newValue = !currentValue
                 
-                let updatedRow = weatherLocationFavorites.filter(colLatitude == lat && colLongitude == lon)
+                let updatedRow = weatherLocationFavorites.filter(colLatitude == latitude && colLongitude == longitude)
                 try db.run(updatedRow.update(
                     colIsFavorite <- newValue,
-                    colLocationName <- name
+                    colLocationName <- locationName
                 ))
                 
                 return newValue
             } else {
                 try db.run(weatherLocationFavorites.insert(
-                    colLatitude <- lat,
-                    colLongitude <- lon,
-                    colLocationName <- name,
+                    colLatitude <- latitude,
+                    colLongitude <- longitude,
+                    colLocationName <- locationName,
                     colIsFavorite <- true,
                     colCreatedAt <- Date()
                 ))
@@ -1135,11 +1095,11 @@ class DatabaseServiceImpl: DatabaseService {
             
             for row in try db.prepare(query) {
                 let favorite = WeatherLocationFavorite(
-                    latitude: try row.get(colLatitude),
-                    longitude: try row.get(colLongitude),
-                    locationName: try row.get(colLocationName),
-                    isFavorite: try row.get(colIsFavorite),
-                    createdAt: try row.get(colCreatedAt)
+                    latitude: row[colLatitude],
+                    longitude: row[colLongitude],
+                    locationName: row[colLocationName],
+                    isFavorite: row[colIsFavorite],
+                    createdAt: row[colCreatedAt]
                 )
                 results.append(favorite)
             }
