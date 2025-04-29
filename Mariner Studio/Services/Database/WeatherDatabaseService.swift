@@ -128,3 +128,17 @@ class WeatherDatabaseService {
                 let favorite = WeatherLocationFavorite(
                     latitude: row[databaseCore.colLatitude],
                     longitude: row[databaseCore.colLongitude],
+                    locationName: row[databaseCore.colLocationName],
+                    isFavorite: row[databaseCore.colIsFavorite],
+                    createdAt: row[databaseCore.colCreatedAt]
+                )
+                results.append(favorite)
+            }
+            
+            return results
+        } catch {
+            print("Error fetching favorite weather locations: \(error.localizedDescription)")
+            throw error
+        }
+    }
+}
