@@ -13,7 +13,7 @@ class DatabaseCore {
     // MARK: - Tables
     let tideStationFavorites = Table("TideStationFavorites")
     let tidalCurrentStationFavorites = Table("TidalCurrentStationFavorites")
-    let navUnits = Table("NavUnit")
+    let navUnits = Table("NavUnits")
     let tugs = Table("Tug")
     let barges = Table("Barge")
     let personalNotes = Table("PersonalNote")
@@ -36,9 +36,9 @@ class DatabaseCore {
     let colCurrentBin = Expression<Int>("current_bin")
     
     // NavUnit
-    let colNavUnitId = Expression<String>("NavUnitId")
-    let colNavUnitName = Expression<String>("NavUnitName")
-    let colNavUnitIsFavorite = Expression<Bool>("IsFavorite")
+    let colNavUnitId = Expression<String>("NAV_UNIT_ID")
+    let colNavUnitName = Expression<String>("NAV_UNIT_NAME")
+    let colNavUnitIsFavorite = Expression<Bool>("is_favorite")
     
     // Tug/Barge
     let colVesselId = Expression<String>("VesselId")
