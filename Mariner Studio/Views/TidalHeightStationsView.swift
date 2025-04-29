@@ -165,10 +165,3 @@ struct StationRow: View {
     }
 }
 
-#Preview {
-    NavigationView {
-        TidalHeightStationsView(
-            databaseService: MockDatabaseService()
-        )
-    }
-}

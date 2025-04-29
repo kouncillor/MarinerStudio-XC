@@ -177,13 +177,4 @@ struct TidalHeightPredictionView: View {
     }
 }
 
-// MARK: - Preview Provider
-#Preview {
-    NavigationStack {
-        TidalHeightPredictionView(
-            stationId: "9447130",
-            stationName: "Seattle",
-            databaseService: MockDatabaseService()
-        )
-    }
-}
+

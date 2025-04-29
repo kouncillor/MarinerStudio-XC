@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct MainView: View {
-    @StateObject private var databaseService = MockDatabaseService()
+    @StateObject private var databaseService = DatabaseServiceImpl.getInstance()
     
     var body: some View {
         NavigationStack {

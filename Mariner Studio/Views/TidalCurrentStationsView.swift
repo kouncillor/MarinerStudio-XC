@@ -161,10 +161,3 @@ struct CurrentStationRow: View {
     }
 }
 
-#Preview {
-    NavigationView {
-        TidalCurrentStationsView(
-            databaseService: MockDatabaseService()
-        )
-    }
-}

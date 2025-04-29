@@ -262,14 +262,3 @@ struct TidalCurrentPredictionView: View {
     }
 }
 
-// MARK: - Preview Provider
-#Preview {
-    NavigationView {
-        TidalCurrentPredictionView(
-            stationId: "t01010",
-            bin: 1,
-            stationName: "Sample Current Station",
-            databaseService: MockDatabaseService()
-        )
-    }
-}
