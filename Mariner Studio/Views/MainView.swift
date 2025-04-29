@@ -38,11 +38,12 @@ struct MainView: View {
                     }
                     
                     // NAV UNITS
-                    NavigationButton(
-                        icon: "nsixseven",
-                        title: "NAV UNITS",
-                        action: { print("Nav Units tapped") }
-                    )
+                    NavigationLink(destination: NavUnitsView(databaseService: databaseService)) {
+                        NavigationButtonContent(
+                            icon: "nsixseven",
+                            title: "NAV UNITS"
+                        )
+                    }
                     
                     // BUOYS
                     NavigationButton(
