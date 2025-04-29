@@ -409,7 +409,7 @@ class DatabaseServiceImpl: DatabaseService, ObservableObject {
                 
                 // Verify write worked
                 let testQuery = tideStationFavorites.filter(colStationId == "TEST_INIT")
-                if let testRecord = try? db.pluck(testQuery) {
+                if let _testRecord = try? db.pluck(testQuery) {
                     print("📊 Successfully wrote and read test record")
                 } else {
                     print("❌ Could not verify test record")
@@ -469,7 +469,7 @@ class DatabaseServiceImpl: DatabaseService, ObservableObject {
                 
                 // Verify write worked
                 let testQuery = tidalCurrentStationFavorites.filter(colStationId == "TEST_INIT")
-                if let testRecord = try? db.pluck(testQuery) {
+                if let _testRecord = try? db.pluck(testQuery) {
                     print("📊 Successfully wrote and read test record")
                 } else {
                     print("❌ Could not verify test record")
