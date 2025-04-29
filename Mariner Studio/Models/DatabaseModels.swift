@@ -13,13 +13,6 @@ struct TidalCurrentStationFavorite {
     let isFavorite: Bool
 }
 
-struct NavUnit: Identifiable {
-    let id = UUID()
-    let navUnitId: String
-    let navUnitName: String
-    var isFavorite: Bool
-}
-
 struct Tug: Identifiable {
     let id = UUID()
     let tugId: String
