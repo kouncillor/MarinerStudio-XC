@@ -164,4 +164,3 @@ struct StationRow: View {
         .padding(.vertical, 5)
     }
 }
-
