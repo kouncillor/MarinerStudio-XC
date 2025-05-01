@@ -227,3 +227,9 @@ struct NavUnit: Identifiable {
 extension NavUnit: Codable {
     // We can use the CodingKeys above for both Codable and SQLite operations
 }
+
+// Make NavUnit conform to StationCoordinates
+extension NavUnit: StationCoordinates {
+    // NavUnit already has latitude and longitude properties,
+    // so we only need the empty extension to conform to the protocol
+}

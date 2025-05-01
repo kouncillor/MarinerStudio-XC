@@ -38,7 +38,10 @@ struct MainView: View {
                     }
                     
                     // NAV UNITS
-                    NavigationLink(destination: NavUnitsView(databaseService: databaseService)) {
+                    NavigationLink(destination: NavUnitsView(
+                        databaseService: databaseService,
+                        locationService: LocationServiceImpl()
+                    )) {
                         NavigationButtonContent(
                             icon: "nsixseven",
                             title: "NAV UNITS"

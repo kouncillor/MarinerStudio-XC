@@ -1,3 +1,4 @@
+// Views/NavUnitsView.swift
 import SwiftUI
 
 struct NavUnitsView: View {
@@ -7,9 +8,14 @@ struct NavUnitsView: View {
     @State private var showOnlyFavorites = false
     
     // MARK: - Initialization
-    init(databaseService: DatabaseService)
-    {
-        _viewModel = StateObject(wrappedValue: NavUnitsViewModel(databaseService: databaseService))
+    init(
+        databaseService: DatabaseService,
+        locationService: LocationService = LocationServiceImpl()
+    ) {
+        _viewModel = StateObject(wrappedValue: NavUnitsViewModel(
+            databaseService: databaseService,
+            locationService: locationService
+        ))
     }
     
     // MARK: - Body
@@ -85,6 +91,8 @@ struct NavUnitsView: View {
             Text("Total Units: \(viewModel.totalNavUnits)")
                 .font(.footnote)
             Spacer()
+            Text("Location: \(viewModel.isLocationEnabled ? "Enabled" : "Disabled")")
+                .font(.footnote)
         }
         .padding(.horizontal)
         .padding(.bottom, 5)
@@ -92,17 +100,17 @@ struct NavUnitsView: View {
     
     private var navUnitsList: some View {
         List {
-            ForEach(viewModel.filteredNavUnits) { navUnit in
+            ForEach(viewModel.filteredNavUnits) { navUnitWithDistance in
                 // Using a Button instead of NavigationLink for now
                 Button(action: {
                     // Just print info for now instead of navigating
-                    print("Selected NavUnit: \(navUnit.navUnitName)")
+                    print("Selected NavUnit: \(navUnitWithDistance.station.navUnitName)")
                 }) {
                     NavUnitRow(
-                        navUnit: navUnit,
+                        navUnitWithDistance: navUnitWithDistance,
                         onToggleFavorite: {
                             Task {
-                                await viewModel.toggleNavUnitFavorite(navUnitId: navUnit.navUnitId)
+                                await viewModel.toggleNavUnitFavorite(navUnitId: navUnitWithDistance.station.navUnitId)
                             }
                         }
                     )
@@ -118,53 +126,60 @@ struct NavUnitsView: View {
 }
 
 struct NavUnitRow: View {
-    let navUnit: NavUnit
+    let navUnitWithDistance: StationWithDistance<NavUnit>
     let onToggleFavorite: () -> Void
     
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             HStack {
-                Text(navUnit.navUnitName)
+                Text(navUnitWithDistance.station.navUnitName)
                     .font(.headline)
                 Spacer()
                 Button(action: onToggleFavorite) {
-                    Image(systemName: navUnit.isFavorite ? "star.fill" : "star")
-                        .foregroundColor(navUnit.isFavorite ? .yellow : .gray)
+                    Image(systemName: navUnitWithDistance.station.isFavorite ? "star.fill" : "star")
+                        .foregroundColor(navUnitWithDistance.station.isFavorite ? .yellow : .gray)
                 }
             }
             
-            if let facilityType = navUnit.facilityType, !facilityType.isEmpty {
+            if let facilityType = navUnitWithDistance.station.facilityType, !facilityType.isEmpty {
                 Text(facilityType)
                     .font(.subheadline)
                     .foregroundColor(.gray)
             }
             
-            if let location = navUnit.location, !location.isEmpty {
+            if let location = navUnitWithDistance.station.location, !location.isEmpty {
                 Text(location)
                     .font(.subheadline)
                     .foregroundColor(.gray)
             }
             
             if let cityState = formatCityState(
-                city: navUnit.cityOrTown,
-                state: navUnit.statePostalCode
+                city: navUnitWithDistance.station.cityOrTown,
+                state: navUnitWithDistance.station.statePostalCode
             ), !cityState.isEmpty {
                 Text(cityState)
                     .font(.caption)
                     .foregroundColor(.gray)
             }
             
-            if navUnit.hasPhoneNumbers {
-                Text("Phone: \(navUnit.phoneNumbers.first ?? "")")
+            if navUnitWithDistance.station.hasPhoneNumbers {
+                Text("Phone: \(navUnitWithDistance.station.phoneNumbers.first ?? "")")
                     .font(.caption)
                     .foregroundColor(.blue)
             }
             
             if let coordinates = formatCoordinates(
-                latitude: navUnit.latitude,
-                longitude: navUnit.longitude
+                latitude: navUnitWithDistance.station.latitude,
+                longitude: navUnitWithDistance.station.longitude
             ), !coordinates.isEmpty {
                 Text(coordinates)
+                    .font(.caption)
+                    .foregroundColor(.gray)
+            }
+            
+            // Display distance if available
+            if !navUnitWithDistance.distanceDisplay.isEmpty {
+                Text("Distance: \(navUnitWithDistance.distanceDisplay)")
                     .font(.caption)
                     .foregroundColor(.gray)
             }
