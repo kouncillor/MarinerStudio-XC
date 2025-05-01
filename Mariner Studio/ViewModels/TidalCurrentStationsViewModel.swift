@@ -112,8 +112,8 @@ class TidalCurrentStationsViewModel: ObservableObject {
                 if first.distanceFromUser != second.distanceFromUser {
                     return first.distanceFromUser < second.distanceFromUser
                 } else if first.station.isFavorite != second.station.isFavorite {
-                    // If true (favorite) should come first, return true here
-                    return first.station.isFavorite && !second.station.isFavorite
+                    // FIXED: Simply return if first is favorite (same as TidalHeightStationsViewModel)
+                    return first.station.isFavorite
                 } else {
                     return first.station.name.localizedCompare(second.station.name) == .orderedAscending
                 }
@@ -126,7 +126,6 @@ class TidalCurrentStationsViewModel: ObservableObject {
             }
         }
     }
-
 
     func toggleFavorites() {
         showOnlyFavorites.toggle()

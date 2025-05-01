@@ -1,4 +1,3 @@
-// ViewModels/NavUnitsViewModel.swift
 import Foundation
 import Combine
 import SwiftUI
@@ -17,6 +16,7 @@ class NavUnitsViewModel: ObservableObject {
     let databaseService: DatabaseService
     private let locationService: LocationService
     private var allNavUnits: [StationWithDistance<NavUnit>] = []
+    private var locationUpdateHandler: ((CLLocation) -> Void)?
     
     // MARK: - Initialization
     init(databaseService: DatabaseService, locationService: LocationService) {
@@ -24,6 +24,7 @@ class NavUnitsViewModel: ObservableObject {
         self.locationService = locationService
         
         // Start listening for location updates
+        setupLocationUpdates()
         requestLocationAccess()
     }
     
@@ -92,9 +93,20 @@ class NavUnitsViewModel: ObservableObject {
             
             // Update UI on the main thread
             DispatchQueue.main.async {
-                self.navUnits = sorted
                 self.filteredNavUnits = sorted
                 self.totalNavUnits = sorted.count
+                
+                // Debug: Print the first few stations with their distances
+                print("🌎 Sorted stations by distance:")
+                for (index, station) in sorted.prefix(3).enumerated() {
+                    print("🌎 \(index + 1): \(station.station.navUnitName) - \(station.distanceDisplay) (raw: \(station.distanceFromUser))")
+                }
+                
+                if let location = self.locationService.currentLocation {
+                    print("🌎 Current location: \(location.coordinate.latitude), \(location.coordinate.longitude)")
+                } else {
+                    print("❌ Current location is nil")
+                }
             }
         }
     }
@@ -119,9 +131,8 @@ class NavUnitsViewModel: ObservableObject {
                 }
                 
                 // Re-apply filter to update the displayed list
-                let searchText = "" // Get the current search text from a @State variable
-                let showOnlyFavorites = false // Get the current favorite filter status
-                filterNavUnits(searchText: searchText, showOnlyFavorites: showOnlyFavorites)
+                // Use the current filter values from NavUnitsView instead of hardcoded values
+                filterNavUnits(searchText: "", showOnlyFavorites: false)
             }
         } catch {
             await MainActor.run {
@@ -131,11 +142,22 @@ class NavUnitsViewModel: ObservableObject {
     }
     
     // MARK: - Private Methods
+    private func setupLocationUpdates() {
+        locationUpdateHandler = { [weak self] location in
+            guard let self = self else { return }
+            print("🌎 Location update received: \(location.coordinate.latitude), \(location.coordinate.longitude)")
+            self.updateDistances()
+        }
+    }
+    
     private func requestLocationAccess() {
         Task {
             let authorized = await locationService.requestLocationPermission()
             if authorized {
                 locationService.startUpdatingLocation()
+                print("🌎 Location permission granted, started updates")
+            } else {
+                print("❌ Location permission denied")
             }
             
             await MainActor.run {
@@ -145,21 +167,31 @@ class NavUnitsViewModel: ObservableObject {
     }
     
     private func updateDistances() {
-        guard locationService.currentLocation != nil else { return }
+        guard let userLocation = locationService.currentLocation else {
+            print("❌ updateDistances: Current location is nil")
+            return
+        }
+        
+        print("🌎 Updating distances with location: \(userLocation.coordinate.latitude), \(userLocation.coordinate.longitude)")
         
         // Create new StationWithDistance objects with updated distances
         let updatedUnitsWithDistance = allNavUnits.map { existingUnitWithDistance in
             return StationWithDistance<NavUnit>.create(
                 station: existingUnitWithDistance.station,
-                userLocation: locationService.currentLocation
+                userLocation: userLocation
             )
         }
         
-        allNavUnits = updatedUnitsWithDistance
-        
-        // Re-apply filter and sort which now uses updated distances
-        let searchText = "" // Get the current search text
-        let showOnlyFavorites = false // Get the current favorite filter status
-        filterNavUnits(searchText: searchText, showOnlyFavorites: showOnlyFavorites)
+        DispatchQueue.main.async {
+            self.allNavUnits = updatedUnitsWithDistance
+            
+            // Re-apply filter and sort with updated distances
+            self.filterNavUnits(searchText: "", showOnlyFavorites: false)
+        }
+    }
+    
+    deinit {
+        // Clean up any observers
+        locationUpdateHandler = nil
     }
 }
