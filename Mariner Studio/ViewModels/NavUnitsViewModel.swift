@@ -1,197 +1,217 @@
 import Foundation
-import Combine
+// Combine import might not be needed if you don't use AnyCancellable or other Combine features
+// import Combine
 import SwiftUI
 import CoreLocation
 
 class NavUnitsViewModel: ObservableObject {
     // MARK: - Published Properties
-    @Published var navUnits: [StationWithDistance<NavUnit>] = []
     @Published var filteredNavUnits: [StationWithDistance<NavUnit>] = []
     @Published var isLoading = false
     @Published var errorMessage = ""
     @Published var totalNavUnits = 0
-    @Published var isLocationEnabled = false
-    
+    @Published var searchText = ""
+    @Published var showOnlyFavorites = false
+    @Published var userLatitude: String = "Unknown"
+    @Published var userLongitude: String = "Unknown"
+
+    // MARK: - Computed Property for Location Status
+    var isLocationEnabled: Bool {
+        let status = locationService.permissionStatus
+        return status == .authorizedWhenInUse || status == .authorizedAlways
+    }
+
     // MARK: - Properties
     let databaseService: DatabaseService
     private let locationService: LocationService
     private var allNavUnits: [StationWithDistance<NavUnit>] = []
-    private var locationUpdateHandler: ((CLLocation) -> Void)?
-    
+    // Removed observer properties
+
     // MARK: - Initialization
     init(databaseService: DatabaseService, locationService: LocationService) {
         self.databaseService = databaseService
         self.locationService = locationService
-        
-        // Start listening for location updates
-        setupLocationUpdates()
-        requestLocationAccess()
+        print("✅ NavUnitsViewModel initialized. Will rely on ServiceProvider for location. Dynamic updates disabled.")
+        // Removed observer setup call
     }
-    
+
     // MARK: - Public Methods
     func loadNavUnits() async {
-        if isLoading { return }
-        
+        print("⏰ ViewModel (NavUnits): loadNavUnits() started at \(Date())")
+
+        guard !isLoading else {
+             print("⏰ ViewModel (NavUnits): loadNavUnits() exited early, already loading.")
+             return
+        }
+
         await MainActor.run {
             isLoading = true
             errorMessage = ""
+            print("⏰ ViewModel (NavUnits): Checking location in loadNavUnits (MainActor block) at \(Date()). Current value: \(locationService.currentLocation?.description ?? "nil")")
+            updateUserCoordinates() // Update displayed coordinates based on current location
         }
-        
+
         do {
-            // Get nav units from database
+            print("⏰ ViewModel (NavUnits): Starting Database call for NavUnits at \(Date())")
             let units = try await databaseService.getNavUnitsAsync()
-            
-            // Create units with distance
+            print("⏰ ViewModel (NavUnits): Finished Database call. Count: \(units.count) at \(Date())")
+
+            print("⏰ ViewModel (NavUnits): Checking location for distance calculation at \(Date()). Current value: \(locationService.currentLocation?.description ?? "nil")")
+            let currentLocationForDistance = locationService.currentLocation
             let unitsWithDistance = units.map { unit in
                 return StationWithDistance<NavUnit>.create(
                     station: unit,
-                    userLocation: locationService.currentLocation
+                    userLocation: currentLocationForDistance
                 )
             }
-            
+
+            // *** ADDED: Log Calculated Distances ***
+            print("🔍 Distances Calculated (First 5):")
+            for (index, unitDist) in unitsWithDistance.prefix(5).enumerated() {
+                print("🔍 \(index): \(unitDist.station.navUnitName) - Dist: \(unitDist.distanceFromUser)")
+            }
+            // *************************************
+
+            print("⏰ ViewModel (NavUnits): Updating UI state (allNavUnits, filterNavUnits, isLoading) at \(Date())")
             await MainActor.run {
-                allNavUnits = unitsWithDistance
-                filterNavUnits(searchText: "", showOnlyFavorites: false)
-                isLocationEnabled = locationService.currentLocation != nil
+                allNavUnits = unitsWithDistance // Store units with calculated distances
+                filterNavUnits() // Apply initial filter/sort based on these distances
                 isLoading = false
+                print("⏰ ViewModel (NavUnits): UI state update complete at \(Date())")
             }
         } catch {
+            print("❌ ViewModel (NavUnits): Error in loadNavUnits at \(Date()): \(error.localizedDescription)")
             await MainActor.run {
                 errorMessage = "Failed to load navigation units: \(error.localizedDescription)"
-                navUnits = []
-                filteredNavUnits = []
+                allNavUnits = []
+                self.filteredNavUnits = []
+                totalNavUnits = 0
                 isLoading = false
             }
         }
+        print("⏰ ViewModel (NavUnits): loadNavUnits() finished at \(Date())")
     }
-    
-    func filterNavUnits(searchText: String, showOnlyFavorites: Bool) {
-        // Using a background thread for potentially heavy filtering/sorting
-        DispatchQueue.global(qos: .userInitiated).async {
-            let filtered = self.allNavUnits.filter { unit in
-                let matchesFavorite = !showOnlyFavorites || unit.station.isFavorite
-                let matchesSearch = searchText.isEmpty ||
-                    unit.station.navUnitName.localizedCaseInsensitiveContains(searchText) ||
-                    (unit.station.location?.localizedCaseInsensitiveContains(searchText) ?? false) ||
-                    (unit.station.cityOrTown?.localizedCaseInsensitiveContains(searchText) ?? false) ||
-                    (unit.station.statePostalCode?.localizedCaseInsensitiveContains(searchText) ?? false) ||
-                    unit.station.navUnitId.localizedCaseInsensitiveContains(searchText)
-                
-                return matchesFavorite && matchesSearch
-            }
-            
-            // Sort nav units by distance, then by favorite status, then by name
-            let sorted = filtered.sorted { first, second in
-                if first.distanceFromUser != second.distanceFromUser {
-                    return first.distanceFromUser < second.distanceFromUser
-                } else if first.station.isFavorite != second.station.isFavorite {
-                    return first.station.isFavorite && !second.station.isFavorite
-                } else {
-                    return first.station.navUnitName.localizedCompare(second.station.navUnitName) == .orderedAscending
-                }
-            }
-            
-            // Update UI on the main thread
-            DispatchQueue.main.async {
-                self.filteredNavUnits = sorted
-                self.totalNavUnits = sorted.count
-                
-                // Debug: Print the first few stations with their distances
-                print("🌎 Sorted stations by distance:")
-                for (index, station) in sorted.prefix(3).enumerated() {
-                    print("🌎 \(index + 1): \(station.station.navUnitName) - \(station.distanceDisplay) (raw: \(station.distanceFromUser))")
-                }
-                
-                if let location = self.locationService.currentLocation {
-                    print("🌎 Current location: \(location.coordinate.latitude), \(location.coordinate.longitude)")
-                } else {
-                    print("❌ Current location is nil")
-                }
+
+    func refreshNavUnits() async {
+         print("🔄 ViewModel (NavUnits): refreshNavUnits() called at \(Date())")
+         // Reset state before reloading
+         await MainActor.run {
+              self.filteredNavUnits = []
+              self.allNavUnits = []
+              self.totalNavUnits = 0
+         }
+         // loadNavUnits will recalculate distances with the latest location
+         await loadNavUnits()
+    }
+
+    // Filter/sort logic remains the same, uses distances stored in allNavUnits
+    func filterNavUnits() {
+        print("🔄 ViewModel (NavUnits): filterNavUnits() called at \(Date())")
+        let currentSearchText = self.searchText
+        let currentShowOnlyFavorites = self.showOnlyFavorites
+
+        let filtered = self.allNavUnits.filter { unit in
+             let matchesFavorite = !currentShowOnlyFavorites || unit.station.isFavorite
+             let matchesSearch = currentSearchText.isEmpty ||
+                 unit.station.navUnitName.localizedCaseInsensitiveContains(currentSearchText) ||
+                 (unit.station.location?.localizedCaseInsensitiveContains(currentSearchText) ?? false) ||
+                 (unit.station.cityOrTown?.localizedCaseInsensitiveContains(currentSearchText) ?? false) ||
+                 (unit.station.statePostalCode?.localizedCaseInsensitiveContains(currentSearchText) ?? false) ||
+                 unit.station.navUnitId.localizedCaseInsensitiveContains(currentSearchText)
+
+             return matchesFavorite && matchesSearch
+        }
+
+        let sorted = filtered.sorted { first, second in
+            if first.distanceFromUser != Double.greatestFiniteMagnitude && second.distanceFromUser == Double.greatestFiniteMagnitude {
+                return true
+            } else if first.distanceFromUser == Double.greatestFiniteMagnitude && second.distanceFromUser != Double.greatestFiniteMagnitude {
+                return false
+            } else if first.distanceFromUser != second.distanceFromUser {
+                return first.distanceFromUser < second.distanceFromUser
+            } else if first.station.isFavorite != second.station.isFavorite {
+                return first.station.isFavorite && !second.station.isFavorite
+            } else {
+                return first.station.navUnitName.localizedCompare(second.station.navUnitName) == .orderedAscending
             }
         }
+
+        // *** ADDED: Log Sort Result ***
+        print("🔍 Sort Result (First 5):")
+        for (index, unitDist) in sorted.prefix(5).enumerated() {
+            print("🔍 \(index): \(unitDist.station.navUnitName) - Dist: \(unitDist.distanceFromUser)")
+        }
+        // ****************************
+
+        DispatchQueue.main.async {
+            self.filteredNavUnits = sorted
+            self.totalNavUnits = sorted.count
+            print("🔄 ViewModel (NavUnits): filterNavUnits() updated self.filteredNavUnits on main thread at \(Date()). Count: \(sorted.count)")
+        }
     }
-    
+
+
+    func searchTextChanged() {
+         filterNavUnits()
+     }
+
+    func favoritesToggleChanged() {
+         filterNavUnits()
+     }
+
+    func clearSearch() {
+          searchText = ""
+          filterNavUnits()
+    }
+
+
     func toggleNavUnitFavorite(navUnitId: String) async {
         do {
-            // Call database service to toggle favorite
+            print("⭐ ViewModel (NavUnits): Toggling favorite for \(navUnitId) at \(Date())")
             let newFavoriteStatus = try await databaseService.toggleFavoriteNavUnitAsync(navUnitId: navUnitId)
-            
+            print("⭐ ViewModel (NavUnits): Database returned new status \(newFavoriteStatus) for \(navUnitId) at \(Date())")
+
             await MainActor.run {
-                // Update all nav units
-                allNavUnits = allNavUnits.map { unitWithDistance in
-                    if unitWithDistance.station.navUnitId == navUnitId {
-                        var updatedUnit = unitWithDistance.station
-                        updatedUnit.isFavorite = newFavoriteStatus
-                        return StationWithDistance(
-                            station: updatedUnit,
-                            distanceFromUser: unitWithDistance.distanceFromUser
-                        )
-                    }
-                    return unitWithDistance
-                }
-                
-                // Re-apply filter to update the displayed list
-                // Use the current filter values from NavUnitsView instead of hardcoded values
-                filterNavUnits(searchText: "", showOnlyFavorites: false)
+                 if let index = allNavUnits.firstIndex(where: { $0.station.navUnitId == navUnitId }) {
+                      var updatedUnit = allNavUnits[index].station
+                      updatedUnit.isFavorite = newFavoriteStatus
+                      // We also need to update the distance from the existing object
+                      let currentDistance = allNavUnits[index].distanceFromUser
+                      allNavUnits[index] = StationWithDistance(
+                          station: updatedUnit,
+                          distanceFromUser: currentDistance // Preserve existing distance
+                      )
+                      print("⭐ ViewModel (NavUnits): Updated allNavUnits array for \(navUnitId) at \(Date())")
+                      filterNavUnits() // Re-apply filter/sort
+                 } else {
+                     print("❌ ViewModel (NavUnits): Station \(navUnitId) not found in allNavUnits after toggle at \(Date())")
+                 }
             }
         } catch {
+             print("❌ ViewModel (NavUnits): Failed to update favorite status for \(navUnitId) at \(Date()): \(error.localizedDescription)")
             await MainActor.run {
                 errorMessage = "Failed to update favorite status: \(error.localizedDescription)"
             }
         }
     }
-    
+
     // MARK: - Private Methods
-    private func setupLocationUpdates() {
-        locationUpdateHandler = { [weak self] location in
-            guard let self = self else { return }
-            print("🌎 Location update received: \(location.coordinate.latitude), \(location.coordinate.longitude)")
-            self.updateDistances()
-        }
+
+    // Removed observer methods
+
+    // Keep this to update the displayed coordinates in the status bar
+    private func updateUserCoordinates() {
+         if let location = locationService.currentLocation {
+              self.userLatitude = String(format: "%.6f", location.coordinate.latitude)
+              self.userLongitude = String(format: "%.6f", location.coordinate.longitude)
+          } else {
+              self.userLatitude = "Unknown"
+              self.userLongitude = "Unknown"
+          }
     }
-    
-    private func requestLocationAccess() {
-        Task {
-            let authorized = await locationService.requestLocationPermission()
-            if authorized {
-                locationService.startUpdatingLocation()
-                print("🌎 Location permission granted, started updates")
-            } else {
-                print("❌ Location permission denied")
-            }
-            
-            await MainActor.run {
-                isLocationEnabled = authorized
-            }
-        }
-    }
-    
-    private func updateDistances() {
-        guard let userLocation = locationService.currentLocation else {
-            print("❌ updateDistances: Current location is nil")
-            return
-        }
-        
-        print("🌎 Updating distances with location: \(userLocation.coordinate.latitude), \(userLocation.coordinate.longitude)")
-        
-        // Create new StationWithDistance objects with updated distances
-        let updatedUnitsWithDistance = allNavUnits.map { existingUnitWithDistance in
-            return StationWithDistance<NavUnit>.create(
-                station: existingUnitWithDistance.station,
-                userLocation: userLocation
-            )
-        }
-        
-        DispatchQueue.main.async {
-            self.allNavUnits = updatedUnitsWithDistance
-            
-            // Re-apply filter and sort with updated distances
-            self.filterNavUnits(searchText: "", showOnlyFavorites: false)
-        }
-    }
-    
+
     deinit {
-        // Clean up any observers
-        locationUpdateHandler = nil
+        print("🗑️ NavUnitsViewModel deinitialized.")
     }
 }
+

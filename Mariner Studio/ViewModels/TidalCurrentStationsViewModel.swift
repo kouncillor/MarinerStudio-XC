@@ -10,14 +10,21 @@ class TidalCurrentStationsViewModel: ObservableObject {
     @Published var searchText = ""
     @Published var showOnlyFavorites = false
     @Published var totalStations = 0
-    @Published var isLocationEnabled = false
-    
+    @Published var userLatitude: String = "Unknown" // Added for consistency
+    @Published var userLongitude: String = "Unknown" // Added for consistency
+
+    // MARK: - Computed Property for Location Status
+    var isLocationEnabled: Bool { // Changed from @Published var to computed var
+        let status = locationService.permissionStatus
+        return status == .authorizedWhenInUse || status == .authorizedAlways
+    }
+
     // MARK: - Private Properties
     private let tidalCurrentService: TidalCurrentService
     private let locationService: LocationService
     private let databaseService: DatabaseService
     private var allStations: [StationWithDistance<TidalCurrentStation>] = []
-    
+
     // MARK: - Initialization
     init(
         tidalCurrentService: TidalCurrentService,
@@ -27,143 +34,203 @@ class TidalCurrentStationsViewModel: ObservableObject {
         self.tidalCurrentService = tidalCurrentService
         self.locationService = locationService
         self.databaseService = databaseService
-        
-        // Start listening for location updates
-        requestLocationAccess()
+        print("✅ TidalCurrentStationsViewModel initialized. Will rely on ServiceProvider for location permission/start.") // Added init log
+        // Removed the call to the removed requestLocationAccess()
     }
-    
+
     // MARK: - Public Methods
     func loadStations() async {
-        if isLoading { return }
-        
+        // --- ADDED PRINT STATEMENT FOR TIMING PROOF ---
+        print("⏰ ViewModel (Currents): loadStations() started at \(Date())")
+        // ---------------------------------------------
+
+        guard !isLoading else {
+             print("⏰ ViewModel (Currents): loadStations() exited early, already loading.") // Added for clarity
+             return
+        }
+
         await MainActor.run {
             isLoading = true
             errorMessage = ""
+            // Print location check time within MainActor block as well
+            print("⏰ ViewModel (Currents): Checking location in loadStations (MainActor block) at \(Date()). Current value: \(locationService.currentLocation?.description ?? "nil")")
+            if let location = locationService.currentLocation {
+                 self.userLatitude = String(format: "%.6f", location.coordinate.latitude)
+                 self.userLongitude = String(format: "%.6f", location.coordinate.longitude)
+             } else {
+                 self.userLatitude = "Unknown"
+                 self.userLongitude = "Unknown"
+             }
         }
-        
+
         do {
-            // Get stations from API
+            print("⏰ ViewModel (Currents): Starting API call for stations at \(Date())") // Added API call timing
             let response = try await tidalCurrentService.getTidalCurrentStations()
-            
+            print("⏰ ViewModel (Currents): Finished API call for stations at \(Date()). Count: \(response.count)") // Added API call timing
+
             var stations = response.stations
-            
-            // Update favorite status
-            for i in 0..<stations.count {
-                if let bin = stations[i].currentBin {
-                    stations[i].isFavorite = await databaseService.isCurrentStationFavorite(id: stations[i].id, bin: bin)
-                } else {
-                    stations[i].isFavorite = await databaseService.isCurrentStationFavorite(id: stations[i].id)
-                }
+
+            print("⏰ ViewModel (Currents): Starting favorite checks at \(Date())") // Added favorite check timing
+            // Update favorite status (using task group for potential performance gain)
+            await withTaskGroup(of: (String, Int?, Bool).self) { group in
+                 for station in stations {
+                     group.addTask {
+                         let isFav: Bool
+                         if let bin = station.currentBin {
+                             isFav = await self.databaseService.isCurrentStationFavorite(id: station.id, bin: bin)
+                         } else {
+                             isFav = await self.databaseService.isCurrentStationFavorite(id: station.id)
+                         }
+                         return (station.id, station.currentBin, isFav) // Return bin as well
+                     }
+                 }
+                 var favoriteStatuses: [String: (bin: Int?, isFav: Bool)] = [:]
+                 for await (id, bin, isFav) in group {
+                     favoriteStatuses[id] = (bin: bin, isFav: isFav)
+                 }
+                 // Apply favorite status back to the stations array
+                 for i in 0..<stations.count {
+                     stations[i].isFavorite = favoriteStatuses[stations[i].id]?.isFav ?? false
+                 }
             }
-            
+            print("⏰ ViewModel (Currents): Finished favorite checks at \(Date())") // Added favorite check timing
+
+
+            print("⏰ ViewModel (Currents): Checking location for distance calculation at \(Date()). Current value: \(locationService.currentLocation?.description ?? "nil")") // Added distance check timing
+            let currentLocationForDistance = locationService.currentLocation
             // Create stations with distance
             let stationsWithDistance = stations.map { station in
                 return StationWithDistance<TidalCurrentStation>.create(
                     station: station,
-                    userLocation: locationService.currentLocation
+                    userLocation: currentLocationForDistance // Use the captured location
                 )
             }
-            
+
+            print("⏰ ViewModel (Currents): Updating UI state (allStations, filterStations, isLoading) at \(Date())") // Added UI update timing
             await MainActor.run {
                 allStations = stationsWithDistance
-                filterStations()
-                isLocationEnabled = locationService.currentLocation != nil
+                filterStations() // Filter and sort with updated data
+                // isLocationEnabled is now computed, no need to set it here
                 isLoading = false
+                print("⏰ ViewModel (Currents): UI state update complete at \(Date())") // Added UI update timing
             }
         } catch {
+            print("❌ ViewModel (Currents): Error in loadStations at \(Date()): \(error.localizedDescription)") // Added error timing
             await MainActor.run {
                 errorMessage = "Failed to load stations: \(error.localizedDescription)"
-                stations = []
+                allStations = [] // Clear all stations on error
+                self.stations = [] // Clear filtered stations on error
+                totalStations = 0
                 isLoading = false
             }
         }
+         print("⏰ ViewModel (Currents): loadStations() finished at \(Date())") // Added overall finish time
     }
-    
+
     func refreshStations() async {
-        await loadStations()
+         // Added print for refresh action
+         print("🔄 ViewModel (Currents): refreshStations() called at \(Date())")
+         // Reset state before reloading
+         await MainActor.run {
+              self.stations = []
+              self.allStations = []
+              self.totalStations = 0
+         }
+         await loadStations()
     }
-    
+
     func filterStations() {
+        // This print helps see when sorting actually happens
+        print("🔄 ViewModel (Currents): filterStations() called at \(Date())")
         let filtered = allStations.filter { station in
             let matchesFavorite = !showOnlyFavorites || station.station.isFavorite
             let matchesSearch = searchText.isEmpty ||
                 station.station.name.localizedCaseInsensitiveContains(searchText) ||
                 (station.station.state?.localizedCaseInsensitiveContains(searchText) ?? false) ||
                 station.station.id.localizedCaseInsensitiveContains(searchText)
-            
+
             return matchesFavorite && matchesSearch
         }
-        
+
         // Sort stations by distance, then by favorite status, then by name
         let sorted = filtered.sorted { first, second in
-            if first.distanceFromUser != second.distanceFromUser {
-                return first.distanceFromUser < second.distanceFromUser
-            } else if first.station.isFavorite != second.station.isFavorite {
-                return first.station.isFavorite
-            } else {
-                return first.station.name < second.station.name
-            }
+             // Prioritize stations with known distance
+             if first.distanceFromUser != Double.greatestFiniteMagnitude && second.distanceFromUser == Double.greatestFiniteMagnitude {
+                 return true // first comes before second
+             } else if first.distanceFromUser == Double.greatestFiniteMagnitude && second.distanceFromUser != Double.greatestFiniteMagnitude {
+                 return false // second comes before first
+             } else if first.distanceFromUser != second.distanceFromUser {
+                 // Both have valid distances, sort by distance
+                 return first.distanceFromUser < second.distanceFromUser
+             } else if first.station.isFavorite != second.station.isFavorite {
+                 // Distances are equal (or both infinite), sort by favorite
+                 return first.station.isFavorite && !second.station.isFavorite // Favorites first
+             } else {
+                 // Distances and favorite status are equal, sort by name
+                 return first.station.name.localizedCompare(second.station.name) == .orderedAscending
+             }
         }
-        
-        stations = sorted
-        totalStations = sorted.count
+
+         // Update the @Published property on the main thread
+         DispatchQueue.main.async {
+             // Avoid redundant updates if the list hasn't changed (optional optimization)
+             // if self.stations.map({ $0.id }) != sorted.map({ $0.id }) {
+                 self.stations = sorted
+                 print("🔄 ViewModel (Currents): filterStations() updated self.stations on main thread at \(Date()). Count: \(sorted.count)")
+             // }
+             self.totalStations = sorted.count
+         }
     }
-    
+
+
     func toggleFavorites() {
         showOnlyFavorites.toggle()
         filterStations()
     }
-    
+
     func clearSearch() {
         searchText = ""
         filterStations()
     }
-    
-    // New method to toggle the favorite status of a station in the database
+
     func toggleStationFavorite(stationId: String) async {
-        // Call the database service to toggle favorite status
-        var newFavoriteStatus: Bool
-        // Check if the station has a bin value
-        if let bin = allStations.first(where: { $0.station.id == stationId })?.station.currentBin {
+        // Find the station first to determine if it has a bin
+        guard let stationToToggle = allStations.first(where: { $0.station.id == stationId })?.station else {
+            print("❌ ViewModel (Currents): Could not find station \(stationId) to toggle favorite.")
+            return
+        }
+
+        // Call the appropriate database function based on whether a bin exists
+        let newFavoriteStatus: Bool
+        if let bin = stationToToggle.currentBin {
             newFavoriteStatus = await databaseService.toggleCurrentStationFavorite(id: stationId, bin: bin)
+            print("⭐ ViewModel (Currents): Toggled favorite for \(stationId) (bin: \(bin)) to \(newFavoriteStatus) at \(Date())")
         } else {
             newFavoriteStatus = await databaseService.toggleCurrentStationFavorite(id: stationId)
+            print("⭐ ViewModel (Currents): Toggled favorite for \(stationId) (no bin) to \(newFavoriteStatus) at \(Date())")
         }
-        
-        // Update our local data
+
+        // Update local data on the main thread
         await MainActor.run {
-            // We need to recreate the station objects with updated favorite status
-            // Update in allStations
-            allStations = allStations.map { stationWithDistance in
-                if stationWithDistance.station.id == stationId {
-                    // Create a new station with updated favorite status
-                    var updatedStation = stationWithDistance.station
-                    updatedStation.isFavorite = newFavoriteStatus
-                    // Create a new StationWithDistance with the updated station
-                    return StationWithDistance(
-                        station: updatedStation,
-                        distanceFromUser: stationWithDistance.distanceFromUser
-                    )
-                }
-                return stationWithDistance
+            // Update in allStations first
+            if let index = allStations.firstIndex(where: { $0.station.id == stationId }) {
+                var updatedStation = allStations[index].station
+                updatedStation.isFavorite = newFavoriteStatus
+                // Create a new StationWithDistance to replace the old one
+                allStations[index] = StationWithDistance(
+                    station: updatedStation,
+                    distanceFromUser: allStations[index].distanceFromUser
+                )
+                print("⭐ ViewModel (Currents): Updated allStations array for \(stationId) at \(Date())")
+            } else {
+                 print("❌ ViewModel (Currents): Station \(stationId) not found in allStations after toggle at \(Date())")
             }
-            
+
             // Re-apply filters to update the filtered stations list
             filterStations()
         }
     }
-    
+
     // MARK: - Private Methods
-    private func requestLocationAccess() {
-        Task {
-            let authorized = await locationService.requestLocationPermission()
-            if authorized {
-                locationService.startUpdatingLocation()
-            }
-            
-            await MainActor.run {
-                isLocationEnabled = authorized
-            }
-        }
-    }
+    // Removed requestLocationAccess() as it's handled by ServiceProvider
 }
