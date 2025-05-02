@@ -19,7 +19,7 @@ class TideStationDatabaseService {
         do {
             let db = try databaseCore.ensureConnection()
             
-            print("📊 Creating TideStationFavorites table if it doesn't exist")
+         //   print("📊 Creating TideStationFavorites table if it doesn't exist")
             
             // Get current tables first
             let tablesQuery = "SELECT name FROM sqlite_master WHERE type='table'"
@@ -29,7 +29,7 @@ class TideStationDatabaseService {
                     tableNames.append(tableName)
                 }
             }
-            print("📊 Current tables: \(tableNames.joined(separator: ", "))")
+        //    print("📊 Current tables: \(tableNames.joined(separator: ", "))")
             
             // Create table
             try db.run(databaseCore.tideStationFavorites.create(ifNotExists: true) { table in
@@ -46,7 +46,7 @@ class TideStationDatabaseService {
             }
             
             if tableNames.contains("TideStationFavorites") {
-                print("📊 TideStationFavorites table created or already exists")
+         //       print("📊 TideStationFavorites table created or already exists")
                 
                 // Check if we can write to the table
                 try db.run(databaseCore.tideStationFavorites.insert(or: .replace,
@@ -57,16 +57,16 @@ class TideStationDatabaseService {
                 // Verify write worked
                 let testQuery = databaseCore.tideStationFavorites.filter(databaseCore.colStationId == "TEST_INIT")
                 if let _testRecord = try? db.pluck(testQuery) {
-                    print("📊 Successfully wrote and read test record")
+        //            print("📊 Successfully wrote and read test record")
                 } else {
-                    print("❌ Could not verify test record")
+          //          print("❌ Could not verify test record")
                 }
             } else {
-                print("❌ Failed to create TideStationFavorites table")
+         //       print("❌ Failed to create TideStationFavorites table")
                 throw NSError(domain: "DatabaseService", code: 4, userInfo: [NSLocalizedDescriptionKey: "Failed to create table"])
             }
         } catch {
-            print("❌ Error creating TideStationFavorites table: \(error.localizedDescription)")
+      //      print("❌ Error creating TideStationFavorites table: \(error.localizedDescription)")
             throw error
         }
     }
@@ -76,18 +76,18 @@ class TideStationDatabaseService {
         do {
             let db = try databaseCore.ensureConnection()
             
-            print("📊 CHECK: Checking favorite status for tide station \(id)")
+        //    print("📊 CHECK: Checking favorite status for tide station \(id)")
             let query = databaseCore.tideStationFavorites.filter(databaseCore.colStationId == id)
             
             if let favorite = try db.pluck(query) {
                 let result = favorite[databaseCore.colIsFavorite]
-                print("📊 CHECK: Found favorite status: \(result)")
+        //        print("📊 CHECK: Found favorite status: \(result)")
                 return result
             }
-            print("📊 CHECK: No favorite record found")
+        //    print("📊 CHECK: No favorite record found")
             return false
         } catch {
-            print("❌ CHECK ERROR: \(error.localizedDescription)")
+        //    print("❌ CHECK ERROR: \(error.localizedDescription)")
             return false
         }
     }
@@ -97,7 +97,7 @@ class TideStationDatabaseService {
         do {
             let db = try databaseCore.ensureConnection()
             
-            print("📊 TOGGLE: Beginning toggle for tide station \(id)")
+       //     print("📊 TOGGLE: Beginning toggle for tide station \(id)")
             
             // Variable to store the result outside transaction
             var result = false
@@ -109,15 +109,15 @@ class TideStationDatabaseService {
                     let currentValue = favorite[databaseCore.colIsFavorite]
                     let newValue = !currentValue
                     
-                    print("📊 TOGGLE: Found existing record with favorite status: \(currentValue), toggling to \(newValue)")
+       //             print("📊 TOGGLE: Found existing record with favorite status: \(currentValue), toggling to \(newValue)")
                     
                     let updatedRow = databaseCore.tideStationFavorites.filter(databaseCore.colStationId == id)
                     let count = try db.run(updatedRow.update(databaseCore.colIsFavorite <- newValue))
                     
-                    print("📊 TOGGLE: Updated record with result: \(count) rows affected")
+        //            print("📊 TOGGLE: Updated record with result: \(count) rows affected")
                     result = newValue
                 } else {
-                    print("📊 TOGGLE: No existing record found, creating new favorite")
+        //            print("📊 TOGGLE: No existing record found, creating new favorite")
                     
                     let insert = databaseCore.tideStationFavorites.insert(
                         databaseCore.colStationId <- id,
@@ -125,7 +125,7 @@ class TideStationDatabaseService {
                     )
                     
                     let rowId = try db.run(insert)
-                    print("📊 TOGGLE: Inserted new favorite with rowId: \(rowId)")
+        //            print("📊 TOGGLE: Inserted new favorite with rowId: \(rowId)")
                     result = true
                 }
             }
@@ -134,8 +134,8 @@ class TideStationDatabaseService {
             try await databaseCore.flushDatabaseAsync()
             return result
         } catch {
-            print("❌ TOGGLE ERROR: \(error.localizedDescription)")
-            print("❌ TOGGLE ERROR DETAILS: \(error)")
+       //     print("❌ TOGGLE ERROR: \(error.localizedDescription)")
+       //     print("❌ TOGGLE ERROR DETAILS: \(error)")
             return false
         }
     }

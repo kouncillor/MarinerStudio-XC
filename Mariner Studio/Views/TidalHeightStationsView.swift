@@ -87,16 +87,30 @@ struct TidalHeightStationsView: View {
     }
     
     private var statusBar: some View {
-        HStack {
-            Text("Total Stations: \(viewModel.totalStations)")
-                .font(.footnote)
-            Spacer()
-            Text("Location: \(viewModel.isLocationEnabled ? "Enabled" : "Disabled")")
-                .font(.footnote)
+        VStack(spacing: 4) {
+            HStack {
+                Text("Total Stations: \(viewModel.totalStations)")
+                    .font(.footnote)
+                Spacer()
+                Text("Location: \(viewModel.isLocationEnabled ? "Enabled" : "Disabled")")
+                    .font(.footnote)
+            }
+            
+            if viewModel.isLocationEnabled {
+                HStack {
+                    Text("Your Position: \(viewModel.userLatitude), \(viewModel.userLongitude)")
+                        .font(.footnote)
+                        .foregroundColor(.blue)
+                    Spacer()
+                }
+            }
         }
         .padding(.horizontal)
         .padding(.bottom, 5)
     }
+    
+    
+    
     
     private var stationsList: some View {
         List {
