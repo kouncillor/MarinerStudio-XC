@@ -6,6 +6,65 @@ import SQLite
 class NavUnitDatabaseService {
     // MARK: - Properties
     private let databaseCore: DatabaseCore
+    
+    // Table definition - each service defines its own tables
+    private let navUnits = Table("NavUnits")
+    
+    // Column definitions with correct case to match database schema
+    private let colNavUnitId = Expression<String>("NAV_UNIT_ID")
+    private let colUnloCode = Expression<String?>("UNLOCODE")
+    private let colNavUnitName = Expression<String>("NAV_UNIT_NAME")
+    private let colLocationDescription = Expression<String?>("LOCATION_DESCRIPTION")
+    private let colFacilityType = Expression<String?>("FACILITY_TYPE")
+    private let colStreetAddress = Expression<String?>("STREET_ADDRESS")
+    private let colCityOrTown = Expression<String?>("CITY_OR_TOWN")
+    private let colStatePostalCode = Expression<String?>("STATE_POSTAL_CODE")
+    private let colZipCode = Expression<String?>("ZIPCODE")
+    private let colCountyName = Expression<String?>("COUNTY_NAME")
+    private let colCountyFipsCode = Expression<String?>("COUNTY_FIPS_CODE")
+    private let colCongress = Expression<String?>("CONGRESS")
+    private let colCongressFips = Expression<String?>("CONGRESS_FIPS")
+    private let colWaterwayName = Expression<String?>("WTWY_NAME")
+    private let colPortName = Expression<String?>("PORT_NAME")
+    private let colMile = Expression<Double?>("MILE")
+    private let colBank = Expression<String?>("BANK")
+    private let colLatitude = Expression<Double>("LATITUDE")
+    private let colLongitude = Expression<Double>("LONGITUDE")
+    private let colOperators = Expression<String?>("OPERATORS")
+    private let colOwners = Expression<String?>("OWNERS")
+    private let colPurpose = Expression<String?>("PURPOSE")
+    private let colHighwayNote = Expression<String?>("HIGHWAY_NOTE")
+    private let colRailwayNote = Expression<String?>("RAILWAY_NOTE")
+    private let colLocation = Expression<String?>("LOCATION")
+    private let colDock = Expression<String?>("DOCK")
+    private let colCommodities = Expression<String?>("COMMODITIES")
+    private let colConstruction = Expression<String?>("CONSTRUCTION")
+    private let colMechanicalHandling = Expression<String?>("MECHANICAL_HANDLING")
+    private let colRemarks = Expression<String?>("REMARKS")
+    private let colVerticalDatum = Expression<String?>("VERTICAL_DATUM")
+    private let colDepthMin = Expression<Double?>("DEPTH_MIN")
+    private let colDepthMax = Expression<Double?>("DEPTH_MAX")
+    private let colBerthingLargest = Expression<Double?>("BERTHING_LARGEST")
+    private let colBerthingTotal = Expression<Double?>("BERTHING_TOTAL")
+    private let colDeckHeightMin = Expression<Double?>("DECK_HEIGHT_MIN")
+    private let colDeckHeightMax = Expression<Double?>("DECK_HEIGHT_MAX")
+    private let colServiceInitiationDate = Expression<String?>("SERVICE_INITIATION_DATE")
+    private let colServiceTerminationDate = Expression<String?>("SERVICE_TERMINATION_DATE")
+    private let colIsFavorite = Expression<Bool>("is_favorite")
+    
+    // These tables and columns should be defined here for Personal Notes and Change Recommendations
+    private let personalNotes = Table("PersonalNote")
+    private let changeRecommendations = Table("ChangeRecommendation")
+    
+    // Column definitions for PersonalNote
+    private let colId = Expression<Int>("Id")
+    private let colNoteText = Expression<String>("NoteText")
+    private let colCreatedAt = Expression<Date>("CreatedAt")
+    private let colModifiedAt = Expression<Date?>("ModifiedAt")
+    
+    // Column definitions for ChangeRecommendation
+    private let colRecommendationText = Expression<String>("RecommendationText")
+    private let colStatus = Expression<Int>("Status")
 
     // MARK: - Initialization
     init(databaseCore: DatabaseCore) {
@@ -19,45 +78,71 @@ class NavUnitDatabaseService {
         do {
             let db = try databaseCore.ensureConnection()
 
-            // REMOVED the 'let columns = [...]' array definition
-
-            // This query implicitly selects all columns defined for the 'navUnits' table
-            let query = databaseCore.navUnits.order(databaseCore.colNavUnitName.asc)
+            // Query using our locally defined columns
+            let query = navUnits.order(colNavUnitName.asc)
 
             var results: [NavUnit] = []
             var count = 0 // Counter for logging
 
-            print(" S NavUnitDatabaseService: Starting fetch...") // Add start log
+            print(" S NavUnitDatabaseService: Starting fetch...")
 
             for row in try db.prepare(query) {
-
-                // *** Log Raw Values ***
-                let latValue = row[databaseCore.colLatitude]
-                let lonValue = row[databaseCore.colLongitude]
-                let unitId = row[databaseCore.colNavUnitId] // Get ID for context
-                if count < 10 { // Log first 10
+                // Log raw values for debugging
+                let latValue = row[colLatitude]
+                let lonValue = row[colLongitude]
+                let unitId = row[colNavUnitId]
+                if count < 10 {
                     print(" S NavUnitDB (\(count)): ID \(unitId) - Raw Lat: \(String(describing: latValue)), Raw Lon: \(String(describing: lonValue))")
                 }
-                // **********************
 
-                // Construct the NavUnit using the full initializer
-                // Ensure mappings here are correct based on DatabaseCore definitions
+                // Create NavUnit with all fields properly mapped
                 let unit = NavUnit(
-                    navUnitId: row[databaseCore.colNavUnitId],
-                    navUnitName: row[databaseCore.colNavUnitName] ?? "N/A",
-                    // ... map ALL other necessary NavUnit properties from 'row' ...
-                    // Make sure DatabaseCore defines Expressions for all needed columns.
-                    // Example: facilityType: row[databaseCore.colFacilityType],
-                    latitude: latValue, // Use the logged value
-                    longitude: lonValue, // Use the logged value
-                    // ... map other properties ...
-                    isFavorite: row[databaseCore.colNavUnitIsFavorite] // Assuming non-optional Bool
+                    navUnitId: row[colNavUnitId],
+                    unloCode: row[colUnloCode],
+                    navUnitName: row[colNavUnitName],
+                    locationDescription: row[colLocationDescription],
+                    facilityType: row[colFacilityType],
+                    streetAddress: row[colStreetAddress],
+                    cityOrTown: row[colCityOrTown],
+                    statePostalCode: row[colStatePostalCode],
+                    zipCode: row[colZipCode],
+                    countyName: row[colCountyName],
+                    countyFipsCode: row[colCountyFipsCode],
+                    congress: row[colCongress],
+                    congressFips: row[colCongressFips],
+                    waterwayName: row[colWaterwayName],
+                    portName: row[colPortName],
+                    mile: row[colMile],
+                    bank: row[colBank],
+                    latitude: latValue,
+                    longitude: lonValue,
+                    operators: row[colOperators],
+                    owners: row[colOwners],
+                    purpose: row[colPurpose],
+                    highwayNote: row[colHighwayNote],
+                    railwayNote: row[colRailwayNote],
+                    location: row[colLocation],
+                    dock: row[colDock],
+                    commodities: row[colCommodities],
+                    construction: row[colConstruction],
+                    mechanicalHandling: row[colMechanicalHandling],
+                    remarks: row[colRemarks],
+                    verticalDatum: row[colVerticalDatum],
+                    depthMin: row[colDepthMin],
+                    depthMax: row[colDepthMax],
+                    berthingLargest: row[colBerthingLargest],
+                    berthingTotal: row[colBerthingTotal],
+                    deckHeightMin: row[colDeckHeightMin],
+                    deckHeightMax: row[colDeckHeightMax],
+                    serviceInitiationDate: row[colServiceInitiationDate],
+                    serviceTerminationDate: row[colServiceTerminationDate],
+                    isFavorite: row[colIsFavorite]
                 )
                 results.append(unit)
-                count += 1 // Increment counter
+                count += 1
             }
 
-            print(" S NavUnitDatabaseService: Fetched \(results.count) units.") // Add end log
+            print(" S NavUnitDatabaseService: Fetched \(results.count) units.")
             return results
         } catch {
             print(" S NavUnitDatabaseService: Error fetching nav units: \(error.localizedDescription)")
@@ -65,57 +150,40 @@ class NavUnitDatabaseService {
         }
     }
 
-    
-    
-    
-    
-    
-    
-    
-    // Add this method within the NavUnitDatabaseService class in
-    // MarinerStudio-XC/Mariner Studio/Services/Database/NavUnitDatabaseService.swift
+    // Toggle favorite status with locally defined columns
+    func toggleFavoriteNavUnitAsync(navUnitId: String) async throws -> Bool {
+        do {
+            let db = try databaseCore.ensureConnection()
 
-        // Toggle favorite status for a navigation unit
-        func toggleFavoriteNavUnitAsync(navUnitId: String) async throws -> Bool {
-            do {
-                let db = try databaseCore.ensureConnection()
+            // Find the specific NavUnit row
+            let query = navUnits.filter(colNavUnitId == navUnitId)
 
-                // Find the specific NavUnit row
-                let query = databaseCore.navUnits.filter(databaseCore.colNavUnitId == navUnitId)
-
-                // Try to get the current unit's favorite status
-                guard let unit = try db.pluck(query) else {
-                    // If the unit doesn't exist in the table for some reason, throw an error or return false
-                    print(" S NavUnitDatabaseService: Error toggling favorite - NavUnit \(navUnitId) not found.")
-                    // Depending on desired behavior, you might throw an error:
-                     throw NSError(domain: "DatabaseService", code: 10, userInfo: [NSLocalizedDescriptionKey: "NavUnit not found for toggling favorite."])
-                    // Or simply return false if non-existence implies not favorited:
-                    // return false
-                }
-
-                let currentValue = unit[databaseCore.colNavUnitIsFavorite]
-                let newValue = !currentValue // Toggle the boolean value
-
-                print(" S NavUnitDatabaseService: Toggling favorite for \(navUnitId) from \(currentValue) to \(newValue)")
-
-                // Prepare the update statement
-                let updatedRow = databaseCore.navUnits.filter(databaseCore.colNavUnitId == navUnitId)
-                // Execute the update
-                try db.run(updatedRow.update(databaseCore.colNavUnitIsFavorite <- newValue))
-
-                // Flush changes to disk
-                try await databaseCore.flushDatabaseAsync()
-                print(" S NavUnitDatabaseService: Favorite status updated successfully for \(navUnitId). New status: \(newValue)")
-                return newValue // Return the new status
-            } catch {
-                print(" S NavUnitDatabaseService: Error toggling favorite for NavUnit \(navUnitId): \(error.localizedDescription)")
-                throw error // Re-throw the error to be handled by the caller (e.g., the ViewModel)
+            // Try to get the current unit's favorite status
+            guard let unit = try db.pluck(query) else {
+                print(" S NavUnitDatabaseService: Error toggling favorite - NavUnit \(navUnitId) not found.")
+                throw NSError(domain: "DatabaseService", code: 10, userInfo: [NSLocalizedDescriptionKey: "NavUnit not found for toggling favorite."])
             }
+
+            let currentValue = unit[colIsFavorite]
+            let newValue = !currentValue // Toggle the boolean value
+
+            print(" S NavUnitDatabaseService: Toggling favorite for \(navUnitId) from \(currentValue) to \(newValue)")
+
+            // Prepare the update statement
+            let updatedRow = navUnits.filter(colNavUnitId == navUnitId)
+            // Execute the update
+            try db.run(updatedRow.update(colIsFavorite <- newValue))
+
+            // Flush changes to disk
+            try await databaseCore.flushDatabaseAsync()
+            print(" S NavUnitDatabaseService: Favorite status updated successfully for \(navUnitId). New status: \(newValue)")
+            return newValue // Return the new status
+        } catch {
+            print(" S NavUnitDatabaseService: Error toggling favorite for NavUnit \(navUnitId): \(error.localizedDescription)")
+            throw error
         }
-    
-    
-    
-    
+    }
+
     // MARK: - Personal Notes Methods
 
     // Get personal notes for a navigation unit
@@ -123,16 +191,16 @@ class NavUnitDatabaseService {
         do {
             let db = try databaseCore.ensureConnection()
 
-            let query = databaseCore.personalNotes.filter(databaseCore.colNavUnitId == navUnitId).order(databaseCore.colCreatedAt.desc)
+            let query = personalNotes.filter(colNavUnitId == navUnitId).order(colCreatedAt.desc)
             var results: [PersonalNote] = []
 
             for row in try db.prepare(query) {
                 let note = PersonalNote(
-                    id: row[databaseCore.colId],
-                    navUnitId: row[databaseCore.colNavUnitId],
-                    noteText: row[databaseCore.colNoteText],
-                    createdAt: row[databaseCore.colCreatedAt],
-                    modifiedAt: row[databaseCore.colModifiedAt]
+                    id: row[colId],
+                    navUnitId: row[colNavUnitId],
+                    noteText: row[colNoteText],
+                    createdAt: row[colCreatedAt],
+                    modifiedAt: row[colModifiedAt]
                 )
                 results.append(note)
             }
@@ -149,10 +217,10 @@ class NavUnitDatabaseService {
         do {
             let db = try databaseCore.ensureConnection()
 
-            let insert = databaseCore.personalNotes.insert(
-                databaseCore.colNavUnitId <- note.navUnitId,
-                databaseCore.colNoteText <- note.noteText,
-                databaseCore.colCreatedAt <- Date()
+            let insert = personalNotes.insert(
+                colNavUnitId <- note.navUnitId,
+                colNoteText <- note.noteText,
+                colCreatedAt <- Date()
             )
 
             let rowId = try db.run(insert)
@@ -169,10 +237,10 @@ class NavUnitDatabaseService {
         do {
             let db = try databaseCore.ensureConnection()
 
-            let updatedRow = databaseCore.personalNotes.filter(databaseCore.colId == note.id)
+            let updatedRow = personalNotes.filter(colId == note.id)
             let affectedRows = try db.run(updatedRow.update(
-                databaseCore.colNoteText <- note.noteText,
-                databaseCore.colModifiedAt <- Date()
+                colNoteText <- note.noteText,
+                colModifiedAt <- Date()
             ))
             try await databaseCore.flushDatabaseAsync()
             return affectedRows
@@ -187,7 +255,7 @@ class NavUnitDatabaseService {
         do {
             let db = try databaseCore.ensureConnection()
 
-            let query = databaseCore.personalNotes.filter(databaseCore.colId == noteId)
+            let query = personalNotes.filter(colId == noteId)
             let affectedRows = try db.run(query.delete())
             try await databaseCore.flushDatabaseAsync()
             return affectedRows
@@ -204,18 +272,18 @@ class NavUnitDatabaseService {
         do {
             let db = try databaseCore.ensureConnection()
 
-            let query = databaseCore.changeRecommendations.filter(databaseCore.colNavUnitId == navUnitId).order(databaseCore.colCreatedAt.desc)
+            let query = changeRecommendations.filter(colNavUnitId == navUnitId).order(colCreatedAt.desc)
             var results: [ChangeRecommendation] = []
 
             for row in try db.prepare(query) {
-                let statusInt = row[databaseCore.colStatus]
+                let statusInt = row[colStatus]
                 let status = RecommendationStatus(rawValue: statusInt) ?? .pending
 
                 let recommendation = ChangeRecommendation(
-                    id: row[databaseCore.colId],
-                    navUnitId: row[databaseCore.colNavUnitId],
-                    recommendationText: row[databaseCore.colRecommendationText],
-                    createdAt: row[databaseCore.colCreatedAt],
+                    id: row[colId],
+                    navUnitId: row[colNavUnitId],
+                    recommendationText: row[colRecommendationText],
+                    createdAt: row[colCreatedAt],
                     status: status
                 )
                 results.append(recommendation)
@@ -233,11 +301,11 @@ class NavUnitDatabaseService {
         do {
             let db = try databaseCore.ensureConnection()
 
-            let insert = databaseCore.changeRecommendations.insert(
-                databaseCore.colNavUnitId <- recommendation.navUnitId,
-                databaseCore.colRecommendationText <- recommendation.recommendationText,
-                databaseCore.colCreatedAt <- Date(),
-                databaseCore.colStatus <- RecommendationStatus.pending.rawValue
+            let insert = changeRecommendations.insert(
+                colNavUnitId <- recommendation.navUnitId,
+                colRecommendationText <- recommendation.recommendationText,
+                colCreatedAt <- Date(),
+                colStatus <- RecommendationStatus.pending.rawValue
             )
 
             let rowId = try db.run(insert)
@@ -254,8 +322,8 @@ class NavUnitDatabaseService {
         do {
             let db = try databaseCore.ensureConnection()
 
-            let updatedRow = databaseCore.changeRecommendations.filter(databaseCore.colId == recommendationId)
-            let affectedRows = try db.run(updatedRow.update(databaseCore.colStatus <- status.rawValue))
+            let updatedRow = changeRecommendations.filter(colId == recommendationId)
+            let affectedRows = try db.run(updatedRow.update(colStatus <- status.rawValue))
             try await databaseCore.flushDatabaseAsync()
             return affectedRows
         } catch {
