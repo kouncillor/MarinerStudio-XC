@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MainView: View {
     @EnvironmentObject var serviceProvider: ServiceProvider
+    @State private var showSettings = false
 
     var body: some View {
         NavigationStack {
@@ -84,6 +85,23 @@ struct MainView: View {
                 .padding()
             }
             .navigationTitle("Mariner Studio")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: {
+                        showSettings = true
+                    }) {
+                        Image(systemName: "gear")
+                    }
+                }
+            }
+            .sheet(isPresented: $showSettings) {
+                NavigationView {
+                    WeatherSettingsView()
+                        .navigationBarItems(trailing: Button("Done") {
+                            showSettings = false
+                        })
+                }
+            }
         }
     }
 }
