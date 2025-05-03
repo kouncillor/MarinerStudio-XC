@@ -4,6 +4,13 @@ import SQLite
 #endif
 
 class BuoyDatabaseService {
+    // MARK: - Table Definitions
+    private let buoyStationFavorites = Table("BuoyStationFavorites")
+    
+    // MARK: - Column Definitions
+    private let colStationId = Expression<String>("station_id")
+    private let colIsFavorite = Expression<Bool>("is_favorite")
+    
     // MARK: - Properties
     private let databaseCore: DatabaseCore
     
@@ -19,10 +26,10 @@ class BuoyDatabaseService {
         do {
             let db = try databaseCore.ensureConnection()
             
-            let query = databaseCore.buoyStationFavorites.filter(databaseCore.colStationId == stationId)
+            let query = buoyStationFavorites.filter(colStationId == stationId)
             
             if let favorite = try db.pluck(query) {
-                return favorite[databaseCore.colIsFavorite]
+                return favorite[colIsFavorite]
             }
             return false
         } catch {
@@ -36,21 +43,21 @@ class BuoyDatabaseService {
         do {
             let db = try databaseCore.ensureConnection()
             
-            let query = databaseCore.buoyStationFavorites.filter(databaseCore.colStationId == stationId)
+            let query = buoyStationFavorites.filter(colStationId == stationId)
             
             if let favorite = try db.pluck(query) {
-                let currentValue = favorite[databaseCore.colIsFavorite]
+                let currentValue = favorite[colIsFavorite]
                 let newValue = !currentValue
                 
-                let updatedRow = databaseCore.buoyStationFavorites.filter(databaseCore.colStationId == stationId)
-                try db.run(updatedRow.update(databaseCore.colIsFavorite <- newValue))
+                let updatedRow = buoyStationFavorites.filter(colStationId == stationId)
+                try db.run(updatedRow.update(colIsFavorite <- newValue))
                 
                 try await databaseCore.flushDatabaseAsync()
                 return newValue
             } else {
-                try db.run(databaseCore.buoyStationFavorites.insert(
-                    databaseCore.colStationId <- stationId,
-                    databaseCore.colIsFavorite <- true
+                try db.run(buoyStationFavorites.insert(
+                    colStationId <- stationId,
+                    colIsFavorite <- true
                 ))
                 try await databaseCore.flushDatabaseAsync()
                 return true

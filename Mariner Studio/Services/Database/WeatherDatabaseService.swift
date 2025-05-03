@@ -4,6 +4,21 @@ import SQLite
 #endif
 
 class WeatherDatabaseService {
+    // MARK: - Table Definitions
+    private let moonPhases = Table("MoonPhase")
+    private let weatherLocationFavorites = Table("WeatherLocationFavorite")
+    
+    // MARK: - Column Definitions - MoonPhase
+    private let colDate = Expression<String>("Date")
+    private let colPhase = Expression<String>("Phase")
+    
+    // MARK: - Column Definitions - WeatherLocationFavorite
+    private let colLatitude = Expression<Double>("Latitude")
+    private let colLongitude = Expression<Double>("Longitude")
+    private let colLocationName = Expression<String>("LocationName")
+    private let colIsFavorite = Expression<Bool>("is_favorite")
+    private let colCreatedAt = Expression<Date>("CreatedAt")
+    
     // MARK: - Properties
     private let databaseCore: DatabaseCore
     
@@ -19,12 +34,12 @@ class WeatherDatabaseService {
         do {
             let db = try databaseCore.ensureConnection()
             
-            let query = databaseCore.moonPhases.filter(databaseCore.colDate == date)
+            let query = moonPhases.filter(colDate == date)
             
             if let row = try db.pluck(query) {
                 let phase = MoonPhase(
-                    date: row[databaseCore.colDate],
-                    phase: row[databaseCore.colPhase]
+                    date: row[colDate],
+                    phase: row[colPhase]
                 )
                 print("Looking up moon phase for date: \(date)")
                 print("Found: \(phase.phase)")
@@ -49,13 +64,13 @@ class WeatherDatabaseService {
         do {
             let db = try databaseCore.ensureConnection()
             
-            try db.run(databaseCore.weatherLocationFavorites.create(ifNotExists: true) { table in
-                table.column(databaseCore.colLatitude)
-                table.column(databaseCore.colLongitude)
-                table.column(databaseCore.colLocationName)
-                table.column(databaseCore.colIsFavorite)
-                table.column(databaseCore.colCreatedAt)
-                table.primaryKey(databaseCore.colLatitude, databaseCore.colLongitude)
+            try db.run(weatherLocationFavorites.create(ifNotExists: true) { table in
+                table.column(colLatitude)
+                table.column(colLongitude)
+                table.column(colLocationName)
+                table.column(colIsFavorite)
+                table.column(colCreatedAt)
+                table.primaryKey(colLatitude, colLongitude)
             })
         } catch {
             print("Error initializing weather location favorites table: \(error.localizedDescription)")
@@ -68,10 +83,10 @@ class WeatherDatabaseService {
         do {
             let db = try databaseCore.ensureConnection()
             
-            let query = databaseCore.weatherLocationFavorites.filter(databaseCore.colLatitude == latitude && databaseCore.colLongitude == longitude)
+            let query = weatherLocationFavorites.filter(colLatitude == latitude && colLongitude == longitude)
             
             if let favorite = try db.pluck(query) {
-                return favorite[databaseCore.colIsFavorite]
+                return favorite[colIsFavorite]
             }
             return false
         } catch {
@@ -85,27 +100,27 @@ class WeatherDatabaseService {
         do {
             let db = try databaseCore.ensureConnection()
             
-            let query = databaseCore.weatherLocationFavorites.filter(databaseCore.colLatitude == latitude && databaseCore.colLongitude == longitude)
+            let query = weatherLocationFavorites.filter(colLatitude == latitude && colLongitude == longitude)
             
             if let favorite = try db.pluck(query) {
-                let currentValue = favorite[databaseCore.colIsFavorite]
+                let currentValue = favorite[colIsFavorite]
                 let newValue = !currentValue
                 
-                let updatedRow = databaseCore.weatherLocationFavorites.filter(databaseCore.colLatitude == latitude && databaseCore.colLongitude == longitude)
+                let updatedRow = weatherLocationFavorites.filter(colLatitude == latitude && colLongitude == longitude)
                 try db.run(updatedRow.update(
-                    databaseCore.colIsFavorite <- newValue,
-                    databaseCore.colLocationName <- locationName
+                    colIsFavorite <- newValue,
+                    colLocationName <- locationName
                 ))
                 
                 try await databaseCore.flushDatabaseAsync()
                 return newValue
             } else {
-                try db.run(databaseCore.weatherLocationFavorites.insert(
-                    databaseCore.colLatitude <- latitude,
-                    databaseCore.colLongitude <- longitude,
-                    databaseCore.colLocationName <- locationName,
-                    databaseCore.colIsFavorite <- true,
-                    databaseCore.colCreatedAt <- Date()
+                try db.run(weatherLocationFavorites.insert(
+                    colLatitude <- latitude,
+                    colLongitude <- longitude,
+                    colLocationName <- locationName,
+                    colIsFavorite <- true,
+                    colCreatedAt <- Date()
                 ))
                 try await databaseCore.flushDatabaseAsync()
                 return true
@@ -121,16 +136,16 @@ class WeatherDatabaseService {
         do {
             let db = try databaseCore.ensureConnection()
             
-            let query = databaseCore.weatherLocationFavorites.filter(databaseCore.colIsFavorite == true).order(databaseCore.colCreatedAt.desc)
+            let query = weatherLocationFavorites.filter(colIsFavorite == true).order(colCreatedAt.desc)
             var results: [WeatherLocationFavorite] = []
             
             for row in try db.prepare(query) {
                 let favorite = WeatherLocationFavorite(
-                    latitude: row[databaseCore.colLatitude],
-                    longitude: row[databaseCore.colLongitude],
-                    locationName: row[databaseCore.colLocationName],
-                    isFavorite: row[databaseCore.colIsFavorite],
-                    createdAt: row[databaseCore.colCreatedAt]
+                    latitude: row[colLatitude],
+                    longitude: row[colLongitude],
+                    locationName: row[colLocationName],
+                    isFavorite: row[colIsFavorite],
+                    createdAt: row[colCreatedAt]
                 )
                 results.append(favorite)
             }

@@ -3,6 +3,8 @@ import Foundation
 import SQLite
 #endif
 
+/// Core database management class responsible for connection lifecycle and common database operations.
+/// Each database service should define its own tables and columns.
 class DatabaseCore {
     // MARK: - Properties
     private var connection: Connection?
@@ -10,72 +12,13 @@ class DatabaseCore {
     private let versionPreferenceKey = "DatabaseVersion"
     private let currentDatabaseVersion = 1
     
-    // MARK: - Tables
-    let tideStationFavorites = Table("TideStationFavorites")
-    let tidalCurrentStationFavorites = Table("TidalCurrentStationFavorites")
-    let navUnits = Table("NavUnits")
-    let tugs = Table("Tug")
-    let barges = Table("Barge")
-    let personalNotes = Table("PersonalNote")
-    let changeRecommendations = Table("ChangeRecommendation")
-    let navUnitPhotos = Table("NavUnitPhoto")
-    let tugPhotos = Table("TugPhoto")
-    let tugNotes = Table("TugNote")
-    let tugChangeRecommendations = Table("TugChangeRecommendation")
-    let bargePhotos = Table("BargePhoto")
-    let buoyStationFavorites = Table("BuoyStationFavorites")
-    let moonPhases = Table("MoonPhase")
-    let weatherLocationFavorites = Table("WeatherLocationFavorite")
-    
-    // MARK: - Columns
-    // TideStationFavorites
-    let colStationId = Expression<String>("station_id")
-    let colIsFavorite = Expression<Bool>("is_favorite")
-    
-    // TidalCurrentStationFavorites
-    let colCurrentBin = Expression<Int>("current_bin")
-    
-    // NavUnit
-    let colNavUnitId = Expression<String>("NAV_UNIT_ID")
-    let colNavUnitName = Expression<String>("NAV_UNIT_NAME")
-    let colNavUnitIsFavorite = Expression<Bool>("is_favorite")
-    
-    // Tug/Barge
-    let colVesselId = Expression<String>("VesselId")
-    let colVesselName = Expression<String>("VesselName")
-    
-    // Common
-    let colId = Expression<Int>("Id")
-    let colCreatedAt = Expression<Date>("CreatedAt")
-    let colModifiedAt = Expression<Date?>("ModifiedAt")
-    
-    // Notes
-    let colNoteText = Expression<String>("NoteText")
-    
-    // Change Recommendations
-    let colRecommendationText = Expression<String>("RecommendationText")
-    let colStatus = Expression<Int>("Status")
-    
-    // Photos
-    let colFilePath = Expression<String>("FilePath")
-    let colFileName = Expression<String>("FileName")
-    let colThumbPath = Expression<String?>("ThumbPath")
-    
-    // Weather Location Favorites
-    let colLatitude = Expression<Double>("Latitude")
-    let colLongitude = Expression<Double>("Longitude")
-    let colLocationName = Expression<String>("LocationName")
-    
-    // Moon Phases
-    let colDate = Expression<String>("Date")
-    let colPhase = Expression<String>("Phase")
-    
     // MARK: - Initialization
     init() {
         print("📊 DatabaseCore being initialized")
     }
     
     // MARK: - Connection Management
+    
     /// Ensures connection is valid before performing operations
     func ensureConnection() throws -> Connection {
         guard let db = connection else {
@@ -247,25 +190,11 @@ class DatabaseCore {
             let db = try ensureConnection()
             
             print("📊 Testing database connection...")
-            // Try to read a record first to check if table exists
-            let testQuery = tideStationFavorites.filter(colStationId == "TEST_ID")
-            if let testRecord = try? db.pluck(testQuery) {
-                print("📊 Found existing test record: \(testRecord[colIsFavorite])")
-            } else {
-                // Insert a test record
-                try db.run(tideStationFavorites.insert(
-                    colStationId <- "TEST_ID",
-                    colIsFavorite <- true
-                ))
-                print("📊 Wrote test record to database")
-            
-                // Verify it was written
-                if let testRecord = try? db.pluck(testQuery) {
-                    print("📊 Successfully read test record: \(testRecord[colIsFavorite])")
-                } else {
-                    print("❌ Could not read test record")
-                }
-            }
+            // Execute a simple test query
+            let testQuery = "SELECT 1"
+            let result = try db.scalar(testQuery)
+            print("📊 Test query result: \(result)")
+            print("📊 Database connection test successful")
         } catch {
             print("❌ Test database operation failed: \(error.localizedDescription)")
             throw error

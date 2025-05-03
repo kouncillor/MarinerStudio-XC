@@ -4,13 +4,12 @@ import SQLite
 #endif
 
 class NavUnitDatabaseService {
-    // MARK: - Properties
-    private let databaseCore: DatabaseCore
-    
-    // Table definition - each service defines its own tables
+    // MARK: - Table Definitions
     private let navUnits = Table("NavUnits")
+    private let personalNotes = Table("PersonalNote")
+    private let changeRecommendations = Table("ChangeRecommendation")
     
-    // Column definitions with correct case to match database schema
+    // MARK: - Column Definitions - NavUnits
     private let colNavUnitId = Expression<String>("NAV_UNIT_ID")
     private let colUnloCode = Expression<String?>("UNLOCODE")
     private let colNavUnitName = Expression<String>("NAV_UNIT_NAME")
@@ -52,40 +51,41 @@ class NavUnitDatabaseService {
     private let colServiceTerminationDate = Expression<String?>("SERVICE_TERMINATION_DATE")
     private let colIsFavorite = Expression<Bool>("is_favorite")
     
-    // These tables and columns should be defined here for Personal Notes and Change Recommendations
-    private let personalNotes = Table("PersonalNote")
-    private let changeRecommendations = Table("ChangeRecommendation")
-    
-    // Column definitions for PersonalNote
+    // MARK: - Column Definitions - Common
     private let colId = Expression<Int>("Id")
-    private let colNoteText = Expression<String>("NoteText")
     private let colCreatedAt = Expression<Date>("CreatedAt")
     private let colModifiedAt = Expression<Date?>("ModifiedAt")
     
-    // Column definitions for ChangeRecommendation
+    // MARK: - Column Definitions - PersonalNote
+    private let colNoteText = Expression<String>("NoteText")
+    
+    // MARK: - Column Definitions - ChangeRecommendation
     private let colRecommendationText = Expression<String>("RecommendationText")
     private let colStatus = Expression<Int>("Status")
-
+    
+    // MARK: - Properties
+    private let databaseCore: DatabaseCore
+    
     // MARK: - Initialization
     init(databaseCore: DatabaseCore) {
         self.databaseCore = databaseCore
     }
-
+    
     // MARK: - NavUnit Methods
-
+    
     // Get all navigation units
     func getNavUnitsAsync() async throws -> [NavUnit] {
         do {
             let db = try databaseCore.ensureConnection()
-
+            
             // Query using our locally defined columns
             let query = navUnits.order(colNavUnitName.asc)
-
+            
             var results: [NavUnit] = []
             var count = 0 // Counter for logging
-
+            
             print(" S NavUnitDatabaseService: Starting fetch...")
-
+            
             for row in try db.prepare(query) {
                 // Log raw values for debugging
                 let latValue = row[colLatitude]
@@ -94,7 +94,7 @@ class NavUnitDatabaseService {
                 if count < 10 {
                     print(" S NavUnitDB (\(count)): ID \(unitId) - Raw Lat: \(String(describing: latValue)), Raw Lon: \(String(describing: lonValue))")
                 }
-
+                
                 // Create NavUnit with all fields properly mapped
                 let unit = NavUnit(
                     navUnitId: row[colNavUnitId],

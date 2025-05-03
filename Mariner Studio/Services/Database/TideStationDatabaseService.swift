@@ -4,6 +4,13 @@ import SQLite
 #endif
 
 class TideStationDatabaseService {
+    // MARK: - Table Definitions
+    private let tideStationFavorites = Table("TideStationFavorites")
+    
+    // MARK: - Column Definitions
+    private let colStationId = Expression<String>("station_id")
+    private let colIsFavorite = Expression<Bool>("is_favorite")
+    
     // MARK: - Properties
     private let databaseCore: DatabaseCore
     
@@ -32,9 +39,9 @@ class TideStationDatabaseService {
         //    print("📊 Current tables: \(tableNames.joined(separator: ", "))")
             
             // Create table
-            try db.run(databaseCore.tideStationFavorites.create(ifNotExists: true) { table in
-                table.column(databaseCore.colStationId, primaryKey: true)
-                table.column(databaseCore.colIsFavorite)
+            try db.run(tideStationFavorites.create(ifNotExists: true) { table in
+                table.column(colStationId, primaryKey: true)
+                table.column(colIsFavorite)
             })
             
             // Verify table was created
@@ -49,13 +56,13 @@ class TideStationDatabaseService {
          //       print("📊 TideStationFavorites table created or already exists")
                 
                 // Check if we can write to the table
-                try db.run(databaseCore.tideStationFavorites.insert(or: .replace,
-                    databaseCore.colStationId <- "TEST_INIT",
-                    databaseCore.colIsFavorite <- true
+                try db.run(tideStationFavorites.insert(or: .replace,
+                    colStationId <- "TEST_INIT",
+                    colIsFavorite <- true
                 ))
                 
                 // Verify write worked
-                let testQuery = databaseCore.tideStationFavorites.filter(databaseCore.colStationId == "TEST_INIT")
+                let testQuery = tideStationFavorites.filter(colStationId == "TEST_INIT")
                 if let _testRecord = try? db.pluck(testQuery) {
         //            print("📊 Successfully wrote and read test record")
                 } else {
@@ -77,10 +84,10 @@ class TideStationDatabaseService {
             let db = try databaseCore.ensureConnection()
             
         //    print("📊 CHECK: Checking favorite status for tide station \(id)")
-            let query = databaseCore.tideStationFavorites.filter(databaseCore.colStationId == id)
+            let query = tideStationFavorites.filter(colStationId == id)
             
             if let favorite = try db.pluck(query) {
-                let result = favorite[databaseCore.colIsFavorite]
+                let result = favorite[colIsFavorite]
         //        print("📊 CHECK: Found favorite status: \(result)")
                 return result
             }
@@ -103,25 +110,25 @@ class TideStationDatabaseService {
             var result = false
             
             try db.transaction {
-                let query = databaseCore.tideStationFavorites.filter(databaseCore.colStationId == id)
+                let query = tideStationFavorites.filter(colStationId == id)
                 
                 if let favorite = try db.pluck(query) {
-                    let currentValue = favorite[databaseCore.colIsFavorite]
+                    let currentValue = favorite[colIsFavorite]
                     let newValue = !currentValue
                     
        //             print("📊 TOGGLE: Found existing record with favorite status: \(currentValue), toggling to \(newValue)")
                     
-                    let updatedRow = databaseCore.tideStationFavorites.filter(databaseCore.colStationId == id)
-                    let count = try db.run(updatedRow.update(databaseCore.colIsFavorite <- newValue))
+                    let updatedRow = tideStationFavorites.filter(colStationId == id)
+                    let count = try db.run(updatedRow.update(colIsFavorite <- newValue))
                     
         //            print("📊 TOGGLE: Updated record with result: \(count) rows affected")
                     result = newValue
                 } else {
         //            print("📊 TOGGLE: No existing record found, creating new favorite")
                     
-                    let insert = databaseCore.tideStationFavorites.insert(
-                        databaseCore.colStationId <- id,
-                        databaseCore.colIsFavorite <- true
+                    let insert = tideStationFavorites.insert(
+                        colStationId <- id,
+                        colIsFavorite <- true
                     )
                     
                     let rowId = try db.run(insert)

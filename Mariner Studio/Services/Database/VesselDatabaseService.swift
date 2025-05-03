@@ -4,6 +4,26 @@ import SQLite
 #endif
 
 class VesselDatabaseService {
+    // MARK: - Table Definitions
+    private let tugs = Table("Tug")
+    private let tugNotes = Table("TugNote")
+    private let tugChangeRecommendations = Table("TugChangeRecommendation")
+    private let barges = Table("Barge")
+    
+    // MARK: - Column Definitions - Common
+    private let colId = Expression<Int>("Id")
+    private let colVesselId = Expression<String>("VesselId")
+    private let colVesselName = Expression<String>("VesselName")
+    private let colCreatedAt = Expression<Date>("CreatedAt")
+    private let colModifiedAt = Expression<Date?>("ModifiedAt")
+    
+    // MARK: - Column Definitions - Notes
+    private let colNoteText = Expression<String>("NoteText")
+    
+    // MARK: - Column Definitions - Change Recommendations
+    private let colRecommendationText = Expression<String>("RecommendationText")
+    private let colStatus = Expression<Int>("Status")
+    
     // MARK: - Properties
     private let databaseCore: DatabaseCore
     
@@ -19,13 +39,13 @@ class VesselDatabaseService {
         do {
             let db = try databaseCore.ensureConnection()
             
-            let query = databaseCore.tugs.order(databaseCore.colVesselName.asc)
+            let query = tugs.order(colVesselName.asc)
             var results: [Tug] = []
             
             for row in try db.prepare(query) {
                 let tug = Tug(
-                    tugId: row[databaseCore.colVesselId],
-                    vesselName: row[databaseCore.colVesselName]
+                    tugId: row[colVesselId],
+                    vesselName: row[colVesselName]
                 )
                 results.append(tug)
             }
@@ -42,16 +62,16 @@ class VesselDatabaseService {
         do {
             let db = try databaseCore.ensureConnection()
             
-            let query = databaseCore.tugNotes.filter(databaseCore.colVesselId == tugId).order(databaseCore.colCreatedAt.desc)
+            let query = tugNotes.filter(colVesselId == tugId).order(colCreatedAt.desc)
             var results: [TugNote] = []
             
             for row in try db.prepare(query) {
                 let note = TugNote(
-                    id: row[databaseCore.colId],
-                    tugId: row[databaseCore.colVesselId],
-                    noteText: row[databaseCore.colNoteText],
-                    createdAt: row[databaseCore.colCreatedAt],
-                    modifiedAt: row[databaseCore.colModifiedAt]
+                    id: row[colId],
+                    tugId: row[colVesselId],
+                    noteText: row[colNoteText],
+                    createdAt: row[colCreatedAt],
+                    modifiedAt: row[colModifiedAt]
                 )
                 results.append(note)
             }
@@ -68,10 +88,10 @@ class VesselDatabaseService {
         do {
             let db = try databaseCore.ensureConnection()
             
-            let insert = databaseCore.tugNotes.insert(
-                databaseCore.colVesselId <- note.tugId,
-                databaseCore.colNoteText <- note.noteText,
-                databaseCore.colCreatedAt <- Date()
+            let insert = tugNotes.insert(
+                colVesselId <- note.tugId,
+                colNoteText <- note.noteText,
+                colCreatedAt <- Date()
             )
             
             let rowId = try db.run(insert)
@@ -88,10 +108,10 @@ class VesselDatabaseService {
         do {
             let db = try databaseCore.ensureConnection()
             
-            let updatedRow = databaseCore.tugNotes.filter(databaseCore.colId == note.id)
+            let updatedRow = tugNotes.filter(colId == note.id)
             try db.run(updatedRow.update(
-                databaseCore.colNoteText <- note.noteText,
-                databaseCore.colModifiedAt <- Date()
+                colNoteText <- note.noteText,
+                colModifiedAt <- Date()
             ))
             
             try await databaseCore.flushDatabaseAsync()
@@ -107,7 +127,7 @@ class VesselDatabaseService {
         do {
             let db = try databaseCore.ensureConnection()
             
-            let query = databaseCore.tugNotes.filter(databaseCore.colId == noteId)
+            let query = tugNotes.filter(colId == noteId)
             try db.run(query.delete())
             try await databaseCore.flushDatabaseAsync()
             return 1
@@ -122,18 +142,18 @@ class VesselDatabaseService {
         do {
             let db = try databaseCore.ensureConnection()
             
-            let query = databaseCore.tugChangeRecommendations.filter(databaseCore.colVesselId == tugId).order(databaseCore.colCreatedAt.desc)
+            let query = tugChangeRecommendations.filter(colVesselId == tugId).order(colCreatedAt.desc)
             var results: [TugChangeRecommendation] = []
             
             for row in try db.prepare(query) {
-                let statusInt = row[databaseCore.colStatus]
+                let statusInt = row[colStatus]
                 let status = RecommendationStatus(rawValue: statusInt) ?? .pending
                 
                 let recommendation = TugChangeRecommendation(
-                    id: row[databaseCore.colId],
-                    tugId: row[databaseCore.colVesselId],
-                    recommendationText: row[databaseCore.colRecommendationText],
-                    createdAt: row[databaseCore.colCreatedAt],
+                    id: row[colId],
+                    tugId: row[colVesselId],
+                    recommendationText: row[colRecommendationText],
+                    createdAt: row[colCreatedAt],
                     status: status
                 )
                 results.append(recommendation)
@@ -151,11 +171,11 @@ class VesselDatabaseService {
         do {
             let db = try databaseCore.ensureConnection()
             
-            let insert = databaseCore.tugChangeRecommendations.insert(
-                databaseCore.colVesselId <- recommendation.tugId,
-                databaseCore.colRecommendationText <- recommendation.recommendationText,
-                databaseCore.colCreatedAt <- Date(),
-                databaseCore.colStatus <- RecommendationStatus.pending.rawValue
+            let insert = tugChangeRecommendations.insert(
+                colVesselId <- recommendation.tugId,
+                colRecommendationText <- recommendation.recommendationText,
+                colCreatedAt <- Date(),
+                colStatus <- RecommendationStatus.pending.rawValue
             )
             
             let rowId = try db.run(insert)
@@ -172,8 +192,8 @@ class VesselDatabaseService {
         do {
             let db = try databaseCore.ensureConnection()
             
-            let updatedRow = databaseCore.tugChangeRecommendations.filter(databaseCore.colId == recommendationId)
-            try db.run(updatedRow.update(databaseCore.colStatus <- status.rawValue))
+            let updatedRow = tugChangeRecommendations.filter(colId == recommendationId)
+            try db.run(updatedRow.update(colStatus <- status.rawValue))
             try await databaseCore.flushDatabaseAsync()
             return 1
         } catch {
@@ -189,13 +209,13 @@ class VesselDatabaseService {
         do {
             let db = try databaseCore.ensureConnection()
             
-            let query = databaseCore.barges.order(databaseCore.colVesselName.asc)
+            let query = barges.order(colVesselName.asc)
             var results: [Barge] = []
             
             for row in try db.prepare(query) {
                 let barge = Barge(
-                    bargeId: row[databaseCore.colVesselId],
-                    vesselName: row[databaseCore.colVesselName]
+                    bargeId: row[colVesselId],
+                    vesselName: row[colVesselName]
                 )
                 results.append(barge)
             }
