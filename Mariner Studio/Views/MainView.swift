@@ -15,11 +15,12 @@ struct MainView: View {
                     )
 
                     // WEATHER
-                    NavigationButton(
-                        icon: "weathersixseventwo",
-                        title: "WEATHER",
-                        action: { print("Weather tapped") }
-                    )
+                    NavigationLink(destination: WeatherMenuView()) {
+                        NavigationButtonContent(
+                            icon: "weathersixseventwo",
+                            title: "WEATHER"
+                        )
+                    }
 
                     // TIDES
                     NavigationLink(destination: TidalHeightStationsView(
