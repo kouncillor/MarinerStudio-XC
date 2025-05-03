@@ -3,22 +3,4 @@
    uuid = "33AC9A54-50FA-4AA1-A32F-E7B61E71E8CD"
    type = "1"
    version = "2.0">
-   <Breakpoints>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            uuid = "2C8A7CCB-21DF-4FA2-B98E-0D10259A2636"
-            shouldBeEnabled = "Yes"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "../../Library/Developer/Xcode/DerivedData/Mariner_Studio-epzrjunbfxajpjcupwtsgqvwtihu/SourcePackages/checkouts/SQLite.swift/Sources/SQLite/Typed/Query.swift"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1235"
-            endingLineNumber = "1235"
-            landmarkName = "subscript(column:)"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-   </Breakpoints>
 </Bucket>
