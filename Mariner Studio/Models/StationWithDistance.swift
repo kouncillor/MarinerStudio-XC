@@ -27,28 +27,26 @@ struct StationWithDistance<T>: Identifiable where T: Identifiable {
     }
     
     // MARK: - Factory Method for Creating from Coordinates
+    // In StationWithDistance.swift - Fix the create method to safely unwrap optionals
     static func create<S>(station: S, userLocation: CLLocation?) -> StationWithDistance<S> where S: Identifiable, S: StationCoordinates {
         let distance: Double
 
         // First, unwrap the user's location
         if let userLocation = userLocation {
             // Now, safely unwrap the station's coordinates
-            // This is the new part to fix the error
             if let stationLatitude = station.latitude, let stationLongitude = station.longitude {
                 // If both coordinates exist, create the station location
                 let stationLocation = CLLocation(
-                    latitude: stationLatitude, // Use the unwrapped latitude
-                    longitude: stationLongitude // Use the unwrapped longitude
+                    latitude: stationLatitude,
+                    longitude: stationLongitude
                 )
                 distance = stationLocation.distance(from: userLocation) / 1000 // Convert to km
             } else {
-                // Handle the case where station coordinates are missing (e.g., set distance to infinite)
-                print("Station \(station.id) is missing coordinates, cannot calculate distance.")
-                distance = Double.greatestFiniteMagnitude // Cannot calculate distance if station has no coordinates
+                // Handle the case where station coordinates are missing
+                distance = Double.greatestFiniteMagnitude
             }
         } else {
             // User location is missing, cannot calculate distance
-            print("User location is nil, cannot calculate distance.")
             distance = Double.greatestFiniteMagnitude
         }
 

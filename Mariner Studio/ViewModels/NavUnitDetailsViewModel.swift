@@ -1,3 +1,4 @@
+
 import Foundation
 import SwiftUI
 import CoreLocation
@@ -20,6 +21,7 @@ class NavUnitDetailsViewModel: ObservableObject {
     
     // MARK: - Services
     private let databaseService: NavUnitDatabaseService
+    private let photoService: PhotoDatabaseService // Added PhotoDatabaseService
     private let navUnitFtpService: NavUnitFtpService
     private let imageCacheService: ImageCacheService
     private let favoritesService: FavoritesService
@@ -55,11 +57,13 @@ class NavUnitDetailsViewModel: ObservableObject {
     // MARK: - Initialization
     init(
         databaseService: NavUnitDatabaseService,
+        photoService: PhotoDatabaseService, // Added parameter
         navUnitFtpService: NavUnitFtpService,
         imageCacheService: ImageCacheService,
         favoritesService: FavoritesService
     ) {
         self.databaseService = databaseService
+        self.photoService = photoService // Initialize the photo service
         self.navUnitFtpService = navUnitFtpService
         self.imageCacheService = imageCacheService
         self.favoritesService = favoritesService
@@ -81,8 +85,8 @@ class NavUnitDetailsViewModel: ObservableObject {
         guard let unit = unit else { return }
         
         do {
-            // Load local photos first
-            self.localPhotos = try await databaseService.getNavUnitPhotosAsync(navUnitId: unit.navUnitId)
+            // Load local photos first - using photoService instead of databaseService
+            self.localPhotos = try await photoService.getNavUnitPhotosAsync(navUnitId: unit.navUnitId)
             
             // Then attempt to load remote photos
             await MainActor.run {
@@ -293,8 +297,8 @@ class NavUnitDetailsViewModel: ObservableObject {
     
     func deletePhoto(_ photoId: Int) async {
         do {
-            // In a real implementation, we would show an alert to confirm
-            try await databaseService.deleteNavUnitPhotoAsync(photoId: photoId)
+            // Use photoService instead of databaseService for photo operations
+            try await photoService.deleteNavUnitPhotoAsync(photoId: photoId)
             await loadLocalPhotos()
         } catch {
             await MainActor.run {
@@ -307,7 +311,8 @@ class NavUnitDetailsViewModel: ObservableObject {
         guard let unit = unit else { return }
         
         do {
-            self.localPhotos = try await databaseService.getNavUnitPhotosAsync(navUnitId: unit.navUnitId)
+            // Use photoService instead of databaseService for photo operations
+            self.localPhotos = try await photoService.getNavUnitPhotosAsync(navUnitId: unit.navUnitId)
         } catch {
             await MainActor.run {
                 self.errorMessage = "Error loading photos: \(error.localizedDescription)"
@@ -349,11 +354,11 @@ class NavUnitDetailsViewModel: ObservableObject {
             deckHeightRange = "Not specified"
         }
         
-        // Format coordinates
-        if hasCoordinates,
-           let latitude = unit.latitude,
-           let longitude = unit.longitude {
+        // Format coordinates - safely unwrapping optionals
+        if let latitude = unit.latitude, let longitude = unit.longitude {
             formattedCoordinates = formatCoordinates(latitude: latitude, longitude: longitude)
+        } else {
+            formattedCoordinates = "Not available"
         }
         
         hasMultiplePhoneNumbers = unit.phoneNumbers.count > 1

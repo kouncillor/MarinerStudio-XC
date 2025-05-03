@@ -159,8 +159,10 @@ struct StationRow: View {
                 .font(.caption)
                 .foregroundColor(.gray)
             
-            HStack {
-                Text("Lat: \(String(format: "%.4f", stationWithDistance.station.latitude)), Long: \(String(format: "%.4f", stationWithDistance.station.longitude))")
+            // Fixed this part to handle optional latitude and longitude
+            if let latitude = stationWithDistance.station.latitude,
+               let longitude = stationWithDistance.station.longitude {
+                Text("Lat: \(String(format: "%.4f", latitude)), Long: \(String(format: "%.4f", longitude))")
                     .font(.caption)
             }
             
