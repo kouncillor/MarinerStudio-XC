@@ -4,6 +4,7 @@ import SwiftUI
 struct NavUnitsView: View {
     // MARK: - Properties
     @StateObject private var viewModel: NavUnitsViewModel
+    @EnvironmentObject var serviceProvider: ServiceProvider
 
     // MARK: - Initialization
     init(
@@ -112,9 +113,18 @@ struct NavUnitsView: View {
     private var navUnitsList: some View {
         List {
             ForEach(viewModel.filteredNavUnits) { navUnitWithDistance in
-                Button(action: {
-                    print("Selected NavUnit: \(navUnitWithDistance.station.navUnitName)")
-                }) {
+                NavigationLink {
+                    // Create the destination view directly to avoid closures
+                    let detailsViewModel = NavUnitDetailsViewModel(
+                        navUnit: navUnitWithDistance.station,
+                        databaseService: viewModel.navUnitService,
+                        photoService: serviceProvider.photoService,
+                        navUnitFtpService: serviceProvider.navUnitFtpService,
+                        imageCacheService: serviceProvider.imageCacheService,
+                        favoritesService: serviceProvider.favoritesService
+                    )
+                    NavUnitDetailsView(viewModel: detailsViewModel)
+                } label: {
                     NavUnitRow(
                         navUnitWithDistance: navUnitWithDistance,
                         onToggleFavorite: {
@@ -225,4 +235,5 @@ struct NavUnitRow: View {
     NavUnitsView(
         navUnitService: NavUnitDatabaseService(databaseCore: DatabaseCore())
     )
+    .environmentObject(ServiceProvider())
 }

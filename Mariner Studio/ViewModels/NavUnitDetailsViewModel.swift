@@ -1,4 +1,3 @@
-
 import Foundation
 import SwiftUI
 import CoreLocation
@@ -21,10 +20,13 @@ class NavUnitDetailsViewModel: ObservableObject {
     
     // MARK: - Services
     private let databaseService: NavUnitDatabaseService
-    private let photoService: PhotoDatabaseService // Added PhotoDatabaseService
+    private let photoService: PhotoDatabaseService
     private let navUnitFtpService: NavUnitFtpService
     private let imageCacheService: ImageCacheService
     private let favoritesService: FavoritesService
+    
+    // Used to manage and cancel any ongoing tasks
+    private var cancellables = Set<AnyCancellable>()
     
     // MARK: - Computed Properties
     var hasCoordinates: Bool {
@@ -57,16 +59,46 @@ class NavUnitDetailsViewModel: ObservableObject {
     // MARK: - Initialization
     init(
         databaseService: NavUnitDatabaseService,
-        photoService: PhotoDatabaseService, // Added parameter
+        photoService: PhotoDatabaseService,
         navUnitFtpService: NavUnitFtpService,
         imageCacheService: ImageCacheService,
         favoritesService: FavoritesService
     ) {
         self.databaseService = databaseService
-        self.photoService = photoService // Initialize the photo service
+        self.photoService = photoService
         self.navUnitFtpService = navUnitFtpService
         self.imageCacheService = imageCacheService
         self.favoritesService = favoritesService
+    }
+    
+    // New initializer that takes a NavUnit
+    init(
+        navUnit: NavUnit,
+        databaseService: NavUnitDatabaseService,
+        photoService: PhotoDatabaseService,
+        navUnitFtpService: NavUnitFtpService,
+        imageCacheService: ImageCacheService,
+        favoritesService: FavoritesService
+    ) {
+        self.databaseService = databaseService
+        self.photoService = photoService
+        self.navUnitFtpService = navUnitFtpService
+        self.imageCacheService = imageCacheService
+        self.favoritesService = favoritesService
+        
+        // Set the nav unit and update display properties
+        self.unit = navUnit
+        updateDisplayProperties()
+        updateFavoriteIcon()
+        
+        // Start loading photos asynchronously using a Task that we can manage
+        Task { @MainActor in
+            do {
+                try await loadAllPhotos()
+            } catch {
+                errorMessage = "Failed to load photos: \(error.localizedDescription)"
+            }
+        }
     }
     
     // MARK: - Public Methods
@@ -76,24 +108,33 @@ class NavUnitDetailsViewModel: ObservableObject {
         updateFavoriteIcon()
         
         // Start loading photos asynchronously
-        Task {
-            await loadAllPhotos()
+        Task { @MainActor in
+            do {
+                try await loadAllPhotos()
+            } catch {
+                errorMessage = "Failed to load photos: \(error.localizedDescription)"
+            }
         }
     }
     
-    private func loadAllPhotos() async {
+    private func loadAllPhotos() async throws {
         guard let unit = unit else { return }
         
+        // Load local photos first - using photoService
         do {
-            // Load local photos first - using photoService instead of databaseService
             self.localPhotos = try await photoService.getNavUnitPhotosAsync(navUnitId: unit.navUnitId)
-            
-            // Then attempt to load remote photos
-            await MainActor.run {
-                self.isLoadingFtpPhotos = true
-                self.remotePhotosHeader = "Remote Photos (Getting file list...)"
-            }
-            
+        } catch {
+            print("Error loading local photos: \(error.localizedDescription)")
+            // Continue loading remote photos even if local photos fail
+        }
+        
+        // Then attempt to load remote photos
+        await MainActor.run {
+            self.isLoadingFtpPhotos = true
+            self.remotePhotosHeader = "Remote Photos (Getting file list...)"
+        }
+        
+        do {
             let fileNames = try await navUnitFtpService.getNavUnitImagesAsync(navUnitId: unit.navUnitId)
             
             await MainActor.run {
@@ -104,23 +145,26 @@ class NavUnitDetailsViewModel: ObservableObject {
             var currentPhoto = 0
             
             // Process in batches for better performance
-            let batchSize = 4
+            let batchSize = 3 // Reduced batch size for better stability
             for i in stride(from: 0, to: fileNames.count, by: batchSize) {
                 let upperBound = min(i + batchSize, fileNames.count)
                 let batch = Array(fileNames[i..<upperBound])
                 
-                await withTaskGroup(of: FtpPhotoItem.self) { group in
+                try await withThrowingTaskGroup(of: FtpPhotoItem.self) { group in
                     for fileName in batch {
                         group.addTask {
                             let item = FtpPhotoItem(fileName: fileName, imageSource: .placeholder)
                             
                             // Add to view model collection immediately with placeholder
-                            await MainActor.run {
-                                self.ftpPhotos.append(item)
-                            }
+                            await self.addPhotoToCollection(item)
                             
                             // Load the actual image
-                            await self.loadFullImage(for: item, navUnitId: unit.navUnitId)
+                            do {
+                                try await self.loadFullImage(for: item, navUnitId: unit.navUnitId)
+                            } catch {
+                                print("Error loading image \(fileName): \(error.localizedDescription)")
+                                // Continue with placeholder
+                            }
                             
                             currentPhoto += 1
                             await MainActor.run {
@@ -130,6 +174,11 @@ class NavUnitDetailsViewModel: ObservableObject {
                             return item
                         }
                     }
+                    
+                    // Wait for all tasks in the group to complete
+                    for try await _ in group {
+                        // Process each result if needed
+                    }
                 }
             }
             
@@ -137,17 +186,23 @@ class NavUnitDetailsViewModel: ObservableObject {
                 self.remotePhotosHeader = "Remote Photos (\(totalPhotos) photos)"
                 self.isLoadingFtpPhotos = false
             }
-            
         } catch {
             await MainActor.run {
-                self.errorMessage = "Error loading photos: \(error.localizedDescription)"
+                self.errorMessage = "Error loading remote photos: \(error.localizedDescription)"
                 self.remotePhotosHeader = "Remote Photos (Error loading)"
                 self.isLoadingFtpPhotos = false
             }
         }
     }
     
-    private func loadFullImage(for item: FtpPhotoItem, navUnitId: String) async {
+    // Helper function to safely add a photo to the collection
+    @MainActor
+    private func addPhotoToCollection(_ photo: FtpPhotoItem) {
+        self.ftpPhotos.append(photo)
+    }
+    
+    // Updated to handle errors better
+    private func loadFullImage(for item: FtpPhotoItem, navUnitId: String) async throws {
         let cacheKey = imageCacheService.getCacheKey(navUnitId, item.fileName)
         
         // Try to get from cache first
@@ -161,19 +216,16 @@ class NavUnitDetailsViewModel: ObservableObject {
         }
         
         // If not in cache, download and cache it
-        do {
-            let imageData = try await navUnitFtpService.downloadNavUnitImageAsync(navUnitId: navUnitId, fileName: item.fileName)
-            if !imageData.isEmpty {
-                await imageCacheService.saveImageAsync(cacheKey, imageData)
-                
-                await MainActor.run {
-                    if let index = self.ftpPhotos.firstIndex(where: { $0.fileName == item.fileName }) {
-                        self.ftpPhotos[index].imageSource = .data(imageData)
-                    }
+        let imageData = try await navUnitFtpService.downloadNavUnitImageAsync(navUnitId: navUnitId, fileName: item.fileName)
+        
+        if !imageData.isEmpty {
+            await imageCacheService.saveImageAsync(cacheKey, imageData)
+            
+            await MainActor.run {
+                if let index = self.ftpPhotos.firstIndex(where: { $0.fileName == item.fileName }) {
+                    self.ftpPhotos[index].imageSource = .data(imageData)
                 }
             }
-        } catch {
-            print("Error loading image: \(error.localizedDescription)")
         }
     }
     
