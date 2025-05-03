@@ -102,22 +102,27 @@ struct NavUnitDetailsView: View {
                 .stroke(Color.gray.opacity(0.3), lineWidth: 1)
                 .background(RoundedRectangle(cornerRadius: 10).fill(Color.white))
             
-            ZStack {
-                Color(UIColor.systemGray6)
-                    .cornerRadius(10)
-                
-                if viewModel.hasCoordinates {
-                    Text("Map would show here with coordinates: \(viewModel.formattedCoordinates)")
-                        .foregroundColor(.gray)
-                        .multilineTextAlignment(.center)
-                        .padding()
-                } else {
+            if viewModel.hasCoordinates, let mapRegion = viewModel.mapRegion, let annotation = viewModel.mapAnnotation {
+                Map(coordinateRegion: .constant(MKCoordinateRegion(
+                    center: mapRegion.center,
+                    span: mapRegion.span
+                )), annotationItems: [annotation]) { place in
+                    MapMarker(coordinate: place.coordinate, tint: .blue)
+                }
+                .cornerRadius(10)
+                .frame(height: 300)
+                .padding()
+            } else {
+                ZStack {
+                    Color(UIColor.systemGray6)
+                        .cornerRadius(10)
+                    
                     Text("No location coordinates available")
                         .foregroundColor(.gray)
                 }
+                .frame(height: 300)
+                .padding()
             }
-            .frame(height: 300)
-            .padding()
         }
     }
     

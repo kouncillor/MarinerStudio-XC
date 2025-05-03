@@ -4,6 +4,26 @@ import CoreLocation
 import Combine
 import MapKit
 
+// Map-related models
+struct MapRegion: Equatable {
+    var center: CLLocationCoordinate2D
+    var span: MKCoordinateSpan
+    
+    static func == (lhs: MapRegion, rhs: MapRegion) -> Bool {
+        return lhs.center.latitude == rhs.center.latitude &&
+               lhs.center.longitude == rhs.center.longitude &&
+               lhs.span.latitudeDelta == rhs.span.latitudeDelta &&
+               lhs.span.longitudeDelta == rhs.span.longitudeDelta
+    }
+}
+
+struct NavUnitMapAnnotation: Identifiable {
+    let id = UUID()
+    let coordinate: CLLocationCoordinate2D
+    let title: String
+    let subtitle: String
+}
+
 class NavUnitDetailsViewModel: ObservableObject {
     // MARK: - Published Properties
     @Published var unit: NavUnit?
@@ -17,6 +37,10 @@ class NavUnitDetailsViewModel: ObservableObject {
     @Published var depthRange: String = ""
     @Published var deckHeightRange: String = ""
     @Published var hasMultiplePhoneNumbers: Bool = false
+    
+    // MARK: - Map-related Properties
+    @Published var mapRegion: MapRegion?
+    @Published var mapAnnotation: NavUnitMapAnnotation?
     
     // MARK: - Services
     private let databaseService: NavUnitDatabaseService
@@ -90,6 +114,7 @@ class NavUnitDetailsViewModel: ObservableObject {
         self.unit = navUnit
         updateDisplayProperties()
         updateFavoriteIcon()
+        initializeMap()
         
         // Start loading photos asynchronously using a Task that we can manage
         Task { @MainActor in
@@ -106,6 +131,7 @@ class NavUnitDetailsViewModel: ObservableObject {
         self.unit = navUnit
         updateDisplayProperties()
         updateFavoriteIcon()
+        initializeMap()
         
         // Start loading photos asynchronously
         Task { @MainActor in
@@ -370,6 +396,31 @@ class NavUnitDetailsViewModel: ObservableObject {
                 self.errorMessage = "Error loading photos: \(error.localizedDescription)"
             }
         }
+    }
+    
+    // MARK: - Map Methods
+    
+    // Add this method to initialize the map when a unit is loaded
+    private func initializeMap() {
+        guard let unit = unit,
+              let latitude = unit.latitude,
+              let longitude = unit.longitude else {
+            mapRegion = nil
+            mapAnnotation = nil
+            return
+        }
+        
+        let coordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+        mapRegion = MapRegion(
+            center: coordinate,
+            span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+        )
+        
+        mapAnnotation = NavUnitMapAnnotation(
+            coordinate: coordinate,
+            title: unit.navUnitName,
+            subtitle: unit.facilityType ?? "Navigation Unit"
+        )
     }
     
     // MARK: - Private Methods
