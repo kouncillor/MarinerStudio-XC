@@ -1,62 +1,89 @@
 import Foundation
 import SwiftUI
-import CoreLocation // Added import
+import CoreLocation
 
 // This class will hold our service instances
 class ServiceProvider: ObservableObject {
-    // MARK: - Service Properties
-    let databaseService: DatabaseService
-    let locationService: LocationService // Added LocationService
-
+    // MARK: - Core Services
+    let databaseCore: DatabaseCore
+    let locationService: LocationService
+    
+    // MARK: - Database Services
+    let tideStationService: TideStationDatabaseService
+    let currentStationService: CurrentStationDatabaseService
+    let navUnitService: NavUnitDatabaseService
+    let vesselService: VesselDatabaseService
+    let photoService: PhotoDatabaseService
+    let buoyService: BuoyDatabaseService
+    let weatherService: WeatherDatabaseService
+    
     // MARK: - Initialization
-    init(databaseService: DatabaseService? = nil, locationService: LocationService? = nil) {
-
-        // --- Initialize DatabaseService ---
-        // Use provided service or get the singleton instance
-        if let providedDatabaseService = databaseService {
-            self.databaseService = providedDatabaseService
-            print("📦 ServiceProvider: Initialized with provided DatabaseService.")
-        } else {
-            // Use the singleton instance
-            self.databaseService = DatabaseServiceImpl.getInstance()
-            print("📦 ServiceProvider: Initialized with singleton DatabaseService.")
-        }
-
-        // --- Initialize LocationService ---
-        // Use provided service or create a default instance
+    init(locationService: LocationService? = nil) {
+        // --- Initialize Core Services ---
+        
+        // Initialize DatabaseCore
+        self.databaseCore = DatabaseCore()
+        print("📦 ServiceProvider: Initialized DatabaseCore.")
+        
+        // Initialize LocationService
         if let providedLocationService = locationService {
             self.locationService = providedLocationService
             print("📦 ServiceProvider: Initialized with provided LocationService.")
         } else {
-            // Create a default instance
             self.locationService = LocationServiceImpl()
             print("📦 ServiceProvider: Initialized with default LocationServiceImpl.")
         }
-
+        
+        // --- Initialize Database Services ---
+        self.tideStationService = TideStationDatabaseService(databaseCore: databaseCore)
+        self.currentStationService = CurrentStationDatabaseService(databaseCore: databaseCore)
+        self.navUnitService = NavUnitDatabaseService(databaseCore: databaseCore)
+        self.vesselService = VesselDatabaseService(databaseCore: databaseCore)
+        self.photoService = PhotoDatabaseService(databaseCore: databaseCore)
+        self.buoyService = BuoyDatabaseService(databaseCore: databaseCore)
+        self.weatherService = WeatherDatabaseService(databaseCore: databaseCore)
+        print("📦 ServiceProvider: Initialized all database services.")
+        
         // --- Asynchronous Initialization Tasks ---
-
+        
         // Task 1: Initialize database
-        Task(priority: .utility) { // Run database init concurrently
+        Task(priority: .utility) {
             do {
                 print("🚀 ServiceProvider: Initializing Database...")
-                try await self.databaseService.initializeAsync()
+                try await self.databaseCore.initializeAsync()
+                
+                // Initialize tables
+                try await self.tideStationService.initializeTideStationFavoritesTableAsync()
+                try await self.currentStationService.initializeCurrentStationFavoritesTableAsync()
+                try await self.photoService.initializePhotosTableAsync()
+                try await self.photoService.initializeBargePhotosTableAsync()
+                try await self.weatherService.initializeWeatherLocationFavoritesTableAsync()
+                
+                print("📊 Tables initialized")
+                
+                // Test database operations to verify connection
+                try await self.databaseCore.checkConnectionWithTestQuery()
+                
+                let tableNames = try await self.databaseCore.getTableNamesAsync()
+                print("📊 Tables in the database: \(tableNames.joined(separator: ", "))")
+                
                 print("✅ ServiceProvider: Database successfully initialized.")
             } catch {
                 // Log error, but don't necessarily block app launch
                 print("❌ ServiceProvider: Error initializing database: \(error.localizedDescription)")
             }
         }
-
+        
         // Task 2: Request location permission and start updates early
-        Task(priority: .utility) { // Run location init concurrently
+        Task(priority: .utility) {
             do {
                 print("🚀 ServiceProvider: Requesting location permission...")
                 // Optional: Small delay to allow UI to settle before permission prompt
                 try await Task.sleep(for: .seconds(0.5))
-
+                
                 let authorized = await self.locationService.requestLocationPermission()
-
-                await MainActor.run { // Ensure UI-related state or calls happen on main thread if needed later
+                
+                await MainActor.run {
                     if authorized {
                         print("✅ ServiceProvider: Location permission granted/exists. Starting updates.")
                         // Start location updates if authorized
@@ -67,12 +94,10 @@ class ServiceProvider: ObservableObject {
                     }
                 }
             } catch {
-                // This catch block handles errors during the Task.sleep or potentially future
-                // errors if requestLocationPermission were to throw.
-                 print("❌ ServiceProvider: Error during location permission request task: \(error.localizedDescription)")
+                print("❌ ServiceProvider: Error during location permission request task: \(error.localizedDescription)")
             }
         }
-
+        
         print("📦 ServiceProvider initialization complete (async tasks launched).")
     }
 }

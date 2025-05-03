@@ -17,7 +17,7 @@ class TidalCurrentPredictionViewModel: ObservableObject {
     
     // MARK: - Private Properties
     private let predictionService: TidalCurrentPredictionService
-    private let databaseService: DatabaseService
+    private let currentStationService: CurrentStationDatabaseService
     private var stationId: String = ""
     private var bin: Int = 0
     private var currentPredictionIndex: Int = 0
@@ -34,13 +34,13 @@ class TidalCurrentPredictionViewModel: ObservableObject {
         bin: Int,
         stationName: String,
         predictionService: TidalCurrentPredictionService,
-        databaseService: DatabaseService
+        currentStationService: CurrentStationDatabaseService
     ) {
         self.stationId = stationId
         self.bin = bin
         self.stationName = stationName
         self.predictionService = predictionService
-        self.databaseService = databaseService
+        self.currentStationService = currentStationService
         
         dateFormatter = DateFormatter()
         dateFormatter.dateStyle = .medium
@@ -146,7 +146,7 @@ class TidalCurrentPredictionViewModel: ObservableObject {
     }
     
     func toggleFavorite() async {
-        let newValue = await databaseService.toggleCurrentStationFavorite(id: stationId, bin: bin)
+        let newValue = await currentStationService.toggleCurrentStationFavorite(id: stationId, bin: bin)
         
         await MainActor.run {
             self.isFavorite = newValue
@@ -255,7 +255,7 @@ class TidalCurrentPredictionViewModel: ObservableObject {
     }
     
     private func updateFavoriteStatus() async {
-        let isFavorite = await databaseService.isCurrentStationFavorite(id: stationId, bin: bin)
+        let isFavorite = await currentStationService.isCurrentStationFavorite(id: stationId, bin: bin)
         
         await MainActor.run {
             self.isFavorite = isFavorite

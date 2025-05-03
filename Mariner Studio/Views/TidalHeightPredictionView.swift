@@ -9,13 +9,13 @@ struct TidalHeightPredictionView: View {
         stationId: String,
         stationName: String,
         predictionService: TidalHeightPredictionService = TidalHeightPredictionServiceImpl(),
-        databaseService: DatabaseService
+        tideStationService: TideStationDatabaseService
     ) {
         _viewModel = StateObject(wrappedValue: TidalHeightPredictionViewModel(
             stationId: stationId,
             stationName: stationName,
             predictionService: predictionService,
-            databaseService: databaseService
+            tideStationService: tideStationService
         ))
     }
     
@@ -176,5 +176,3 @@ struct TidalHeightPredictionView: View {
         }
     }
 }
-
-

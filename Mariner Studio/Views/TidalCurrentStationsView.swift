@@ -4,19 +4,17 @@ struct TidalCurrentStationsView: View {
    // MARK: - Properties
    @StateObject private var viewModel: TidalCurrentStationsViewModel
    @State private var isRefreshing = false
-   private let databaseService: DatabaseService
    
    // MARK: - Initialization
    init(
        tidalCurrentService: TidalCurrentService = TidalCurrentServiceImpl(),
        locationService: LocationService = LocationServiceImpl(),
-       databaseService: DatabaseService
+       currentStationService: CurrentStationDatabaseService
    ) {
-       self.databaseService = databaseService
        _viewModel = StateObject(wrappedValue: TidalCurrentStationsViewModel(
            tidalCurrentService: tidalCurrentService,
            locationService: locationService,
-           databaseService: databaseService
+           currentStationService: currentStationService
        ))
    }
    
@@ -105,7 +103,7 @@ struct TidalCurrentStationsView: View {
                    stationId: stationWithDistance.station.id,
                    bin: stationWithDistance.station.currentBin ?? 0,
                    stationName: stationWithDistance.station.name,
-                   databaseService: databaseService
+                   currentStationService: viewModel.currentStationService
                )) {
                    TidalCurrentStationRow(
                        stationWithDistance: stationWithDistance,

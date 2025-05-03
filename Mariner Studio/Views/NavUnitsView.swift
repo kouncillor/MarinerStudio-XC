@@ -4,15 +4,14 @@ import SwiftUI
 struct NavUnitsView: View {
     // MARK: - Properties
     @StateObject private var viewModel: NavUnitsViewModel
-    // Removed @State properties for searchText and showOnlyFavorites
 
     // MARK: - Initialization
     init(
-        databaseService: DatabaseService,
+        navUnitService: NavUnitDatabaseService,
         locationService: LocationService = LocationServiceImpl() // Can use default if always provided by ServiceProvider
     ) {
         _viewModel = StateObject(wrappedValue: NavUnitsViewModel(
-            databaseService: databaseService,
+            navUnitService: navUnitService,
             locationService: locationService
         ))
     }
@@ -24,7 +23,7 @@ struct NavUnitsView: View {
             searchAndFilterBar
 
             // Status Information
-            statusBar // Corrected statusBar usage
+            statusBar
 
             // Main Content
             ZStack {
@@ -42,7 +41,6 @@ struct NavUnitsView: View {
         }
         .navigationTitle("Navigation Units")
         .task {
-            // Use the renamed load method if applicable, otherwise keep as is
             await viewModel.loadNavUnits()
         }
     }
@@ -57,15 +55,13 @@ struct NavUnitsView: View {
                 // Bind TextField directly to the ViewModel's property
                 TextField("Search nav units...", text: $viewModel.searchText)
                     .onChange(of: viewModel.searchText) { _ in
-                        // Call the ViewModel's method that now reads the properties internally
-                        viewModel.searchTextChanged() // Corrected method call
+                        viewModel.searchTextChanged()
                     }
 
                 // Use viewModel.searchText here too
                 if !viewModel.searchText.isEmpty {
                     Button(action: {
-                        // Call the ViewModel's clear method
-                        viewModel.clearSearch() // Corrected method call
+                        viewModel.clearSearch()
                     }) {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundColor(.gray)
@@ -73,40 +69,33 @@ struct NavUnitsView: View {
                 }
             }
             .padding(8)
-            .background(Color(.systemBackground)) // Use system background for adaptability
+            .background(Color(.systemBackground))
             .cornerRadius(10)
             .padding(.trailing, 8)
 
             Button(action: {
-                // Toggle the ViewModel's property directly
                 viewModel.showOnlyFavorites.toggle()
-                // Call the ViewModel's method that reacts to the toggle
-                viewModel.favoritesToggleChanged() // Corrected method call
+                viewModel.favoritesToggleChanged()
             }) {
-                // Read the favorite state from the ViewModel
-                Image(systemName: viewModel.showOnlyFavorites ? "star.fill" : "star") // Use viewModel state
-                    .foregroundColor(viewModel.showOnlyFavorites ? .yellow : .gray) // Use viewModel state
-                    .frame(width: 44, height: 44) // Ensure consistent button size
+                Image(systemName: viewModel.showOnlyFavorites ? "star.fill" : "star")
+                    .foregroundColor(viewModel.showOnlyFavorites ? .yellow : .gray)
+                    .frame(width: 44, height: 44)
             }
         }
         .padding([.horizontal, .top])
     }
 
-    // CORRECTED statusBar implementation
     private var statusBar: some View {
-        // Wrap the content in a VStack
-        VStack(alignment: .leading, spacing: 4) { // Added VStack and spacing
+        VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Text("Total Units: \(viewModel.totalNavUnits)")
                     .font(.footnote)
                 Spacer()
-                // Read computed property from ViewModel
                 Text("Location: \(viewModel.isLocationEnabled ? "Enabled" : "Disabled")")
                     .font(.footnote)
             }
-            .padding(.horizontal) // Keep horizontal padding for this HStack
+            .padding(.horizontal)
 
-            // Add user coordinates display for consistency, inside the VStack
             if viewModel.isLocationEnabled {
                 HStack {
                     Text("Your Position: \(viewModel.userLatitude), \(viewModel.userLongitude)")
@@ -114,21 +103,17 @@ struct NavUnitsView: View {
                         .foregroundColor(.blue)
                     Spacer()
                 }
-                .padding(.horizontal) // Keep horizontal padding for this HStack too
+                .padding(.horizontal)
             }
         }
-        .padding(.bottom, 5) // Apply bottom padding to the whole VStack
+        .padding(.bottom, 5)
     }
 
     private var navUnitsList: some View {
         List {
-            // Use the filtered list from the ViewModel
             ForEach(viewModel.filteredNavUnits) { navUnitWithDistance in
-                // Using a Button instead of NavigationLink for now, assuming details view is TBD
                 Button(action: {
-                    // Action for selecting a row (e.g., navigate to detail view)
                     print("Selected NavUnit: \(navUnitWithDistance.station.navUnitName)")
-                    // TODO: Implement navigation to a NavUnit detail view if needed
                 }) {
                     NavUnitRow(
                         navUnitWithDistance: navUnitWithDistance,
@@ -139,18 +124,16 @@ struct NavUnitsView: View {
                         }
                     )
                 }
-                .buttonStyle(PlainButtonStyle()) // Use PlainButtonStyle for standard row appearance
+                .buttonStyle(PlainButtonStyle())
             }
         }
         .listStyle(PlainListStyle())
         .refreshable {
-             // Use the renamed refresh method
              await viewModel.refreshNavUnits()
         }
     }
 }
 
-// NavUnitRow remains unchanged from your provided code
 struct NavUnitRow: View {
     let navUnitWithDistance: StationWithDistance<NavUnit>
     let onToggleFavorite: () -> Void
@@ -165,7 +148,6 @@ struct NavUnitRow: View {
                     Image(systemName: navUnitWithDistance.station.isFavorite ? "star.fill" : "star")
                         .foregroundColor(navUnitWithDistance.station.isFavorite ? .yellow : .gray)
                 }
-                // Ensure the button tap area is reasonable even if the icon is small
                 .contentShape(Rectangle())
             }
 
@@ -191,12 +173,10 @@ struct NavUnitRow: View {
             }
 
             if navUnitWithDistance.station.hasPhoneNumbers {
-                 // Assuming phoneNumbers is non-empty due to hasPhoneNumbers check
                  Text("Phone: \(navUnitWithDistance.station.phoneNumbers.first ?? "N/A")")
                      .font(.caption)
-                     .foregroundColor(.blue) // Keep phone number noticeable
+                     .foregroundColor(.blue)
              }
-
 
             if let coordinates = formatCoordinates(
                 latitude: navUnitWithDistance.station.latitude,
@@ -207,17 +187,15 @@ struct NavUnitRow: View {
                     .foregroundColor(.gray)
             }
 
-            // Display distance if available
             if !navUnitWithDistance.distanceDisplay.isEmpty {
                 Text("Distance: \(navUnitWithDistance.distanceDisplay)")
                     .font(.caption)
                     .foregroundColor(.gray)
             }
         }
-        .padding(.vertical, 5) // Add some vertical padding to rows
+        .padding(.vertical, 5)
     }
 
-    // Helper functions (assuming these are still needed and correct)
     private func formatCityState(city: String?, state: String?) -> String? {
         let cityText = city?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let stateText = state?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
@@ -235,8 +213,7 @@ struct NavUnitRow: View {
 
     private func formatCoordinates(latitude: Double?, longitude: Double?) -> String? {
         if let lat = latitude, let lon = longitude {
-             // Check for valid coordinate range if necessary, e.g. lat != 0 || lon != 0
-             if abs(lat) > 0.0001 || abs(lon) > 0.0001 { // Avoid showing 0.0000, 0.0000
+             if abs(lat) > 0.0001 || abs(lon) > 0.0001 {
                  return String(format: "Lat: %.4f, Long: %.4f", lat, lon)
              }
         }
@@ -244,15 +221,8 @@ struct NavUnitRow: View {
     }
 }
 
-
-// MARK: - Preview
 #Preview {
-    // Ensure the preview also works with the updated structure
-    // You might need a mock DatabaseService and LocationService for robust previews
     NavUnitsView(
-        databaseService: DatabaseServiceImpl.getInstance(), // Or a mock service
-        locationService: LocationServiceImpl() // Or a mock service
+        navUnitService: NavUnitDatabaseService(databaseCore: DatabaseCore())
     )
-    // Add environment object if MainView provides it higher up
-    // .environmentObject(ServiceProvider())
 }

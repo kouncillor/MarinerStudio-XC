@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct MainView: View {
-
     @EnvironmentObject var serviceProvider: ServiceProvider
 
     var body: some View {
@@ -22,13 +21,11 @@ struct MainView: View {
                         action: { print("Weather tapped") }
                     )
 
-                    // TIDES - MODIFIED NavigationLink
+                    // TIDES
                     NavigationLink(destination: TidalHeightStationsView(
-                        // Explicitly pass services from the environment's ServiceProvider
-                        // Keep default for services not managed by ServiceProvider (if any)
-                        tidalHeightService: TidalHeightServiceImpl(), // Assuming this isn't in ServiceProvider yet
-                        locationService: serviceProvider.locationService, // Pass the shared instance
-                        databaseService: serviceProvider.databaseService // Pass the shared instance
+                        tidalHeightService: TidalHeightServiceImpl(),
+                        locationService: serviceProvider.locationService,
+                        tideStationService: serviceProvider.tideStationService
                     )) {
                         NavigationButtonContent(
                             icon: "tsixseven",
@@ -36,12 +33,11 @@ struct MainView: View {
                         )
                     }
 
-                    // CURRENTS - MODIFIED NavigationLink
+                    // CURRENTS
                     NavigationLink(destination: TidalCurrentStationsView(
-                        // Explicitly pass services from the environment's ServiceProvider
-                        tidalCurrentService: TidalCurrentServiceImpl(), // Assuming this isn't in ServiceProvider yet
-                        locationService: serviceProvider.locationService, // Pass the shared instance
-                        databaseService: serviceProvider.databaseService // Pass the shared instance
+                        tidalCurrentService: TidalCurrentServiceImpl(),
+                        locationService: serviceProvider.locationService,
+                        currentStationService: serviceProvider.currentStationService
                     )) {
                         NavigationButtonContent(
                             icon: "csixseven",
@@ -49,11 +45,10 @@ struct MainView: View {
                         )
                     }
 
-                    // NAV UNITS - MODIFIED NavigationLink
+                    // NAV UNITS
                     NavigationLink(destination: NavUnitsView(
-                        // Explicitly pass services from the environment's ServiceProvider
-                        databaseService: serviceProvider.databaseService, // Pass the shared instance
-                        locationService: serviceProvider.locationService // Pass the shared instance
+                        navUnitService: serviceProvider.navUnitService,
+                        locationService: serviceProvider.locationService
                     )) {
                         NavigationButtonContent(
                             icon: "nsixseven",
@@ -84,14 +79,11 @@ struct MainView: View {
 
                     // ROUTE
                     RouteButton(action: { print("Route tapped") })
-
                 }
                 .padding()
             }
             .navigationTitle("Mariner Studio")
         }
-        // NOTE: The .environmentObject modifier for the *actual app*
-        // should be in your Mariner_StudioApp.swift file, attaching to MainView() there.
     }
 }
 
@@ -149,7 +141,7 @@ struct RouteButton: View {
     var body: some View {
         Button(action: action) {
             HStack {
-                Image("tsixseven") // Consider updating this icon if needed
+                Image("tsixseven")
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 67, height: 67)
@@ -180,12 +172,9 @@ struct RouteButton: View {
     }
 }
 
-
-// Preview needs the EnvironmentObject now
+// Preview
 #Preview {
-    // Create a ServiceProvider instance specifically for the preview
     let previewServiceProvider = ServiceProvider()
     return MainView()
-        // Inject the preview ServiceProvider into the preview environment
         .environmentObject(previewServiceProvider)
 }

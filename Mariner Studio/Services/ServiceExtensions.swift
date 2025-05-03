@@ -8,9 +8,41 @@ extension View {
     }
 }
 
-// Convenience extension to access the database service from SwiftUI views
+// Convenience extensions to access specific database services from SwiftUI views
 extension EnvironmentObject where ObjectType == ServiceProvider {
-    var database: DatabaseService {
-        wrappedValue.databaseService
+    var databaseCore: DatabaseCore {
+        wrappedValue.databaseCore
+    }
+    
+    var tideStationService: TideStationDatabaseService {
+        wrappedValue.tideStationService
+    }
+    
+    var currentStationService: CurrentStationDatabaseService {
+        wrappedValue.currentStationService
+    }
+    
+    var navUnitService: NavUnitDatabaseService {
+        wrappedValue.navUnitService
+    }
+    
+    var photoService: PhotoDatabaseService {
+        wrappedValue.photoService
+    }
+    
+    var vesselService: VesselDatabaseService {
+        wrappedValue.vesselService
+    }
+    
+    var buoyService: BuoyDatabaseService {
+        wrappedValue.buoyService
+    }
+    
+    var weatherService: WeatherDatabaseService {
+        wrappedValue.weatherService
+    }
+    
+    var locationService: LocationService {
+        wrappedValue.locationService
     }
 }

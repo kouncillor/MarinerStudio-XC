@@ -1,6 +1,4 @@
 import Foundation
-// Combine import might not be needed if you don't use AnyCancellable or other Combine features
-// import Combine
 import SwiftUI
 import CoreLocation
 
@@ -22,17 +20,15 @@ class NavUnitsViewModel: ObservableObject {
     }
 
     // MARK: - Properties
-    let databaseService: DatabaseService
+    let navUnitService: NavUnitDatabaseService
     private let locationService: LocationService
     private var allNavUnits: [StationWithDistance<NavUnit>] = []
-    // Removed observer properties
 
     // MARK: - Initialization
-    init(databaseService: DatabaseService, locationService: LocationService) {
-        self.databaseService = databaseService
+    init(navUnitService: NavUnitDatabaseService, locationService: LocationService) {
+        self.navUnitService = navUnitService
         self.locationService = locationService
         print("✅ NavUnitsViewModel initialized. Will rely on ServiceProvider for location. Dynamic updates disabled.")
-        // Removed observer setup call
     }
 
     // MARK: - Public Methods
@@ -53,7 +49,7 @@ class NavUnitsViewModel: ObservableObject {
 
         do {
             print("⏰ ViewModel (NavUnits): Starting Database call for NavUnits at \(Date())")
-            let units = try await databaseService.getNavUnitsAsync()
+            let units = try await navUnitService.getNavUnitsAsync()
             print("⏰ ViewModel (NavUnits): Finished Database call. Count: \(units.count) at \(Date())")
 
             print("⏰ ViewModel (NavUnits): Checking location for distance calculation at \(Date()). Current value: \(locationService.currentLocation?.description ?? "nil")")
@@ -150,7 +146,6 @@ class NavUnitsViewModel: ObservableObject {
         }
     }
 
-
     func searchTextChanged() {
          filterNavUnits()
      }
@@ -164,11 +159,10 @@ class NavUnitsViewModel: ObservableObject {
           filterNavUnits()
     }
 
-
     func toggleNavUnitFavorite(navUnitId: String) async {
         do {
             print("⭐ ViewModel (NavUnits): Toggling favorite for \(navUnitId) at \(Date())")
-            let newFavoriteStatus = try await databaseService.toggleFavoriteNavUnitAsync(navUnitId: navUnitId)
+            let newFavoriteStatus = try await navUnitService.toggleFavoriteNavUnitAsync(navUnitId: navUnitId)
             print("⭐ ViewModel (NavUnits): Database returned new status \(newFavoriteStatus) for \(navUnitId) at \(Date())")
 
             await MainActor.run {
@@ -196,10 +190,6 @@ class NavUnitsViewModel: ObservableObject {
     }
 
     // MARK: - Private Methods
-
-    // Removed observer methods
-
-    // Keep this to update the displayed coordinates in the status bar
     private func updateUserCoordinates() {
          if let location = locationService.currentLocation {
               self.userLatitude = String(format: "%.6f", location.coordinate.latitude)
@@ -214,4 +204,3 @@ class NavUnitsViewModel: ObservableObject {
         print("🗑️ NavUnitsViewModel deinitialized.")
     }
 }
-

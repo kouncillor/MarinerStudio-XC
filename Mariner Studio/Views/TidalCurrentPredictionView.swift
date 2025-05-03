@@ -10,14 +10,14 @@ struct TidalCurrentPredictionView: View {
         bin: Int,
         stationName: String,
         predictionService: TidalCurrentPredictionService = TidalCurrentPredictionServiceImpl(),
-        databaseService: DatabaseService
+        currentStationService: CurrentStationDatabaseService
     ) {
         _viewModel = StateObject(wrappedValue: TidalCurrentPredictionViewModel(
             stationId: stationId,
             bin: bin,
             stationName: stationName,
             predictionService: predictionService,
-            databaseService: databaseService
+            currentStationService: currentStationService
         ))
     }
     
@@ -261,4 +261,3 @@ struct TidalCurrentPredictionView: View {
         }
     }
 }
-

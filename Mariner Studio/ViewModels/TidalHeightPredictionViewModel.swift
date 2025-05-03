@@ -16,7 +16,7 @@ class TidalHeightPredictionViewModel: ObservableObject {
     
     // MARK: - Private Properties
     private let predictionService: TidalHeightPredictionService
-    private let databaseService: DatabaseService
+    private let tideStationService: TideStationDatabaseService
     private let dateFormatter: DateFormatter
     
     // MARK: - Initialization
@@ -24,13 +24,13 @@ class TidalHeightPredictionViewModel: ObservableObject {
         stationId: String,
         stationName: String,
         predictionService: TidalHeightPredictionService,
-        databaseService: DatabaseService
+        tideStationService: TideStationDatabaseService
     ) {
         print("🌊 Initializing view model for station: \(stationId) - \(stationName)")
         self.stationId = stationId
         self.stationName = stationName
         self.predictionService = predictionService
-        self.databaseService = databaseService
+        self.tideStationService = tideStationService
         
         dateFormatter = DateFormatter()
         dateFormatter.dateStyle = .medium
@@ -84,14 +84,14 @@ class TidalHeightPredictionViewModel: ObservableObject {
     
     func toggleFavorite() async {
         do {
-            let newValue = await databaseService.toggleTideStationFavorite(id: stationId)
+            let newValue = await tideStationService.toggleTideStationFavorite(id: stationId)
             
             await MainActor.run {
                 self.isFavorite = newValue
             }
         } catch {
             await MainActor.run {
-                self.errorMessage = "Failed to update favorite status"
+                errorMessage = "Failed to update favorite status"
             }
         }
     }
@@ -127,7 +127,7 @@ class TidalHeightPredictionViewModel: ObservableObject {
     
     // MARK: - Private Methods
     private func updateFavoriteStatus() async {
-        let isFavorite = await databaseService.isTideStationFavorite(id: stationId)
+        let isFavorite = await tideStationService.isTideStationFavorite(id: stationId)
         
         await MainActor.run {
             self.isFavorite = isFavorite

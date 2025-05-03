@@ -19,39 +19,36 @@ class TidalHeightStationsViewModel: ObservableObject {
         return status == .authorizedWhenInUse || status == .authorizedAlways
     }
 
-    // MARK: - Private Properties
+    // MARK: - Properties
+    let tideStationService: TideStationDatabaseService
     private let tidalHeightService: TidalHeightService
     private let locationService: LocationService
-    private let databaseService: DatabaseService
     private var allStations: [StationWithDistance<TidalHeightStation>] = []
 
     // MARK: - Initialization
     init(
         tidalHeightService: TidalHeightService,
         locationService: LocationService,
-        databaseService: DatabaseService
+        tideStationService: TideStationDatabaseService
     ) {
         self.tidalHeightService = tidalHeightService
         self.locationService = locationService
-        self.databaseService = databaseService
+        self.tideStationService = tideStationService
         print("✅ TidalHeightStationsViewModel initialized. Will rely on ServiceProvider for location permission/start.")
     }
 
     // MARK: - Public Methods
     func loadStations() async {
-        // --- ADDED PRINT STATEMENT FOR TIMING PROOF ---
         print("⏰ ViewModel: loadStations() started at \(Date())")
-        // ---------------------------------------------
 
         guard !isLoading else {
-             print("⏰ ViewModel: loadStations() exited early, already loading.") // Added for clarity
+             print("⏰ ViewModel: loadStations() exited early, already loading.")
              return
         }
 
         await MainActor.run {
             isLoading = true
             errorMessage = ""
-            // Print location check time within MainActor block as well
             print("⏰ ViewModel: Checking location in loadStations (MainActor block) at \(Date()). Current value: \(locationService.currentLocation?.description ?? "nil")")
             if let location = locationService.currentLocation {
                  self.userLatitude = String(format: "%.6f", location.coordinate.latitude)
@@ -63,17 +60,17 @@ class TidalHeightStationsViewModel: ObservableObject {
         }
 
         do {
-            print("⏰ ViewModel: Starting API call for stations at \(Date())") // Added API call timing
+            print("⏰ ViewModel: Starting API call for stations at \(Date())")
             let response = try await tidalHeightService.getTidalHeightStations()
-            print("⏰ ViewModel: Finished API call for stations at \(Date())") // Added API call timing
+            print("⏰ ViewModel: Finished API call for stations at \(Date())")
 
             var stations = response.stations
 
-            print("⏰ ViewModel: Starting favorite checks at \(Date())") // Added favorite check timing
+            print("⏰ ViewModel: Starting favorite checks at \(Date())")
             await withTaskGroup(of: (String, Bool).self) { group in
                 for station in stations {
                     group.addTask {
-                        let isFav = await self.databaseService.isTideStationFavorite(id: station.id)
+                        let isFav = await self.tideStationService.isTideStationFavorite(id: station.id)
                         return (station.id, isFav)
                     }
                 }
@@ -85,10 +82,9 @@ class TidalHeightStationsViewModel: ObservableObject {
                     stations[i].isFavorite = favoriteStatuses[stations[i].id] ?? false
                 }
             }
-             print("⏰ ViewModel: Finished favorite checks at \(Date())") // Added favorite check timing
+             print("⏰ ViewModel: Finished favorite checks at \(Date())")
 
-
-            print("⏰ ViewModel: Checking location for distance calculation at \(Date()). Current value: \(locationService.currentLocation?.description ?? "nil")") // Added distance check timing
+            print("⏰ ViewModel: Checking location for distance calculation at \(Date()). Current value: \(locationService.currentLocation?.description ?? "nil")")
             let currentLocationForDistance = locationService.currentLocation
             let stationsWithDistance = stations.map { station in
                 return StationWithDistance<TidalHeightStation>.create(
@@ -97,15 +93,15 @@ class TidalHeightStationsViewModel: ObservableObject {
                 )
             }
 
-            print("⏰ ViewModel: Updating UI state (allStations, filterStations, isLoading) at \(Date())") // Added UI update timing
+            print("⏰ ViewModel: Updating UI state (allStations, filterStations, isLoading) at \(Date())")
             await MainActor.run {
                 allStations = stationsWithDistance
                 filterStations()
                 isLoading = false
-                 print("⏰ ViewModel: UI state update complete at \(Date())") // Added UI update timing
+                 print("⏰ ViewModel: UI state update complete at \(Date())")
             }
         } catch {
-             print("❌ ViewModel: Error in loadStations at \(Date()): \(error.localizedDescription)") // Added error timing
+             print("❌ ViewModel: Error in loadStations at \(Date()): \(error.localizedDescription)")
             await MainActor.run {
                 errorMessage = "Failed to load stations: \(error.localizedDescription)"
                 allStations = []
@@ -114,11 +110,10 @@ class TidalHeightStationsViewModel: ObservableObject {
                 isLoading = false
             }
         }
-        print("⏰ ViewModel: loadStations() finished at \(Date())") // Added overall finish time
+        print("⏰ ViewModel: loadStations() finished at \(Date())")
     }
 
-    // ... (rest of the ViewModel code: refreshStations, filterStations, toggleFavorites, toggleStationFavorite remains the same) ...
-     func refreshStations() async {
+    func refreshStations() async {
          await MainActor.run {
               self.stations = []
               self.allStations = []
@@ -128,7 +123,6 @@ class TidalHeightStationsViewModel: ObservableObject {
      }
 
      func filterStations() {
-          // This print helps see when sorting actually happens
           print("🔄 ViewModel: filterStations() called at \(Date())")
           let filtered = allStations.filter { station in
               let matchesFavorite = !showOnlyFavorites || station.station.isFavorite
@@ -153,9 +147,7 @@ class TidalHeightStationsViewModel: ObservableObject {
                }
           }
 
-          // Update the @Published property on the main thread
           DispatchQueue.main.async {
-              // Avoid redundant updates if the list hasn't changed
               if self.stations.map({ $0.id }) != sorted.map({ $0.id }) {
                   self.stations = sorted
                   print("🔄 ViewModel: filterStations() updated self.stations on main thread at \(Date()). Count: \(sorted.count)")
@@ -163,7 +155,6 @@ class TidalHeightStationsViewModel: ObservableObject {
               self.totalStations = sorted.count
           }
      }
-
 
      func toggleFavorites() {
          showOnlyFavorites.toggle()
@@ -176,7 +167,7 @@ class TidalHeightStationsViewModel: ObservableObject {
      }
 
      func toggleStationFavorite(stationId: String) async {
-         let newFavoriteStatus = await databaseService.toggleTideStationFavorite(id: stationId)
+         let newFavoriteStatus = await tideStationService.toggleTideStationFavorite(id: stationId)
 
          if let index = allStations.firstIndex(where: { $0.station.id == stationId }) {
              var updatedStation = allStations[index].station
