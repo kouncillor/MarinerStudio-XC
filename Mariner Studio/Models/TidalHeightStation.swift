@@ -4,8 +4,8 @@ struct TidalHeightStation: Identifiable, Codable {
     // MARK: - Properties
     let id: String
     let name: String
-    let latitude: Double
-    let longitude: Double
+    let latitude: Double?
+    let longitude: Double?
     let state: String?
     let type: String
     let referenceId: String

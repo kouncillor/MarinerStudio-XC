@@ -24,8 +24,8 @@ struct NavUnit: Identifiable {
     var mile: Double?
     var bank: String?
     // No change needed here as the properties are already non-optional in the struct
-    var latitude: Double
-    var longitude: Double
+    var latitude: Double?
+    var longitude: Double?
     var operators: String?
     var owners: String?
     var purpose: String?

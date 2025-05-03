@@ -17,6 +17,11 @@ class ServiceProvider: ObservableObject {
     let buoyService: BuoyDatabaseService
     let weatherService: WeatherDatabaseService
     
+    // MARK: - Added Services for Nav Unit Details
+    let navUnitFtpService: NavUnitFtpService
+    let imageCacheService: ImageCacheService
+    let favoritesService: FavoritesService
+    
     // MARK: - Initialization
     init(locationService: LocationService? = nil) {
         // --- Initialize Core Services ---
@@ -43,6 +48,12 @@ class ServiceProvider: ObservableObject {
         self.buoyService = BuoyDatabaseService(databaseCore: databaseCore)
         self.weatherService = WeatherDatabaseService(databaseCore: databaseCore)
         print("📦 ServiceProvider: Initialized all database services.")
+        
+        // --- Initialize Added Services ---
+        self.navUnitFtpService = NavUnitFtpServiceImpl()
+        self.imageCacheService = ImageCacheServiceImpl()
+        self.favoritesService = FavoritesServiceImpl()
+        print("📦 ServiceProvider: Initialized NavUnit detail services.")
         
         // --- Asynchronous Initialization Tasks ---
         

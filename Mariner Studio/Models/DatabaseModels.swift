@@ -63,24 +63,6 @@ struct ChangeRecommendation: Identifiable {
     }
 }
 
-struct NavUnitPhoto: Identifiable {
-    let id: Int
-    let navUnitId: String
-    let filePath: String
-    let fileName: String
-    let thumbPath: String?
-    let createdAt: Date
-    
-    init(id: Int = 0, navUnitId: String, filePath: String, fileName: String, thumbPath: String? = nil, createdAt: Date = Date()) {
-        self.id = id
-        self.navUnitId = navUnitId
-        self.filePath = filePath
-        self.fileName = fileName
-        self.thumbPath = thumbPath
-        self.createdAt = createdAt
-    }
-}
-
 struct TugPhoto: Identifiable {
     let id: Int
     let tugId: String
