@@ -27,8 +27,9 @@ class NavUnitDatabaseService {
     private let colPortName = Expression<String?>("PORT_NAME")
     private let colMile = Expression<Double?>("MILE")
     private let colBank = Expression<String?>("BANK")
-    private let colLatitude = Expression<Double>("LATITUDE")
-    private let colLongitude = Expression<Double>("LONGITUDE")
+    // FIX: Changed these from non-optional to optional
+    private let colLatitude = Expression<Double?>("LATITUDE")
+    private let colLongitude = Expression<Double?>("LONGITUDE")
     private let colOperators = Expression<String?>("OPERATORS")
     private let colOwners = Expression<String?>("OWNERS")
     private let colPurpose = Expression<String?>("PURPOSE")
@@ -95,6 +96,7 @@ class NavUnitDatabaseService {
                     print(" S NavUnitDB (\(count)): ID \(unitId) - Raw Lat: \(String(describing: latValue)), Raw Lon: \(String(describing: lonValue))")
                 }
                 
+                // FIX: Use default values of 0 when latitude/longitude are nil
                 // Create NavUnit with all fields properly mapped
                 let unit = NavUnit(
                     navUnitId: row[colNavUnitId],
@@ -114,8 +116,8 @@ class NavUnitDatabaseService {
                     portName: row[colPortName],
                     mile: row[colMile],
                     bank: row[colBank],
-                    latitude: latValue,
-                    longitude: lonValue,
+                    latitude: latValue ?? 0.0,  // Use 0.0 as default if nil
+                    longitude: lonValue ?? 0.0, // Use 0.0 as default if nil
                     operators: row[colOperators],
                     owners: row[colOwners],
                     purpose: row[colPurpose],
