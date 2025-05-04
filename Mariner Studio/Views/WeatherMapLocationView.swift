@@ -10,6 +10,7 @@ struct WeatherMapLocationView: View {
     @StateObject private var viewModel = WeatherMapLocationViewModel()
     @EnvironmentObject var serviceProvider: ServiceProvider
     @Environment(\.colorScheme) var colorScheme
+    @Environment(\.presentationMode) var presentationMode
     
     // State for hourly forecast navigation
     @State private var hourlyViewModel: HourlyForecastViewModel?
@@ -103,8 +104,9 @@ struct WeatherMapLocationView: View {
             .padding()
         }
         .navigationTitle("\(locationName) Weather")
+        .navigationBarTitleDisplayMode(.inline)
         .onAppear {
-            // Initialize with services from the provider
+            // Initialize with services from the provider and passed location data
             viewModel.initialize(
                 weatherService: serviceProvider.openMeteoService,
                 geocodingService: serviceProvider.geocodingService,
@@ -114,7 +116,13 @@ struct WeatherMapLocationView: View {
                 locationName: locationName
             )
             
+            // Load weather data immediately when view appears
             viewModel.loadWeatherData()
+        }
+        .onDisappear {
+            // Clean up resources when view disappears
+            hourlyViewModel = nil
+            showHourlyForecast = false
         }
         .background(
             colorScheme == .dark ?

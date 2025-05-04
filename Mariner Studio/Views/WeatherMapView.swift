@@ -62,6 +62,7 @@ struct WeatherMapView: View {
                         longitude: selectedLocation.longitude,
                         locationName: locationName
                     )
+                    .environmentObject(serviceProvider)
                 } else {
                     EmptyView()
                 }
@@ -71,6 +72,16 @@ struct WeatherMapView: View {
         )
         .onAppear {
             setupInitialLocation()
+        }
+        // We'll only clear the selection when navigating back to this view
+        // not when it disappears (which would include when going to details view)
+        .onChange(of: showWeatherDetails) { wasShowing, isShowing in
+            // Only reset when returning from details view
+            if wasShowing && !isShowing {
+                // Reset the selection after returning from the details view
+                selectedLocation = nil
+                locationName = ""
+            }
         }
     }
     
@@ -98,7 +109,9 @@ struct WeatherMapView: View {
     }
     
     private func handleLongPress(at coordinate: CLLocationCoordinate2D) {
+        // Reset previous location data
         selectedLocation = coordinate
+        locationName = ""  // Reset the location name before loading the new one
         isLoading = true
         errorMessage = nil
         

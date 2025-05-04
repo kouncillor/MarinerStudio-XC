@@ -48,8 +48,14 @@ class WeatherMapLocationViewModel: ObservableObject {
     private var weatherService: WeatherService?
     private var geocodingService: GeocodingService?
     private var databaseService: WeatherDatabaseService?
+    private var weatherTask: Task<Void, Never>?
     
     private var cancellables = Set<AnyCancellable>()
+    
+    deinit {
+        // Cancel any ongoing tasks when view model is deallocated
+        weatherTask?.cancel()
+    }
     
     // MARK: - Initialization
     
@@ -62,19 +68,57 @@ class WeatherMapLocationViewModel: ObservableObject {
         longitude: Double,
         locationName: String
     ) {
+        // Cancel any existing tasks
+        weatherTask?.cancel()
+        
+        // Set services
         self.weatherService = weatherService
         self.geocodingService = geocodingService
         self.databaseService = databaseService
+        
+        // Set location data
         self.latitude = latitude
         self.longitude = longitude
+        
+        // Set the location display to the passed location name
         self.locationDisplay = locationName
+        
+        // Reset all other properties to default values
+        resetUIState()
+    }
+    
+    // Reset UI state without changing location
+    private func resetUIState() {
+        temperature = "--"
+        feelsLike = "--"
+        weatherDescription = "--"
+        precipitation = "0.00"
+        windSpeed = "--"
+        windGusts = "--"
+        windDirection = "--"
+        humidity = "--"
+        visibility = "--"
+        pressure = "--"
+        dewPoint = "--"
+        weatherImage = "sun.max.fill"
+        forecastPeriods = []
+        isFavorite = false
+        favoriteIcon = "heart"
+        errorMessage = ""
     }
     
     // MARK: - Public Methods
     
     /// Loads weather data for the specified coordinates
     func loadWeatherData() {
-        Task {
+        // Cancel any existing weather task
+        weatherTask?.cancel()
+        
+        // Start a new task for fetching weather data
+        weatherTask = Task {
+            // Check if task is cancelled
+            if Task.isCancelled { return }
+            
             await MainActor.run {
                 isLoading = true
                 errorMessage = ""
@@ -83,29 +127,53 @@ class WeatherMapLocationViewModel: ObservableObject {
             // Get weather data using the specified coordinates
             if let weatherService = weatherService {
                 do {
+                    // Make sure we have valid coordinates
+                    guard latitude != 0 && longitude != 0 else {
+                        await MainActor.run {
+                            errorMessage = "Invalid location coordinates"
+                            isLoading = false
+                        }
+                        return
+                    }
+                    
+                    // Get weather data
                     let weather = try await weatherService.getWeather(
                         latitude: latitude,
                         longitude: longitude
                     )
+                    
+                    // Check if task is cancelled before processing data
+                    if Task.isCancelled { return }
                     
                     await processWeatherData(weather)
                     
                     // Check if location is a favorite
                     await updateFavoriteStatus()
                 } catch {
-                    print("❌ Weather API error: \(error)")
-                    await MainActor.run {
-                        errorMessage = "Weather data unavailable. Please try again later."
+                    // Only update UI if task hasn't been cancelled
+                    if !Task.isCancelled {
+                        print("❌ Weather API error: \(error)")
+                        await MainActor.run {
+                            errorMessage = "Weather data unavailable. Please try again later."
+                            isLoading = false
+                        }
                     }
                 }
             } else {
-                await MainActor.run {
-                    errorMessage = "Weather service unavailable"
+                // Only update UI if task hasn't been cancelled
+                if !Task.isCancelled {
+                    await MainActor.run {
+                        errorMessage = "Weather service unavailable"
+                        isLoading = false
+                    }
                 }
             }
             
-            await MainActor.run {
-                isLoading = false
+            // Only update UI if task hasn't been cancelled
+            if !Task.isCancelled {
+                await MainActor.run {
+                    isLoading = false
+                }
             }
         }
     }
@@ -156,25 +224,33 @@ class WeatherMapLocationViewModel: ObservableObject {
                         if let databaseService = databaseService {
                             let dateString = currentDate.formatted(.iso8601.year().month().day())
                             if (try? await databaseService.getMoonPhaseForDateAsync(date: dateString)) != nil {
-                                await MainActor.run {
-                                    weatherImage = "moon.stars.fill" // Default moon image
+                                if !Task.isCancelled {
+                                    await MainActor.run {
+                                        weatherImage = "moon.stars.fill" // Default moon image
+                                    }
                                 }
                             } else {
+                                if !Task.isCancelled {
+                                    await MainActor.run {
+                                        weatherImage = "moon.stars.fill"
+                                    }
+                                }
+                            }
+                        } else {
+                            if !Task.isCancelled {
                                 await MainActor.run {
                                     weatherImage = "moon.stars.fill"
                                 }
                             }
-                        } else {
-                            await MainActor.run {
-                                weatherImage = "moon.stars.fill"
-                            }
                         }
                     } else {
-                        await MainActor.run {
-                            weatherImage = WeatherIconMapper.mapWeatherCode(
-                                weather.currentWeather.weatherCode,
-                                isNight: weather.currentWeather.isDay == 0
-                            )
+                        if !Task.isCancelled {
+                            await MainActor.run {
+                                weatherImage = WeatherIconMapper.mapWeatherCode(
+                                    weather.currentWeather.weatherCode,
+                                    isNight: weather.currentWeather.isDay == 0
+                                )
+                            }
                         }
                     }
                 }
@@ -235,6 +311,8 @@ class WeatherMapLocationViewModel: ObservableObject {
     /// Process the forecast data
     private func processForecastData(_ weather: OpenMeteoResponse) {
         Task {
+            if Task.isCancelled { return }
+            
             var forecastItems: [DailyForecastItem] = []
             
             for i in 0..<min(7, weather.daily.time.count) {
@@ -248,9 +326,9 @@ class WeatherMapLocationViewModel: ObservableObject {
                 
                 if let databaseService = databaseService {
                     let dateString = forecastDate.formatted(.iso8601.year().month().day())
-                    if (try? await databaseService.getMoonPhaseForDateAsync(date: dateString)) != nil {
-                        // Set values if needed based on moon phase
-                    }
+                    // Try to safely get moon phase, but don't break if it fails
+                    _ = try? await databaseService.getMoonPhaseForDateAsync(date: dateString)
+                    // In a real implementation, we would use the result to determine moonPhaseIcon and isWaxingMoon
                 }
                 
                 // Get visibility for noon of this day
@@ -295,23 +373,31 @@ class WeatherMapLocationViewModel: ObservableObject {
             // Fix for concurrent access warning - capture the array locally
             let items = forecastItems
             
-            await MainActor.run {
-                self.forecastPeriods = items
+            // Only update UI if task hasn't been cancelled
+            if !Task.isCancelled {
+                await MainActor.run {
+                    self.forecastPeriods = items
+                }
             }
         }
     }
     
     /// Check if the current location is a favorite
     private func updateFavoriteStatus() async {
+        if Task.isCancelled { return }
+        
         if let databaseService = databaseService {
             let favoriteStatus = await databaseService.isWeatherLocationFavoriteAsync(
                 latitude: latitude,
                 longitude: longitude
             )
             
-            await MainActor.run {
-                isFavorite = favoriteStatus
-                favoriteIcon = favoriteStatus ? "heart.fill" : "heart"
+            // Only update UI if task hasn't been cancelled
+            if !Task.isCancelled {
+                await MainActor.run {
+                    isFavorite = favoriteStatus
+                    favoriteIcon = favoriteStatus ? "heart.fill" : "heart"
+                }
             }
         }
     }
