@@ -19,7 +19,6 @@ class ServiceProvider: ObservableObject {
     
     // MARK: - Weather Services
     let openMeteoService: WeatherService
-    let weatherLocationService: WeatherLocationService
     let geocodingService: GeocodingService
     
     // MARK: - Added Services for Nav Unit Details
@@ -55,9 +54,7 @@ class ServiceProvider: ObservableObject {
         print("📦 ServiceProvider: Initialized all database services.")
         
         // --- Initialize Weather Services ---
-        // Use the new WeatherServiceImpl instead of OpenMeteoWeatherService
         self.openMeteoService = WeatherServiceImpl()
-        self.weatherLocationService = WeatherLocationManager()
         self.geocodingService = GeocodingServiceImpl()
         print("📦 ServiceProvider: Initialized weather services.")
         
@@ -111,9 +108,6 @@ class ServiceProvider: ObservableObject {
                         print("✅ ServiceProvider: Location permission granted/exists. Starting updates.")
                         // Start location updates if authorized
                         self.locationService.startUpdatingLocation()
-                        
-                        // Also start updates for the weather location service
-                        (self.weatherLocationService as? WeatherLocationManager)?.startLocationUpdates()
                     } else {
                         // This case is expected if user denies, restricts, or hasn't decided yet
                         print("⚠️ ServiceProvider: Location permission not authorized at launch. Updates not started.")
@@ -127,5 +121,3 @@ class ServiceProvider: ObservableObject {
         print("📦 ServiceProvider initialization complete (async tasks launched).")
     }
 }
-
-

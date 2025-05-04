@@ -67,10 +67,11 @@ struct CurrentLocalWeatherView: View {
         .navigationTitle("Current Weather")
         .onAppear {
             // Initialize with services from the provider
+            // Note: Now using locationService instead of weatherLocationService
             viewModel.initialize(
                 weatherService: serviceProvider.openMeteoService,
                 geocodingService: serviceProvider.geocodingService,
-                locationService: serviceProvider.weatherLocationService,
+                locationService: serviceProvider.locationService,
                 databaseService: serviceProvider.weatherService
             )
             

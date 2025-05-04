@@ -51,14 +51,9 @@ extension EnvironmentObject where ObjectType == ServiceProvider {
         wrappedValue.openMeteoService
     }
     
-    var weatherLocationService: WeatherLocationService {
-        wrappedValue.weatherLocationService
-    }
-    
     var geocodingService: GeocodingService {
         wrappedValue.geocodingService
     }
-    
 }
 
 // Extension for converting degrees to cardinal directions

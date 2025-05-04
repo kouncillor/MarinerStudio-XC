@@ -1,3 +1,4 @@
+
 import SwiftUI
 
 struct WeatherMenuView: View {
@@ -57,64 +58,51 @@ struct WeatherMenuView: View {
     // Opens the NOAA radar website using Safari
     private func openRadarWebsite() {
         Task {
-            if let locationService = serviceProvider.locationService as? WeatherLocationService {
-                // Get current location
-                locationService.getCurrentLocation { result in
-                    switch result {
-                    case .success(let location):
-                        // Build settings for the NOAA radar URL
-                        let settings = [
-                            "agenda": [
-                                "id": "weather",
-                                "center": [location.coordinate.longitude, location.coordinate.latitude],
-                                "location": [location.coordinate.longitude, location.coordinate.latitude],
-                                "zoom": 10.575874024810885,
-                                "layer": "bref_qcd"
-                            ],
-                            "animating": false,
-                            "base": "standard",
-                            "artcc": false,
-                            "county": false,
-                            "cwa": false,
-                            "rfc": false,
-                            "state": false,
-                            "menu": true,
-                            "shortFusedOnly": false,
-                            "opacity": [
-                                "alerts": 0.8,
-                                "local": 0.6,
-                                "localStations": 0.8,
-                                "national": 0.6
-                            ]
-                        ] as [String: Any]
-                        
-                        // Encode settings to URL
-                        if let settingsData = try? JSONSerialization.data(withJSONObject: settings),
-                           let settingsBase64 = String(data: settingsData, encoding: .utf8)?
-                            .data(using: .utf8)?
-                            .base64EncodedString()
-                            .replacingOccurrences(of: "+", with: "-")
-                            .replacingOccurrences(of: "/", with: "_")
-                            .replacingOccurrences(of: "=", with: "") {
-                            
-                            let url = "https://radar.weather.gov/?settings=v1_\(settingsBase64)"
-                            
-                            if let radarURL = URL(string: url) {
-                                UIApplication.shared.open(radarURL)
-                            }
-                        }
-                        
-                    case .failure(let error):
-                        print("Error getting location for radar: \(error.localizedDescription)")
-                        
-                        // Open radar with default location (New York)
-                        if let defaultURL = URL(string: "https://radar.weather.gov/") {
-                            UIApplication.shared.open(defaultURL)
-                        }
+            // Now using the main locationService instead of weatherLocationService
+            if let location = serviceProvider.locationService.currentLocation {
+                // Build settings for the NOAA radar URL
+                let settings = [
+                    "agenda": [
+                        "id": "weather",
+                        "center": [location.coordinate.longitude, location.coordinate.latitude],
+                        "location": [location.coordinate.longitude, location.coordinate.latitude],
+                        "zoom": 10.575874024810885,
+                        "layer": "bref_qcd"
+                    ],
+                    "animating": false,
+                    "base": "standard",
+                    "artcc": false,
+                    "county": false,
+                    "cwa": false,
+                    "rfc": false,
+                    "state": false,
+                    "menu": true,
+                    "shortFusedOnly": false,
+                    "opacity": [
+                        "alerts": 0.8,
+                        "local": 0.6,
+                        "localStations": 0.8,
+                        "national": 0.6
+                    ]
+                ] as [String: Any]
+                
+                // Encode settings to URL
+                if let settingsData = try? JSONSerialization.data(withJSONObject: settings),
+                   let settingsBase64 = String(data: settingsData, encoding: .utf8)?
+                    .data(using: .utf8)?
+                    .base64EncodedString()
+                    .replacingOccurrences(of: "+", with: "-")
+                    .replacingOccurrences(of: "/", with: "_")
+                    .replacingOccurrences(of: "=", with: "") {
+                    
+                    let url = "https://radar.weather.gov/?settings=v1_\(settingsBase64)"
+                    
+                    if let radarURL = URL(string: url) {
+                        UIApplication.shared.open(radarURL)
                     }
                 }
             } else {
-                // Fallback to standard radar URL if location service is unavailable
+                // Fallback to standard radar URL if location is unavailable
                 if let defaultURL = URL(string: "https://radar.weather.gov/") {
                     UIApplication.shared.open(defaultURL)
                 }
@@ -187,9 +175,3 @@ struct WeatherFavoritesView: View {
     }
 }
 
-#Preview {
-    NavigationView {
-        WeatherMenuView()
-            .environmentObject(ServiceProvider())
-    }
-}

@@ -39,23 +39,15 @@ class WeatherViewModel: ObservableObject {
     // Other UI properties
     @Published var attribution = "Weather data provided by Open-Meteo.com"
     
-    
-    
-    
-    
     // Add these to the @Published properties in the ViewModel
     @Published var selectedForecastDate: Date?
     @Published var selectedForecastData: [Date] = []
     @Published var shouldNavigateToHourlyForecast = false
     
-    
-    
-    
-    
     // MARK: - Private Properties
     private var weatherService: WeatherService?
     private var geocodingService: GeocodingService?
-    private var locationService: WeatherLocationService?
+    private var locationService: LocationService?
     private var databaseService: WeatherDatabaseService?
     
     private var cancellables = Set<AnyCancellable>()
@@ -67,7 +59,7 @@ class WeatherViewModel: ObservableObject {
     func initialize(
         weatherService: WeatherService?,
         geocodingService: GeocodingService?,
-        locationService: WeatherLocationService?,
+        locationService: LocationService?,
         databaseService: WeatherDatabaseService?
     ) {
         self.weatherService = weatherService
@@ -78,9 +70,6 @@ class WeatherViewModel: ObservableObject {
     
     // MARK: - Public Methods
     
- 
-    // In WeatherViewModel.swift, update the loadWeatherData method:
-
     func loadWeatherData() {
         Task {
             await MainActor.run {
@@ -157,20 +146,6 @@ class WeatherViewModel: ObservableObject {
         }
     }
     
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
     /// Toggles the favorite status of the current location
     func toggleFavorite() {
         Task {
@@ -225,12 +200,31 @@ class WeatherViewModel: ObservableObject {
     private func getUserLocation() async throws -> CLLocation? {
         return try await withCheckedThrowingContinuation { continuation in
             if let locationService = locationService {
-                locationService.getCurrentLocation { result in
-                    switch result {
-                    case .success(let location):
-                        continuation.resume(returning: location)
-                    case .failure(let error):
-                        continuation.resume(throwing: error)
+                if let location = locationService.currentLocation {
+                    continuation.resume(returning: location)
+                } else {
+                    Task {
+                        let authorized = await locationService.requestLocationPermission()
+                        if authorized {
+                            locationService.startUpdatingLocation()
+                            // Give it a moment to get a location
+                            try await Task.sleep(for: .seconds(1))
+                            if let location = locationService.currentLocation {
+                                continuation.resume(returning: location)
+                            } else {
+                                continuation.resume(throwing: NSError(
+                                    domain: "WeatherViewModel",
+                                    code: 0,
+                                    userInfo: [NSLocalizedDescriptionKey: "Unable to get location"]
+                                ))
+                            }
+                        } else {
+                            continuation.resume(throwing: NSError(
+                                domain: "WeatherViewModel",
+                                code: 2,
+                                userInfo: [NSLocalizedDescriptionKey: "Location access denied"]
+                            ))
+                        }
                     }
                 }
             } else {
@@ -270,7 +264,6 @@ class WeatherViewModel: ObservableObject {
             }
         }
     }
-    
     
     private func processWeatherData(_ weather: OpenMeteoResponse) async {
         await MainActor.run {
@@ -361,13 +354,6 @@ class WeatherViewModel: ObservableObject {
         }
     }
     
-    
-    
-    
-    
-    
-    
-    
     /// Process the forecast data
     private func processForecastData(_ weather: OpenMeteoResponse) {
         Task {
@@ -439,25 +425,11 @@ class WeatherViewModel: ObservableObject {
         }
     }
     
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-     
     /// Check if the current location is a favorite
     private func updateFavoriteStatus() async {
         if let databaseService = databaseService {
             do {
-                let favoriteStatus = try await databaseService.isWeatherLocationFavoriteAsync(
+                let favoriteStatus = await databaseService.isWeatherLocationFavoriteAsync(
                     latitude: latitude,
                     longitude: longitude
                 )
@@ -549,5 +521,4 @@ class WeatherViewModel: ObservableObject {
         let index = Int(((degrees + 11.25) / 22.5).truncatingRemainder(dividingBy: 16))
         return directions[index]
     }
-    
 }
