@@ -52,6 +52,18 @@ class NavUnitDetailsViewModel: ObservableObject {
     // Used to manage and cancel any ongoing tasks
     private var cancellables = Set<AnyCancellable>()
     
+    // Add an actor to safely manage concurrent access to currentPhoto
+    private actor PhotoLoadingState {
+        var currentCount = 0
+        
+        func increment() -> Int {
+            currentCount += 1
+            return currentCount
+        }
+    }
+    
+    private let photoLoadingState = PhotoLoadingState()
+    
     // MARK: - Computed Properties
     var hasCoordinates: Bool {
         return unit?.latitude != nil && unit?.longitude != nil
@@ -168,7 +180,6 @@ class NavUnitDetailsViewModel: ObservableObject {
             }
             
             let totalPhotos = fileNames.count
-            var currentPhoto = 0
             
             // Process in batches for better performance
             let batchSize = 3 // Reduced batch size for better stability
@@ -192,9 +203,10 @@ class NavUnitDetailsViewModel: ObservableObject {
                                 // Continue with placeholder
                             }
                             
-                            currentPhoto += 1
+                            // Fixed: Use the actor to safely increment the counter
+                            let currentCount = await self.photoLoadingState.increment()
                             await MainActor.run {
-                                self.remotePhotosHeader = "Remote Photos (Loading \(currentPhoto) of \(totalPhotos))"
+                                self.remotePhotosHeader = "Remote Photos (Loading \(currentCount) of \(totalPhotos))"
                             }
                             
                             return item
@@ -375,8 +387,9 @@ class NavUnitDetailsViewModel: ObservableObject {
     
     func deletePhoto(_ photoId: Int) async {
         do {
-            // Use photoService instead of databaseService for photo operations
-            try await photoService.deleteNavUnitPhotoAsync(photoId: photoId)
+            // Fixed: Store the result in a variable, even if we don't use it
+            let deleteResult = try await photoService.deleteNavUnitPhotoAsync(photoId: photoId)
+            print("Delete result: \(deleteResult)")
             await loadLocalPhotos()
         } catch {
             await MainActor.run {
