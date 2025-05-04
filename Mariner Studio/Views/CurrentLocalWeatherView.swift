@@ -71,7 +71,6 @@ struct CurrentLocalWeatherView: View {
                 weatherService: serviceProvider.openMeteoService,
                 geocodingService: serviceProvider.geocodingService,
                 locationService: serviceProvider.weatherLocationService,
-                navigationService: serviceProvider.navigationService,
                 databaseService: serviceProvider.weatherService
             )
             

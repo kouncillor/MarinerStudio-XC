@@ -27,9 +27,6 @@ class ServiceProvider: ObservableObject {
     let imageCacheService: ImageCacheService
     let favoritesService: FavoritesService
     
-    // MARK: - Navigation Service
-    let navigationService: NavigationService
-    
     // MARK: - Initialization
     init(locationService: LocationService? = nil) {
         // --- Initialize Core Services ---
@@ -63,10 +60,6 @@ class ServiceProvider: ObservableObject {
         self.weatherLocationService = WeatherLocationManager()
         self.geocodingService = GeocodingServiceImpl()
         print("📦 ServiceProvider: Initialized weather services.")
-        
-        // --- Initialize Navigation Service ---
-        self.navigationService = NavigationServiceImpl()
-        print("📦 ServiceProvider: Initialized navigation service.")
         
         // --- Initialize Added Services ---
         self.navUnitFtpService = NavUnitFtpServiceImpl()
@@ -135,62 +128,4 @@ class ServiceProvider: ObservableObject {
     }
 }
 
-// MARK: - Navigation Service
 
-protocol NavigationService {
-    func navigateTo(destination: String, parameters: [String: Any]) async
-    func goBack() async
-}
-
-class NavigationServiceImpl: NavigationService {
-    func navigateTo(destination: String, parameters: [String: Any]) async {
-        // In a real implementation, this would use UIKit or SwiftUI navigation
-        print("📱 NavigationService: Navigating to \(destination) with parameters: \(parameters)")
-        
-        // The actual implementation would depend on how navigation is structured in the app
-        // For example, with a NavigationStack, it might push a new view onto the stack
-    }
-    
-    func goBack() async {
-        // In a real implementation, this would use UIKit or SwiftUI navigation
-        print("📱 NavigationService: Going back")
-        
-        // The actual implementation would depend on how navigation is structured in the app
-        // For example, with a NavigationStack, it might pop the current view
-    }
-}
-
-// MARK: - Geocoding Service
-
-protocol GeocodingService {
-    func reverseGeocode(latitude: Double, longitude: Double) async throws -> GeocodingResponse
-}
-
-struct GeocodingResponse {
-    struct Result {
-        let name: String
-        let state: String
-    }
-    
-    let results: [Result]
-}
-
-class GeocodingServiceImpl: GeocodingService {
-    func reverseGeocode(latitude: Double, longitude: Double) async throws -> GeocodingResponse {
-        // In a real implementation, this would call a geocoding API
-        // For now, we'll return a placeholder response
-        
-        // Simulate network delay
-        try await Task.sleep(for: .seconds(0.5))
-        
-        // Return a placeholder response
-        return GeocodingResponse(
-            results: [
-                GeocodingResponse.Result(
-                    name: "New York",
-                    state: "NY"
-                )
-            ]
-        )
-    }
-}

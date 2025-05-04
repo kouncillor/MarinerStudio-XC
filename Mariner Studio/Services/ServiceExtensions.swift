@@ -59,9 +59,6 @@ extension EnvironmentObject where ObjectType == ServiceProvider {
         wrappedValue.geocodingService
     }
     
-    var navigationService: NavigationService {
-        wrappedValue.navigationService
-    }
 }
 
 // Extension for converting degrees to cardinal directions

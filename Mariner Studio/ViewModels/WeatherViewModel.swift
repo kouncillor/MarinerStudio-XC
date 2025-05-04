@@ -39,11 +39,23 @@ class WeatherViewModel: ObservableObject {
     // Other UI properties
     @Published var attribution = "Weather data provided by Open-Meteo.com"
     
+    
+    
+    
+    
+    // Add these to the @Published properties in the ViewModel
+    @Published var selectedForecastDate: Date?
+    @Published var selectedForecastData: [Date] = []
+    @Published var shouldNavigateToHourlyForecast = false
+    
+    
+    
+    
+    
     // MARK: - Private Properties
     private var weatherService: WeatherService?
     private var geocodingService: GeocodingService?
     private var locationService: WeatherLocationService?
-    private var navigationService: NavigationService?
     private var databaseService: WeatherDatabaseService?
     
     private var cancellables = Set<AnyCancellable>()
@@ -56,13 +68,11 @@ class WeatherViewModel: ObservableObject {
         weatherService: WeatherService?,
         geocodingService: GeocodingService?,
         locationService: WeatherLocationService?,
-        navigationService: NavigationService?,
         databaseService: WeatherDatabaseService?
     ) {
         self.weatherService = weatherService
         self.geocodingService = geocodingService
         self.locationService = locationService
-        self.navigationService = navigationService
         self.databaseService = databaseService
     }
     
@@ -185,24 +195,28 @@ class WeatherViewModel: ObservableObject {
         }
     }
     
-    /// Navigate to hourly forecast for the selected date
+    /// Prepares hourly forecast data for the selected date
     func navigateToHourlyForecast(forecast: DailyForecastItem) {
+        // Instead of navigation service, we'll set up data for SwiftUI navigation
+        // This would typically be used with either:
+        // 1. State variables that trigger navigation
+        // 2. Parameters passed to a NavigationLink destination
+        
+        // Store relevant data in published properties that the view can access
         Task {
-            if let navigationService = navigationService {
-                let params: [String: Any] = [
-                    "selectedDate": forecast.date,
-                    "allDates": forecastPeriods.map { $0.date },
-                    "latitude": latitude,
-                    "longitude": longitude,
-                    "locationName": locationDisplay
-                ]
+            await MainActor.run {
+                // These would be new published properties in the ViewModel
+                selectedForecastDate = forecast.date
+                selectedForecastData = forecastPeriods.map { $0.date }
                 
-                await navigationService.navigateTo(
-                    destination: "HourlyForecastView",
-                    parameters: params
-                )
+                // This boolean could be used to trigger navigation in a SwiftUI view
+                // if using programmatic navigation with NavigationPath
+                shouldNavigateToHourlyForecast = true
             }
         }
+        
+        // Note: The actual navigation would happen in the view using NavigationLink
+        // or NavigationStack's programmatic navigation
     }
     
     // MARK: - Private Methods
