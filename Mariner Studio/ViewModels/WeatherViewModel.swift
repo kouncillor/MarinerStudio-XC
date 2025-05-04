@@ -151,21 +151,17 @@ class WeatherViewModel: ObservableObject {
         Task {
             guard latitude != 0 && longitude != 0 else { return }
             
-            do {
-                if let databaseService = databaseService {
-                    let newFavoriteStatus = await databaseService.toggleWeatherLocationFavoriteAsync(
-                        latitude: latitude,
-                        longitude: longitude,
-                        locationName: locationDisplay
-                    )
-                    
-                    await MainActor.run {
-                        isFavorite = newFavoriteStatus
-                        favoriteIcon = newFavoriteStatus ? "heart.fill" : "heart"
-                    }
+            if let databaseService = databaseService {
+                let newFavoriteStatus = await databaseService.toggleWeatherLocationFavoriteAsync(
+                    latitude: latitude,
+                    longitude: longitude,
+                    locationName: locationDisplay
+                )
+                
+                await MainActor.run {
+                    isFavorite = newFavoriteStatus
+                    favoriteIcon = newFavoriteStatus ? "heart.fill" : "heart"
                 }
-            } catch {
-                print("❌ Error toggling favorite: \(error)")
             }
         }
     }
@@ -204,26 +200,30 @@ class WeatherViewModel: ObservableObject {
                     continuation.resume(returning: location)
                 } else {
                     Task {
-                        let authorized = await locationService.requestLocationPermission()
-                        if authorized {
-                            locationService.startUpdatingLocation()
-                            // Give it a moment to get a location
-                            try await Task.sleep(for: .seconds(1))
-                            if let location = locationService.currentLocation {
-                                continuation.resume(returning: location)
+                        do {
+                            let authorized = await locationService.requestLocationPermission()
+                            if authorized {
+                                locationService.startUpdatingLocation()
+                                // Give it a moment to get a location
+                                try await Task.sleep(for: .seconds(1))
+                                if let location = locationService.currentLocation {
+                                    continuation.resume(returning: location)
+                                } else {
+                                    continuation.resume(throwing: NSError(
+                                        domain: "WeatherViewModel",
+                                        code: 0,
+                                        userInfo: [NSLocalizedDescriptionKey: "Unable to get location"]
+                                    ))
+                                }
                             } else {
                                 continuation.resume(throwing: NSError(
                                     domain: "WeatherViewModel",
-                                    code: 0,
-                                    userInfo: [NSLocalizedDescriptionKey: "Unable to get location"]
+                                    code: 2,
+                                    userInfo: [NSLocalizedDescriptionKey: "Location access denied"]
                                 ))
                             }
-                        } else {
-                            continuation.resume(throwing: NSError(
-                                domain: "WeatherViewModel",
-                                code: 2,
-                                userInfo: [NSLocalizedDescriptionKey: "Location access denied"]
-                            ))
+                        } catch {
+                            continuation.resume(throwing: error)
                         }
                     }
                 }
@@ -277,7 +277,8 @@ class WeatherViewModel: ObservableObject {
                     if let currentDate = ISO8601DateFormatter().date(from: weather.currentWeather.time) {
                         if let databaseService = databaseService {
                             let dateString = currentDate.formatted(.iso8601.year().month().day())
-                            if let moonPhase = try? await databaseService.getMoonPhaseForDateAsync(date: dateString) {
+                            // Use a boolean check instead of unused variable
+                            if (try? await databaseService.getMoonPhaseForDateAsync(date: dateString)) != nil {
                                 await MainActor.run {
                                     weatherImage = "moon.stars.fill" // Default moon image
                                 }
@@ -365,18 +366,15 @@ class WeatherViewModel: ObservableObject {
                 }
                 
                 // Get moon phase from database
-                var moonPhaseIcon = "moonphase.new.moon"
-                var isWaxingMoon = true
+                let moonPhaseIcon = "moonphase.new.moon"
+                let isWaxingMoon = true
                 
                 if let databaseService = databaseService {
                     let dateString = forecastDate.formatted(.iso8601.year().month().day())
-                    // Added 'date:' parameter label here
-                    if let moonPhase = try? await databaseService.getMoonPhaseForDateAsync(date: dateString) {
-                        // If using the DbMoonPhase that doesn't have icon/isWaxing properties,
-                        // you'll need to determine these values from the phase string
+                    // Use boolean check instead of unused variable
+                    if (try? await databaseService.getMoonPhaseForDateAsync(date: dateString)) != nil {
+                        // Set values if needed based on moon phase
                         // For now, keeping defaults
-                        moonPhaseIcon = "moonphase.new.moon"
-                        isWaxingMoon = true
                     }
                 }
                 
@@ -419,8 +417,11 @@ class WeatherViewModel: ObservableObject {
                 forecastItems.append(item)
             }
             
+            // Fix for concurrent access warning - capture the array locally
+            let items = forecastItems
+            
             await MainActor.run {
-                forecastPeriods = forecastItems
+                self.forecastPeriods = items
             }
         }
     }
@@ -428,18 +429,15 @@ class WeatherViewModel: ObservableObject {
     /// Check if the current location is a favorite
     private func updateFavoriteStatus() async {
         if let databaseService = databaseService {
-            do {
-                let favoriteStatus = await databaseService.isWeatherLocationFavoriteAsync(
-                    latitude: latitude,
-                    longitude: longitude
-                )
-                
-                await MainActor.run {
-                    isFavorite = favoriteStatus
-                    favoriteIcon = favoriteStatus ? "heart.fill" : "heart"
-                }
-            } catch {
-                print("❌ Error checking favorite status: \(error)")
+            // Remove do-catch since no errors are thrown
+            let favoriteStatus = await databaseService.isWeatherLocationFavoriteAsync(
+                latitude: latitude,
+                longitude: longitude
+            )
+            
+            await MainActor.run {
+                isFavorite = favoriteStatus
+                favoriteIcon = favoriteStatus ? "heart.fill" : "heart"
             }
         }
     }
