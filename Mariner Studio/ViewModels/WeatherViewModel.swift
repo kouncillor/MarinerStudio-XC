@@ -68,7 +68,9 @@ class WeatherViewModel: ObservableObject {
     
     // MARK: - Public Methods
     
-    /// Loads weather data for the user's current location
+ 
+    // In WeatherViewModel.swift, update the loadWeatherData method:
+
     func loadWeatherData() {
         Task {
             await MainActor.run {
@@ -89,35 +91,53 @@ class WeatherViewModel: ObservableObject {
                 
                 // Get location name
                 if let geocodingService = geocodingService {
-                    let geocodingResult = try await geocodingService.reverseGeocode(
-                        latitude: location.coordinate.latitude,
-                        longitude: location.coordinate.longitude
-                    )
-                    
-                    if let locationResult = geocodingResult.results.first {
+                    do {
+                        let geocodingResult = try await geocodingService.reverseGeocode(
+                            latitude: location.coordinate.latitude,
+                            longitude: location.coordinate.longitude
+                        )
+                        
+                        if let locationResult = geocodingResult.results.first {
+                            await MainActor.run {
+                                locationDisplay = "\(locationResult.name), \(locationResult.state)"
+                            }
+                        }
+                    } catch {
+                        print("⚠️ Geocoding error: \(error), continuing with coordinates only")
                         await MainActor.run {
-                            locationDisplay = "\(locationResult.name), \(locationResult.state)"
+                            locationDisplay = "Location at \(String(format: "%.4f", latitude))°, \(String(format: "%.4f", longitude))°"
                         }
                     }
                 }
                 
                 // Get weather data
                 if let weatherService = weatherService {
-                    let weather = try await weatherService.getWeather(
-                        latitude: location.coordinate.latitude,
-                        longitude: location.coordinate.longitude
-                    )
-                    
-                    await processWeatherData(weather)
+                    do {
+                        let weather = try await weatherService.getWeather(
+                            latitude: location.coordinate.latitude,
+                            longitude: location.coordinate.longitude
+                        )
+                        
+                        await processWeatherData(weather)
+                        
+                        // Check if location is a favorite
+                        await updateFavoriteStatus()
+                    } catch {
+                        print("❌ Weather API error: \(error)")
+                        await MainActor.run {
+                            errorMessage = "Weather data unavailable. Please try again later."
+                        }
+                    }
+                } else {
+                    await MainActor.run {
+                        errorMessage = "Weather service unavailable"
+                    }
                 }
-                
-                // Check if location is a favorite
-                await updateFavoriteStatus()
                 
             } catch {
                 await MainActor.run {
-                    errorMessage = error.localizedDescription
-                    print("❌ Weather error: \(error)")
+                    errorMessage = "Could not retrieve location: \(error.localizedDescription)"
+                    print("❌ Location error: \(error)")
                 }
             }
             
@@ -126,6 +146,20 @@ class WeatherViewModel: ObservableObject {
             }
         }
     }
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
     /// Toggles the favorite status of the current location
     func toggleFavorite() {
@@ -224,7 +258,6 @@ class WeatherViewModel: ObservableObject {
     }
     
     
-    /// Process the weather data and update the UI
     private func processWeatherData(_ weather: OpenMeteoResponse) async {
         await MainActor.run {
             // Current conditions
@@ -237,11 +270,8 @@ class WeatherViewModel: ObservableObject {
                     if let currentDate = ISO8601DateFormatter().date(from: weather.currentWeather.time) {
                         if let databaseService = databaseService {
                             let dateString = currentDate.formatted(.iso8601.year().month().day())
-                            // Added 'date:' parameter label here
                             if let moonPhase = try? await databaseService.getMoonPhaseForDateAsync(date: dateString) {
                                 await MainActor.run {
-                                    // Since we renamed MoonPhase to DbMoonPhase, we need to handle the icon property differently
-                                    // DbMoonPhase doesn't have an icon property, so we'll need to map or use a default
                                     weatherImage = "moon.stars.fill" // Default moon image
                                 }
                             } else {
@@ -270,35 +300,44 @@ class WeatherViewModel: ObservableObject {
                 )
             }
             
-            // Get current hour index
-            let currentHourIndex = Calendar.current.component(.hour, from: Date())
+            // Get current hour index - handle potential out of bounds
+            let currentHourIndex = min(Calendar.current.component(.hour, from: Date()), weather.hourly.temperature.count - 1)
             
-            // Current conditions from hourly data
-            if weather.hourly.temperature.count > currentHourIndex {
+            // Current conditions from hourly data - with bound checking
+            if currentHourIndex < weather.hourly.temperature.count {
                 feelsLike = "\(Int(weather.hourly.temperature[currentHourIndex].rounded()))"
                 windSpeed = "\(weather.hourly.windSpeed[currentHourIndex].rounded(.toNearestOrAwayFromZero)) mph"
                 windDirection = getWindDirection(weather.hourly.windDirection[currentHourIndex])
                 
-                if let humidityValue = weather.hourly.relativeHumidity?[currentHourIndex] {
-                    humidity = "\(humidityValue)"
+                if let humidityValues = weather.hourly.relativeHumidity,
+                   currentHourIndex < humidityValues.count {
+                    humidity = "\(humidityValues[currentHourIndex])"
                 }
                 
-                windGusts = "\(weather.hourly.windGusts[currentHourIndex].rounded(.toNearestOrAwayFromZero)) mph"
+                if currentHourIndex < weather.hourly.windGusts.count {
+                    windGusts = "\(weather.hourly.windGusts[currentHourIndex].rounded(.toNearestOrAwayFromZero)) mph"
+                }
                 
                 // Visibility (convert meters to miles)
-                let visibilityMiles = weather.hourly.visibility[currentHourIndex] / 1609.34
-                visibility = visibilityMiles >= 15.0 ? "15+ mi" : "\(String(format: "%.1f", visibilityMiles)) mi"
-                
-                // Pressure (convert hPa to inHg)
-                pressure = String(format: "%.2f", weather.hourly.pressure[currentHourIndex] * 0.02953)
-                
-                if let dewPointValue = weather.hourly.dewPoint?[currentHourIndex] {
-                    dewPoint = "\(dewPointValue.rounded(.toNearestOrAwayFromZero))"
+                if currentHourIndex < weather.hourly.visibility.count {
+                    let visibilityMiles = weather.hourly.visibility[currentHourIndex] / 1609.34
+                    visibility = visibilityMiles >= 15.0 ? "15+ mi" : "\(String(format: "%.1f", visibilityMiles)) mi"
                 }
                 
-                // Calculate 24-hour precipitation
+                // Pressure (convert hPa to inHg)
+                if currentHourIndex < weather.hourly.pressure.count {
+                    pressure = String(format: "%.2f", weather.hourly.pressure[currentHourIndex] * 0.02953)
+                }
+                
+                if let dewPointValues = weather.hourly.dewPoint,
+                   currentHourIndex < dewPointValues.count {
+                    dewPoint = "\(dewPointValues[currentHourIndex].rounded(.toNearestOrAwayFromZero))"
+                }
+                
+                // Calculate 24-hour precipitation - safely
+                let precipCount = weather.hourly.precipitation.count
                 let last24HoursPrecip = weather.hourly.precipitation
-                    .prefix(min(24, weather.hourly.precipitation.count))
+                    .prefix(min(24, precipCount))
                     .reduce(0, +)
                 precipitation = String(format: "%.2f", last24HoursPrecip)
             }
@@ -307,8 +346,6 @@ class WeatherViewModel: ObservableObject {
             processForecastData(weather)
         }
     }
-    
-    
     
     
     
@@ -498,4 +535,5 @@ class WeatherViewModel: ObservableObject {
         let index = Int(((degrees + 11.25) / 22.5).truncatingRemainder(dividingBy: 16))
         return directions[index]
     }
+    
 }

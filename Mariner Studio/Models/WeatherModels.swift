@@ -95,11 +95,6 @@ enum WeatherCondition: Int {
     case thunderstormWithSlightHailOm = 96
     case thunderstormWithHeavyHailOm = 99
     
-   
-    
-    
-    
-    
     func getIconName() -> String {
         switch self {
         case .clearSky, .clearSkyOm:
@@ -134,10 +129,6 @@ enum WeatherCondition: Int {
             return "cloud.fill"
         }
     }
-    
-    
-    
-    
     
     func getDescription() -> String {
         switch self {
@@ -396,6 +387,15 @@ struct CurrentWeather: Decodable {
     }
 }
 
+
+
+
+
+
+
+
+
+
 struct HourlyWeather: Decodable {
     let time: [String]
     let temperature: [Double]
@@ -407,6 +407,8 @@ struct HourlyWeather: Decodable {
     let dewPoint: [Double]?
     let pressure: [Double]
     let visibility: [Double]
+    var isDay: [Int]
+    var weatherCode: [Int]
     
     enum CodingKeys: String, CodingKey {
         case time
@@ -419,8 +421,42 @@ struct HourlyWeather: Decodable {
         case dewPoint = "dew_point_2m"
         case pressure = "surface_pressure"
         case visibility
+        case isDay = "is_day"
+        case weatherCode = "weathercode"
+    }
+    
+    // Custom initializer with default values for the new fields
+    init(time: [String], temperature: [Double], relativeHumidity: [Int]?, precipitation: [Double],
+         windSpeed: [Double], windDirection: [Double], windGusts: [Double], dewPoint: [Double]?,
+         pressure: [Double], visibility: [Double], isDay: [Int] = [], weatherCode: [Int] = []) {
+        self.time = time
+        self.temperature = temperature
+        self.relativeHumidity = relativeHumidity
+        self.precipitation = precipitation
+        self.windSpeed = windSpeed
+        self.windDirection = windDirection
+        self.windGusts = windGusts
+        self.dewPoint = dewPoint
+        self.pressure = pressure
+        self.visibility = visibility
+        self.isDay = isDay
+        self.weatherCode = weatherCode
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 struct DailyWeather: Decodable {
     let time: [String]
@@ -583,5 +619,29 @@ struct MarineHourlyUnits: Decodable {
         case swellWavePeriod = "swell_wave_period"
         case windWaveHeight = "wind_wave_height"
         case windWaveDirection = "wind_wave_direction"
+    }
+}
+
+// MARK: - Weather Error
+enum WeatherError: Error, LocalizedError {
+    case invalidURL
+    case invalidResponse
+    case serverError(statusCode: Int)
+    case decodingError(Error)
+    case invalidDate
+    
+    var errorDescription: String? {
+        switch self {
+        case .invalidURL:
+            return "Invalid URL for weather request"
+        case .invalidResponse:
+            return "Invalid response from weather service"
+        case .serverError(let statusCode):
+            return "Server error with status code: \(statusCode)"
+        case .decodingError(let error):
+            return "Error decoding weather data: \(error.localizedDescription)"
+        case .invalidDate:
+            return "Invalid date for weather request"
+        }
     }
 }

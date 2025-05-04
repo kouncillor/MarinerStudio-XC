@@ -58,7 +58,8 @@ class ServiceProvider: ObservableObject {
         print("📦 ServiceProvider: Initialized all database services.")
         
         // --- Initialize Weather Services ---
-        self.openMeteoService = OpenMeteoWeatherService()
+        // Use the new WeatherServiceImpl instead of OpenMeteoWeatherService
+        self.openMeteoService = WeatherServiceImpl()
         self.weatherLocationService = WeatherLocationManager()
         self.geocodingService = GeocodingServiceImpl()
         print("📦 ServiceProvider: Initialized weather services.")
