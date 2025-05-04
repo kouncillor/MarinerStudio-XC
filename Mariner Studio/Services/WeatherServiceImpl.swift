@@ -5,27 +5,27 @@ class WeatherServiceImpl: WeatherService {
     // MARK: - Constants
     private let baseUrl = "https://api.open-meteo.com/v1/forecast"
     private let marineUrl = "https://marine-api.open-meteo.com/v1/marine"
-    
+
     // MARK: - Properties
     private let urlSession: URLSession
-    
+
     // MARK: - Initialization
     init(urlSession: URLSession = .shared) {
         self.urlSession = urlSession
     }
-    
+
     // MARK: - Weather Service Methods
-    
+
     func getWeather(latitude: Double, longitude: Double) async throws -> OpenMeteoResponse {
         // Get today's date and format it for the API
         let today = Date()
         let todayDate = formatDate(today)
-        
+
         // Calculate the end date (today + 7 days)
         let calendar = Calendar.current
         if let endDate = calendar.date(byAdding: .day, value: 7, to: today) {
             let endDateString = formatDate(endDate)
-            
+
             // Build the URL with all required parameters
             let url = URL(string: "\(baseUrl)?" +
                          "latitude=\(latitude)" +
@@ -41,35 +41,35 @@ class WeatherServiceImpl: WeatherService {
                          "&precipitation_unit=inch" +
                          "&start_date=\(todayDate)" +
                          "&end_date=\(endDateString)")
-            
+
             guard let requestUrl = url else {
                 throw WeatherError.invalidURL
             }
-            
+
             print("📡 OpenMeteo Weather URL: \(requestUrl)")
-            
+
             let (data, response) = try await urlSession.data(from: requestUrl)
-            
+
             // Validate the response
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw WeatherError.invalidResponse
             }
-            
+
             guard httpResponse.statusCode == 200 else {
                 throw WeatherError.serverError(statusCode: httpResponse.statusCode)
             }
-            
+
             // Log a sample of the response
             if let jsonString = String(data: data, encoding: .utf8)?.prefix(200) {
                 print("📡 Response sample: \(jsonString)...")
             }
-            
+
             // Parse the JSON manually using JSONSerialization
             do {
                 guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
                     throw WeatherError.decodingError(NSError(domain: "WeatherService", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid JSON structure"]))
                 }
-                
+
                 // Create an OpenMeteoResponse from the raw JSON
                 return try createResponseFromRawJSON(json)
             } catch {
@@ -80,22 +80,22 @@ class WeatherServiceImpl: WeatherService {
             throw WeatherError.invalidDate
         }
     }
-    
+
     func getHourlyForecast(year: Int, month: Int, day: Int, latitude: Double, longitude: Double) async throws -> OpenMeteoHourlyResponse {
         // Create date components
         var dateComponents = DateComponents()
         dateComponents.year = year
         dateComponents.month = month
         dateComponents.day = day
-        
+
         // Create date from components
         guard let date = Calendar.current.date(from: dateComponents) else {
             throw WeatherError.invalidDate
         }
-        
+
         // Format date for API
         let dateString = formatDate(date)
-        
+
         // Build the URL with all required parameters
         let url = URL(string: "\(baseUrl)?" +
                      "latitude=\(latitude)" +
@@ -109,30 +109,39 @@ class WeatherServiceImpl: WeatherService {
                      "&temperature_unit=fahrenheit" +
                      "&windspeed_unit=mph" +
                      "&precipitation_unit=inch")
-        
+
         guard let requestUrl = url else {
             throw WeatherError.invalidURL
         }
-        
+
         print("📡 Hourly Forecast URL: \(requestUrl)")
-        
+
         let (data, response) = try await urlSession.data(from: requestUrl)
-        
+
         // Validate the response
         guard let httpResponse = response as? HTTPURLResponse else {
             throw WeatherError.invalidResponse
         }
-        
+
+        // --- Start Added Logging ---
+        print("📡 Hourly Response Status Code: \(httpResponse.statusCode)")
+        if let responseString = String(data: data, encoding: .utf8) {
+             print("📡 Hourly Response Data (First 500 chars): \(responseString.prefix(500))...")
+        } else {
+             print("📡 Hourly Response Data: Could not decode as UTF-8 string.")
+        }
+        // --- End Added Logging ---
+
         guard httpResponse.statusCode == 200 else {
             throw WeatherError.serverError(statusCode: httpResponse.statusCode)
         }
-        
+
         // Decode the response using JSONSerialization for flexibility
         do {
             guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
                 throw WeatherError.decodingError(NSError(domain: "WeatherService", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid JSON structure"]))
             }
-            
+
             // Parse the JSON into our model
             return try createHourlyResponseFromRawJSON(json)
         } catch {
@@ -140,22 +149,22 @@ class WeatherServiceImpl: WeatherService {
             throw WeatherError.decodingError(error)
         }
     }
-    
+
     func getMarineForecast(year: Int, month: Int, day: Int, latitude: Double, longitude: Double) async throws -> OpenMeteoMarineResponse? {
         // Create date components
         var dateComponents = DateComponents()
         dateComponents.year = year
         dateComponents.month = month
         dateComponents.day = day
-        
+
         // Create date from components
         guard let date = Calendar.current.date(from: dateComponents) else {
             throw WeatherError.invalidDate
         }
-        
+
         // Format date for API
         let dateString = formatDate(date)
-        
+
         // Build the URL with all required parameters
         let url = URL(string: "\(marineUrl)?" +
                      "latitude=\(latitude)" +
@@ -166,20 +175,20 @@ class WeatherServiceImpl: WeatherService {
                      "&start_date=\(dateString)" +
                      "&end_date=\(dateString)" +
                      "&timezone=auto")
-        
+
         guard let requestUrl = url else {
             throw WeatherError.invalidURL
         }
-        
+
         print("📡 Marine Forecast URL: \(requestUrl)")
-        
+
         let (data, response) = try await urlSession.data(from: requestUrl)
-        
+
         // Validate the response
         guard let httpResponse = response as? HTTPURLResponse else {
             throw WeatherError.invalidResponse
         }
-        
+
         guard httpResponse.statusCode == 200 else {
             // For marine data, we return nil if it's not available rather than throwing an error
             // as many locations won't have marine data
@@ -188,18 +197,18 @@ class WeatherServiceImpl: WeatherService {
             }
             throw WeatherError.serverError(statusCode: httpResponse.statusCode)
         }
-        
+
         // Check if response contains an error message
         if let content = String(data: data, encoding: .utf8), content.contains("Error") {
             return nil
         }
-        
+
         // Parse the JSON using JSONSerialization
         do {
             guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
                 throw WeatherError.decodingError(NSError(domain: "WeatherService", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid JSON structure"]))
             }
-            
+
             // Create the marine response from the raw JSON
             return try createMarineResponseFromRawJSON(json)
         } catch {
@@ -207,9 +216,9 @@ class WeatherServiceImpl: WeatherService {
             throw WeatherError.decodingError(error)
         }
     }
-    
+
     // MARK: - Helper Methods
-    
+
     /// Formats a date for API requests
     /// - Parameter date: The date to format
     /// - Returns: Formatted date string (yyyy-MM-dd)
@@ -218,9 +227,9 @@ class WeatherServiceImpl: WeatherService {
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.string(from: date)
     }
-    
+
     // MARK: - JSON Parsing Methods
-    
+
     /// Create an OpenMeteoResponse from raw JSON
     private func createResponseFromRawJSON(_ json: [String: Any]) throws -> OpenMeteoResponse {
         // Extract basic properties
@@ -231,7 +240,7 @@ class WeatherServiceImpl: WeatherService {
               let dailyData = json["daily"] as? [String: Any] else {
             throw WeatherError.decodingError(NSError(domain: "WeatherService", code: 2, userInfo: [NSLocalizedDescriptionKey: "Missing required fields in JSON"]))
         }
-        
+
         // Extract hourly arrays
         guard let timeArray = hourlyData["time"] as? [String],
               let temperatureArray = hourlyData["temperature_2m"] as? [Double],
@@ -245,11 +254,11 @@ class WeatherServiceImpl: WeatherService {
               let weatherCodeArray = hourlyData["weathercode"] as? [Int] else {
             throw WeatherError.decodingError(NSError(domain: "WeatherService", code: 3, userInfo: [NSLocalizedDescriptionKey: "Missing hourly data fields in JSON"]))
         }
-        
+
         // Extract optional hourly arrays
         let relativeHumidityArray = hourlyData["relativehumidity_2m"] as? [Int]
         let dewPointArray = hourlyData["dew_point_2m"] as? [Double]
-        
+
         // Extract daily arrays
         guard let dailyTimeArray = dailyData["time"] as? [String],
               let dailyWeatherCodeArray = dailyData["weathercode"] as? [Int],
@@ -262,7 +271,7 @@ class WeatherServiceImpl: WeatherService {
               let dailySurfacePressureArray = dailyData["surface_pressure_mean"] as? [Double] else {
             throw WeatherError.decodingError(NSError(domain: "WeatherService", code: 4, userInfo: [NSLocalizedDescriptionKey: "Missing daily data fields in JSON"]))
         }
-        
+
         // Create the hourly weather object
         let hourlyWeather = HourlyWeather(
             time: timeArray,
@@ -278,7 +287,7 @@ class WeatherServiceImpl: WeatherService {
             isDay: isDayArray,
             weatherCode: weatherCodeArray
         )
-        
+
         // Create the daily weather object
         let dailyWeather = DailyWeather(
             time: dailyTimeArray,
@@ -291,10 +300,10 @@ class WeatherServiceImpl: WeatherService {
             weatherCode: dailyWeatherCodeArray,
             surfacePressure: dailySurfacePressureArray
         )
-        
+
         // Get the current hour index
         let currentHourIndex = min(Calendar.current.component(.hour, from: Date()), timeArray.count - 1)
-        
+
         // Create the current weather object from the hourly data
         let currentWeather = CurrentWeather(
             temperature: temperatureArray[currentHourIndex],
@@ -304,7 +313,7 @@ class WeatherServiceImpl: WeatherService {
             time: timeArray[currentHourIndex],
             isDay: isDayArray[currentHourIndex]
         )
-        
+
         // Create the full response
         return OpenMeteoResponse(
             isDay: currentWeather.isDay,
@@ -316,9 +325,13 @@ class WeatherServiceImpl: WeatherService {
             daily: dailyWeather
         )
     }
-    
+
     /// Create an OpenMeteoHourlyResponse from raw JSON using JSONSerialization
     private func createHourlyResponseFromRawJSON(_ json: [String: Any]) throws -> OpenMeteoHourlyResponse {
+        // --- Start Added Logging ---
+        print("🧠 Attempting to parse hourly JSON...")
+        // --- End Added Logging ---
+
         // Extract the 'hourly_units' dictionary
         guard let unitsDict = json["hourly_units"] as? [String: String] else {
             throw WeatherError.decodingError(NSError(domain: "WeatherService", code: 5, userInfo: [NSLocalizedDescriptionKey: "Missing 'hourly_units' field in JSON"]))
@@ -379,17 +392,20 @@ class WeatherServiceImpl: WeatherService {
         )
 
         // Create the final response object
+        // --- Start Added Logging ---
+        print("🧠 Successfully parsed hourly JSON.")
+        // --- End Added Logging ---
         return OpenMeteoHourlyResponse(
             hourly: hourlyData,
             hourlyUnits: hourlyUnits
         )
     }
-    
+
     /// Create an OpenMeteoMarineResponse from raw JSON
     private func createMarineResponseFromRawJSON(_ json: [String: Any]) throws -> OpenMeteoMarineResponse? {
         // This is a simplified placeholder implementation
         // In a real app, you would parse the JSON to create the MarineHourlyData and MarineHourlyUnits objects
-        
+
         // For now, we'll return a minimal response
         let marineHourlyData = MarineHourlyData(
             time: [],
@@ -402,7 +418,7 @@ class WeatherServiceImpl: WeatherService {
             windWaveHeight: [],
             windWaveDirection: []
         )
-        
+
         let marineHourlyUnits = MarineHourlyUnits(
             time: "",
             waveHeight: "",
@@ -414,7 +430,7 @@ class WeatherServiceImpl: WeatherService {
             windWaveHeight: "",
             windWaveDirection: ""
         )
-        
+
         return OpenMeteoMarineResponse(
             hourly: marineHourlyData,
             hourlyUnits: marineHourlyUnits

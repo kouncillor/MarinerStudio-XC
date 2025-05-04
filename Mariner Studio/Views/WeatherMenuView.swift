@@ -1,52 +1,57 @@
-
 import SwiftUI
 
 struct WeatherMenuView: View {
     // We'll use environment objects for service dependencies
     @EnvironmentObject var serviceProvider: ServiceProvider
-    
+
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
-                // Favorites
+                // Favorites - System Icon
                 NavigationLink(destination: WeatherFavoritesView()) {
                     MenuButtonContent(
-                        icon: "heart.fill",
-                        title: "FAVORITES"
+                        iconType: .system("heart.fill"), // Specify system icon
+                        title: "FAVORITES",
+                        color: .red
                     )
                 }
-                
-                // Local Weather
+
+                // Local Weather - System Icon
                 NavigationLink(destination: CurrentLocalWeatherView()) {
                     MenuButtonContent(
-                        icon: "location.fill",
-                        title: "LOCAL"
+                        iconType: .system("location.fill"), // Specify system icon
+                        title: "LOCAL",
+                        color: .green
                     )
                 }
-                
-                // Weather Map
+
+                // Weather Map - Custom Icon
                 NavigationLink(destination: WeatherMapView()) {
                     MenuButtonContent(
-                        icon: "map.fill",
-                        title: "MAP"
+                        iconType: .custom("earthsixfour"), // Specify custom icon name
+                        title: "MAP",
+                        color: .blue // Color might not apply if asset isn't a Template
                     )
                 }
-                
-                // Radar
+
+                // Radar - System Icon
                 Button(action: {
                     openRadarWebsite()
                 }) {
                     MenuButtonContent(
-                        icon: "radar",
-                        title: "RADAR"
+                        iconType: .system("antenna.radiowaves.left.and.right"), // Specify system icon
+                        title: "RADAR",
+                        color: .orange
                     )
                 }
-                
-                // Settings
+
+                // Settings - System Icon
                 NavigationLink(destination: WeatherSettingsView()) {
                     MenuButtonContent(
-                        icon: "gearshape.fill",
-                        title: "SETTINGS"
+                        //iconType: .system("gearshape.fill"), // Specify system icon
+                        iconType: .system("line.3.horizontal"), // <-- Changed icon name
+                        title: "SETTINGS",
+                        color: .blue
                     )
                 }
             }
@@ -54,7 +59,7 @@ struct WeatherMenuView: View {
         }
         .navigationTitle("Weather")
     }
-    
+
     // Opens the NOAA radar website using Safari
     private func openRadarWebsite() {
         Task {
@@ -69,69 +74,72 @@ struct WeatherMenuView: View {
                         "zoom": 10.575874024810885,
                         "layer": "bref_qcd"
                     ],
-                    "animating": false,
-                    "base": "standard",
-                    "artcc": false,
-                    "county": false,
-                    "cwa": false,
-                    "rfc": false,
-                    "state": false,
-                    "menu": true,
-                    "shortFusedOnly": false,
-                    "opacity": [
-                        "alerts": 0.8,
-                        "local": 0.6,
-                        "localStations": 0.8,
-                        "national": 0.6
-                    ]
+                    "animating": false, "base": "standard", "artcc": false, "county": false,
+                    "cwa": false, "rfc": false, "state": false, "menu": true, "shortFusedOnly": false,
+                    "opacity": ["alerts": 0.8, "local": 0.6, "localStations": 0.8, "national": 0.6]
                 ] as [String: Any]
-                
                 // Encode settings to URL
                 if let settingsData = try? JSONSerialization.data(withJSONObject: settings),
                    let settingsBase64 = String(data: settingsData, encoding: .utf8)?
-                    .data(using: .utf8)?
-                    .base64EncodedString()
-                    .replacingOccurrences(of: "+", with: "-")
-                    .replacingOccurrences(of: "/", with: "_")
+                    .data(using: .utf8)?.base64EncodedString()
+                    .replacingOccurrences(of: "+", with: "-").replacingOccurrences(of: "/", with: "_")
                     .replacingOccurrences(of: "=", with: "") {
-                    
                     let url = "https://radar.weather.gov/?settings=v1_\(settingsBase64)"
-                    
-                    if let radarURL = URL(string: url) {
-                        UIApplication.shared.open(radarURL)
-                    }
+                    if let radarURL = URL(string: url) { UIApplication.shared.open(radarURL) }
                 }
             } else {
                 // Fallback to standard radar URL if location is unavailable
-                if let defaultURL = URL(string: "https://radar.weather.gov/") {
-                    UIApplication.shared.open(defaultURL)
-                }
+                if let defaultURL = URL(string: "https://radar.weather.gov/") { UIApplication.shared.open(defaultURL) }
             }
         }
     }
 }
 
-// MenuButtonContent component - custom styled buttons for the menu
+// MenuButtonContent component - updated to handle both icon types
 struct MenuButtonContent: View {
-    let icon: String
+    // Enum to define icon type
+    enum IconType {
+        case system(String) // Holds SF Symbol name
+        case custom(String) // Holds custom Asset name
+    }
+
+    let iconType: IconType // Use the enum
     let title: String
-    
+    let color: Color
+
     var body: some View {
         HStack {
-            Image(systemName: icon)
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 40, height: 40)
-                .foregroundColor(.blue)
-                .padding(.horizontal, 20)
-            
+            // Create the correct image based on type FIRST
+            // --- Start Changes ---
+            Group {
+                 switch iconType {
+                 case .system(let name):
+                     Image(systemName: name)
+                         .resizable() // Apply modifiers directly to Image
+                         .aspectRatio(contentMode: .fit)
+                         .foregroundColor(color) // Apply color
+                 case .custom(let name):
+                     Image(name)
+                         .resizable() // Apply modifiers directly to Image
+                         .aspectRatio(contentMode: .fit)
+                         // Conditionally apply foregroundColor ONLY if it's a template image.
+                         // For simplicity now, we apply it, but it might need adjustment
+                         // based on your asset settings.
+                         .foregroundColor(color) // Attempt to apply color
+                 }
+            }
+            .frame(width: 40, height: 40) // Apply frame AFTER creating/modifying the image
+            .padding(.horizontal, 20)
+            // --- End Changes ---
+
+
             Text(title)
                 .font(.title2)
                 .fontWeight(.semibold)
                 .foregroundColor(.primary)
-            
+
             Spacer()
-            
+
             Image(systemName: "chevron.right")
                 .foregroundColor(.secondary)
                 .padding(.trailing, 10)
@@ -144,7 +152,6 @@ struct MenuButtonContent: View {
         )
     }
 }
-
 // Placeholder for WeatherMapView
 struct WeatherMapView: View {
     var body: some View {
@@ -152,7 +159,7 @@ struct WeatherMapView: View {
             Text("Weather Map")
                 .font(.largeTitle)
                 .padding()
-            
+
             Text("Map feature coming soon")
                 .foregroundColor(.secondary)
         }
@@ -167,7 +174,7 @@ struct WeatherFavoritesView: View {
             Text("Weather Favorites")
                 .font(.largeTitle)
                 .padding()
-            
+
             Text("Favorites feature coming soon")
                 .foregroundColor(.secondary)
         }
@@ -175,3 +182,14 @@ struct WeatherFavoritesView: View {
     }
 }
 
+// Preview Provider (Optional - may need adjustment depending on ServiceProvider setup)
+#if DEBUG
+struct WeatherMenuView_Previews: PreviewProvider {
+    static var previews: some View {
+        NavigationView {
+            WeatherMenuView()
+                .environmentObject(ServiceProvider()) // Provide a dummy ServiceProvider for preview
+        }
+    }
+}
+#endif // DEBUG

@@ -90,7 +90,7 @@ struct MainView: View {
                     Button(action: {
                         showSettings = true
                     }) {
-                        Image(systemName: "gear")
+                        Image(systemName: "line.3.horizontal")
                     }
                 }
             }
