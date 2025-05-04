@@ -40,48 +40,50 @@ class LocationServiceImpl: NSObject, LocationService, CLLocationManagerDelegate 
         locationManager.distanceFilter = kCLDistanceFilterNone
     }
 
-    // MARK: - LocationService Methods
+    
+    
     func requestLocationPermission() async -> Bool {
-        // (Code for requestLocationPermission remains the same as before)
-        // ... it checks status, requests if .notDetermined, returns true/false ...
-   //     let currentStatus = locationManager.authorizationStatus // Check status directly here for logging
         print("📍 LocationServiceImpl: requestLocationPermission called. Current status: \(permissionStatus.description)")
 
-        return await withCheckedContinuation { continuation in
-            DispatchQueue.main.async { [weak self] in
-                 guard let self = self else {
-                     print("📍 LocationServiceImpl: Self is nil in request permission continuation.")
-                     continuation.resume(returning: false)
-                     return
-                 }
-
-                 switch self.locationManager.authorizationStatus {
-                 case .authorizedWhenInUse, .authorizedAlways:
-                      print("📍 LocationServiceImpl: Permission already granted.")
-                      continuation.resume(returning: true)
-                 case .notDetermined:
-                      print("📍 LocationServiceImpl: Requesting 'When In Use' authorization...")
-                      // Set up a temporary handler (safer than instance property if called multiple times)
-                      // NOTE: This simple handler only works for the *first* status change.
-                      // A more robust solution might involve Combine or NotificationCenter.
-                      self.onAuthorizationStatusChanged = { status in
-                          self.onAuthorizationStatusChanged = nil // Clear handler
-                          let authorized = (status == .authorizedWhenInUse || status == .authorizedAlways)
-                          print("📍 LocationServiceImpl: Authorization status changed to \(status.rawValue). Authorized: \(authorized)")
-                          continuation.resume(returning: authorized)
-                      }
-                      self.locationManager.requestWhenInUseAuthorization()
-                 case .denied, .restricted:
-                      print("📍 LocationServiceImpl: Permission denied or restricted.")
-                      continuation.resume(returning: false)
-                 @unknown default:
-                      print("📍 LocationServiceImpl: Unknown authorization status.")
-                      continuation.resume(returning: false)
-                 }
+        return await withCheckedContinuation { [weak self] continuation in
+            guard let self = self else {
+                print("📍 LocationServiceImpl: Self is nil in request permission continuation.")
+                continuation.resume(returning: false)
+                return
+            }
+            
+            // Move to the main thread if needed
+            Task { @MainActor in
+                switch self.locationManager.authorizationStatus {
+                case .authorizedWhenInUse, .authorizedAlways:
+                    print("📍 LocationServiceImpl: Permission already granted.")
+                    continuation.resume(returning: true)
+                case .notDetermined:
+                    print("📍 LocationServiceImpl: Requesting 'When In Use' authorization...")
+                    self.onAuthorizationStatusChanged = { status in
+                        self.onAuthorizationStatusChanged = nil
+                        let authorized = (status == .authorizedWhenInUse || status == .authorizedAlways)
+                        print("📍 LocationServiceImpl: Authorization status changed to \(status.rawValue). Authorized: \(authorized)")
+                        continuation.resume(returning: authorized)
+                    }
+                    self.locationManager.requestWhenInUseAuthorization()
+                case .denied, .restricted:
+                    print("📍 LocationServiceImpl: Permission denied or restricted.")
+                    continuation.resume(returning: false)
+                @unknown default:
+                    print("📍 LocationServiceImpl: Unknown authorization status.")
+                    continuation.resume(returning: false)
+                }
             }
         }
     }
-
+    
+    
+    
+    
+    
+    
+    
     func startUpdatingLocation() {
         print("📍 LocationServiceImpl: startUpdatingLocation() called.")
         locationManager.startUpdatingLocation()

@@ -22,6 +22,8 @@ class CurrentStationDatabaseService {
     
     // MARK: - Methods
     
+   
+    
     // Initialize current station favorites table with extensive error logging
     func initializeCurrentStationFavoritesTableAsync() async throws {
         do {
@@ -67,7 +69,7 @@ class CurrentStationDatabaseService {
                 
                 // Verify write worked
                 let testQuery = tidalCurrentStationFavorites.filter(colStationId == "TEST_INIT")
-                if let _testRecord = try? db.pluck(testQuery) {
+                if (try? db.pluck(testQuery)) != nil {
                     print("📊 Successfully wrote and read test record")
                 } else {
                     print("❌ Could not verify test record")
@@ -81,6 +83,18 @@ class CurrentStationDatabaseService {
             throw error
         }
     }
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
     // Check if a current station is marked as favorite
     func isCurrentStationFavorite(id: String, bin: Int) async -> Bool {

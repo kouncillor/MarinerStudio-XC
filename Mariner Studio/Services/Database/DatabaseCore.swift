@@ -193,7 +193,7 @@ class DatabaseCore {
             // Execute a simple test query
             let testQuery = "SELECT 1"
             let result = try db.scalar(testQuery)
-            print("📊 Test query result: \(result)")
+            print("📊 Test query result: \(String(describing: result))")
             print("📊 Database connection test successful")
         } catch {
             print("❌ Test database operation failed: \(error.localizedDescription)")

@@ -125,7 +125,7 @@ enum WeatherCondition: Int {
         case .fog, .mist, .smoke, .haze, .sandDustWhirls, .sand, .dust, .volcanicAsh,
              .squalls, .tornado, .fogOm, .depositingRimeFogOm:
             return "cloud.fog.fill"
-        default:
+        @unknown default:
             return "cloud.fill"
         }
     }

@@ -61,9 +61,9 @@ class TideStationDatabaseService {
                     colIsFavorite <- true
                 ))
                 
-                // Verify write worked
+                // Verify write worked - FIX 1: Changed to boolean test instead of unused variable
                 let testQuery = tideStationFavorites.filter(colStationId == "TEST_INIT")
-                if let _testRecord = try? db.pluck(testQuery) {
+                if try db.pluck(testQuery) != nil {
         //            print("📊 Successfully wrote and read test record")
                 } else {
           //          print("❌ Could not verify test record")
@@ -119,7 +119,8 @@ class TideStationDatabaseService {
        //             print("📊 TOGGLE: Found existing record with favorite status: \(currentValue), toggling to \(newValue)")
                     
                     let updatedRow = tideStationFavorites.filter(colStationId == id)
-                    let count = try db.run(updatedRow.update(colIsFavorite <- newValue))
+                    // FIX 2: Changed to underscore for unused count variable
+                    _ = try db.run(updatedRow.update(colIsFavorite <- newValue))
                     
         //            print("📊 TOGGLE: Updated record with result: \(count) rows affected")
                     result = newValue
@@ -131,7 +132,8 @@ class TideStationDatabaseService {
                         colIsFavorite <- true
                     )
                     
-                    let rowId = try db.run(insert)
+                    // FIX 3: Changed to underscore for unused rowId variable
+                    _ = try db.run(insert)
         //            print("📊 TOGGLE: Inserted new favorite with rowId: \(rowId)")
                     result = true
                 }
