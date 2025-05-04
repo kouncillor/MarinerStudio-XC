@@ -25,7 +25,7 @@ struct WeatherMenuView: View {
                     )
                 }
 
-                // Weather Map - Custom Icon
+                // Weather Map
                 NavigationLink(destination: WeatherMapView()) {
                     MenuButtonContent(
                         iconType: .custom("earthsixfour"), // Specify custom icon name
@@ -152,20 +152,6 @@ struct MenuButtonContent: View {
         )
     }
 }
-// Placeholder for WeatherMapView
-struct WeatherMapView: View {
-    var body: some View {
-        VStack {
-            Text("Weather Map")
-                .font(.largeTitle)
-                .padding()
-
-            Text("Map feature coming soon")
-                .foregroundColor(.secondary)
-        }
-        .navigationTitle("Weather Map")
-    }
-}
 
 // Placeholder for WeatherFavoritesView
 struct WeatherFavoritesView: View {
@@ -182,14 +168,3 @@ struct WeatherFavoritesView: View {
     }
 }
 
-// Preview Provider (Optional - may need adjustment depending on ServiceProvider setup)
-#if DEBUG
-struct WeatherMenuView_Previews: PreviewProvider {
-    static var previews: some View {
-        NavigationView {
-            WeatherMenuView()
-                .environmentObject(ServiceProvider()) // Provide a dummy ServiceProvider for preview
-        }
-    }
-}
-#endif // DEBUG
