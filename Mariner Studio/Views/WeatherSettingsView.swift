@@ -16,8 +16,8 @@ struct WeatherSettingsView: View {
             // Units Section
             Section(header: Text("Units")) {
                 Toggle("Use Metric Units", isOn: $useMetricUnits)
-                    .onChange(of: useMetricUnits) { newValue in
-                        // Would notify other parts of the app that the units preference changed
+                    .onChange(of: useMetricUnits) { oldValue, newValue in
+                        // Notification code here
                         NotificationCenter.default.post(
                             name: Notification.Name("UnitsPreferenceChanged"),
                             object: nil,

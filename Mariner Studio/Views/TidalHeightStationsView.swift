@@ -55,7 +55,7 @@ struct TidalHeightStationsView: View {
                     .foregroundColor(.gray)
                 
                 TextField("Search stations...", text: $viewModel.searchText)
-                    .onChange(of: viewModel.searchText) { _ in
+                    .onChange(of: viewModel.searchText) {
                         viewModel.filterStations()
                     }
                 

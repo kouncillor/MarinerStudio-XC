@@ -53,12 +53,11 @@ struct NavUnitsView: View {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(.gray)
 
-                // Bind TextField directly to the ViewModel's property
                 TextField("Search nav units...", text: $viewModel.searchText)
-                    .onChange(of: viewModel.searchText) { _ in
+                    .onChange(of: viewModel.searchText) {
                         viewModel.searchTextChanged()
                     }
-
+                
                 // Use viewModel.searchText here too
                 if !viewModel.searchText.isEmpty {
                     Button(action: {

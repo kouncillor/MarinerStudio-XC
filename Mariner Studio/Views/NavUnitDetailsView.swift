@@ -1,3 +1,4 @@
+
 import SwiftUI
 import MapKit
 import CoreLocation
@@ -96,21 +97,35 @@ struct NavUnitDetailsView: View {
         }
     }
     
+   
+    
+    
+    
+   
+    
+    
+    
+    
+    
+    // Updated mapView component for NavUnitDetailsView.swift
+    // This replaces the existing mapView implementation to use the new iOS 17+ Map API
+
     private var mapView: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 10)
                 .stroke(Color.gray.opacity(0.3), lineWidth: 1)
                 .background(RoundedRectangle(cornerRadius: 10).fill(Color.white))
             
-            if viewModel.hasCoordinates, let mapRegion = viewModel.mapRegion, let annotation = viewModel.mapAnnotation {
-                Map(coordinateRegion: .constant(MKCoordinateRegion(
-                    center: mapRegion.center,
-                    span: mapRegion.span
-                )), annotationItems: [annotation]) { place in
-                    MapMarker(coordinate: place.coordinate, tint: .blue)
+            if viewModel.hasCoordinates, let mapRegion = viewModel.mapRegion, let _ = viewModel.mapAnnotation {
+                // Modern iOS 17 Map implementation
+                Map {
+                    if let annotation = viewModel.mapAnnotation {
+                        Marker(annotation.title, coordinate: annotation.coordinate)
+                            .tint(.blue)
+                    }
                 }
-                .cornerRadius(10)
                 .frame(height: 300)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
                 .padding()
             } else {
                 ZStack {
@@ -125,6 +140,24 @@ struct NavUnitDetailsView: View {
             }
         }
     }
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
     private var actionButtons: some View {
         HStack(spacing: 15) {
