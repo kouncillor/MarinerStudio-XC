@@ -136,7 +136,7 @@ struct BuoyStationFavorite {
     let isFavorite: Bool
 }
 
-struct MoonPhase {
+struct DbMoonPhase {
     let date: String
     let phase: String
 }

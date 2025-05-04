@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 /// Helper utility for formatting visibility values
 struct VisibilityHelper {

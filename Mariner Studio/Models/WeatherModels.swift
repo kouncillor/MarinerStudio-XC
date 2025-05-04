@@ -95,6 +95,11 @@ enum WeatherCondition: Int {
     case thunderstormWithSlightHailOm = 96
     case thunderstormWithHeavyHailOm = 99
     
+   
+    
+    
+    
+    
     func getIconName() -> String {
         switch self {
         case .clearSky, .clearSkyOm:
@@ -103,20 +108,36 @@ enum WeatherCondition: Int {
             return "cloud.sun.fill"
         case .scatteredClouds, .brokenClouds, .overcastClouds, .overcastOm:
             return "cloud.fill"
-        case .rain, .lightRain, .moderateRain, .slightRainOm, .moderateRainOm, .heavyRainOm:
+        case .lightRain, .moderateRain, .heavyIntensityRain, .veryHeavyRain, .extremeRain,
+             .freezingRain, .lightIntensityShowerRain, .showerRain, .heavyIntensityShowerRain,
+             .raggedShowerRain, .slightRainOm, .moderateRainOm, .heavyRainOm,
+             .slightRainShowersOm, .moderateRainShowersOm, .violentRainShowersOm:
             return "cloud.rain.fill"
-        case .thunderstorm, .thunderstormOm, .thunderstormWithSlightHailOm, .thunderstormWithHeavyHailOm:
+        case .thunderstorm, .lightThunderstorm, .heavyThunderstorm, .raggedThunderstorm,
+             .thunderstormWithLightRain, .thunderstormWithRain, .thunderstormWithHeavyRain,
+             .thunderstormWithLightDrizzle, .thunderstormWithDrizzle, .thunderstormWithHeavyDrizzle,
+             .thunderstormOm, .thunderstormWithSlightHailOm, .thunderstormWithHeavyHailOm:
             return "cloud.bolt.fill"
-        case .drizzle, .lightDrizzleOm, .moderateDrizzleOm, .denseDrizzleOm:
+        case .drizzle, .lightIntensityDrizzle, .heavyIntensityDrizzle, .lightIntensityDrizzleRain,
+             .drizzleRain, .heavyIntensityDrizzleRain, .showerRainAndDrizzle, .heavyShowerRainAndDrizzle,
+             .showerDrizzle, .lightDrizzleOm, .moderateDrizzleOm, .denseDrizzleOm:
             return "cloud.drizzle.fill"
-        case .snow, .lightSnow, .heavySnow, .slightSnowFallOm, .moderateSnowFallOm, .heavySnowFallOm:
+        case .snow, .lightSnow, .heavySnow, .sleet, .lightShowerSleet, .showerSleet,
+             .lightRainAndSnow, .rainAndSnow, .lightShowerSnow, .showerSnow, .heavyShowerSnow,
+             .slightSnowFallOm, .moderateSnowFallOm, .heavySnowFallOm, .snowGrainsOm,
+             .slightSnowShowersOm, .heavySnowShowersOm:
             return "snow"
-        case .fog, .mist, .fogOm, .depositingRimeFogOm:
+        case .fog, .mist, .smoke, .haze, .sandDustWhirls, .sand, .dust, .volcanicAsh,
+             .squalls, .tornado, .fogOm, .depositingRimeFogOm:
             return "cloud.fog.fill"
         default:
             return "cloud.fill"
         }
     }
+    
+    
+    
+    
     
     func getDescription() -> String {
         switch self {
@@ -330,7 +351,7 @@ struct MoonPhase: Identifiable {
 }
 
 // MARK: - Weather Location Favorite
-struct WeatherLocationFavorite: Identifiable {
+struct DbWeatherLocationFavorite: Identifiable {
     let id = UUID()
     let latitude: Double
     let longitude: Double

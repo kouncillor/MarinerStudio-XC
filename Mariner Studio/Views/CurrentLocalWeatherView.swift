@@ -70,7 +70,7 @@ struct CurrentLocalWeatherView: View {
             viewModel.initialize(
                 weatherService: serviceProvider.openMeteoService,
                 geocodingService: serviceProvider.geocodingService,
-                locationService: serviceProvider.locationService,
+                locationService: serviceProvider.weatherLocationService,
                 navigationService: serviceProvider.navigationService,
                 databaseService: serviceProvider.weatherService
             )
