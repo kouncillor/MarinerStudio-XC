@@ -317,41 +317,68 @@ class WeatherServiceImpl: WeatherService {
         )
     }
     
-    /// Create an OpenMeteoHourlyResponse from raw JSON
+    /// Create an OpenMeteoHourlyResponse from raw JSON using JSONSerialization
     private func createHourlyResponseFromRawJSON(_ json: [String: Any]) throws -> OpenMeteoHourlyResponse {
-        // This is a simplified placeholder implementation
-        // In a real app, you would parse the JSON to create the HourlyData and HourlyUnits objects
-        
-        // For now, we'll return a minimal response
-        let hourlyData = HourlyData(
-            time: [],
-            temperature: [],
-            relativeHumidity: nil,
-            dewPoint: nil,
-            precipitation: [],
-            precipitationProbability: nil,
-            weatherCode: [],
-            pressure: [],
-            visibility: [],
-            windSpeed: [],
-            windDirection: [],
-            windGusts: []
-        )
-        
+        // Extract the 'hourly_units' dictionary
+        guard let unitsDict = json["hourly_units"] as? [String: String] else {
+            throw WeatherError.decodingError(NSError(domain: "WeatherService", code: 5, userInfo: [NSLocalizedDescriptionKey: "Missing 'hourly_units' field in JSON"]))
+        }
+
+        // Create HourlyUnits, handling potential missing optional keys (though present in the example)
         let hourlyUnits = HourlyUnits(
-            time: "",
-            temperature: "",
-            relativeHumidity: nil,
-            dewPoint: nil,
-            precipitation: "",
-            weatherCode: "",
-            pressure: "",
-            visibility: "",
-            windSpeed: "",
-            windDirection: "",
-            windGusts: ""
+            time: unitsDict["time"] ?? "iso8601",
+            temperature: unitsDict["temperature_2m"] ?? "°F",
+            relativeHumidity: unitsDict["relativehumidity_2m"], // Optional
+            dewPoint: unitsDict["dewpoint_2m"], // Optional
+            precipitation: unitsDict["precipitation"] ?? "inch",
+            weatherCode: unitsDict["weathercode"] ?? "wmo code",
+            pressure: unitsDict["pressure_msl"] ?? "hPa",
+            visibility: unitsDict["visibility"] ?? "ft",
+            windSpeed: unitsDict["windspeed_10m"] ?? "mp/h",
+            windDirection: unitsDict["winddirection_10m"] ?? "°",
+            windGusts: unitsDict["windgusts_10m"] ?? "mp/h"
         )
-        
+
+        // Extract the 'hourly' data dictionary
+        guard let dataDict = json["hourly"] as? [String: Any] else {
+            throw WeatherError.decodingError(NSError(domain: "WeatherService", code: 6, userInfo: [NSLocalizedDescriptionKey: "Missing 'hourly' field in JSON"]))
+        }
+
+        // Extract mandatory arrays first
+        guard let timeArray = dataDict["time"] as? [String],
+              let temperatureArray = dataDict["temperature_2m"] as? [Double],
+              let precipitationArray = dataDict["precipitation"] as? [Double],
+              let weatherCodeArray = dataDict["weathercode"] as? [Int],
+              let pressureArray = dataDict["pressure_msl"] as? [Double],
+              let visibilityArray = dataDict["visibility"] as? [Double],
+              let windSpeedArray = dataDict["windspeed_10m"] as? [Double],
+              let windDirectionArray = dataDict["winddirection_10m"] as? [Double],
+              let windGustsArray = dataDict["windgusts_10m"] as? [Double] else {
+            throw WeatherError.decodingError(NSError(domain: "WeatherService", code: 7, userInfo: [NSLocalizedDescriptionKey: "Missing required hourly data arrays in JSON"]))
+        }
+
+        // Extract optional arrays
+        let relativeHumidityArray = dataDict["relativehumidity_2m"] as? [Int]
+        let dewPointArray = dataDict["dewpoint_2m"] as? [Double]
+        let precipitationProbabilityArray = dataDict["precipitation_probability"] as? [Double]
+
+        // Create HourlyData
+        let hourlyData = HourlyData(
+            time: timeArray,
+            temperature: temperatureArray,
+            relativeHumidity: relativeHumidityArray, // Assign optional array
+            dewPoint: dewPointArray, // Assign optional array
+            precipitation: precipitationArray,
+            precipitationProbability: precipitationProbabilityArray, // Assign optional array
+            weatherCode: weatherCodeArray,
+            pressure: pressureArray,
+            visibility: visibilityArray,
+            windSpeed: windSpeedArray,
+            windDirection: windDirectionArray,
+            windGusts: windGustsArray
+        )
+
+        // Create the final response object
         return OpenMeteoHourlyResponse(
             hourly: hourlyData,
             hourlyUnits: hourlyUnits

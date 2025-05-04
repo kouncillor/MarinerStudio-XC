@@ -5,9 +5,19 @@ import CoreLocation
 class LocationServiceImpl: NSObject, LocationService, CLLocationManagerDelegate {
     // MARK: - Properties
     private let locationManager = CLLocationManager()
-    var locationUpdateHandler: ((CLLocation) -> Void)? // Note: Currently not used by TidalHeightStationsViewModel
+    var locationUpdateHandler: ((CLLocation) -> Void)?
 
     private(set) var currentLocation: CLLocation? // Can be read publicly, but only set privately
+    
+    // Store the last known location, even if it's not the most accurate
+    private var lastKnownLocation: CLLocation? {
+        didSet {
+            // If we don't have a better location yet, use this as current
+            if currentLocation == nil {
+                currentLocation = lastKnownLocation
+            }
+        }
+    }
 
     var permissionStatus: LocationPermissionStatus {
         // Convert CoreLocation status to our custom enum
@@ -37,7 +47,7 @@ class LocationServiceImpl: NSObject, LocationService, CLLocationManagerDelegate 
     private func setupLocationManager() {
         locationManager.delegate = self // Essential: Make sure the delegate is self
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
-        locationManager.distanceFilter = kCLDistanceFilterNone
+        locationManager.distanceFilter = 10 // Update if device moves by 10 meters - changed from kCLDistanceFilterNone
     }
 
     
@@ -111,35 +121,52 @@ class LocationServiceImpl: NSObject, LocationService, CLLocationManagerDelegate 
     // MARK: - CLLocationManagerDelegate Methods
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        // --- THIS IS THE PROOF POINT ---
         guard let location = locations.last else {
-            print("‼️ PROOF POINT (didUpdateLocations): Called but locations array was empty.")
+            print("‼️ LocationServiceImpl (didUpdateLocations): Called but locations array was empty.")
             return
         }
 
-        // Print details of the received location *before* filtering
-         print("‼️ PROOF POINT (didUpdateLocations): Received location - Lat: \(location.coordinate.latitude), Lon: \(location.coordinate.longitude), Acc: \(location.horizontalAccuracy)m, Time: \(location.timestamp)")
+        // Print details of the received location
+        print("📍 LocationServiceImpl (didUpdateLocations): Received location - Lat: \(location.coordinate.latitude), Lon: \(location.coordinate.longitude), Acc: \(location.horizontalAccuracy)m, Time: \(location.timestamp)")
 
-        // Existing filtering logic
+        // Always update lastKnownLocation with the latest reading
+        lastKnownLocation = location
+        
+        // Apply a simpler filtering approach - negative accuracy is invalid
         guard location.horizontalAccuracy >= 0 else {
-             print("‼️ PROOF POINT (didUpdateLocations): Ignoring location with negative accuracy.")
-             return
-        }
-        // Relaxed accuracy check for debugging - accept up to 100m initially
-        guard location.horizontalAccuracy <= 100 else { // Relaxed from 20 to 100 for testing
-            print("‼️ PROOF POINT (didUpdateLocations): Ignoring inaccurate location (\(location.horizontalAccuracy)m > 100m).")
-            return
-        }
-        let howRecent = location.timestamp.timeIntervalSinceNow
-        guard abs(howRecent) < 15.0 else {
-            print("‼️ PROOF POINT (didUpdateLocations): Ignoring old location (\(howRecent)s).")
+            print("📍 LocationServiceImpl (didUpdateLocations): Ignoring location with negative accuracy.")
             return
         }
 
-        // If it passes filters, update currentLocation
-        print("✅ PROOF POINT (didUpdateLocations): Location PASSED filters. Updating currentLocation.")
-        currentLocation = location
-        locationUpdateHandler?(location) // Call handler if set (still not used by TidalHeight VM)
+        // Prioritize recent locations with good accuracy
+        let locationAge = -location.timestamp.timeIntervalSinceNow
+        
+        // If we don't have any location yet, use this one regardless of accuracy
+        if currentLocation == nil {
+            print("📍 LocationServiceImpl: First location received, using it.")
+            currentLocation = location
+            locationUpdateHandler?(location)
+            return
+        }
+        
+        // If the location is recent and accurate, update our current location
+        if locationAge < 60 && location.horizontalAccuracy <= 100 {
+            // Check if this is better than our current location
+            if let current = currentLocation,
+               location.horizontalAccuracy < current.horizontalAccuracy ||
+               current.horizontalAccuracy > 100 {
+                print("📍 LocationServiceImpl: Better location received (more accurate), updating currentLocation.")
+                currentLocation = location
+                locationUpdateHandler?(location)
+            }
+        } else if locationAge < 10 {
+            // Even if accuracy isn't great, update if it's very recent and we have a poor current location
+            if let current = currentLocation, current.horizontalAccuracy > 100 {
+                print("📍 LocationServiceImpl: Recent location received, updating currentLocation.")
+                currentLocation = location
+                locationUpdateHandler?(location)
+            }
+        }
     }
 
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
@@ -159,10 +186,4 @@ class LocationServiceImpl: NSObject, LocationService, CLLocationManagerDelegate 
 
     // MARK: - Callback Handlers (For requestLocationPermission continuation)
     private var onAuthorizationStatusChanged: ((CLAuthorizationStatus) -> Void)?
-
-    // Deprecated delegate method (kept for compatibility reference if needed, but locationManagerDidChangeAuthorization is preferred)
-    // func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
-    //    print("📍 LocationServiceImpl: locationManager didChangeAuthorization delegate called (DEPRECATED). Status: \(status.rawValue)")
-    //    onAuthorizationStatusChanged?(status)
-    // }
 }

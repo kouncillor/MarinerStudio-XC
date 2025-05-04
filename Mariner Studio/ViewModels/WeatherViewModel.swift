@@ -15,6 +15,10 @@ class WeatherViewModel: ObservableObject {
     @Published var longitude: Double = 0.0
     @Published var locationDisplay = "--"
     
+    // Location accuracy state
+    @Published var locationState: LocationAccuracyState = .unavailable
+    @Published var locationAccuracyDescription = "Determining your location..."
+    
     // Current weather conditions
     @Published var temperature = "--"
     @Published var feelsLike = "--"
@@ -52,6 +56,7 @@ class WeatherViewModel: ObservableObject {
     
     private var cancellables = Set<AnyCancellable>()
     private var locationManager = CLLocationManager()
+    private var locationTask: Task<Void, Never>?
     
     // MARK: - Initialization
     
@@ -68,75 +73,88 @@ class WeatherViewModel: ObservableObject {
         self.databaseService = databaseService
     }
     
+    deinit {
+        // Cancel any ongoing location task
+        locationTask?.cancel()
+    }
+    
     // MARK: - Public Methods
     
     func loadWeatherData() {
-        Task {
+        // Cancel any existing location task
+        locationTask?.cancel()
+        
+        // Start a new location acquisition task
+        locationTask = Task {
             await MainActor.run {
                 isLoading = true
                 errorMessage = ""
+                locationState = .unavailable
+                locationAccuracyDescription = "Determining your location..."
             }
             
-            do {
-                guard let location = try await getUserLocation() else {
-                    throw WeatherError.invalidResponse
-                }
-                
-                // Update location coordinates
+            // Try to get location with progressively relaxed requirements
+            let location = await getProgressiveLocation(timeoutSeconds: 10)
+            
+            // If we couldn't get any location, show error
+            guard let finalLocation = location?.location else {
                 await MainActor.run {
-                    latitude = location.coordinate.latitude
-                    longitude = location.coordinate.longitude
+                    errorMessage = "Could not retrieve your location. Please check your location settings and try again."
+                    isLoading = false
                 }
-                
-                // Get location name
-                if let geocodingService = geocodingService {
-                    do {
-                        let geocodingResult = try await geocodingService.reverseGeocode(
-                            latitude: location.coordinate.latitude,
-                            longitude: location.coordinate.longitude
-                        )
-                        
-                        if let locationResult = geocodingResult.results.first {
-                            await MainActor.run {
-                                locationDisplay = "\(locationResult.name), \(locationResult.state)"
-                            }
-                        }
-                    } catch {
-                        print("⚠️ Geocoding error: \(error), continuing with coordinates only")
+                return
+            }
+            
+            // Update UI with location info
+            await MainActor.run {
+                latitude = finalLocation.coordinate.latitude
+                longitude = finalLocation.coordinate.longitude
+                locationState = location ?? .unavailable
+                locationAccuracyDescription = location?.description ?? "Unknown location accuracy"
+            }
+            
+            // Get location name through geocoding
+            if let geocodingService = geocodingService {
+                do {
+                    let geocodingResult = try await geocodingService.reverseGeocode(
+                        latitude: finalLocation.coordinate.latitude,
+                        longitude: finalLocation.coordinate.longitude
+                    )
+                    
+                    if let locationResult = geocodingResult.results.first {
                         await MainActor.run {
-                            locationDisplay = "Location at \(String(format: "%.4f", latitude))°, \(String(format: "%.4f", longitude))°"
+                            locationDisplay = "\(locationResult.name), \(locationResult.state)"
                         }
                     }
-                }
-                
-                // Get weather data
-                if let weatherService = weatherService {
-                    do {
-                        let weather = try await weatherService.getWeather(
-                            latitude: location.coordinate.latitude,
-                            longitude: location.coordinate.longitude
-                        )
-                        
-                        await processWeatherData(weather)
-                        
-                        // Check if location is a favorite
-                        await updateFavoriteStatus()
-                    } catch {
-                        print("❌ Weather API error: \(error)")
-                        await MainActor.run {
-                            errorMessage = "Weather data unavailable. Please try again later."
-                        }
-                    }
-                } else {
+                } catch {
+                    print("⚠️ Geocoding error: \(error), continuing with coordinates only")
                     await MainActor.run {
-                        errorMessage = "Weather service unavailable"
+                        locationDisplay = "Location at \(String(format: "%.4f", latitude))°, \(String(format: "%.4f", longitude))°"
                     }
                 }
-                
-            } catch {
+            }
+            
+            // Finally get weather data
+            if let weatherService = weatherService {
+                do {
+                    let weather = try await weatherService.getWeather(
+                        latitude: finalLocation.coordinate.latitude,
+                        longitude: finalLocation.coordinate.longitude
+                    )
+                    
+                    await processWeatherData(weather)
+                    
+                    // Check if location is a favorite
+                    await updateFavoriteStatus()
+                } catch {
+                    print("❌ Weather API error: \(error)")
+                    await MainActor.run {
+                        errorMessage = "Weather data unavailable. Please try again later."
+                    }
+                }
+            } else {
                 await MainActor.run {
-                    errorMessage = "Could not retrieve location: \(error.localizedDescription)"
-                    print("❌ Location error: \(error)")
+                    errorMessage = "Weather service unavailable"
                 }
             }
             
@@ -146,6 +164,166 @@ class WeatherViewModel: ObservableObject {
         }
     }
     
+    /// New progressive location acquisition method
+    private func getProgressiveLocation(timeoutSeconds: Double) async -> LocationAccuracyState? {
+        guard let locationService = locationService else {
+            return .disabled
+        }
+        
+        // Check permission status first
+        let permissionStatus = locationService.permissionStatus
+        
+        if permissionStatus == .denied || permissionStatus == .restricted {
+            return .disabled
+        }
+        
+        // Request permission if needed
+        if permissionStatus == .notDetermined {
+            let authorized = await locationService.requestLocationPermission()
+            if !authorized {
+                return .disabled
+            }
+        }
+        
+        // Start location updates
+        locationService.startUpdatingLocation()
+        
+        // Set up timestamps
+        let startTime = Date()
+        let endTime = startTime.addingTimeInterval(timeoutSeconds)
+        
+        // Remember the best location we've seen so far
+        var bestState: LocationAccuracyState = .unavailable
+        
+        // Try to get location within timeout period, with progressive accuracy
+        repeat {
+            // Check if current location is available
+            if let currentLocation = locationService.currentLocation {
+                // Determine state based on accuracy and age
+                let newState = determineLocationState(currentLocation)
+                
+                // Update UI if state is better than what we had
+                if isNewStateImprovement(newState, over: bestState) {
+                    bestState = newState
+                    
+                    await MainActor.run {
+                        locationState = newState
+                        locationAccuracyDescription = newState.description
+                    }
+
+                    // If we've reached high accuracy, we can use this location
+                    if case .highAccuracy = newState {
+                        print("🎯 Reached high accuracy location - stopping search")
+                        return newState  // Now properly returns from getProgressiveLocation
+                    }
+                    
+                }
+                
+                // If we have any location, we could return it immediately for a minimum viable response
+                if bestState == .unavailable {
+                    bestState = newState
+                    await MainActor.run {
+                        locationState = newState
+                        locationAccuracyDescription = newState.description
+                    }
+                }
+            }
+            
+            // Small delay between checks
+            try? await Task.sleep(for: .milliseconds(200))
+            
+            // Check if task was cancelled
+            if Task.isCancelled {
+                return bestState
+            }
+            
+        } while Date() < endTime
+        
+        // After timeout, return the best location we found
+        return bestState
+    }
+    
+    /// Determine the location state based on a CLLocation
+    private func determineLocationState(_ location: CLLocation) -> LocationAccuracyState {
+        // Check location age
+        let locationAge = -location.timestamp.timeIntervalSinceNow
+        
+        // If location is older than 5 minutes, consider it cached
+        if locationAge > 300 {
+            return .cached(location: location, age: locationAge)
+        }
+        
+        // Otherwise, categorize by accuracy
+        let accuracy = location.horizontalAccuracy
+        if accuracy > 100 {
+            return .lowAccuracy(location: location, accuracy: accuracy)
+        } else if accuracy > 50 {
+            return .mediumAccuracy(location: location, accuracy: accuracy)
+        } else {
+            return .highAccuracy(location: location, accuracy: accuracy)
+        }
+    }
+    
+    /// Determine if a new location state is an improvement over the current one
+    private func isNewStateImprovement(_ new: LocationAccuracyState, over current: LocationAccuracyState) -> Bool {
+        // Any location is better than no location
+        if case .unavailable = current {
+            return true
+        }
+        
+        // Disabled can't be improved
+        if case .disabled = current {
+            return false
+        }
+        
+        // Fix for the "Contextual type for closure argument list expects 1 argument" error
+        // We need to use the correct type checking approach for enums with associated values
+        
+        // Get the case types in order of preference (highest accuracy first)
+        let stateRanking = [
+            "highAccuracy",
+            "mediumAccuracy",
+            "lowAccuracy",
+            "cached"
+        ]
+        
+        // Helper function to get the case name without associated values
+        func getCaseName(_ state: LocationAccuracyState) -> String {
+            switch state {
+            case .highAccuracy: return "highAccuracy"
+            case .mediumAccuracy: return "mediumAccuracy"
+            case .lowAccuracy: return "lowAccuracy"
+            case .cached: return "cached"
+            case .unavailable: return "unavailable"
+            case .disabled: return "disabled"
+            }
+        }
+        
+        let currentRankValue = stateRanking.firstIndex(of: getCaseName(current)) ?? Int.max
+        let newRankValue = stateRanking.firstIndex(of: getCaseName(new)) ?? Int.max
+        
+        // Lower rank value means higher preference
+        if newRankValue < currentRankValue {
+            return true
+        } else if newRankValue == currentRankValue {
+            // For same rank, compare by accuracy or age
+            switch (current, new) {
+            case let (.highAccuracy(_, currentAcc), .highAccuracy(_, newAcc)),
+                 let (.mediumAccuracy(_, currentAcc), .mediumAccuracy(_, newAcc)),
+                 let (.lowAccuracy(_, currentAcc), .lowAccuracy(_, newAcc)):
+                return newAcc < currentAcc // Lower accuracy number is better
+                
+            case let (.cached(_, currentAge), .cached(_, newAge)):
+                return newAge < currentAge // Lower age is better
+                
+            default:
+                return false
+            }
+        }
+        
+        return false
+    }
+
     /// Toggles the favorite status of the current location
     func toggleFavorite() {
         Task {
@@ -169,101 +347,20 @@ class WeatherViewModel: ObservableObject {
     /// Prepares hourly forecast data for the selected date
     func navigateToHourlyForecast(forecast: DailyForecastItem) {
         // Instead of navigation service, we'll set up data for SwiftUI navigation
-        // This would typically be used with either:
-        // 1. State variables that trigger navigation
-        // 2. Parameters passed to a NavigationLink destination
-        
         // Store relevant data in published properties that the view can access
         Task {
             await MainActor.run {
-                // These would be new published properties in the ViewModel
+                // These published properties will be used for navigation
                 selectedForecastDate = forecast.date
                 selectedForecastData = forecastPeriods.map { $0.date }
                 
                 // This boolean could be used to trigger navigation in a SwiftUI view
-                // if using programmatic navigation with NavigationPath
                 shouldNavigateToHourlyForecast = true
             }
         }
-        
-        // Note: The actual navigation would happen in the view using NavigationLink
-        // or NavigationStack's programmatic navigation
     }
     
     // MARK: - Private Methods
-    
-    /// Get the user's current location
-    private func getUserLocation() async throws -> CLLocation? {
-        return try await withCheckedThrowingContinuation { continuation in
-            if let locationService = locationService {
-                if let location = locationService.currentLocation {
-                    continuation.resume(returning: location)
-                } else {
-                    Task {
-                        do {
-                            let authorized = await locationService.requestLocationPermission()
-                            if authorized {
-                                locationService.startUpdatingLocation()
-                                // Give it a moment to get a location
-                                try await Task.sleep(for: .seconds(1))
-                                if let location = locationService.currentLocation {
-                                    continuation.resume(returning: location)
-                                } else {
-                                    continuation.resume(throwing: NSError(
-                                        domain: "WeatherViewModel",
-                                        code: 0,
-                                        userInfo: [NSLocalizedDescriptionKey: "Unable to get location"]
-                                    ))
-                                }
-                            } else {
-                                continuation.resume(throwing: NSError(
-                                    domain: "WeatherViewModel",
-                                    code: 2,
-                                    userInfo: [NSLocalizedDescriptionKey: "Location access denied"]
-                                ))
-                            }
-                        } catch {
-                            continuation.resume(throwing: error)
-                        }
-                    }
-                }
-            } else {
-                // Fallback to using CLLocationManager directly
-                let locationManager = CLLocationManager()
-                
-                switch locationManager.authorizationStatus {
-                case .authorizedWhenInUse, .authorizedAlways:
-                    if let location = locationManager.location {
-                        continuation.resume(returning: location)
-                    } else {
-                        continuation.resume(throwing: NSError(
-                            domain: "WeatherViewModel",
-                            code: 0,
-                            userInfo: [NSLocalizedDescriptionKey: "Unable to get location"]
-                        ))
-                    }
-                case .notDetermined:
-                    continuation.resume(throwing: NSError(
-                        domain: "WeatherViewModel",
-                        code: 1,
-                        userInfo: [NSLocalizedDescriptionKey: "Location authorization not determined"]
-                    ))
-                case .restricted, .denied:
-                    continuation.resume(throwing: NSError(
-                        domain: "WeatherViewModel",
-                        code: 2,
-                        userInfo: [NSLocalizedDescriptionKey: "Location access denied"]
-                    ))
-                @unknown default:
-                    continuation.resume(throwing: NSError(
-                        domain: "WeatherViewModel",
-                        code: 3,
-                        userInfo: [NSLocalizedDescriptionKey: "Unknown location authorization status"]
-                    ))
-                }
-            }
-        }
-    }
     
     private func processWeatherData(_ weather: OpenMeteoResponse) async {
         await MainActor.run {

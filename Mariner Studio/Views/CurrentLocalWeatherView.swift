@@ -6,6 +6,10 @@ struct CurrentLocalWeatherView: View {
     @EnvironmentObject var serviceProvider: ServiceProvider
     @Environment(\.colorScheme) var colorScheme
     
+    // State for hourly forecast navigation
+    @State private var hourlyViewModel: HourlyForecastViewModel?
+    @State private var showHourlyForecast = false
+    
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
@@ -46,12 +50,41 @@ struct CurrentLocalWeatherView: View {
                         precipitation: viewModel.precipitation
                     )
                     
-                    // 7-Day forecast
+                    // 7-Day forecast with navigation to hourly view
                     DailyForecastView(
                         forecasts: viewModel.forecastPeriods,
                         onForecastSelected: { forecast in
                             viewModel.navigateToHourlyForecast(forecast: forecast)
+                            
+                            // Create the hourly forecast view model
+                            let hourlyVM = HourlyForecastViewModel(
+                                weatherService: serviceProvider.openMeteoService,
+                                databaseService: serviceProvider.weatherService
+                            )
+                            
+                            hourlyVM.initialize(
+                                selectedDate: forecast.date,
+                                allDates: viewModel.forecastPeriods.map { $0.date },
+                                latitude: viewModel.latitude,
+                                longitude: viewModel.longitude,
+                                locationName: viewModel.locationDisplay
+                            )
+                            
+                            // Store the view model and trigger navigation
+                            hourlyViewModel = hourlyVM
+                            showHourlyForecast = true
                         }
+                    )
+                    .background(
+                        NavigationLink(
+                            destination: Group {
+                                if let viewModel = hourlyViewModel {
+                                    HourlyForecastView(viewModel: viewModel)
+                                }
+                            },
+                            isActive: $showHourlyForecast,
+                            label: { EmptyView() }
+                        )
                     )
                     
                     // Attribution
@@ -67,7 +100,6 @@ struct CurrentLocalWeatherView: View {
         .navigationTitle("Current Weather")
         .onAppear {
             // Initialize with services from the provider
-            // Note: Now using locationService instead of weatherLocationService
             viewModel.initialize(
                 weatherService: serviceProvider.openMeteoService,
                 geocodingService: serviceProvider.geocodingService,
