@@ -42,26 +42,114 @@ class MapClusteringViewModel: ObservableObject {
     func loadData() {
         // Load all three data types concurrently
         Task {
+            // Start all three loading tasks
             await loadNavUnits()
             await loadTidalHeightStations()
             await loadTidalCurrentStations()
-        }
-        
-        // Keep the existing sample data loading for backward compatibility
-        guard let plistURL = Bundle.main.url(forResource: "Data", withExtension: "plist") else {
-            print("Failed to resolve URL for Data.plist in bundle.")
-            return
-        }
-
-        do {
-            let plistData = try Data(contentsOf: plistURL)
-            let decoder = PropertyListDecoder()
-            let decodedData = try decoder.decode(MapData.self, from: plistData)
             
-            // Set the cycles data
-            self.navobjects = decodedData.cycles
-        } catch {
-            print("Failed to load provided data, error: \(error.localizedDescription)")
+            // After all data is loaded, update the navobjects array
+            await MainActor.run {
+                updateNavObjects()
+            }
+        }
+    }
+    
+    // MARK: - Update NavObjects Method
+    /// Converts all loaded maritime data into NavObject instances and updates the navobjects array
+    @MainActor
+    private func updateNavObjects() {
+        // Clear existing array
+        navobjects.removeAll()
+        
+        // Convert and add NavUnits to navobjects
+        let navUnitObjects = convertNavUnitsToNavObjects()
+        navobjects.append(contentsOf: navUnitObjects)
+        
+        // Convert and add TidalHeightStations to navobjects
+        let tideStationObjects = convertTideStationsToNavObjects()
+        navobjects.append(contentsOf: tideStationObjects)
+        
+        // Convert and add TidalCurrentStations to navobjects
+        let currentStationObjects = convertCurrentStationsToNavObjects()
+        navobjects.append(contentsOf: currentStationObjects)
+        
+        print("MapClusteringViewModel: Updated navobjects array with \(navobjects.count) objects")
+        print("MapClusteringViewModel: - NavUnits: \(navUnitObjects.count)")
+        print("MapClusteringViewModel: - TideStations: \(tideStationObjects.count)")
+        print("MapClusteringViewModel: - CurrentStations: \(currentStationObjects.count)")
+    }
+    
+    // MARK: - Conversion Methods
+    
+    /// Converts NavUnit objects to NavObject instances for map display
+    private func convertNavUnitsToNavObjects() -> [NavObject] {
+        return navUnits.compactMap { stationWithDistance in
+            let station = stationWithDistance.station
+            
+            // Skip if coordinates are invalid
+            guard let latitude = station.latitude,
+                  let longitude = station.longitude,
+                  abs(latitude) > 0.0001 || abs(longitude) > 0.0001 else {
+                return nil
+            }
+            
+            // Create new NavObject
+            let navObject = NavObject()
+            navObject.type = .navunit
+            navObject.coordinate = CLLocationCoordinate2D(
+                latitude: latitude,
+                longitude: longitude
+            )
+            
+            return navObject
+        }
+    }
+    
+    /// Converts TidalHeightStation objects to NavObject instances for map display
+    private func convertTideStationsToNavObjects() -> [NavObject] {
+        return tideStations.compactMap { stationWithDistance in
+            let station = stationWithDistance.station
+            
+            // Skip if coordinates are invalid
+            guard let latitude = station.latitude,
+                  let longitude = station.longitude,
+                  abs(latitude) > 0.0001 || abs(longitude) > 0.0001 else {
+                return nil
+            }
+            
+            // Create new NavObject
+            let navObject = NavObject()
+            navObject.type = .tidalheightstation
+            navObject.coordinate = CLLocationCoordinate2D(
+                latitude: latitude,
+                longitude: longitude
+            )
+            
+            return navObject
+        }
+    }
+    
+    /// Converts TidalCurrentStation objects to NavObject instances for map display
+    private func convertCurrentStationsToNavObjects() -> [NavObject] {
+        return currentStations.compactMap { stationWithDistance in
+            let station = stationWithDistance.station
+            
+            // Skip if coordinates are invalid
+            guard let latitude = station.latitude,
+                  let longitude = station.longitude,
+                  abs(latitude) > 0.0001 || abs(longitude) > 0.0001 else {
+                return nil
+            }
+            
+            // Create new NavObject
+            let navObject = NavObject()
+            navObject.type = .tidalcurrentstation
+            navObject.coordinate = CLLocationCoordinate2D(
+                latitude: latitude,
+                longitude: longitude
+            )
+            
+            return navObject
         }
     }
     
@@ -184,6 +272,31 @@ class MapClusteringViewModel: ObservableObject {
             currentStations = []
             isLoadingCurrentStations = false
             print("MapClusteringViewModel: Error loading Current Stations - \(error.localizedDescription)")
+        }
+    }
+    
+    // MARK: - Public Methods
+    
+    /// Refreshes all maritime data
+    func refreshData() {
+        Task {
+            // Clear current data
+            await MainActor.run {
+                navUnits = []
+                tideStations = []
+                currentStations = []
+                navobjects = []
+            }
+            
+            // Reload everything
+            await loadNavUnits()
+            await loadTidalHeightStations()
+            await loadTidalCurrentStations()
+            
+            // Update navobjects array
+            await MainActor.run {
+                updateNavObjects()
+            }
         }
     }
 }
