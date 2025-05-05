@@ -9,11 +9,12 @@ struct MainView: View {
             ScrollView {
                 VStack(spacing: 12) {
                     // MAP
-                    NavigationButton(
-                        icon: "earthsixfour",
-                        title: "MAP",
-                        action: { print("Map tapped") }
-                    )
+                    NavigationLink(destination: MapClusteringView()) {
+                        NavigationButtonContent(
+                            icon: "earthsixfour",
+                            title: "MAP"
+                        )
+                    }
 
                     // WEATHER
                     NavigationLink(destination: WeatherMenuView()) {
