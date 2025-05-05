@@ -4,7 +4,7 @@ import CoreLocation
 
 class MapClusteringViewModel: ObservableObject {
     // MARK: - Published Properties
-    @Published var cycles: [Cycle] = []
+    @Published var navobjects: [NavObject] = []
     @Published var navUnits: [StationWithDistance<NavUnit>] = []
     @Published var tideStations: [StationWithDistance<TidalHeightStation>] = []
     @Published var currentStations: [StationWithDistance<TidalCurrentStation>] = []
@@ -59,7 +59,7 @@ class MapClusteringViewModel: ObservableObject {
             let decodedData = try decoder.decode(MapData.self, from: plistData)
             
             // Set the cycles data
-            self.cycles = decodedData.cycles
+            self.navobjects = decodedData.cycles
         } catch {
             print("Failed to load provided data, error: \(error.localizedDescription)")
         }

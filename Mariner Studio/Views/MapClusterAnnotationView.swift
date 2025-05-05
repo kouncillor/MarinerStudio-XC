@@ -18,14 +18,14 @@ class MapClusterAnnotationView: MKAnnotationView {
         if let cluster = annotation as? MKClusterAnnotation {
             let totalBikes = cluster.memberAnnotations.count
             
-            if count(cycleType: .unicycle) > 0 {
+            if count(cycleType: .navunit) > 0 {
                 image = drawUnicycleCount(count: totalBikes)
             } else {
-                let tricycleCount = count(cycleType: .tricycle)
+                let tricycleCount = count(cycleType: .tidalcurrentstation)
                 image = drawRatioBicycleToTricycle(tricycleCount, to: totalBikes)
             }
             
-            if count(cycleType: .unicycle) > 0 {
+            if count(cycleType: .navunit) > 0 {
                 displayPriority = .defaultLow
             } else {
                 displayPriority = .defaultHigh
@@ -76,14 +76,14 @@ class MapClusterAnnotationView: MKAnnotationView {
     }
 
     // THE FIX: Explicitly specifying the result type for filter
-    private func count(cycleType type: Cycle.CycleType) -> Int {
+    private func count(cycleType type: NavObject.NavObjectType) -> Int {
         guard let cluster = annotation as? MKClusterAnnotation else {
             return 0
         }
 
         // This is likely where the error is occurring - explicitly specify the result type:
         let filteredAnnotations: [MKAnnotation] = cluster.memberAnnotations.filter { member -> Bool in
-            guard let bike = member as? Cycle else {
+            guard let bike = member as? NavObject else {
                 return false // Better to return false than crash with fatalError
             }
             return bike.type == type

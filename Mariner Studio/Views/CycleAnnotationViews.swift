@@ -82,14 +82,14 @@ class ClusterAnnotationView: MKAnnotationView {
         if let cluster = annotation as? MKClusterAnnotation {
             let totalBikes = cluster.memberAnnotations.count
             
-            if count(cycleType: .unicycle) > 0 {
+            if count(cycleType: .navunit) > 0 {
                 image = drawUnicycleCount(count: totalBikes)
             } else {
-                let tricycleCount = count(cycleType: .tricycle)
+                let tricycleCount = count(cycleType: .tidalcurrentstation)
                 image = drawRatioBicycleToTricycle(tricycleCount, to: totalBikes)
             }
             
-            if count(cycleType: .unicycle) > 0 {
+            if count(cycleType: .navunit) > 0 {
                 displayPriority = .defaultLow
             } else {
                 displayPriority = .defaultHigh
@@ -139,13 +139,13 @@ class ClusterAnnotationView: MKAnnotationView {
         }
     }
 
-    private func count(cycleType type: Cycle.CycleType) -> Int {
+    private func count(cycleType type: NavObject.NavObjectType) -> Int {
         guard let cluster = annotation as? MKClusterAnnotation else {
             return 0
         }
 
         return cluster.memberAnnotations.filter { member -> Bool in
-            guard let bike = member as? Cycle else {
+            guard let bike = member as? NavObject else {
                 fatalError("Found unexpected annotation type")
             }
             return bike.type == type

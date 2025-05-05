@@ -10,7 +10,7 @@ import MapKit
 import CoreLocation
 
 struct MapData: Decodable {
-    let cycles: [Cycle]
+    let cycles: [NavObject]
 
     let centerLatitude: CLLocationDegrees
     let centerLongitude: CLLocationDegrees

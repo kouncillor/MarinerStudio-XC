@@ -2,7 +2,7 @@ import MapKit
 import CoreLocation
 
 struct MarinerMapData: Decodable {
-    let cycles: [Cycle]
+    let navobjects: [NavObject]
     let centerLatitude: CLLocationDegrees
     let centerLongitude: CLLocationDegrees
     let latitudeDelta: CLLocationDegrees
@@ -15,15 +15,15 @@ struct MarinerMapData: Decodable {
     }
 }
 
-// Copy Cycle class from Tandm for compatibility with their data format
-class Cycle: NSObject, Decodable, MKAnnotation {
-    enum CycleType: Int, Decodable {
-        case unicycle
-        case bicycle
-        case tricycle
+
+class NavObject: NSObject, Decodable, MKAnnotation {
+    enum NavObjectType: Int, Decodable {
+        case navunit
+        case tidalheightstation
+        case tidalcurrentstation
     }
     
-    var type: CycleType = .unicycle
+    var type: NavObjectType = .navunit
     
     private var latitude: CLLocationDegrees = 0
     private var longitude: CLLocationDegrees = 0

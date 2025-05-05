@@ -17,7 +17,7 @@ class MapAnnotation: NSObject, MKAnnotation {
     }
     
     // Create from Cycle (for compatibility with Tandm data)
-    convenience init(from cycle: Cycle) {
+    convenience init(from cycle: NavObject) {
         let type = AnnotationType(rawValue: cycle.type.rawValue) ?? .bicycle
         self.init(type: type, coordinate: cycle.coordinate)
     }

@@ -3,7 +3,7 @@ import MapKit
 
 struct TandmMapViewRepresentable: UIViewRepresentable {
     @Binding var region: MKCoordinateRegion
-    var annotations: [Cycle]
+    var annotations: [NavObject]
     
     func makeUIView(context: Context) -> MKMapView {
         let mapView = MKMapView()
@@ -24,7 +24,7 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
         mapView.setRegion(region, animated: true)
         
         // Remove old annotations and add new ones
-        let currentAnnotations = mapView.annotations.filter { $0 is Cycle }
+        let currentAnnotations = mapView.annotations.filter { $0 is NavObject }
         mapView.removeAnnotations(currentAnnotations)
         mapView.addAnnotations(annotations)
     }
@@ -42,14 +42,14 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
         }
         
         func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
-            guard let annotation = annotation as? Cycle else { return nil }
+            guard let annotation = annotation as? NavObject else { return nil }
             
             switch annotation.type {
-            case .unicycle:
+            case .navunit:
                 return UnicycleAnnotationView(annotation: annotation, reuseIdentifier: UnicycleAnnotationView.ReuseID)
-            case .bicycle:
+            case .tidalheightstation:
                 return BicycleAnnotationView(annotation: annotation, reuseIdentifier: BicycleAnnotationView.ReuseID)
-            case .tricycle:
+            case .tidalcurrentstation:
                 return TricycleAnnotationView(annotation: annotation, reuseIdentifier: TricycleAnnotationView.ReuseID)
             }
         }
