@@ -45,8 +45,12 @@ struct MapClusteringView: View {
     var body: some View {
         ZStack {
             // Use the renamed view representable
-            TandmMapViewRepresentable(region: $mapRegion, annotations: viewModel.navobjects)
-                .edgesIgnoringSafeArea(.all)
+            TandmMapViewRepresentable(
+                region: $mapRegion,
+                annotations: viewModel.navobjects,
+                viewModel: viewModel
+            )
+            .edgesIgnoringSafeArea(.all)
             
             // Add loading indicator if needed
             if viewModel.isLoadingNavUnits || viewModel.isLoadingTideStations || viewModel.isLoadingCurrentStations {

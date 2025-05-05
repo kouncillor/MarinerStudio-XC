@@ -1,9 +1,11 @@
+
 import SwiftUI
 import MapKit
 
 struct TandmMapViewRepresentable: UIViewRepresentable {
     @Binding var region: MKCoordinateRegion
     var annotations: [NavObject]
+    var viewModel: MapClusteringViewModel
     
     func makeUIView(context: Context) -> MKMapView {
         let mapView = MKMapView()
@@ -55,7 +57,11 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
         }
         
         func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
+            // Update the region binding for SwiftUI
             parent.region = mapView.region
+            
+            // Update the view model with the new region
+            parent.viewModel.updateMapRegion(mapView.region)
         }
     }
 }
