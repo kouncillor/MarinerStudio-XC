@@ -8,13 +8,30 @@ struct MainView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 12) {
-                    // MAP
-                    NavigationLink(destination: MapClusteringView()) {
+                  
+                    
+                    
+                    
+                    
+                    // In MainView.swift, update the NavigationLink for MAP:
+                    NavigationLink(destination: MapClusteringView(
+                        navUnitService: serviceProvider.navUnitService,
+                        tideStationService: serviceProvider.tideStationService,
+                        currentStationService: serviceProvider.currentStationService,
+                        locationService: serviceProvider.locationService
+                    )) {
                         NavigationButtonContent(
                             icon: "earthsixfour",
                             title: "MAP"
                         )
                     }
+                    
+                    
+                    
+                    
+                    
+                    
+                    
 
                     // WEATHER
                     NavigationLink(destination: WeatherMenuView()) {

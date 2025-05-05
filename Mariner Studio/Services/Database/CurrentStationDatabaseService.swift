@@ -101,18 +101,18 @@ class CurrentStationDatabaseService {
         do {
             let db = try databaseCore.ensureConnection()
             
-            print("📊 CHECK: Checking favorite status for station \(id), bin \(bin)")
+       //     print("📊 CHECK: Checking favorite status for station \(id), bin \(bin)")
             let query = tidalCurrentStationFavorites.filter(colStationId == id && colCurrentBin == bin)
             
             if let favorite = try db.pluck(query) {
                 let result = favorite[colIsFavorite]
-                print("📊 CHECK: Found favorite status: \(result)")
+       //         print("📊 CHECK: Found favorite status: \(result)")
                 return result
             }
-            print("📊 CHECK: No favorite record found")
+     //       print("📊 CHECK: No favorite record found")
             return false
         } catch {
-            print("❌ CHECK ERROR: \(error.localizedDescription)")
+     //       print("❌ CHECK ERROR: \(error.localizedDescription)")
             return false
         }
     }
@@ -171,20 +171,20 @@ class CurrentStationDatabaseService {
         do {
             let db = try databaseCore.ensureConnection()
             
-            print("📊 CHECK: Checking any favorite status for station \(id)")
+          //  print("📊 CHECK: Checking any favorite status for station \(id)")
             let query = tidalCurrentStationFavorites.filter(colStationId == id)
             
             // Check if any record exists and is marked as favorite
             for row in try db.prepare(query) {
                 if row[colIsFavorite] {
-                    print("📊 CHECK: Found favorite status true for bin \(row[colCurrentBin])")
+          //          print("📊 CHECK: Found favorite status true for bin \(row[colCurrentBin])")
                     return true
                 }
             }
-            print("📊 CHECK: No favorite record found for any bin")
+         //   print("📊 CHECK: No favorite record found for any bin")
             return false
         } catch {
-            print("❌ CHECK ERROR: \(error.localizedDescription)")
+        //    print("❌ CHECK ERROR: \(error.localizedDescription)")
             return false
         }
     }

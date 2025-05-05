@@ -93,7 +93,7 @@ class NavUnitDatabaseService {
                 let lonValue = row[colLongitude]
                 let unitId = row[colNavUnitId]
                 if count < 10 {
-                    print(" S NavUnitDB (\(count)): ID \(unitId) - Raw Lat: \(String(describing: latValue)), Raw Lon: \(String(describing: lonValue))")
+         //           print(" S NavUnitDB (\(count)): ID \(unitId) - Raw Lat: \(String(describing: latValue)), Raw Lon: \(String(describing: lonValue))")
                 }
                 
                 // FIX: Use default values of 0 when latitude/longitude are nil
@@ -144,10 +144,10 @@ class NavUnitDatabaseService {
                 count += 1
             }
 
-            print(" S NavUnitDatabaseService: Fetched \(results.count) units.")
+          //  print(" S NavUnitDatabaseService: Fetched \(results.count) units.")
             return results
         } catch {
-            print(" S NavUnitDatabaseService: Error fetching nav units: \(error.localizedDescription)")
+       //     print(" S NavUnitDatabaseService: Error fetching nav units: \(error.localizedDescription)")
             throw error
         }
     }

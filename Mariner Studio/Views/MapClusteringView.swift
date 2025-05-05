@@ -7,7 +7,40 @@ struct MapClusteringView: View {
         span: MKCoordinateSpan(latitudeDelta: 0.00978871051851371, longitudeDelta: 0.008167393319212121)
     )
     
-    @StateObject private var viewModel = MapClusteringViewModel()
+    @StateObject private var viewModel: MapClusteringViewModel
+    @EnvironmentObject var serviceProvider: ServiceProvider
+    
+    // MARK: - Initialization
+    init() {
+        // Default initializer - uses ServiceProvider via EnvironmentObject
+        _viewModel = StateObject(wrappedValue: MapClusteringViewModel(
+            navUnitService: NavUnitDatabaseService(databaseCore: DatabaseCore()),
+            tideStationService: TideStationDatabaseService(databaseCore: DatabaseCore()),
+            currentStationService: CurrentStationDatabaseService(databaseCore: DatabaseCore()),
+            tidalHeightService: TidalHeightServiceImpl(),
+            tidalCurrentService: TidalCurrentServiceImpl(),
+            locationService: LocationServiceImpl()
+        ))
+    }
+    
+    // MARK: - Convenience init that takes services for easier testing
+    init(navUnitService: NavUnitDatabaseService,
+         tideStationService: TideStationDatabaseService,
+         currentStationService: CurrentStationDatabaseService,
+         locationService: LocationService) {
+        // Create the required service implementations
+        let tidalHeightService = TidalHeightServiceImpl()
+        let tidalCurrentService = TidalCurrentServiceImpl()
+        
+        _viewModel = StateObject(wrappedValue: MapClusteringViewModel(
+            navUnitService: navUnitService,
+            tideStationService: tideStationService,
+            currentStationService: currentStationService,
+            tidalHeightService: tidalHeightService,
+            tidalCurrentService: tidalCurrentService,
+            locationService: locationService
+        ))
+    }
     
     var body: some View {
         ZStack {
@@ -15,73 +48,33 @@ struct MapClusteringView: View {
             TandmMapViewRepresentable(region: $mapRegion, annotations: viewModel.cycles)
                 .edgesIgnoringSafeArea(.all)
             
-            VStack {
-                Spacer()
-                HStack {
+            // Add loading indicator if needed
+            if viewModel.isLoadingNavUnits || viewModel.isLoadingTideStations || viewModel.isLoadingCurrentStations {
+                VStack {
+                    HStack {
+                        ProgressView()
+                        Text("Loading data...")
+                    }
+                    .padding()
+                    .background(Color.white.opacity(0.8))
+                    .cornerRadius(10)
+                    
                     Spacer()
-                    MapLegendView()
-                        .padding()
                 }
+                .padding(.top)
             }
         }
-        .navigationTitle("Bicycle Rentals")
+        .navigationTitle("Maritime Map")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
-            // Load the cycle data when view appears
+            // Load the cycle data and maritime data when view appears
             viewModel.loadData()
         }
     }
 }
 
-struct MapLegendView: View {
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            LegendItem(color: Color(red: 0.668, green: 0.475, blue: 0.259), text: "Unicycle")
-            LegendItem(color: Color(red: 1.0, green: 0.474, blue: 0.0), text: "Bicycle")
-            LegendItem(color: Color(red: 0.597, green: 0.706, blue: 0.0), text: "Tricycle")
-        }
-        .padding()
-        .background(Color.white.opacity(0.9))
-        .cornerRadius(10)
-        .shadow(radius: 3)
-    }
-}
-
-struct LegendItem: View {
-    let color: Color
-    let text: String
-    
-    var body: some View {
-        HStack {
-            Circle()
-                .fill(color)
-                .frame(width: 12, height: 12)
-            Text(text)
-                .font(.caption)
-            Spacer()
-        }
-    }
-}
-
-// ViewModel to handle data loading and processing
-class MapClusteringViewModel: ObservableObject {
-    @Published var cycles: [Cycle] = []
-    
-    func loadData() {
-        guard let plistURL = Bundle.main.url(forResource: "Data", withExtension: "plist") else {
-            print("Failed to resolve URL for Data.plist in bundle.")
-            return
-        }
-
-        do {
-            let plistData = try Data(contentsOf: plistURL)
-            let decoder = PropertyListDecoder()
-            let decodedData = try decoder.decode(MapData.self, from: plistData)
-            
-            // Set the cycles data
-            self.cycles = decodedData.cycles
-        } catch {
-            print("Failed to load provided data, error: \(error.localizedDescription)")
-        }
-    }
+// Add preview for SwiftUI Preview
+#Preview {
+    MapClusteringView()
+        .environmentObject(ServiceProvider())
 }
