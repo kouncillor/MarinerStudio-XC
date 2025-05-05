@@ -1,11 +1,17 @@
 import MapKit
 
+// Optimized version of the ClusterAnnotationView with caching
 class MapClusterAnnotationView: MKAnnotationView {
+    // Cache for rendered cluster images - static so it persists for the app lifetime
+    private static var imageCache: [String: UIImage] = [:]
     
     override init(annotation: MKAnnotation?, reuseIdentifier: String?) {
         super.init(annotation: annotation, reuseIdentifier: reuseIdentifier)
         collisionMode = .circle
         centerOffset = CGPoint(x: 0, y: -10) // Offset center point to animate better with marker annotations
+        
+        // Performance optimizations
+        displayPriority = .defaultHigh
     }
 
     required init?(coder aDecoder: NSCoder) {
@@ -15,21 +21,39 @@ class MapClusterAnnotationView: MKAnnotationView {
     override func prepareForDisplay() {
         super.prepareForDisplay()
         
-        if let cluster = annotation as? MKClusterAnnotation {
-            let totalBikes = cluster.memberAnnotations.count
+        guard let cluster = annotation as? MKClusterAnnotation else { return }
+        
+        // Get counts of each type in the most efficient way
+        let (navUnitCount, tidalHeightCount, tidalCurrentCount) = getCounts(from: cluster)
+        let totalCount = cluster.memberAnnotations.count
+        
+        // Create a cache key based on the counts
+        let cacheKey = "\(navUnitCount)-\(tidalHeightCount)-\(tidalCurrentCount)-\(totalCount)"
+        
+        // Check if we already have this image cached
+        if let cachedImage = MapClusterAnnotationView.imageCache[cacheKey] {
+            self.image = cachedImage
+        } else {
+            // Generate and cache the image
+            let newImage: UIImage
             
-            if count(cycleType: .navunit) > 0 {
-                image = drawUnicycleCount(count: totalBikes)
+            if navUnitCount > 0 {
+                newImage = drawUnicycleCount(count: totalCount)
             } else {
-                let tricycleCount = count(cycleType: .tidalcurrentstation)
-                image = drawRatioBicycleToTricycle(tricycleCount, to: totalBikes)
+                newImage = drawRatioBicycleToTricycle(tidalCurrentCount, to: totalCount)
             }
             
-            if count(cycleType: .navunit) > 0 {
-                displayPriority = .defaultLow
-            } else {
-                displayPriority = .defaultHigh
-            }
+            // Cache the new image
+            MapClusterAnnotationView.imageCache[cacheKey] = newImage
+            self.image = newImage
+        }
+        
+        // Set display priority based on types - giving navunits lower priority
+        // so other annotations are more visible when zoomed out
+        if navUnitCount > 0 {
+            displayPriority = .defaultLow
+        } else {
+            displayPriority = .defaultHigh
         }
     }
 
@@ -45,6 +69,9 @@ class MapClusterAnnotationView: MKAnnotationView {
     }
 
     private func drawRatio(_ fraction: Int, to whole: Int, fractionColor: UIColor?, wholeColor: UIColor?) -> UIImage {
+        // For extremely large clusters, cap the displayed number to improve performance
+        let displayCount = min(whole, 999)
+        
         let renderer = UIGraphicsImageRenderer(size: CGSize(width: 40, height: 40))
         return renderer.image { _ in
             // Fill full circle with wholeColor
@@ -52,43 +79,53 @@ class MapClusterAnnotationView: MKAnnotationView {
             UIBezierPath(ovalIn: CGRect(x: 0, y: 0, width: 40, height: 40)).fill()
 
             // Fill pie with fractionColor
-            fractionColor?.setFill()
-            let piePath = UIBezierPath()
-            piePath.addArc(withCenter: CGPoint(x: 20, y: 20), radius: 20,
-                           startAngle: 0, endAngle: (CGFloat.pi * 2.0 * CGFloat(fraction)) / CGFloat(whole),
-                           clockwise: true)
-            piePath.addLine(to: CGPoint(x: 20, y: 20))
-            piePath.close()
-            piePath.fill()
+            if let fractionColor = fractionColor, fraction > 0 {
+                fractionColor.setFill()
+                let piePath = UIBezierPath()
+                piePath.addArc(withCenter: CGPoint(x: 20, y: 20), radius: 20,
+                               startAngle: 0, endAngle: (CGFloat.pi * 2.0 * CGFloat(fraction)) / CGFloat(whole),
+                               clockwise: true)
+                piePath.addLine(to: CGPoint(x: 20, y: 20))
+                piePath.close()
+                piePath.fill()
+            }
 
             // Fill inner circle with white color
             UIColor.white.setFill()
             UIBezierPath(ovalIn: CGRect(x: 8, y: 8, width: 24, height: 24)).fill()
 
             // Finally draw count text vertically and horizontally centered
+            // Use smaller font for large numbers
+            let fontSize: CGFloat = displayCount < 100 ? 20 : 16
             let attributes = [ NSAttributedString.Key.foregroundColor: UIColor.black,
-                               NSAttributedString.Key.font: UIFont.boldSystemFont(ofSize: 20)]
-            let text = "\(whole)"
+                              NSAttributedString.Key.font: UIFont.boldSystemFont(ofSize: fontSize)]
+            
+            // Format the text with a + for very large numbers
+            let text = displayCount < 999 ? "\(displayCount)" : "999+"
             let size = text.size(withAttributes: attributes)
             let rect = CGRect(x: 20 - size.width / 2, y: 20 - size.height / 2, width: size.width, height: size.height)
             text.draw(in: rect, withAttributes: attributes)
         }
     }
 
-    // THE FIX: Explicitly specifying the result type for filter
-    private func count(cycleType type: NavObject.NavObjectType) -> Int {
-        guard let cluster = annotation as? MKClusterAnnotation else {
-            return 0
-        }
-
-        // This is likely where the error is occurring - explicitly specify the result type:
-        let filteredAnnotations: [MKAnnotation] = cluster.memberAnnotations.filter { member -> Bool in
-            guard let bike = member as? NavObject else {
-                return false // Better to return false than crash with fatalError
+    // Optimized method to count different types of annotations
+    private func getCounts(from cluster: MKClusterAnnotation) -> (navUnits: Int, tidalHeight: Int, tidalCurrent: Int) {
+        var navUnitCount = 0
+        var tidalHeightCount = 0
+        var tidalCurrentCount = 0
+        
+        // Use a faster approach without extra allocations
+        for case let navObject as NavObject in cluster.memberAnnotations {
+            switch navObject.type {
+            case .navunit:
+                navUnitCount += 1
+            case .tidalheightstation:
+                tidalHeightCount += 1
+            case .tidalcurrentstation:
+                tidalCurrentCount += 1
             }
-            return bike.type == type
         }
         
-        return filteredAnnotations.count
+        return (navUnitCount, tidalHeightCount, tidalCurrentCount)
     }
 }

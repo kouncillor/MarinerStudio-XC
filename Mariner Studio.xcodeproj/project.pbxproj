@@ -14,9 +14,33 @@
 		2EB41CD02DBC80CC009FC129 /* Mariner Studio.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Mariner Studio.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		2E7A7FF42DC9601900E3ED8F /* Exceptions for "Mariner Studio" folder in "Mariner Studio" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Models/NavObjectExtenstions.swift,
+			);
+			target = 2EB41CCF2DBC80CC009FC129 /* Mariner Studio */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
+		2E7A7FF52DC9601900E3ED8F /* Exceptions for "Mariner Studio" folder in "Copy Bundle Resources" phase from "Mariner Studio" target */ = {
+			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
+			buildPhase = 2EB41CCE2DBC80CC009FC129 /* Resources */;
+			membershipExceptions = (
+				Models/NavObjectExtenstions.swift,
+			);
+		};
+/* End PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		2EB41CD22DBC80CC009FC129 /* Mariner Studio */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				2E7A7FF42DC9601900E3ED8F /* Exceptions for "Mariner Studio" folder in "Mariner Studio" target */,
+				2E7A7FF52DC9601900E3ED8F /* Exceptions for "Mariner Studio" folder in "Copy Bundle Resources" phase from "Mariner Studio" target */,
+			);
 			path = "Mariner Studio";
 			sourceTree = "<group>";
 		};
