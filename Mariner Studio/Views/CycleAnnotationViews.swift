@@ -1,6 +1,70 @@
 import MapKit
 
-class MapClusterAnnotationView: MKAnnotationView {
+private let multiWheelCycleClusterID = "multiWheelCycle"
+
+class UnicycleAnnotationView: MKMarkerAnnotationView {
+    static let ReuseID = "unicycleAnnotation"
+
+    override init(annotation: MKAnnotation?, reuseIdentifier: String?) {
+        super.init(annotation: annotation, reuseIdentifier: reuseIdentifier)
+        clusteringIdentifier = "unicycle"
+    }
+
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func prepareForDisplay() {
+        super.prepareForDisplay()
+        displayPriority = .defaultLow
+        markerTintColor = UIColor(red: 0.668, green: 0.475, blue: 0.259, alpha: 1.0) // unicycleColor
+        // If you have the image in your assets, use it here
+        // glyphImage = UIImage(named: "unicycle")
+    }
+}
+
+class BicycleAnnotationView: MKMarkerAnnotationView {
+    static let ReuseID = "bicycleAnnotation"
+    
+    override init(annotation: MKAnnotation?, reuseIdentifier: String?) {
+        super.init(annotation: annotation, reuseIdentifier: reuseIdentifier)
+        clusteringIdentifier = multiWheelCycleClusterID
+    }
+    
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    override func prepareForDisplay() {
+        super.prepareForDisplay()
+        displayPriority = .defaultHigh
+        markerTintColor = UIColor(red: 1.0, green: 0.474, blue: 0.0, alpha: 1.0) // bicycleColor
+        // glyphImage = UIImage(named: "bicycle")
+    }
+}
+
+class TricycleAnnotationView: MKMarkerAnnotationView {
+    static let ReuseID = "tricycleAnnotation"
+
+    override init(annotation: MKAnnotation?, reuseIdentifier: String?) {
+        super.init(annotation: annotation, reuseIdentifier: reuseIdentifier)
+        clusteringIdentifier = multiWheelCycleClusterID
+    }
+
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func prepareForDisplay() {
+        super.prepareForDisplay()
+        displayPriority = .defaultHigh
+        markerTintColor = UIColor(red: 0.597, green: 0.706, blue: 0.0, alpha: 1.0) // tricycleColor
+        // glyphImage = UIImage(named: "tricycle")
+    }
+}
+
+// Also include the ClusterAnnotationView
+class ClusterAnnotationView: MKAnnotationView {
     
     override init(annotation: MKAnnotation?, reuseIdentifier: String?) {
         super.init(annotation: annotation, reuseIdentifier: reuseIdentifier)
@@ -75,20 +139,16 @@ class MapClusterAnnotationView: MKAnnotationView {
         }
     }
 
-    // THE FIX: Explicitly specifying the result type for filter
     private func count(cycleType type: Cycle.CycleType) -> Int {
         guard let cluster = annotation as? MKClusterAnnotation else {
             return 0
         }
 
-        // This is likely where the error is occurring - explicitly specify the result type:
-        let filteredAnnotations: [MKAnnotation] = cluster.memberAnnotations.filter { member -> Bool in
+        return cluster.memberAnnotations.filter { member -> Bool in
             guard let bike = member as? Cycle else {
-                return false // Better to return false than crash with fatalError
+                fatalError("Found unexpected annotation type")
             }
             return bike.type == type
-        }
-        
-        return filteredAnnotations.count
+        }.count
     }
 }

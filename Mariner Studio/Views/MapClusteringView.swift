@@ -2,96 +2,86 @@ import SwiftUI
 import MapKit
 
 struct MapClusteringView: View {
-    @StateObject private var viewModel = MapViewModel()
-    @Environment(\.presentationMode) var presentationMode
+    @State private var mapRegion = MKCoordinateRegion(
+        center: CLLocationCoordinate2D(latitude: 37.8050315413548, longitude: -122.413632917219),
+        span: MKCoordinateSpan(latitudeDelta: 0.00978871051851371, longitudeDelta: 0.008167393319212121)
+    )
+    
+    @StateObject private var viewModel = MapClusteringViewModel()
     
     var body: some View {
-        ZStack(alignment: .topTrailing) {
-            MapViewRepresentable(
-                annotations: viewModel.annotations,
-                region: viewModel.region,
-                showsUserLocation: true
-            )
-            .edgesIgnoringSafeArea(.all)
+        ZStack {
+            // Use the renamed view representable
+            TandmMapViewRepresentable(region: $mapRegion, annotations: viewModel.cycles)
+                .edgesIgnoringSafeArea(.all)
             
             VStack {
-                HStack {
-                    Button(action: {
-                        presentationMode.wrappedValue.dismiss()
-                    }) {
-                        Image(systemName: "arrow.left")
-                            .padding()
-                            .background(Color.white.opacity(0.8))
-                            .clipShape(Circle())
-                    }
-                    .padding([.top, .leading])
-                    
-                    Spacer()
-                }
-                
                 Spacer()
-                
                 HStack {
                     Spacer()
-                    
-                    MKCompassButton()
-                        .mapControls()
-                        .frame(width: 44, height: 44)
-                        .background(Color.white.opacity(0.8))
-                        .clipShape(Circle())
+                    MapLegendView()
                         .padding()
-                    
-                    MKUserTrackingButton()
-                        .mapControls()
-                        .frame(width: 44, height: 44)
-                        .background(Color.white.opacity(0.8))
-                        .clipShape(Circle())
-                        .padding([.bottom, .trailing])
                 }
             }
         }
-        .navigationBarHidden(true)
+        .navigationTitle("Bicycle Rentals")
+        .navigationBarTitleDisplayMode(.inline)
         .onAppear {
+            // Load the cycle data when view appears
             viewModel.loadData()
         }
     }
 }
 
-class MapViewModel: ObservableObject {
-    @Published var annotations: [MapAnnotation] = []
-    @Published var region: MKCoordinateRegion = MKCoordinateRegion(
-        center: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
-        span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1)
-    )
+struct MapLegendView: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            LegendItem(color: Color(red: 0.668, green: 0.475, blue: 0.259), text: "Unicycle")
+            LegendItem(color: Color(red: 1.0, green: 0.474, blue: 0.0), text: "Bicycle")
+            LegendItem(color: Color(red: 0.597, green: 0.706, blue: 0.0), text: "Tricycle")
+        }
+        .padding()
+        .background(Color.white.opacity(0.9))
+        .cornerRadius(10)
+        .shadow(radius: 3)
+    }
+}
+
+struct LegendItem: View {
+    let color: Color
+    let text: String
+    
+    var body: some View {
+        HStack {
+            Circle()
+                .fill(color)
+                .frame(width: 12, height: 12)
+            Text(text)
+                .font(.caption)
+            Spacer()
+        }
+    }
+}
+
+// ViewModel to handle data loading and processing
+class MapClusteringViewModel: ObservableObject {
+    @Published var cycles: [Cycle] = []
     
     func loadData() {
-        // Load data from the bundle (similar to Tandm)
-        guard let url = Bundle.main.url(forResource: "Data", withExtension: "plist"),
-              let data = try? Data(contentsOf: url),
-              let plist = try? PropertyListDecoder().decode(MarinerMapData.self, from: data) else {
-            print("Failed to load map data")
+        guard let plistURL = Bundle.main.url(forResource: "Data", withExtension: "plist") else {
+            print("Failed to resolve URL for Data.plist in bundle.")
             return
         }
-        
-        self.annotations = plist.cycles.map { MapAnnotation(from: $0) }
-        self.region = plist.region
-    }
-}
 
-struct MKCompassButton: UIViewRepresentable {
-    func makeUIView(context: Context) -> MKCompassButton {
-        let button = MKCompassButton(mapView: MKMapView())
-        button.compassVisibility = .visible
-        return button
+        do {
+            let plistData = try Data(contentsOf: plistURL)
+            let decoder = PropertyListDecoder()
+            let decodedData = try decoder.decode(MapData.self, from: plistData)
+            
+            // Set the cycles data
+            self.cycles = decodedData.cycles
+        } catch {
+            print("Failed to load provided data, error: \(error.localizedDescription)")
+        }
     }
-    
-    func updateUIView(_ uiView: MKCompassButton, context: Context) {}
-}
-
-struct MKUserTrackingButton: UIViewRepresentable {
-    func makeUIView(context: Context) -> MKUserTrackingButton {
-        return MKUserTrackingButton(mapView: MKMapView())
-    }
-    
-    func updateUIView(_ uiView: MKUserTrackingButton, context: Context) {}
 }
