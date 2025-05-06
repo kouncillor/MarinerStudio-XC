@@ -1,7 +1,6 @@
+
 import SwiftUI
 import MapKit
-
-//Just a comment to update  the commits
 
 struct TandmMapViewRepresentable: UIViewRepresentable {
     @Binding var region: MKCoordinateRegion
@@ -27,8 +26,8 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
     
     func updateUIView(_ mapView: MKMapView, context: Context) {
         // Only update the region if it was changed by user interaction, not by code
-        if !context.coordinator.isUpdatingRegion && mapView.region.center.latitude != region.center.latitude ||
-           mapView.region.center.longitude != region.center.longitude {
+        if !context.coordinator.isUpdatingRegion && (mapView.region.center.latitude != region.center.latitude ||
+           mapView.region.center.longitude != region.center.longitude) {
             context.coordinator.isUpdatingRegion = true
             mapView.setRegion(region, animated: true)
             context.coordinator.isUpdatingRegion = false
@@ -106,9 +105,29 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
         
         // Efficient annotation update mechanism
         func updateAnnotations(in mapView: MKMapView, newAnnotations: [NavObject]) {
-            // Only process updates if annotations have changed
-            guard newAnnotations != lastAnnotations else { return }
+            // Cache comparison for better performance
+            let newAnnotationCount = newAnnotations.count
+            let existingAnnotationCount = mapView.annotations.count
             
+            // Quick check if collections are identical by count (and last known set)
+            if newAnnotationCount == lastAnnotations.count && newAnnotations == lastAnnotations {
+                return
+            }
+            
+            // If we're dealing with significantly different numbers of annotations,
+            // or we have a large number of annotations, use a faster approach
+            if abs(newAnnotationCount - existingAnnotationCount) > 50 || newAnnotationCount > 200 {
+                // Remove all existing non-user location annotations
+                let nonUserAnnotations = mapView.annotations.filter { !($0 is MKUserLocation) }
+                mapView.removeAnnotations(nonUserAnnotations)
+                
+                // Add all new annotations at once
+                mapView.addAnnotations(newAnnotations)
+                lastAnnotations = newAnnotations
+                return
+            }
+            
+            // For smaller changes, do a more precise update
             // Find annotations to add and remove
             let existingAnnotations = mapView.annotations.compactMap { $0 as? NavObject }
             
@@ -132,7 +151,7 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
             }
             
             // Update in batches to avoid UI freezes
-            let batchSize = 100
+            let batchSize = 50
             
             // Remove old annotations in batches
             for i in stride(from: 0, to: annotationsToRemove.count, by: batchSize) {

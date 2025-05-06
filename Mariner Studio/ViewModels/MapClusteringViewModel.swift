@@ -1,6 +1,7 @@
-import SwiftUI
+
+import Foundation
+import CoreLocation
 import MapKit
-import Combine
 
 class MapClusteringViewModel: ObservableObject {
     // MARK: - Published Properties
@@ -8,9 +9,22 @@ class MapClusteringViewModel: ObservableObject {
     @Published var isLoadingNavUnits = false
     @Published var isLoadingTideStations = false
     @Published var isLoadingCurrentStations = false
-    @Published var currentRegion: MKCoordinateRegion?
     
-    // MARK: - Private Properties
+    // MARK: - Map Properties
+    private var allNavObjects: [NavObject] = []
+    private(set) var currentRegion: MKCoordinateRegion?
+    
+    // MARK: - New Properties for Annotation Capping
+    private let maxAnnotations = 100
+    private var lastProcessedRegion: MKCoordinateRegion?
+    private var regionChangeThrottleTime = 0.3 // seconds
+    private var lastRegionChangeTime = Date()
+    
+    // MARK: - Spatial Indexing
+    private var spatialGrid: [String: [NavObject]] = [:]
+    private let gridCellSize: Double = 0.05 // degrees (roughly 5.5 km at equator)
+    
+    // MARK: - Services
     private let navUnitService: NavUnitDatabaseService
     private let tideStationService: TideStationDatabaseService
     private let currentStationService: CurrentStationDatabaseService
@@ -18,36 +32,13 @@ class MapClusteringViewModel: ObservableObject {
     private let tidalCurrentService: TidalCurrentService
     private let locationService: LocationService
     
-    // Queue for background processing
-    private let processingQueue = DispatchQueue(label: "com.marinerstudio.mapprocessing", qos: .userInitiated, attributes: .concurrent)
-    
-    // Cache
-    private var navUnitsCache: [NavUnit] = []
-    private var tideStationsCache: [TidalHeightStation] = []
-    private var currentStationsCache: [TidalCurrentStation] = []
-    
-    // Throttling region updates
-    private var regionUpdateTimer: Timer?
-    private var pendingRegionUpdate: MKCoordinateRegion?
-    
-    // Visible region for lazy loading
-    private var visibleRegion: MKCoordinateRegion?
-    
-    // Cancellables
-    private var cancellables = Set<AnyCancellable>()
-    
-    // Batch size for processing annotations
-    private let annotationBatchSize = 200
-    
     // MARK: - Initialization
-    init(
-        navUnitService: NavUnitDatabaseService,
-        tideStationService: TideStationDatabaseService,
-        currentStationService: CurrentStationDatabaseService,
-        tidalHeightService: TidalHeightService,
-        tidalCurrentService: TidalCurrentService,
-        locationService: LocationService
-    ) {
+    init(navUnitService: NavUnitDatabaseService,
+         tideStationService: TideStationDatabaseService,
+         currentStationService: CurrentStationDatabaseService,
+         tidalHeightService: TidalHeightService,
+         tidalCurrentService: TidalCurrentService,
+         locationService: LocationService) {
         self.navUnitService = navUnitService
         self.tideStationService = tideStationService
         self.currentStationService = currentStationService
@@ -55,24 +46,22 @@ class MapClusteringViewModel: ObservableObject {
         self.tidalCurrentService = tidalCurrentService
         self.locationService = locationService
         
-        // Initialize with user's location if available
+        // Set initial region based on user location if available
         if let userLocation = locationService.currentLocation {
-            self.currentRegion = MKCoordinateRegion(
+            currentRegion = MKCoordinateRegion(
                 center: userLocation.coordinate,
                 span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
             )
         } else {
-            // Default region (San Francisco Bay Area)
-            self.currentRegion = MKCoordinateRegion(
-                center: CLLocationCoordinate2D(latitude: 37.8050315413548, longitude: -122.413632917219),
+            // Default to San Francisco as fallback
+            currentRegion = MKCoordinateRegion(
+                center: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
                 span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
             )
         }
     }
     
     // MARK: - Public Methods
-    
-    /// Load all data required for the map
     func loadData() {
         Task {
             await loadNavUnits()
@@ -81,128 +70,82 @@ class MapClusteringViewModel: ObservableObject {
         }
     }
     
-    /// Update the visible map region and refresh annotations if needed
-    func updateMapRegion(_ region: MKCoordinateRegion) {
-        // Cancel any pending updates
-        regionUpdateTimer?.invalidate()
+    // Method to update map region and refresh visible annotations
+    func updateMapRegion(_ newRegion: MKCoordinateRegion) {
+        // Check if we should throttle this update
+        let now = Date()
+        if now.timeIntervalSince(lastRegionChangeTime) < regionChangeThrottleTime {
+            return
+        }
         
-        // Store the new region for processing
-        pendingRegionUpdate = region
+        // Skip if it's a very small change
+        if let lastRegion = lastProcessedRegion,
+           abs(lastRegion.center.latitude - newRegion.center.latitude) < 0.001 &&
+           abs(lastRegion.center.longitude - newRegion.center.longitude) < 0.001 &&
+           abs(lastRegion.span.latitudeDelta - newRegion.span.latitudeDelta) < 0.001 {
+            return
+        }
         
-        // Create a debounced region update to avoid excessive processing
-        regionUpdateTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: false) { [weak self] _ in
-            guard let self = self, let pendingRegion = self.pendingRegionUpdate else { return }
-            
-            // Update the current region
-            self.currentRegion = pendingRegion
-            
-            // Check if we need to load more annotations based on the new visible region
-            self.refreshVisibleAnnotations(in: pendingRegion)
+        lastRegionChangeTime = now
+        currentRegion = newRegion
+        lastProcessedRegion = newRegion
+        
+        // Get visible or nearby grid cells
+        let nearbyGridCells = getNearbyCells(forRegion: newRegion)
+        
+        // Update visible annotations
+        Task { @MainActor in
+            self.updateVisibleAnnotations(forRegion: newRegion, fromCells: nearbyGridCells)
         }
     }
     
     // MARK: - Private Methods
-    
-    /// Refresh annotations visible in the current region
-    private func refreshVisibleAnnotations(in region: MKCoordinateRegion) {
-        // Save the visible region
-        self.visibleRegion = region
-        
-        // Use expanded region for preloading
-        let expandedRegion = expandRegion(region, byFactor: 1.5)
-        
-        // Process in background
-        processingQueue.async { [weak self] in
-            guard let self = self else { return }
-            
-            // Process NavUnits, TidalHeightStations, and TidalCurrentStations
-            // that are within the expanded visible region
-            var visibleAnnotations: [NavObject] = []
-            
-            // Add NavUnits that are within the visible region
-            let visibleNavUnits = self.navUnitsCache.filter { navUnit in
-                guard let latitude = navUnit.latitude, let longitude = navUnit.longitude else { return false }
-                return self.isCoordinate(CLLocationCoordinate2D(latitude: latitude, longitude: longitude),
-                                       inRegion: expandedRegion)
-            }
-            
-            // Create NavObject annotations for visible NavUnits
-            for navUnit in visibleNavUnits {
-                guard let latitude = navUnit.latitude, let longitude = navUnit.longitude else { continue }
-                let annotation = NavUnitAnnotation(navUnit: navUnit)
-                visibleAnnotations.append(annotation)
-            }
-            
-            // Add TidalHeightStations that are within the visible region
-            let visibleTideStations = self.tideStationsCache.filter { station in
-                guard let latitude = station.latitude, let longitude = station.longitude else { return false }
-                return self.isCoordinate(CLLocationCoordinate2D(latitude: latitude, longitude: longitude),
-                                       inRegion: expandedRegion)
-            }
-            
-            // Create NavObject annotations for visible TidalHeightStations
-            for station in visibleTideStations {
-                guard let latitude = station.latitude, let longitude = station.longitude else { continue }
-                let annotation = TidalHeightStationAnnotation(station: station)
-                visibleAnnotations.append(annotation)
-            }
-            
-            // Add TidalCurrentStations that are within the visible region
-            let visibleCurrentStations = self.currentStationsCache.filter { station in
-                guard let latitude = station.latitude, let longitude = station.longitude else { return false }
-                return self.isCoordinate(CLLocationCoordinate2D(latitude: latitude, longitude: longitude),
-                                       inRegion: expandedRegion)
-            }
-            
-            // Create NavObject annotations for visible TidalCurrentStations
-            for station in visibleCurrentStations {
-                guard let latitude = station.latitude, let longitude = station.longitude else { continue }
-                let annotation = TidalCurrentStationAnnotation(station: station)
-                visibleAnnotations.append(annotation)
-            }
-            
-            // Update annotations on the main thread
-            DispatchQueue.main.async {
-                self.navobjects = visibleAnnotations
-            }
-        }
-    }
-    
-    /// Load navigation units from the database
     private func loadNavUnits() async {
-        // Skip if already loading
-        guard !isLoadingNavUnits else { return }
+        if isLoadingNavUnits { return }
         
         await MainActor.run {
             isLoadingNavUnits = true
         }
         
         do {
-            let navUnits = try await navUnitService.getNavUnitsAsync()
+            let units = try await navUnitService.getNavUnitsAsync()
             
-            // Cache the nav units
-            navUnitsCache = navUnits
-            
-            // If we have a visible region, update annotations
-            if let region = visibleRegion {
-                refreshVisibleAnnotations(in: region)
+            // Convert to NavObject annotations
+            let annotations = units.compactMap { unit -> NavObject? in
+                // Skip entries without valid coordinates
+                guard let latitude = unit.latitude, let longitude = unit.longitude,
+                      latitude != 0 || longitude != 0 else {
+                    return nil
+                }
+                
+                let navObject = NavObject()
+                navObject.type = .navunit
+                navObject.coordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+                return navObject
             }
             
             await MainActor.run {
+                addToSpatialIndex(annotations)
+                self.allNavObjects.append(contentsOf: annotations)
+                
+                // Update visible annotations if we have a current region
+                if let region = self.currentRegion {
+                    let nearbyCells = self.getNearbyCells(forRegion: region)
+                    self.updateVisibleAnnotations(forRegion: region, fromCells: nearbyCells)
+                }
+                
                 isLoadingNavUnits = false
             }
         } catch {
-            print("❌ Error loading NavUnits: \(error.localizedDescription)")
+            print("Error loading navigation units: \(error.localizedDescription)")
             await MainActor.run {
                 isLoadingNavUnits = false
             }
         }
     }
     
-    /// Load tidal height stations from the API
     private func loadTidalHeightStations() async {
-        // Skip if already loading
-        guard !isLoadingTideStations else { return }
+        if isLoadingTideStations { return }
         
         await MainActor.run {
             isLoadingTideStations = true
@@ -210,50 +153,42 @@ class MapClusteringViewModel: ObservableObject {
         
         do {
             let response = try await tidalHeightService.getTidalHeightStations()
-            var stations = response.stations
             
-            // Update favorite status
-            await withTaskGroup(of: (String, Bool).self) { group in
-                for station in stations {
-                    group.addTask {
-                        let isFav = await self.tideStationService.isTideStationFavorite(id: station.id)
-                        return (station.id, isFav)
-                    }
+            // Convert to NavObject annotations
+            let annotations = response.stations.compactMap { station -> NavObject? in
+                // Skip entries without valid coordinates
+                guard let latitude = station.latitude, let longitude = station.longitude else {
+                    return nil
                 }
                 
-                var favoriteStatuses: [String: Bool] = [:]
-                for await (id, isFav) in group {
-                    favoriteStatuses[id] = isFav
-                }
-                
-                for i in 0..<stations.count {
-                    stations[i].isFavorite = favoriteStatuses[stations[i].id] ?? false
-                }
-            }
-            
-            // Cache the stations
-            tideStationsCache = stations
-            
-            // If we have a visible region, update annotations
-            if let region = visibleRegion {
-                refreshVisibleAnnotations(in: region)
+                let navObject = NavObject()
+                navObject.type = .tidalheightstation
+                navObject.coordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+                return navObject
             }
             
             await MainActor.run {
+                addToSpatialIndex(annotations)
+                self.allNavObjects.append(contentsOf: annotations)
+                
+                // Update visible annotations if we have a current region
+                if let region = self.currentRegion {
+                    let nearbyCells = self.getNearbyCells(forRegion: region)
+                    self.updateVisibleAnnotations(forRegion: region, fromCells: nearbyCells)
+                }
+                
                 isLoadingTideStations = false
             }
         } catch {
-            print("❌ Error loading TidalHeightStations: \(error.localizedDescription)")
+            print("Error loading tidal height stations: \(error.localizedDescription)")
             await MainActor.run {
                 isLoadingTideStations = false
             }
         }
     }
     
-    /// Load tidal current stations from the API
     private func loadTidalCurrentStations() async {
-        // Skip if already loading
-        guard !isLoadingCurrentStations else { return }
+        if isLoadingCurrentStations { return }
         
         await MainActor.run {
             isLoadingCurrentStations = true
@@ -261,130 +196,115 @@ class MapClusteringViewModel: ObservableObject {
         
         do {
             let response = try await tidalCurrentService.getTidalCurrentStations()
-            var stations = response.stations
             
-            // Update favorite status
-            await withTaskGroup(of: (String, Int?, Bool).self) { group in
-                for station in stations {
-                    group.addTask {
-                        let isFav: Bool
-                        if let bin = station.currentBin {
-                            isFav = await self.currentStationService.isCurrentStationFavorite(id: station.id, bin: bin)
-                        } else {
-                            isFav = await self.currentStationService.isCurrentStationFavorite(id: station.id)
-                        }
-                        return (station.id, station.currentBin, isFav)
-                    }
+            // Convert to NavObject annotations
+            let annotations = response.stations.compactMap { station -> NavObject? in
+                // Skip entries without valid coordinates
+                guard let latitude = station.latitude, let longitude = station.longitude else {
+                    return nil
                 }
                 
-                var favoriteStatuses: [String: (bin: Int?, isFav: Bool)] = [:]
-                for await (id, bin, isFav) in group {
-                    favoriteStatuses[id] = (bin: bin, isFav: isFav)
-                }
-                
-                for i in 0..<stations.count {
-                    stations[i].isFavorite = favoriteStatuses[stations[i].id]?.isFav ?? false
-                }
-            }
-            
-            // Cache the stations
-            currentStationsCache = stations
-            
-            // If we have a visible region, update annotations
-            if let region = visibleRegion {
-                refreshVisibleAnnotations(in: region)
+                let navObject = NavObject()
+                navObject.type = .tidalcurrentstation
+                navObject.coordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+                return navObject
             }
             
             await MainActor.run {
+                addToSpatialIndex(annotations)
+                self.allNavObjects.append(contentsOf: annotations)
+                
+                // Update visible annotations if we have a current region
+                if let region = self.currentRegion {
+                    let nearbyCells = self.getNearbyCells(forRegion: region)
+                    self.updateVisibleAnnotations(forRegion: region, fromCells: nearbyCells)
+                }
+                
                 isLoadingCurrentStations = false
             }
         } catch {
-            print("❌ Error loading TidalCurrentStations: \(error.localizedDescription)")
+            print("Error loading tidal current stations: \(error.localizedDescription)")
             await MainActor.run {
                 isLoadingCurrentStations = false
             }
         }
     }
     
-    // MARK: - Helper Methods
+    // MARK: - Spatial Indexing Methods
     
-    /// Check if a coordinate is inside a region
-    private func isCoordinate(_ coordinate: CLLocationCoordinate2D, inRegion region: MKCoordinateRegion) -> Bool {
-        let minLat = region.center.latitude - region.span.latitudeDelta / 2
-        let maxLat = region.center.latitude + region.span.latitudeDelta / 2
-        let minLon = region.center.longitude - region.span.longitudeDelta / 2
-        let maxLon = region.center.longitude + region.span.longitudeDelta / 2
+    // Add annotations to spatial grid index
+    private func addToSpatialIndex(_ annotations: [NavObject]) {
+        for annotation in annotations {
+            let gridKey = gridKeyForCoordinate(annotation.coordinate)
+            if spatialGrid[gridKey] == nil {
+                spatialGrid[gridKey] = [annotation]
+            } else {
+                spatialGrid[gridKey]?.append(annotation)
+            }
+        }
+    }
+    
+    // Get grid cell key for a coordinate
+    private func gridKeyForCoordinate(_ coordinate: CLLocationCoordinate2D) -> String {
+        let latCell = Int(coordinate.latitude / gridCellSize)
+        let lonCell = Int(coordinate.longitude / gridCellSize)
+        return "\(latCell):\(lonCell)"
+    }
+    
+    // Get nearby grid cells for a region
+    private func getNearbyCells(forRegion region: MKCoordinateRegion) -> [String] {
+        // Calculate bounding box
+        let minLat = region.center.latitude - region.span.latitudeDelta
+        let maxLat = region.center.latitude + region.span.latitudeDelta
+        let minLon = region.center.longitude - region.span.longitudeDelta
+        let maxLon = region.center.longitude + region.span.longitudeDelta
         
-        return coordinate.latitude >= minLat && coordinate.latitude <= maxLat &&
-               coordinate.longitude >= minLon && coordinate.longitude <= maxLon
-    }
-    
-    /// Expand a region by a factor for preloading
-    private func expandRegion(_ region: MKCoordinateRegion, byFactor factor: Double) -> MKCoordinateRegion {
-        let expandedSpan = MKCoordinateSpan(
-            latitudeDelta: region.span.latitudeDelta * factor,
-            longitudeDelta: region.span.longitudeDelta * factor
-        )
+        // Get grid cell ranges
+        let minLatCell = Int(minLat / gridCellSize)
+        let maxLatCell = Int(maxLat / gridCellSize)
+        let minLonCell = Int(minLon / gridCellSize)
+        let maxLonCell = Int(maxLon / gridCellSize)
         
-        return MKCoordinateRegion(
-            center: region.center,
-            span: expandedSpan
-        )
-    }
-}
-
-// MARK: - Custom NavObject Subclasses
-
-/// NavUnit Annotation - to improve type safety and performance
-class NavUnitAnnotation: NavObject {
-    let navUnit: NavUnit
-    
-    init(navUnit: NavUnit) {
-        self.navUnit = navUnit
-        super.init()
-        self.type = .navunit
-        if let lat = navUnit.latitude, let lon = navUnit.longitude {
-            self.coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+        // Generate all cell keys in the range
+        var cellKeys: [String] = []
+        for latCell in minLatCell...maxLatCell {
+            for lonCell in minLonCell...maxLonCell {
+                cellKeys.append("\(latCell):\(lonCell)")
+            }
         }
+        
+        return cellKeys
     }
     
-    required init(from decoder: Decoder) throws {
-        fatalError("init(from:) has not been implemented")
-    }
-}
-
-/// TidalHeightStation Annotation
-class TidalHeightStationAnnotation: NavObject {
-    let station: TidalHeightStation
+    // MARK: - Annotation Filtering and Capping
     
-    init(station: TidalHeightStation) {
-        self.station = station
-        super.init()
-        self.type = .tidalheightstation
-        if let lat = station.latitude, let lon = station.longitude {
-            self.coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+    // Update visible annotations based on current region
+    private func updateVisibleAnnotations(forRegion region: MKCoordinateRegion, fromCells cellKeys: [String]) {
+        // Collect all annotations from the relevant grid cells
+        var candidateAnnotations: [NavObject] = []
+        for key in cellKeys {
+            if let annotations = spatialGrid[key] {
+                candidateAnnotations.append(contentsOf: annotations)
+            }
         }
-    }
-    
-    required init(from decoder: Decoder) throws {
-        fatalError("init(from:) has not been implemented")
-    }
-}
-
-/// TidalCurrentStation Annotation
-class TidalCurrentStationAnnotation: NavObject {
-    let station: TidalCurrentStation
-    
-    init(station: TidalCurrentStation) {
-        self.station = station
-        super.init()
-        self.type = .tidalcurrentstation
-        if let lat = station.latitude, let lon = station.longitude {
-            self.coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+        
+        // Sort by distance from center
+        let centerCoordinate = region.center
+        let sortedAnnotations = candidateAnnotations.sorted { (obj1, obj2) -> Bool in
+            let distance1 = calculateDistance(from: centerCoordinate, to: obj1.coordinate)
+            let distance2 = calculateDistance(from: centerCoordinate, to: obj2.coordinate)
+            return distance1 < distance2
         }
+        
+        // Cap to maximum number
+        let cappedAnnotations = Array(sortedAnnotations.prefix(maxAnnotations))
+        self.navobjects = cappedAnnotations
     }
     
-    required init(from decoder: Decoder) throws {
-        fatalError("init(from:) has not been implemented")
+    // Calculate distance between coordinates
+    private func calculateDistance(from source: CLLocationCoordinate2D, to destination: CLLocationCoordinate2D) -> Double {
+        let sourceLocation = CLLocation(latitude: source.latitude, longitude: source.longitude)
+        let destinationLocation = CLLocation(latitude: destination.latitude, longitude: destination.longitude)
+        return sourceLocation.distance(from: destinationLocation)
     }
 }
