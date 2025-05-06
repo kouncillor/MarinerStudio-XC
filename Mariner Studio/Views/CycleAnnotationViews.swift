@@ -1,13 +1,13 @@
 import MapKit
 
-private let multiWheelCycleClusterID = "multiWheelCycle"
+private let multiWheelCycleClusterID = "tidalStation"
 
-class UnicycleAnnotationView: MKMarkerAnnotationView {
-    static let ReuseID = "unicycleAnnotation"
+class NavUnitAnnotationView: MKMarkerAnnotationView {
+    static let ReuseID = "navunitAnnotation"
 
     override init(annotation: MKAnnotation?, reuseIdentifier: String?) {
         super.init(annotation: annotation, reuseIdentifier: reuseIdentifier)
-        clusteringIdentifier = "unicycle"
+        clusteringIdentifier = "navunit"
     }
 
     required init?(coder aDecoder: NSCoder) {
@@ -17,14 +17,14 @@ class UnicycleAnnotationView: MKMarkerAnnotationView {
     override func prepareForDisplay() {
         super.prepareForDisplay()
         displayPriority = .defaultLow
-        markerTintColor = UIColor(red: 0.668, green: 0.475, blue: 0.259, alpha: 1.0) // unicycleColor
+        markerTintColor = UIColor(red: 0, green: 71/255, blue: 171/255, alpha: 1.0) // Royal Blue
         // If you have the image in your assets, use it here
         // glyphImage = UIImage(named: "unicycle")
     }
 }
 
-class BicycleAnnotationView: MKMarkerAnnotationView {
-    static let ReuseID = "bicycleAnnotation"
+class TidalHeightStationAnnotationView: MKMarkerAnnotationView {
+    static let ReuseID = "tidalheightstationAnnotation"
     
     override init(annotation: MKAnnotation?, reuseIdentifier: String?) {
         super.init(annotation: annotation, reuseIdentifier: reuseIdentifier)
@@ -43,8 +43,8 @@ class BicycleAnnotationView: MKMarkerAnnotationView {
     }
 }
 
-class TricycleAnnotationView: MKMarkerAnnotationView {
-    static let ReuseID = "tricycleAnnotation"
+class TidalCurrentStationAnnotationView: MKMarkerAnnotationView {
+    static let ReuseID = "tidalcurrentstationAnnotation"
 
     override init(annotation: MKAnnotation?, reuseIdentifier: String?) {
         super.init(annotation: annotation, reuseIdentifier: reuseIdentifier)

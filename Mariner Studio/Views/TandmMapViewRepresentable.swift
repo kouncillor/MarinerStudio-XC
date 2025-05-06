@@ -17,9 +17,9 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
         mapView.preferredConfiguration = MKStandardMapConfiguration(elevationStyle: .flat)
         
         // Register the annotation view classes
-        mapView.register(UnicycleAnnotationView.self, forAnnotationViewWithReuseIdentifier: UnicycleAnnotationView.ReuseID)
-        mapView.register(BicycleAnnotationView.self, forAnnotationViewWithReuseIdentifier: BicycleAnnotationView.ReuseID)
-        mapView.register(TricycleAnnotationView.self, forAnnotationViewWithReuseIdentifier: TricycleAnnotationView.ReuseID)
+        mapView.register(NavUnitAnnotationView.self, forAnnotationViewWithReuseIdentifier: NavUnitAnnotationView.ReuseID)
+        mapView.register(TidalHeightStationAnnotationView.self, forAnnotationViewWithReuseIdentifier: TidalHeightStationAnnotationView.ReuseID)
+        mapView.register(TidalCurrentStationAnnotationView.self, forAnnotationViewWithReuseIdentifier: TidalCurrentStationAnnotationView.ReuseID)
         mapView.register(MapClusterAnnotationView.self, forAnnotationViewWithReuseIdentifier: MKMapViewDefaultClusterAnnotationViewReuseIdentifier)
         
         return mapView
@@ -73,17 +73,17 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
             switch navObject.type {
             case .navunit:
                 return mapView.dequeueReusableAnnotationView(
-                    withIdentifier: UnicycleAnnotationView.ReuseID,
+                    withIdentifier: NavUnitAnnotationView.ReuseID,
                     for: navObject
                 )
             case .tidalheightstation:
                 return mapView.dequeueReusableAnnotationView(
-                    withIdentifier: BicycleAnnotationView.ReuseID,
+                    withIdentifier: TidalHeightStationAnnotationView.ReuseID,
                     for: navObject
                 )
             case .tidalcurrentstation:
                 return mapView.dequeueReusableAnnotationView(
-                    withIdentifier: TricycleAnnotationView.ReuseID,
+                    withIdentifier: TidalCurrentStationAnnotationView.ReuseID,
                     for: navObject
                 )
             }
