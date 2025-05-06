@@ -29,7 +29,7 @@ class MapClusteringViewModel: ObservableObject {
     private let currentStationService: CurrentStationDatabaseService
     private let tidalHeightService: TidalHeightService
     private let tidalCurrentService: TidalCurrentService
-    private let locationService: LocationService
+    let locationService: LocationService
     
     // MARK: - Initialization
     init(navUnitService: NavUnitDatabaseService,

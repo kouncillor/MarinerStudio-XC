@@ -1,4 +1,3 @@
-
 import SwiftUI
 import MapKit
 
@@ -20,6 +19,10 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
         mapView.register(TidalHeightStationAnnotationView.self, forAnnotationViewWithReuseIdentifier: TidalHeightStationAnnotationView.ReuseID)
         mapView.register(TidalCurrentStationAnnotationView.self, forAnnotationViewWithReuseIdentifier: TidalCurrentStationAnnotationView.ReuseID)
         mapView.register(MapClusterAnnotationView.self, forAnnotationViewWithReuseIdentifier: MKMapViewDefaultClusterAnnotationViewReuseIdentifier)
+        
+        // Store the mapView in our proxy for access from SwiftUI
+        TandmMapViewProxy.shared.mapView = mapView
+        TandmMapViewProxy.shared.coordinator = context.coordinator
         
         return mapView
     }
@@ -50,6 +53,36 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
         
         init(_ parent: TandmMapViewRepresentable) {
             self.parent = parent
+        }
+        
+        // Center map on user's location
+        func centerMapOnUserLocation(_ mapView: MKMapView) {
+            print("Attempting to center on user location")
+            
+            if let userLocation = parent.viewModel.locationService.currentLocation?.coordinate {
+                print("User location found: \(userLocation.latitude), \(userLocation.longitude)")
+                
+                let newRegion = MKCoordinateRegion(
+                    center: userLocation,
+                    span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+                )
+                
+                isUpdatingRegion = true
+                mapView.setRegion(newRegion, animated: true)
+                
+                // Update the parent's region binding
+                DispatchQueue.main.async {
+                    self.parent.region = newRegion
+                    
+                    // Update the viewModel's current region
+                    self.parent.viewModel.updateMapRegion(newRegion)
+                    self.isUpdatingRegion = false
+                    
+                    print("Map centered on user location")
+                }
+            } else {
+                print("User location not available")
+            }
         }
         
         func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
@@ -171,4 +204,49 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
             lastAnnotations = newAnnotations
         }
     }
+}
+
+// MARK: - Location Button Overlay
+struct MapViewWithOverlay: View {
+    @Binding var region: MKCoordinateRegion
+    var annotations: [NavObject]
+    var viewModel: MapClusteringViewModel
+    
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            TandmMapViewRepresentable(region: $region, annotations: annotations, viewModel: viewModel)
+            
+            HStack {
+                // Location button on the left
+                Button(action: {
+                    print("Location button tapped")
+                    if let mapView = TandmMapViewProxy.shared.mapView,
+                       let coordinator = TandmMapViewProxy.shared.coordinator {
+                        coordinator.centerMapOnUserLocation(mapView)
+                    } else {
+                        print("MapView or Coordinator not available")
+                    }
+                }) {
+                    Image(systemName: "location.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(.white)
+                        .frame(width: 44, height: 44)
+                        .background(Color.blue)
+                        .clipShape(Circle())
+                        .shadow(radius: 4)
+                }
+                .padding(.leading, 16)
+                
+                Spacer()
+            }
+            .padding(.bottom, 16)
+        }
+    }
+}
+
+// Proxy to access the MapView from the overlay button
+class TandmMapViewProxy {
+    static let shared = TandmMapViewProxy()
+    weak var mapView: MKMapView?
+    weak var coordinator: TandmMapViewRepresentable.Coordinator?
 }

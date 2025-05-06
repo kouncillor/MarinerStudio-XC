@@ -47,13 +47,19 @@ struct MapClusteringView: View {
     
     var body: some View {
         ZStack {
-            // Map view
-            TandmMapViewRepresentable(
+            // Use MapViewWithOverlay instead of TandmMapViewRepresentable
+            MapViewWithOverlay(
                 region: $mapRegion,
                 annotations: filteredAnnotations(),
                 viewModel: viewModel
             )
             .edgesIgnoringSafeArea(.all)
+            .onAppear {
+                // Register the proxy coordinator when the view appears
+                if let proxy = TandmMapViewProxy.shared.mapView?.delegate as? TandmMapViewRepresentable.Coordinator {
+                    TandmMapViewProxy.shared.coordinator = proxy
+                }
+            }
             
             // Loading indicator
             if isLoading() {
@@ -113,6 +119,9 @@ struct MapClusteringView: View {
         }
     }
     
+    // Rest of the MapClusteringView stays the same...
+    // (Filter options view and helper methods)
+    
     // Filter options sheet view
     private var filterOptionsView: some View {
         VStack(spacing: 20) {
@@ -164,10 +173,4 @@ struct MapClusteringView: View {
             }
         }
     }
-}
-
-// Add preview for SwiftUI Preview
-#Preview {
-    MapClusteringView()
-        .environmentObject(ServiceProvider())
 }
