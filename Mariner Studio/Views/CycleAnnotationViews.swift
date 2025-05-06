@@ -1,6 +1,6 @@
 import MapKit
 
-private let multiWheelCycleClusterID = "tidalStation"
+private let tidalStationClusterID = "tidalStation"
 
 class NavUnitAnnotationView: MKMarkerAnnotationView {
     static let ReuseID = "navunitAnnotation"
@@ -17,7 +17,7 @@ class NavUnitAnnotationView: MKMarkerAnnotationView {
     override func prepareForDisplay() {
         super.prepareForDisplay()
         displayPriority = .defaultLow
-        markerTintColor = UIColor(red: 0, green: 71/255, blue: 171/255, alpha: 1.0) // Royal Blue
+        markerTintColor = UIColor.systemBlue // Changed to Blue
         // If you have the image in your assets, use it here
         // glyphImage = UIImage(named: "unicycle")
     }
@@ -28,7 +28,7 @@ class TidalHeightStationAnnotationView: MKMarkerAnnotationView {
     
     override init(annotation: MKAnnotation?, reuseIdentifier: String?) {
         super.init(annotation: annotation, reuseIdentifier: reuseIdentifier)
-        clusteringIdentifier = multiWheelCycleClusterID
+        clusteringIdentifier = tidalStationClusterID
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -38,7 +38,7 @@ class TidalHeightStationAnnotationView: MKMarkerAnnotationView {
     override func prepareForDisplay() {
         super.prepareForDisplay()
         displayPriority = .defaultHigh
-        markerTintColor = UIColor(red: 1.0, green: 0.474, blue: 0.0, alpha: 1.0) // bicycleColor
+        markerTintColor = UIColor.systemGreen // Changed to Green
         // glyphImage = UIImage(named: "bicycle")
     }
 }
@@ -48,7 +48,7 @@ class TidalCurrentStationAnnotationView: MKMarkerAnnotationView {
 
     override init(annotation: MKAnnotation?, reuseIdentifier: String?) {
         super.init(annotation: annotation, reuseIdentifier: reuseIdentifier)
-        clusteringIdentifier = multiWheelCycleClusterID
+        clusteringIdentifier = tidalStationClusterID
     }
 
     required init?(coder aDecoder: NSCoder) {
@@ -58,7 +58,7 @@ class TidalCurrentStationAnnotationView: MKMarkerAnnotationView {
     override func prepareForDisplay() {
         super.prepareForDisplay()
         displayPriority = .defaultHigh
-        markerTintColor = UIColor(red: 0.597, green: 0.706, blue: 0.0, alpha: 1.0) // tricycleColor
+        markerTintColor = UIColor.systemRed // Changed to Red
         // glyphImage = UIImage(named: "tricycle")
     }
 }
@@ -83,10 +83,10 @@ class ClusterAnnotationView: MKAnnotationView {
             let totalBikes = cluster.memberAnnotations.count
             
             if count(cycleType: .navunit) > 0 {
-                image = drawUnicycleCount(count: totalBikes)
+                image = drawNavUnitCount(count: totalBikes) // Renamed method
             } else {
-                let tricycleCount = count(cycleType: .tidalcurrentstation)
-                image = drawRatioBicycleToTricycle(tricycleCount, to: totalBikes)
+                let tidalCurrentCount = count(cycleType: .tidalcurrentstation)
+                image = drawRatioTidalCurrentToTidalHeight(tidalCurrentCount, to: totalBikes) // Renamed method
             }
             
             if count(cycleType: .navunit) > 0 {
@@ -97,15 +97,17 @@ class ClusterAnnotationView: MKAnnotationView {
         }
     }
 
-    private func drawRatioBicycleToTricycle(_ tricycleCount: Int, to totalBikes: Int) -> UIImage {
-        return drawRatio(tricycleCount, to: totalBikes,
-                        fractionColor: UIColor(red: 0.597, green: 0.706, blue: 0.0, alpha: 1.0), // tricycleColor
-                        wholeColor: UIColor(red: 1.0, green: 0.474, blue: 0.0, alpha: 1.0)) // bicycleColor
+    // Renamed from drawRatioBicycleToTricycle
+    private func drawRatioTidalCurrentToTidalHeight(_ currentCount: Int, to totalCount: Int) -> UIImage {
+        return drawRatio(currentCount, to: totalCount,
+                        fractionColor: UIColor.systemRed, // Changed to Red (Tidal Current)
+                        wholeColor: UIColor.systemGreen) // Changed to Green (Tidal Height)
     }
 
-    private func drawUnicycleCount(count: Int) -> UIImage {
+    // Renamed from drawUnicycleCount
+    private func drawNavUnitCount(count: Int) -> UIImage {
         return drawRatio(0, to: count, fractionColor: nil,
-                        wholeColor: UIColor(red: 0.668, green: 0.475, blue: 0.259, alpha: 1.0)) // unicycleColor
+                        wholeColor: UIColor.systemBlue) // Changed to Blue (NavUnit)
     }
 
     private func drawRatio(_ fraction: Int, to whole: Int, fractionColor: UIColor?, wholeColor: UIColor?) -> UIImage {

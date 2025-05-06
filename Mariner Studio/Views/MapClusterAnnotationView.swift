@@ -38,9 +38,9 @@ class MapClusterAnnotationView: MKAnnotationView {
             let newImage: UIImage
             
             if navUnitCount > 0 {
-                newImage = drawUnicycleCount(count: totalCount)
+                newImage = drawNavUnitCount(count: totalCount) // Renamed method
             } else {
-                newImage = drawRatioBicycleToTricycle(tidalCurrentCount, to: totalCount)
+                newImage = drawRatioTidalCurrentToTidalHeight(tidalCurrentCount, to: totalCount) // Renamed method
             }
             
             // Cache the new image
@@ -57,15 +57,17 @@ class MapClusterAnnotationView: MKAnnotationView {
         }
     }
 
-    private func drawRatioBicycleToTricycle(_ tricycleCount: Int, to totalBikes: Int) -> UIImage {
-        return drawRatio(tricycleCount, to: totalBikes,
-                        fractionColor: UIColor(red: 0.597, green: 0.706, blue: 0.0, alpha: 1.0), // tricycleColor
-                        wholeColor: UIColor(red: 1.0, green: 0.474, blue: 0.0, alpha: 1.0)) // bicycleColor
+    // Renamed from drawRatioBicycleToTricycle
+    private func drawRatioTidalCurrentToTidalHeight(_ currentCount: Int, to totalCount: Int) -> UIImage {
+        return drawRatio(currentCount, to: totalCount,
+                        fractionColor: UIColor.systemRed, // Changed to Red (Tidal Current)
+                        wholeColor: UIColor.systemGreen) // Changed to Green (Tidal Height)
     }
 
-    private func drawUnicycleCount(count: Int) -> UIImage {
+    // Renamed from drawUnicycleCount
+    private func drawNavUnitCount(count: Int) -> UIImage {
         return drawRatio(0, to: count, fractionColor: nil,
-                        wholeColor: UIColor(red: 0.668, green: 0.475, blue: 0.259, alpha: 1.0)) // unicycleColor
+                        wholeColor: UIColor.systemBlue) // Changed to Blue (NavUnit)
     }
 
     private func drawRatio(_ fraction: Int, to whole: Int, fractionColor: UIColor?, wholeColor: UIColor?) -> UIImage {
