@@ -24,6 +24,7 @@ class NavObject: NSObject, Decodable, MKAnnotation {
     }
     
     var type: NavObjectType = .navunit
+    var name: String = "" // Added name property
     
     private var latitude: CLLocationDegrees = 0
     private var longitude: CLLocationDegrees = 0
@@ -36,5 +37,10 @@ class NavObject: NSObject, Decodable, MKAnnotation {
             latitude = newValue.latitude
             longitude = newValue.longitude
         }
+    }
+    
+    // MARK: - Title for annotation callout
+    @objc var title: String? {
+        return name
     }
 }

@@ -1,4 +1,3 @@
-
 import Foundation
 import CoreLocation
 import MapKit
@@ -121,6 +120,7 @@ class MapClusteringViewModel: ObservableObject {
                 let navObject = NavObject()
                 navObject.type = .navunit
                 navObject.coordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+                navObject.name = unit.navUnitName // Add name from NavUnit
                 return navObject
             }
             
@@ -164,6 +164,7 @@ class MapClusteringViewModel: ObservableObject {
                 let navObject = NavObject()
                 navObject.type = .tidalheightstation
                 navObject.coordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+                navObject.name = station.name // Add name from TidalHeightStation
                 return navObject
             }
             
@@ -207,6 +208,7 @@ class MapClusteringViewModel: ObservableObject {
                 let navObject = NavObject()
                 navObject.type = .tidalcurrentstation
                 navObject.coordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+                navObject.name = station.name // Add name from TidalCurrentStation
                 return navObject
             }
             
