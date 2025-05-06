@@ -13,14 +13,16 @@ class NavUnitAnnotationView: MKMarkerAnnotationView {
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-
+    
     override func prepareForDisplay() {
         super.prepareForDisplay()
         displayPriority = .defaultLow
         markerTintColor = UIColor.systemBlue // Changed to Blue
-        // If you have the image in your assets, use it here
-        // glyphImage = UIImage(named: "unicycle")
+        
+        // Use the n.circle.fill SF Symbol
+        glyphImage = UIImage(systemName: "ferry")
     }
+    
 }
 
 class TidalHeightStationAnnotationView: MKMarkerAnnotationView {
@@ -37,10 +39,13 @@ class TidalHeightStationAnnotationView: MKMarkerAnnotationView {
     
     override func prepareForDisplay() {
         super.prepareForDisplay()
-        displayPriority = .defaultHigh
-        markerTintColor = UIColor.systemGreen // Changed to Green
-        // glyphImage = UIImage(named: "bicycle")
+        displayPriority = .defaultLow
+        markerTintColor = UIColor.systemGreen // Changed to Blue
+        
+        // Use the n.circle.fill SF Symbol
+        glyphImage = UIImage(systemName: "water.waves.and.arrow.trianglehead.up")
     }
+    
 }
 
 class TidalCurrentStationAnnotationView: MKMarkerAnnotationView {
@@ -59,7 +64,8 @@ class TidalCurrentStationAnnotationView: MKMarkerAnnotationView {
         super.prepareForDisplay()
         displayPriority = .defaultHigh
         markerTintColor = UIColor.systemRed // Changed to Red
-        // glyphImage = UIImage(named: "tricycle")
+        glyphImage = UIImage(systemName: "arrowshape.left.arrowshape.right")
+        
     }
 }
 
