@@ -64,7 +64,7 @@ class TidalCurrentStationAnnotationView: MKMarkerAnnotationView {
 }
 
 // Also include the ClusterAnnotationView
-class ClusterAnnotationView: MKAnnotationView {
+class MaritimeClusterAnnotationView: MKAnnotationView {
     
     override init(annotation: MKAnnotation?, reuseIdentifier: String?) {
         super.init(annotation: annotation, reuseIdentifier: reuseIdentifier)
@@ -80,16 +80,16 @@ class ClusterAnnotationView: MKAnnotationView {
         super.prepareForDisplay()
         
         if let cluster = annotation as? MKClusterAnnotation {
-            let totalBikes = cluster.memberAnnotations.count
+            let totalStations = cluster.memberAnnotations.count
             
-            if count(cycleType: .navunit) > 0 {
-                image = drawNavUnitCount(count: totalBikes) // Renamed method
+            if count(maritimeType: .navunit) > 0 {
+                image = drawNavUnitCount(count: totalStations) // Renamed method
             } else {
-                let tidalCurrentCount = count(cycleType: .tidalcurrentstation)
-                image = drawRatioTidalCurrentToTidalHeight(tidalCurrentCount, to: totalBikes) // Renamed method
+                let tidalCurrentCount = count(maritimeType: .tidalcurrentstation)
+                image = drawRatioTidalCurrentToTidalHeight(tidalCurrentCount, to: totalStations) // Renamed method
             }
             
-            if count(cycleType: .navunit) > 0 {
+            if count(maritimeType: .navunit) > 0 {
                 displayPriority = .defaultLow
             } else {
                 displayPriority = .defaultHigh
@@ -97,14 +97,13 @@ class ClusterAnnotationView: MKAnnotationView {
         }
     }
 
-    // Renamed from drawRatioBicycleToTricycle
     private func drawRatioTidalCurrentToTidalHeight(_ currentCount: Int, to totalCount: Int) -> UIImage {
         return drawRatio(currentCount, to: totalCount,
                         fractionColor: UIColor.systemRed, // Changed to Red (Tidal Current)
                         wholeColor: UIColor.systemGreen) // Changed to Green (Tidal Height)
     }
 
-    // Renamed from drawUnicycleCount
+    
     private func drawNavUnitCount(count: Int) -> UIImage {
         return drawRatio(0, to: count, fractionColor: nil,
                         wholeColor: UIColor.systemBlue) // Changed to Blue (NavUnit)
@@ -141,7 +140,7 @@ class ClusterAnnotationView: MKAnnotationView {
         }
     }
 
-    private func count(cycleType type: NavObject.NavObjectType) -> Int {
+    private func count(maritimeType type: NavObject.NavObjectType) -> Int {
         guard let cluster = annotation as? MKClusterAnnotation else {
             return 0
         }
@@ -154,3 +153,4 @@ class ClusterAnnotationView: MKAnnotationView {
         }.count
     }
 }
+
