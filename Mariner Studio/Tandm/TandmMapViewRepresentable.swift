@@ -213,33 +213,39 @@ struct MapViewWithOverlay: View {
     var viewModel: MapClusteringViewModel
     
     var body: some View {
-        ZStack(alignment: .bottom) {
+        ZStack {
             TandmMapViewRepresentable(region: $region, annotations: annotations, viewModel: viewModel)
             
-            HStack {
-                // Location button on the left
-                Button(action: {
-                    print("Location button tapped")
-                    if let mapView = TandmMapViewProxy.shared.mapView,
-                       let coordinator = TandmMapViewProxy.shared.coordinator {
-                        coordinator.centerMapOnUserLocation(mapView)
-                    } else {
-                        print("MapView or Coordinator not available")
-                    }
-                }) {
-                    Image(systemName: "location.fill")
-                        .font(.system(size: 20))
-                        .foregroundColor(.white)
-                        .frame(width: 44, height: 44)
-                        .background(Color.blue)
-                        .clipShape(Circle())
-                        .shadow(radius: 4)
-                }
-                .padding(.leading, 16)
-                
+            VStack {
                 Spacer()
+                
+                HStack {
+                    // Location button on the left
+                    Button(action: {
+                        print("Location button tapped")
+                        if let mapView = TandmMapViewProxy.shared.mapView,
+                           let coordinator = TandmMapViewProxy.shared.coordinator {
+                            coordinator.centerMapOnUserLocation(mapView)
+                        } else {
+                            print("MapView or Coordinator not available")
+                        }
+                    }) {
+                        Image(systemName: "location.fill")
+                            .font(.system(size: 20))
+                            .foregroundColor(.white)
+                            .frame(width: 44, height: 44)
+                            .background(Color.blue)
+                            .clipShape(Circle())
+                            .shadow(radius: 4)
+                    }
+                    .padding(.leading, 16)
+                    
+                    Spacer()
+                    
+                    // Note: The filter button is in the parent view
+                }
+                .padding(.bottom, 16)
             }
-            .padding(.bottom, 16)
         }
     }
 }
