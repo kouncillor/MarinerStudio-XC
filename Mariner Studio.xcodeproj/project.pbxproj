@@ -8,39 +8,17 @@
 
 /* Begin PBXBuildFile section */
 		2E2F40E02DBF09510005CB80 /* SQLite in Frameworks */ = {isa = PBXBuildFile; productRef = 2E2F40DF2DBF09510005CB80 /* SQLite */; };
+		2E5E9FA42DCBD39D00F97B95 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 2E5E9FA32DCBD39D00F97B95 /* RevenueCat */; };
+		2E5E9FA62DCBD39D00F97B95 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 2E5E9FA52DCBD39D00F97B95 /* RevenueCatUI */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		2EB41CD02DBC80CC009FC129 /* Mariner Studio.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Mariner Studio.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		2E7A7FF42DC9601900E3ED8F /* Exceptions for "Mariner Studio" folder in "Mariner Studio" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Models/NavObjectExtenstions.swift,
-			);
-			target = 2EB41CCF2DBC80CC009FC129 /* Mariner Studio */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
-/* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
-		2E7A7FF52DC9601900E3ED8F /* Exceptions for "Mariner Studio" folder in "Copy Bundle Resources" phase from "Mariner Studio" target */ = {
-			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
-			buildPhase = 2EB41CCE2DBC80CC009FC129 /* Resources */;
-			membershipExceptions = (
-				Models/NavObjectExtenstions.swift,
-			);
-		};
-/* End PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		2EB41CD22DBC80CC009FC129 /* Mariner Studio */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				2E7A7FF42DC9601900E3ED8F /* Exceptions for "Mariner Studio" folder in "Mariner Studio" target */,
-				2E7A7FF52DC9601900E3ED8F /* Exceptions for "Mariner Studio" folder in "Copy Bundle Resources" phase from "Mariner Studio" target */,
-			);
 			path = "Mariner Studio";
 			sourceTree = "<group>";
 		};
@@ -51,7 +29,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2E5E9FA42DCBD39D00F97B95 /* RevenueCat in Frameworks */,
 				2E2F40E02DBF09510005CB80 /* SQLite in Frameworks */,
+				2E5E9FA62DCBD39D00F97B95 /* RevenueCatUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -95,6 +75,8 @@
 			name = "Mariner Studio";
 			packageProductDependencies = (
 				2E2F40DF2DBF09510005CB80 /* SQLite */,
+				2E5E9FA32DCBD39D00F97B95 /* RevenueCat */,
+				2E5E9FA52DCBD39D00F97B95 /* RevenueCatUI */,
 			);
 			productName = "Mariner Studio";
 			productReference = 2EB41CD02DBC80CC009FC129 /* Mariner Studio.app */;
@@ -126,6 +108,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				2E2F40DE2DBF09510005CB80 /* XCRemoteSwiftPackageReference "SQLite" */,
+				2E5E9FA22DCBD39D00F97B95 /* XCRemoteSwiftPackageReference "purchases-ios" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 2EB41CD12DBC80CC009FC129 /* Products */;
@@ -394,6 +377,14 @@
 				minimumVersion = 0.15.3;
 			};
 		};
+		2E5E9FA22DCBD39D00F97B95 /* XCRemoteSwiftPackageReference "purchases-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.23.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -401,6 +392,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 2E2F40DE2DBF09510005CB80 /* XCRemoteSwiftPackageReference "SQLite" */;
 			productName = SQLite;
+		};
+		2E5E9FA32DCBD39D00F97B95 /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2E5E9FA22DCBD39D00F97B95 /* XCRemoteSwiftPackageReference "purchases-ios" */;
+			productName = RevenueCat;
+		};
+		2E5E9FA52DCBD39D00F97B95 /* RevenueCatUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2E5E9FA22DCBD39D00F97B95 /* XCRemoteSwiftPackageReference "purchases-ios" */;
+			productName = RevenueCatUI;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -2,6 +2,13 @@ import SwiftUI
 
 @main
 struct Mariner_StudioApp: App {
+    
+    //Access the Adaptor for RevenueCat
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    
+    
+    
+
     // Create a shared service provider at app startup
     @StateObject private var serviceProvider = ServiceProvider()
     

@@ -1,6 +1,15 @@
 {
-  "originHash" : "42598adf0e546dd7490b40b2fd0f5298dee9c098f71dcdbfcb5cc4c07573f374",
+  "originHash" : "7fbb8ef432aa9fb0da328b6636e05eb3d71334ecfa19ec315704526fd6e8fbab",
   "pins" : [
+    {
+      "identity" : "purchases-ios",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/RevenueCat/purchases-ios.git",
+      "state" : {
+        "revision" : "31637c9d69c9f33a5426a6bfaca80d2bfe8950c1",
+        "version" : "5.23.0"
+      }
+    },
     {
       "identity" : "sqlite.swift",
       "kind" : "remoteSourceControl",

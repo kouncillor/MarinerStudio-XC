@@ -1,4 +1,6 @@
 import SwiftUI
+import RevenueCat // Ensure RevenueCat is imported
+import RevenueCatUI
 
 struct MainView: View {
     @EnvironmentObject var serviceProvider: ServiceProvider
@@ -8,11 +10,6 @@ struct MainView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 12) {
-                  
-                    
-                    
-                    
-                    
                     // In MainView.swift, update the NavigationLink for MAP:
                     NavigationLink(destination: MapClusteringView(
                         navUnitService: serviceProvider.navUnitService,
@@ -25,13 +22,6 @@ struct MainView: View {
                             title: "MAP"
                         )
                     }
-                    
-                    
-                    
-                    
-                    
-                    
-                    
 
                     // WEATHER
                     NavigationLink(destination: WeatherMenuView()) {
@@ -113,7 +103,7 @@ struct MainView: View {
                 }
             }
             .sheet(isPresented: $showSettings) {
-                NavigationView {
+                NavigationView { // Consider using .fullScreenCover or if NavigationView is essential here
                     WeatherSettingsView()
                         .navigationBarItems(trailing: Button("Done") {
                             showSettings = false
@@ -121,10 +111,35 @@ struct MainView: View {
                 }
             }
         }
+        // Apply the .presentPaywallIfNeeded modifier to the NavigationStack
+        // This will present the paywall if the "Pro" entitlement is not active
+        // when MainView appears.
+        .presentPaywallIfNeeded(requiredEntitlementIdentifier: "Pro")
+        // You can also include optional handlers if needed:
+        // .presentPaywallIfNeeded(
+        //     requiredEntitlementIdentifier: "Pro",
+        //     onPurchaseCompleted: { customerInfo in
+        //         print("DEBUG: Purchase completed for \(customerInfo.originalAppUserId)")
+        //         // Optionally dismiss the paywall or update UI
+        //     },
+        //     onRestoreCompleted: { customerInfo in
+        //         print("DEBUG: Restore completed for \(customerInfo.originalAppUserId)")
+        //         // Optionally dismiss the paywall or update UI
+        //     },
+        //     onFailure: { error in
+        //         print("DEBUG: Paywall error: \(error)")
+        //         // Handle error, e.g., show an alert
+        //     },
+        //     onDismiss: {
+        //         print("DEBUG: Paywall dismissed")
+        //         // Handle dismissal if necessary
+        //     }
+        // )
     }
 }
 
-// NavigationButton struct remains the same
+// Your existing NavigationButton, NavigationButtonContent, and RouteButton structs remain the same:
+
 struct NavigationButton: View {
     let icon: String
     let title: String
@@ -138,7 +153,6 @@ struct NavigationButton: View {
     }
 }
 
-// NavigationButtonContent struct remains the same
 struct NavigationButtonContent: View {
     let icon: String
     let title: String
@@ -171,14 +185,13 @@ struct NavigationButtonContent: View {
     }
 }
 
-// RouteButton struct remains the same
 struct RouteButton: View {
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             HStack {
-                Image("tsixseven")
+                Image("tsixseven") // Assuming this is an intended placeholder or actual image
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 67, height: 67)
@@ -209,9 +222,11 @@ struct RouteButton: View {
     }
 }
 
-// Preview
-#Preview {
-    let previewServiceProvider = ServiceProvider()
-    return MainView()
-        .environmentObject(previewServiceProvider)
-}
+// Make sure you have placeholders or actual implementations for:
+// ServiceProvider, MapClusteringView, WeatherMenuView, TidalHeightStationsView,
+// TidalCurrentStationsView, NavUnitsView, WeatherSettingsView,
+// TidalHeightServiceImpl, TidalCurrentServiceImpl, and any services they depend on.
+
+// Also, ensure RevenueCat SDK is configured, typically in your App's init or onAppear:
+// Purchases.configure(withAPIKey: "your_api_key")
+// And that you have defined an entitlement named "Pro" in your RevenueCat dashboard.
