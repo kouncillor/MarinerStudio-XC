@@ -22,6 +22,9 @@ struct MapClusteringView: View {
     @State private var showTidalCurrentStations = true
     @State private var selectedNavUnitId: String? = nil
     @State private var showNavUnitDetails = false
+    @State private var selectedTidalHeightStationId: String? = nil
+    @State private var selectedTidalHeightStationName: String? = nil
+    @State private var showTidalHeightDetails = false
     @EnvironmentObject var serviceProvider: ServiceProvider
     
     // MARK: - Initialization
@@ -66,6 +69,11 @@ struct MapClusteringView: View {
                 onNavUnitSelected: { navUnitId in
                     selectedNavUnitId = navUnitId
                     showNavUnitDetails = true
+                },
+                onTidalHeightStationSelected: { stationId, stationName in
+                    selectedTidalHeightStationId = stationId
+                    selectedTidalHeightStationName = stationName
+                    showTidalHeightDetails = true
                 }
             )
             .edgesIgnoringSafeArea(.all)
@@ -133,27 +141,47 @@ struct MapClusteringView: View {
             viewModel.loadData()
         }
         .background(
-            NavigationLink(
-                isActive: $showNavUnitDetails,
-                destination: {
-                    if let navUnitId = selectedNavUnitId,
-                       let navUnit = viewModel.findNavUnitById(navUnitId) {
-                        let detailsViewModel = NavUnitDetailsViewModel(
-                            navUnit: navUnit,
-                            databaseService: viewModel.navUnitService,
-                            photoService: serviceProvider.photoService,
-                            navUnitFtpService: serviceProvider.navUnitFtpService,
-                            imageCacheService: serviceProvider.imageCacheService,
-                            favoritesService: serviceProvider.favoritesService
-                        )
-                        NavUnitDetailsView(viewModel: detailsViewModel)
-                    } else {
-                        Text("Navigation Unit not found")
-                    }
-                },
-                label: { EmptyView() }
-            )
-            .hidden()
+            Group {
+                NavigationLink(
+                    isActive: $showNavUnitDetails,
+                    destination: {
+                        if let navUnitId = selectedNavUnitId,
+                           let navUnit = viewModel.findNavUnitById(navUnitId) {
+                            let detailsViewModel = NavUnitDetailsViewModel(
+                                navUnit: navUnit,
+                                databaseService: viewModel.navUnitService,
+                                photoService: serviceProvider.photoService,
+                                navUnitFtpService: serviceProvider.navUnitFtpService,
+                                imageCacheService: serviceProvider.imageCacheService,
+                                favoritesService: serviceProvider.favoritesService
+                            )
+                            NavUnitDetailsView(viewModel: detailsViewModel)
+                        } else {
+                            Text("Navigation Unit not found")
+                        }
+                    },
+                    label: { EmptyView() }
+                )
+                .hidden()
+                
+                NavigationLink(
+                    isActive: $showTidalHeightDetails,
+                    destination: {
+                        if let stationId = selectedTidalHeightStationId,
+                           let stationName = selectedTidalHeightStationName {
+                            TidalHeightPredictionView(
+                                stationId: stationId,
+                                stationName: stationName,
+                                tideStationService: serviceProvider.tideStationService
+                            )
+                        } else {
+                            Text("Tidal Height Station not found")
+                        }
+                    },
+                    label: { EmptyView() }
+                )
+                .hidden()
+            }
         )
     }
     
@@ -214,6 +242,13 @@ struct MapClusteringView: View {
         self.selectedNavUnitId = navUnitId
         self.showNavUnitDetails = true
     }
+    
+    // Navigate to Tidal Height details
+    func navigateToTidalHeightDetails(stationId: String, stationName: String) {
+        self.selectedTidalHeightStationId = stationId
+        self.selectedTidalHeightStationName = stationName
+        self.showTidalHeightDetails = true
+    }
 }
 
 // MARK: - Location Button Overlay
@@ -222,6 +257,7 @@ struct MapViewWithOverlay: View {
     var annotations: [NavObject]
     var viewModel: MapClusteringViewModel
     var onNavUnitSelected: (String) -> Void
+    var onTidalHeightStationSelected: (String, String) -> Void
     
     var body: some View {
         ZStack {
@@ -229,7 +265,8 @@ struct MapViewWithOverlay: View {
                 region: $region,
                 annotations: annotations,
                 viewModel: viewModel,
-                onNavUnitSelected: onNavUnitSelected
+                onNavUnitSelected: onNavUnitSelected,
+                onTidalHeightStationSelected: onTidalHeightStationSelected
             )
             
             VStack {

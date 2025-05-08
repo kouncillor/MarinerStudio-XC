@@ -1,3 +1,5 @@
+
+
 import SwiftUI
 import MapKit
 
@@ -6,6 +8,7 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
     var annotations: [NavObject]
     var viewModel: MapClusteringViewModel
     var onNavUnitSelected: (String) -> Void
+    var onTidalHeightStationSelected: (String, String) -> Void
     
     func makeUIView(context: Context) -> MKMapView {
         let mapView = MKMapView()
@@ -31,14 +34,15 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
     func updateUIView(_ mapView: MKMapView, context: Context) {
         // Only update the region if it was changed by user interaction, not by code
         if !context.coordinator.isUpdatingRegion && (mapView.region.center.latitude != region.center.latitude ||
-                                                     mapView.region.center.longitude != region.center.longitude) {
+           mapView.region.center.longitude != region.center.longitude) {
             context.coordinator.isUpdatingRegion = true
             mapView.setRegion(region, animated: true)
             context.coordinator.isUpdatingRegion = false
         }
         
-        // Update the onNavUnitSelected callback
+        // Update the callbacks
         context.coordinator.onNavUnitSelected = onNavUnitSelected
+        context.coordinator.onTidalHeightStationSelected = onTidalHeightStationSelected
         
         // Use efficient annotation updates - only update what changed
         context.coordinator.updateAnnotations(in: mapView, newAnnotations: annotations)
@@ -55,10 +59,12 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
         var lastAnnotations: [NavObject] = []
         var lastUpdateTime: Date = Date()
         var onNavUnitSelected: ((String) -> Void)?
+        var onTidalHeightStationSelected: ((String, String) -> Void)?
         
         init(_ parent: TandmMapViewRepresentable) {
             self.parent = parent
             self.onNavUnitSelected = parent.onNavUnitSelected
+            self.onTidalHeightStationSelected = parent.onTidalHeightStationSelected
         }
         
         // Center map on user's location
@@ -142,8 +148,13 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
                         }
                     }
                 case .tidalheightstation:
-                    print("Tapped on Tidal Height Station: \(navObject.name)")
-                    // Additional code to handle the tidal height station tap
+                    print("Tapped on Tidal Height Station: \(navObject.name), ID: \(navObject.objectId)")
+                    // Navigate to Tidal Height Prediction view
+                    DispatchQueue.main.async {
+                        if !navObject.objectId.isEmpty {
+                            self.onTidalHeightStationSelected?(navObject.objectId, navObject.name)
+                        }
+                    }
                 case .tidalcurrentstation:
                     print("Tapped on Tidal Current Station: \(navObject.name)")
                     // Additional code to handle the tidal current station tap
@@ -202,8 +213,8 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
                 !existingAnnotations.contains { existingAnnotation in
                     // Compare by coordinate since NavObject doesn't implement Equatable
                     return existingAnnotation.coordinate.latitude == newAnnotation.coordinate.latitude &&
-                    existingAnnotation.coordinate.longitude == newAnnotation.coordinate.longitude &&
-                    existingAnnotation.type == newAnnotation.type
+                           existingAnnotation.coordinate.longitude == newAnnotation.coordinate.longitude &&
+                           existingAnnotation.type == newAnnotation.type
                 }
             }
             
@@ -211,8 +222,8 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
             let annotationsToRemove = existingAnnotations.filter { existingAnnotation in
                 !newAnnotations.contains { newAnnotation in
                     return existingAnnotation.coordinate.latitude == newAnnotation.coordinate.latitude &&
-                    existingAnnotation.coordinate.longitude == newAnnotation.coordinate.longitude &&
-                    existingAnnotation.type == newAnnotation.type
+                           existingAnnotation.coordinate.longitude == newAnnotation.coordinate.longitude &&
+                           existingAnnotation.type == newAnnotation.type
                 }
             }
             
@@ -237,5 +248,4 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
             lastAnnotations = newAnnotations
         }
     }
-    
 }
