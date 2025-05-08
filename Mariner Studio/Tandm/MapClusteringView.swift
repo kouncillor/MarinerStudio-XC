@@ -1,5 +1,13 @@
+
 import SwiftUI
 import MapKit
+
+// Proxy to access the MapView from the overlay button
+class TandmMapViewProxy {
+    static let shared = TandmMapViewProxy()
+    weak var mapView: MKMapView?
+    weak var coordinator: TandmMapViewRepresentable.Coordinator?
+}
 
 struct MapClusteringView: View {
     @State private var mapRegion = MKCoordinateRegion(
@@ -12,6 +20,9 @@ struct MapClusteringView: View {
     @State private var showNavUnits = true
     @State private var showTidalHeightStations = true
     @State private var showTidalCurrentStations = true
+    @State private var selectedNavUnitId: String? = nil
+    @State private var showNavUnitDetails = false
+    @EnvironmentObject var serviceProvider: ServiceProvider
     
     // MARK: - Initialization
     init() {
@@ -51,7 +62,11 @@ struct MapClusteringView: View {
             MapViewWithOverlay(
                 region: $mapRegion,
                 annotations: filteredAnnotations(),
-                viewModel: viewModel
+                viewModel: viewModel,
+                onNavUnitSelected: { navUnitId in
+                    selectedNavUnitId = navUnitId
+                    showNavUnitDetails = true
+                }
             )
             .edgesIgnoringSafeArea(.all)
             .onAppear {
@@ -117,10 +132,30 @@ struct MapClusteringView: View {
             // Load the data when view appears
             viewModel.loadData()
         }
+        .background(
+            NavigationLink(
+                isActive: $showNavUnitDetails,
+                destination: {
+                    if let navUnitId = selectedNavUnitId,
+                       let navUnit = viewModel.findNavUnitById(navUnitId) {
+                        let detailsViewModel = NavUnitDetailsViewModel(
+                            navUnit: navUnit,
+                            databaseService: viewModel.navUnitService,
+                            photoService: serviceProvider.photoService,
+                            navUnitFtpService: serviceProvider.navUnitFtpService,
+                            imageCacheService: serviceProvider.imageCacheService,
+                            favoritesService: serviceProvider.favoritesService
+                        )
+                        NavUnitDetailsView(viewModel: detailsViewModel)
+                    } else {
+                        Text("Navigation Unit not found")
+                    }
+                },
+                label: { EmptyView() }
+            )
+            .hidden()
+        )
     }
-    
-    // Rest of the MapClusteringView stays the same...
-    // (Filter options view and helper methods)
     
     // Filter options sheet view
     private var filterOptionsView: some View {
@@ -170,6 +205,62 @@ struct MapClusteringView: View {
                 return showTidalHeightStations
             case .tidalcurrentstation:
                 return showTidalCurrentStations
+            }
+        }
+    }
+    
+    // Navigate to NavUnit details
+    func navigateToNavUnitDetails(navUnitId: String) {
+        self.selectedNavUnitId = navUnitId
+        self.showNavUnitDetails = true
+    }
+}
+
+// MARK: - Location Button Overlay
+struct MapViewWithOverlay: View {
+    @Binding var region: MKCoordinateRegion
+    var annotations: [NavObject]
+    var viewModel: MapClusteringViewModel
+    var onNavUnitSelected: (String) -> Void
+    
+    var body: some View {
+        ZStack {
+            TandmMapViewRepresentable(
+                region: $region,
+                annotations: annotations,
+                viewModel: viewModel,
+                onNavUnitSelected: onNavUnitSelected
+            )
+            
+            VStack {
+                Spacer()
+                
+                HStack {
+                    // Location button on the left
+                    Button(action: {
+                        print("Location button tapped")
+                        if let mapView = TandmMapViewProxy.shared.mapView,
+                           let coordinator = TandmMapViewProxy.shared.coordinator {
+                            coordinator.centerMapOnUserLocation(mapView)
+                        } else {
+                            print("MapView or Coordinator not available")
+                        }
+                    }) {
+                        Image(systemName: "location.fill")
+                            .font(.system(size: 20))
+                            .foregroundColor(.white)
+                            .frame(width: 44, height: 44)
+                            .background(Color.blue)
+                            .clipShape(Circle())
+                            .shadow(radius: 4)
+                    }
+                    .padding(.leading, 16)
+                    
+                    Spacer()
+                    
+                    // Note: The filter button is in the parent view
+                }
+                .padding(.bottom, 16)
             }
         }
     }

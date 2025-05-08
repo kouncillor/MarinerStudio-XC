@@ -5,6 +5,7 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
     @Binding var region: MKCoordinateRegion
     var annotations: [NavObject]
     var viewModel: MapClusteringViewModel
+    var onNavUnitSelected: (String) -> Void
     
     func makeUIView(context: Context) -> MKMapView {
         let mapView = MKMapView()
@@ -30,11 +31,14 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
     func updateUIView(_ mapView: MKMapView, context: Context) {
         // Only update the region if it was changed by user interaction, not by code
         if !context.coordinator.isUpdatingRegion && (mapView.region.center.latitude != region.center.latitude ||
-           mapView.region.center.longitude != region.center.longitude) {
+                                                     mapView.region.center.longitude != region.center.longitude) {
             context.coordinator.isUpdatingRegion = true
             mapView.setRegion(region, animated: true)
             context.coordinator.isUpdatingRegion = false
         }
+        
+        // Update the onNavUnitSelected callback
+        context.coordinator.onNavUnitSelected = onNavUnitSelected
         
         // Use efficient annotation updates - only update what changed
         context.coordinator.updateAnnotations(in: mapView, newAnnotations: annotations)
@@ -50,9 +54,11 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
         var isUpdatingRegion = false
         var lastAnnotations: [NavObject] = []
         var lastUpdateTime: Date = Date()
+        var onNavUnitSelected: ((String) -> Void)?
         
         init(_ parent: TandmMapViewRepresentable) {
             self.parent = parent
+            self.onNavUnitSelected = parent.onNavUnitSelected
         }
         
         // Center map on user's location
@@ -121,6 +127,33 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
             }
         }
         
+        func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
+            // Handle when a user taps on an annotation
+            guard let annotation = view.annotation else { return }
+            
+            if let navObject = annotation as? NavObject {
+                switch navObject.type {
+                case .navunit:
+                    print("Tapped on NavUnit: \(navObject.name), ID: \(navObject.objectId)")
+                    // Navigate to NavUnit details
+                    DispatchQueue.main.async {
+                        if !navObject.objectId.isEmpty {
+                            self.onNavUnitSelected?(navObject.objectId)
+                        }
+                    }
+                case .tidalheightstation:
+                    print("Tapped on Tidal Height Station: \(navObject.name)")
+                    // Additional code to handle the tidal height station tap
+                case .tidalcurrentstation:
+                    print("Tapped on Tidal Current Station: \(navObject.name)")
+                    // Additional code to handle the tidal current station tap
+                }
+            } else if let cluster = annotation as? MKClusterAnnotation {
+                print("Tapped on cluster with \(cluster.memberAnnotations.count) annotations")
+                // Handle cluster tap if needed
+            }
+        }
+        
         func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
             // Avoid feedback loop by checking if we're currently updating
             guard !isUpdatingRegion else { return }
@@ -169,8 +202,8 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
                 !existingAnnotations.contains { existingAnnotation in
                     // Compare by coordinate since NavObject doesn't implement Equatable
                     return existingAnnotation.coordinate.latitude == newAnnotation.coordinate.latitude &&
-                           existingAnnotation.coordinate.longitude == newAnnotation.coordinate.longitude &&
-                           existingAnnotation.type == newAnnotation.type
+                    existingAnnotation.coordinate.longitude == newAnnotation.coordinate.longitude &&
+                    existingAnnotation.type == newAnnotation.type
                 }
             }
             
@@ -178,8 +211,8 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
             let annotationsToRemove = existingAnnotations.filter { existingAnnotation in
                 !newAnnotations.contains { newAnnotation in
                     return existingAnnotation.coordinate.latitude == newAnnotation.coordinate.latitude &&
-                           existingAnnotation.coordinate.longitude == newAnnotation.coordinate.longitude &&
-                           existingAnnotation.type == newAnnotation.type
+                    existingAnnotation.coordinate.longitude == newAnnotation.coordinate.longitude &&
+                    existingAnnotation.type == newAnnotation.type
                 }
             }
             
@@ -204,55 +237,5 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
             lastAnnotations = newAnnotations
         }
     }
-}
-
-// MARK: - Location Button Overlay
-struct MapViewWithOverlay: View {
-    @Binding var region: MKCoordinateRegion
-    var annotations: [NavObject]
-    var viewModel: MapClusteringViewModel
     
-    var body: some View {
-        ZStack {
-            TandmMapViewRepresentable(region: $region, annotations: annotations, viewModel: viewModel)
-            
-            VStack {
-                Spacer()
-                
-                HStack {
-                    // Location button on the left
-                    Button(action: {
-                        print("Location button tapped")
-                        if let mapView = TandmMapViewProxy.shared.mapView,
-                           let coordinator = TandmMapViewProxy.shared.coordinator {
-                            coordinator.centerMapOnUserLocation(mapView)
-                        } else {
-                            print("MapView or Coordinator not available")
-                        }
-                    }) {
-                        Image(systemName: "location.fill")
-                            .font(.system(size: 20))
-                            .foregroundColor(.white)
-                            .frame(width: 44, height: 44)
-                            .background(Color.blue)
-                            .clipShape(Circle())
-                            .shadow(radius: 4)
-                    }
-                    .padding(.leading, 16)
-                    
-                    Spacer()
-                    
-                    // Note: The filter button is in the parent view
-                }
-                .padding(.bottom, 16)
-            }
-        }
-    }
-}
-
-// Proxy to access the MapView from the overlay button
-class TandmMapViewProxy {
-    static let shared = TandmMapViewProxy()
-    weak var mapView: MKMapView?
-    weak var coordinator: TandmMapViewRepresentable.Coordinator?
 }

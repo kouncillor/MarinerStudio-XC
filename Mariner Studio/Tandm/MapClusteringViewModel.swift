@@ -1,3 +1,5 @@
+
+
 import Foundation
 import CoreLocation
 import MapKit
@@ -23,8 +25,11 @@ class MapClusteringViewModel: ObservableObject {
     private var spatialGrid: [String: [NavObject]] = [:]
     private let gridCellSize: Double = 0.05 // degrees (roughly 5.5 km at equator)
     
+    // MARK: - NavUnit Storage
+    private var navUnits: [NavUnit] = []
+    
     // MARK: - Services
-    private let navUnitService: NavUnitDatabaseService
+    let navUnitService: NavUnitDatabaseService
     private let tideStationService: TideStationDatabaseService
     private let currentStationService: CurrentStationDatabaseService
     private let tidalHeightService: TidalHeightService
@@ -98,6 +103,11 @@ class MapClusteringViewModel: ObservableObject {
         }
     }
     
+    // Find a NavUnit by its ID
+    func findNavUnitById(_ navUnitId: String) -> NavUnit? {
+        return navUnits.first { $0.navUnitId == navUnitId }
+    }
+    
     // MARK: - Private Methods
     private func loadNavUnits() async {
         if isLoadingNavUnits { return }
@@ -108,6 +118,7 @@ class MapClusteringViewModel: ObservableObject {
         
         do {
             let units = try await navUnitService.getNavUnitsAsync()
+            self.navUnits = units // Store the full NavUnit objects
             
             // Convert to NavObject annotations
             let annotations = units.compactMap { unit -> NavObject? in
@@ -120,7 +131,8 @@ class MapClusteringViewModel: ObservableObject {
                 let navObject = NavObject()
                 navObject.type = .navunit
                 navObject.coordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
-                navObject.name = unit.navUnitName // Add name from NavUnit
+                navObject.name = unit.navUnitName
+                navObject.objectId = unit.navUnitId // Store the ID for later lookup
                 return navObject
             }
             
@@ -164,7 +176,8 @@ class MapClusteringViewModel: ObservableObject {
                 let navObject = NavObject()
                 navObject.type = .tidalheightstation
                 navObject.coordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
-                navObject.name = station.name // Add name from TidalHeightStation
+                navObject.name = station.name
+                navObject.objectId = station.id // Store the ID for later lookup
                 return navObject
             }
             
@@ -208,7 +221,8 @@ class MapClusteringViewModel: ObservableObject {
                 let navObject = NavObject()
                 navObject.type = .tidalcurrentstation
                 navObject.coordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
-                navObject.name = station.name // Add name from TidalCurrentStation
+                navObject.name = station.name
+                navObject.objectId = station.id // Store the ID for later lookup
                 return navObject
             }
             
