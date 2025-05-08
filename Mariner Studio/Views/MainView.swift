@@ -114,27 +114,18 @@ struct MainView: View {
         // Apply the .presentPaywallIfNeeded modifier to the NavigationStack
         // This will present the paywall if the "Pro" entitlement is not active
         // when MainView appears.
-        .presentPaywallIfNeeded(requiredEntitlementIdentifier: "Pro")
-        // You can also include optional handlers if needed:
-        // .presentPaywallIfNeeded(
-        //     requiredEntitlementIdentifier: "Pro",
-        //     onPurchaseCompleted: { customerInfo in
-        //         print("DEBUG: Purchase completed for \(customerInfo.originalAppUserId)")
-        //         // Optionally dismiss the paywall or update UI
-        //     },
-        //     onRestoreCompleted: { customerInfo in
-        //         print("DEBUG: Restore completed for \(customerInfo.originalAppUserId)")
-        //         // Optionally dismiss the paywall or update UI
-        //     },
-        //     onFailure: { error in
-        //         print("DEBUG: Paywall error: \(error)")
-        //         // Handle error, e.g., show an alert
-        //     },
-        //     onDismiss: {
-        //         print("DEBUG: Paywall dismissed")
-        //         // Handle dismissal if necessary
-        //     }
-        // )
+     //   .presentPaywallIfNeeded(requiredEntitlementIdentifier: "Pro")
+        
+        
+        
+        
+        
+        .presentPaywallIfNeeded(
+                    requiredEntitlementIdentifier: "Pro",
+                    
+                    presentationMode: .fullScreen
+                )
+    
     }
 }
 
