@@ -78,15 +78,21 @@ struct MapClusteringView: View {
                 annotations: filteredAnnotations(),
                 viewModel: viewModel,
                 onNavUnitSelected: { navUnitId in
+                    print("NavUnit selected: \(navUnitId)")
+                    resetAllNavigationState()
                     selectedNavUnitId = navUnitId
                     showNavUnitDetails = true
                 },
                 onTidalHeightStationSelected: { stationId, stationName in
+                    print("Tidal Height Station selected: \(stationId), \(stationName)")
+                    resetAllNavigationState()
                     selectedTidalHeightStationId = stationId
                     selectedTidalHeightStationName = stationName
                     showTidalHeightDetails = true
                 },
                 onTidalCurrentStationSelected: { stationId, bin, stationName in
+                    print("Tidal Current Station selected: \(stationId), \(bin), \(stationName)")
+                    resetAllNavigationState()
                     selectedTidalCurrentStationId = stationId
                     selectedTidalCurrentStationBin = bin
                     selectedTidalCurrentStationName = stationName
@@ -99,6 +105,10 @@ struct MapClusteringView: View {
                 if let proxy = TandmMapViewProxy.shared.mapView?.delegate as? TandmMapViewRepresentable.Coordinator {
                     TandmMapViewProxy.shared.coordinator = proxy
                 }
+                
+                // FORCE RESET all navigation state when the map view appears
+                print("MapClusteringView appeared - Resetting all navigation state")
+                resetAllNavigationState()
             }
             
             // Loading indicator
@@ -159,7 +169,7 @@ struct MapClusteringView: View {
         }
         .background(
             Group {
-                // Navigation link for NavUnits
+                // NavUnit navigation link
                 NavigationLink(
                     isActive: $showNavUnitDetails,
                     destination: {
@@ -180,9 +190,8 @@ struct MapClusteringView: View {
                     },
                     label: { EmptyView() }
                 )
-                .hidden()
                 
-                // Navigation link for Tidal Height Stations
+                // Tidal Height Station navigation link
                 NavigationLink(
                     isActive: $showTidalHeightDetails,
                     destination: {
@@ -199,9 +208,8 @@ struct MapClusteringView: View {
                     },
                     label: { EmptyView() }
                 )
-                .hidden()
                 
-                // Navigation link for Tidal Current Stations
+                // Tidal Current Station navigation link
                 NavigationLink(
                     isActive: $showTidalCurrentDetails,
                     destination: {
@@ -220,7 +228,6 @@ struct MapClusteringView: View {
                     },
                     label: { EmptyView() }
                 )
-                .hidden()
             }
         )
     }
@@ -277,25 +284,24 @@ struct MapClusteringView: View {
         }
     }
     
-    // Navigate to NavUnit details
-    func navigateToNavUnitDetails(navUnitId: String) {
-        self.selectedNavUnitId = navUnitId
-        self.showNavUnitDetails = true
-    }
-    
-    // Navigate to Tidal Height details
-    func navigateToTidalHeightDetails(stationId: String, stationName: String) {
-        self.selectedTidalHeightStationId = stationId
-        self.selectedTidalHeightStationName = stationName
-        self.showTidalHeightDetails = true
-    }
-    
-    // Navigate to Tidal Current details
-    func navigateToTidalCurrentDetails(stationId: String, bin: Int, stationName: String) {
-        self.selectedTidalCurrentStationId = stationId
-        self.selectedTidalCurrentStationBin = bin
-        self.selectedTidalCurrentStationName = stationName
-        self.showTidalCurrentDetails = true
+    // Reset all navigation state variables
+    private func resetAllNavigationState() {
+        print("Resetting all navigation state")
+        
+        // Reset NavUnit state
+        selectedNavUnitId = nil
+        showNavUnitDetails = false
+        
+        // Reset Tidal Height Station state
+        selectedTidalHeightStationId = nil
+        selectedTidalHeightStationName = nil
+        showTidalHeightDetails = false
+        
+        // Reset Tidal Current Station state
+        selectedTidalCurrentStationId = nil
+        selectedTidalCurrentStationBin = nil
+        selectedTidalCurrentStationName = nil
+        showTidalCurrentDetails = false
     }
 }
 
@@ -352,5 +358,3 @@ struct MapViewWithOverlay: View {
         }
     }
 }
-
-

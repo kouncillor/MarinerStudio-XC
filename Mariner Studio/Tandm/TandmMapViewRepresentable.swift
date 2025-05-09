@@ -1,5 +1,4 @@
 
-
 import SwiftUI
 import MapKit
 
@@ -41,10 +40,13 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
             context.coordinator.isUpdatingRegion = false
         }
         
-        // Update the callbacks
-        context.coordinator.onNavUnitSelected = onNavUnitSelected
-        context.coordinator.onTidalHeightStationSelected = onTidalHeightStationSelected
-        context.coordinator.onTidalCurrentStationSelected = onTidalCurrentStationSelected
+        // Important: Update the callbacks BEFORE handling annotations
+        // This ensures the latest callbacks are used
+        context.coordinator.updateCallbacks(
+            navUnitCallback: onNavUnitSelected,
+            tidalHeightCallback: onTidalHeightStationSelected,
+            tidalCurrentCallback: onTidalCurrentStationSelected
+        )
         
         // Use efficient annotation updates - only update what changed
         context.coordinator.updateAnnotations(in: mapView, newAnnotations: annotations)
@@ -60,15 +62,31 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
         var isUpdatingRegion = false
         var lastAnnotations: [NavObject] = []
         var lastUpdateTime: Date = Date()
-        var onNavUnitSelected: ((String) -> Void)?
-        var onTidalHeightStationSelected: ((String, String) -> Void)?
-        var onTidalCurrentStationSelected: ((String, Int, String) -> Void)?
+        
+        // Callbacks stored as properties
+        private var _onNavUnitSelected: ((String) -> Void)?
+        private var _onTidalHeightStationSelected: ((String, String) -> Void)?
+        private var _onTidalCurrentStationSelected: ((String, Int, String) -> Void)?
+        
+        // Method to safely update callbacks
+        func updateCallbacks(
+            navUnitCallback: @escaping (String) -> Void,
+            tidalHeightCallback: @escaping (String, String) -> Void,
+            tidalCurrentCallback: @escaping (String, Int, String) -> Void
+        ) {
+            self._onNavUnitSelected = navUnitCallback
+            self._onTidalHeightStationSelected = tidalHeightCallback
+            self._onTidalCurrentStationSelected = tidalCurrentCallback
+        }
         
         init(_ parent: TandmMapViewRepresentable) {
             self.parent = parent
-            self.onNavUnitSelected = parent.onNavUnitSelected
-            self.onTidalHeightStationSelected = parent.onTidalHeightStationSelected
-            self.onTidalCurrentStationSelected = parent.onTidalCurrentStationSelected
+            super.init()
+            
+            // Initialize callbacks from parent
+            self._onNavUnitSelected = parent.onNavUnitSelected
+            self._onTidalHeightStationSelected = parent.onTidalHeightStationSelected
+            self._onTidalCurrentStationSelected = parent.onTidalCurrentStationSelected
         }
         
         // Center map on user's location
@@ -142,31 +160,33 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
             guard let annotation = view.annotation else { return }
             
             if let navObject = annotation as? NavObject {
+                // Important: Deselect the annotation immediately to ensure fresh selection next time
+                mapView.deselectAnnotation(annotation, animated: true)
+                
                 switch navObject.type {
                 case .navunit:
                     print("Tapped on NavUnit: \(navObject.name), ID: \(navObject.objectId)")
                     // Navigate to NavUnit details
-                    DispatchQueue.main.async {
-                        if !navObject.objectId.isEmpty {
-                            self.onNavUnitSelected?(navObject.objectId)
+                    DispatchQueue.main.async { [weak self] in
+                        if !navObject.objectId.isEmpty, let callback = self?._onNavUnitSelected {
+                            callback(navObject.objectId)
                         }
                     }
                 case .tidalheightstation:
                     print("Tapped on Tidal Height Station: \(navObject.name), ID: \(navObject.objectId)")
                     // Navigate to Tidal Height Prediction view
-                    DispatchQueue.main.async {
-                        if !navObject.objectId.isEmpty {
-                            self.onTidalHeightStationSelected?(navObject.objectId, navObject.name)
+                    DispatchQueue.main.async { [weak self] in
+                        if !navObject.objectId.isEmpty, let callback = self?._onTidalHeightStationSelected {
+                            callback(navObject.objectId, navObject.name)
                         }
                     }
                 case .tidalcurrentstation:
-                    print("Tapped on Tidal Current Station: \(navObject.name), ID: \(navObject.objectId)")
+                    print("Tapped on Tidal Current Station: \(navObject.name), ID: \(navObject.objectId), Bin: \(navObject.currentBin ?? 0)")
                     // Navigate to Tidal Current Prediction view
-                    DispatchQueue.main.async {
-                        if !navObject.objectId.isEmpty {
-                            // Get the bin value from the NavObject, with a default of 0 if nil
+                    DispatchQueue.main.async { [weak self] in
+                        if !navObject.objectId.isEmpty, let callback = self?._onTidalCurrentStationSelected {
                             let bin = navObject.currentBin ?? 0
-                            self.onTidalCurrentStationSelected?(navObject.objectId, bin, navObject.name)
+                            callback(navObject.objectId, bin, navObject.name)
                         }
                     }
                 }
@@ -260,8 +280,3 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
         }
     }
 }
-
-
-
-
-
