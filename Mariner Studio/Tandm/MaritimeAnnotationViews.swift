@@ -1,13 +1,14 @@
-import MapKit
 
-private let tidalStationClusterID = "tidalStation"
+
+import MapKit
 
 class NavUnitAnnotationView: MKMarkerAnnotationView {
     static let ReuseID = "navunitAnnotation"
 
     override init(annotation: MKAnnotation?, reuseIdentifier: String?) {
         super.init(annotation: annotation, reuseIdentifier: reuseIdentifier)
-        clusteringIdentifier = "navunit"
+        // Remove clusteringIdentifier to prevent clustering
+        clusteringIdentifier = nil
     }
 
     required init?(coder aDecoder: NSCoder) {
@@ -22,7 +23,6 @@ class NavUnitAnnotationView: MKMarkerAnnotationView {
         // Use the n.circle.fill SF Symbol
         glyphImage = UIImage(systemName: "n.square")
     }
-    
 }
 
 class TidalHeightStationAnnotationView: MKMarkerAnnotationView {
@@ -30,7 +30,8 @@ class TidalHeightStationAnnotationView: MKMarkerAnnotationView {
     
     override init(annotation: MKAnnotation?, reuseIdentifier: String?) {
         super.init(annotation: annotation, reuseIdentifier: reuseIdentifier)
-        clusteringIdentifier = tidalStationClusterID
+        // Remove clusteringIdentifier to prevent clustering
+        clusteringIdentifier = nil
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -45,7 +46,6 @@ class TidalHeightStationAnnotationView: MKMarkerAnnotationView {
         // Use the n.circle.fill SF Symbol
         glyphImage = UIImage(systemName: "t.square")
     }
-    
 }
 
 class TidalCurrentStationAnnotationView: MKMarkerAnnotationView {
@@ -53,7 +53,8 @@ class TidalCurrentStationAnnotationView: MKMarkerAnnotationView {
 
     override init(annotation: MKAnnotation?, reuseIdentifier: String?) {
         super.init(annotation: annotation, reuseIdentifier: reuseIdentifier)
-        clusteringIdentifier = tidalStationClusterID
+        // Remove clusteringIdentifier to prevent clustering
+        clusteringIdentifier = nil
     }
 
     required init?(coder aDecoder: NSCoder) {
@@ -65,17 +66,16 @@ class TidalCurrentStationAnnotationView: MKMarkerAnnotationView {
         displayPriority = .defaultHigh
         markerTintColor = UIColor.systemRed // Changed to Red
         glyphImage = UIImage(systemName: "c.square")
-        
     }
 }
 
-// Also include the ClusterAnnotationView
+// Keep MaritimeClusterAnnotationView as a fallback, but it won't be used since clustering is disabled
 class MaritimeClusterAnnotationView: MKAnnotationView {
     
     override init(annotation: MKAnnotation?, reuseIdentifier: String?) {
         super.init(annotation: annotation, reuseIdentifier: reuseIdentifier)
         collisionMode = .circle
-        centerOffset = CGPoint(x: 0, y: -10) // Offset center point to animate better with marker annotations
+        centerOffset = CGPoint(x: 0, y: -10)
     }
 
     required init?(coder aDecoder: NSCoder) {
@@ -89,10 +89,10 @@ class MaritimeClusterAnnotationView: MKAnnotationView {
             let totalStations = cluster.memberAnnotations.count
             
             if count(maritimeType: .navunit) > 0 {
-                image = drawNavUnitCount(count: totalStations) // Renamed method
+                image = drawNavUnitCount(count: totalStations)
             } else {
                 let tidalCurrentCount = count(maritimeType: .tidalcurrentstation)
-                image = drawRatioTidalCurrentToTidalHeight(tidalCurrentCount, to: totalStations) // Renamed method
+                image = drawRatioTidalCurrentToTidalHeight(tidalCurrentCount, to: totalStations)
             }
             
             if count(maritimeType: .navunit) > 0 {
@@ -105,14 +105,13 @@ class MaritimeClusterAnnotationView: MKAnnotationView {
 
     private func drawRatioTidalCurrentToTidalHeight(_ currentCount: Int, to totalCount: Int) -> UIImage {
         return drawRatio(currentCount, to: totalCount,
-                        fractionColor: UIColor.systemRed, // Changed to Red (Tidal Current)
-                        wholeColor: UIColor.systemGreen) // Changed to Green (Tidal Height)
+                        fractionColor: UIColor.systemRed,
+                        wholeColor: UIColor.systemGreen)
     }
 
-    
     private func drawNavUnitCount(count: Int) -> UIImage {
         return drawRatio(0, to: count, fractionColor: nil,
-                        wholeColor: UIColor.systemBlue) // Changed to Blue (NavUnit)
+                        wholeColor: UIColor.systemBlue)
     }
 
     private func drawRatio(_ fraction: Int, to whole: Int, fractionColor: UIColor?, wholeColor: UIColor?) -> UIImage {
@@ -159,4 +158,3 @@ class MaritimeClusterAnnotationView: MKAnnotationView {
         }.count
     }
 }
-

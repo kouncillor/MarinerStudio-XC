@@ -1,6 +1,7 @@
+
 import MapKit
 
-// Optimized version of the ClusterAnnotationView with caching
+// This class will be kept for reference, but won't be used since clustering is disabled
 class MapClusterAnnotationView: MKAnnotationView {
     // Cache for rendered cluster images - static so it persists for the app lifetime
     private static var imageCache: [String: UIImage] = [:]

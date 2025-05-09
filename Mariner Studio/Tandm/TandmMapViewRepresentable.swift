@@ -22,7 +22,9 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
         mapView.register(NavUnitAnnotationView.self, forAnnotationViewWithReuseIdentifier: NavUnitAnnotationView.ReuseID)
         mapView.register(TidalHeightStationAnnotationView.self, forAnnotationViewWithReuseIdentifier: TidalHeightStationAnnotationView.ReuseID)
         mapView.register(TidalCurrentStationAnnotationView.self, forAnnotationViewWithReuseIdentifier: TidalCurrentStationAnnotationView.ReuseID)
-        mapView.register(MapClusterAnnotationView.self, forAnnotationViewWithReuseIdentifier: MKMapViewDefaultClusterAnnotationViewReuseIdentifier)
+        
+        // Remove cluster registration since we've disabled clustering
+        // mapView.register(MapClusterAnnotationView.self, forAnnotationViewWithReuseIdentifier: MKMapViewDefaultClusterAnnotationViewReuseIdentifier)
         
         // Store the mapView in our proxy for access from SwiftUI
         TandmMapViewProxy.shared.mapView = mapView
@@ -120,18 +122,18 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
         }
         
         func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
-            // Handle cluster annotations
-            if let clusterAnnotation = annotation as? MKClusterAnnotation {
-                return mapView.dequeueReusableAnnotationView(
-                    withIdentifier: MKMapViewDefaultClusterAnnotationViewReuseIdentifier,
-                    for: clusterAnnotation
-                )
-            }
-            
             // Return nil for user location annotation
             if annotation is MKUserLocation {
                 return nil
             }
+            
+            // We no longer handle cluster annotations since clustering is disabled
+            // if let clusterAnnotation = annotation as? MKClusterAnnotation {
+            //     return mapView.dequeueReusableAnnotationView(
+            //         withIdentifier: MKMapViewDefaultClusterAnnotationViewReuseIdentifier,
+            //         for: clusterAnnotation
+            //     )
+            // }
             
             // Handle NavObject annotations
             guard let navObject = annotation as? NavObject else { return nil }
@@ -190,10 +192,12 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
                         }
                     }
                 }
-            } else if let cluster = annotation as? MKClusterAnnotation {
-                print("Tapped on cluster with \(cluster.memberAnnotations.count) annotations")
-                // Handle cluster tap if needed
             }
+            // Remove cluster handling since we've disabled clustering
+            // else if let cluster = annotation as? MKClusterAnnotation {
+            //     print("Tapped on cluster with \(cluster.memberAnnotations.count) annotations")
+            //     // Handle cluster tap if needed
+            // }
         }
         
         func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {

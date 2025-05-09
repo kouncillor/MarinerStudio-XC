@@ -72,7 +72,7 @@ struct MapClusteringView: View {
     
     var body: some View {
         ZStack {
-            // Use MapViewWithOverlay instead of TandmMapViewRepresentable
+            // Use MapViewWithOverlay
             MapViewWithOverlay(
                 region: $mapRegion,
                 annotations: filteredAnnotations(),
