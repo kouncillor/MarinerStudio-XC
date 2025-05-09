@@ -159,17 +159,3 @@ struct MenuButtonContent: View {
     }
 }
 
-// Placeholder for WeatherFavoritesView
-struct WeatherFavoritesView: View {
-    var body: some View {
-        VStack {
-            Text("Weather Favorites")
-                .font(.largeTitle)
-                .padding()
-
-            Text("Favorites feature coming soon")
-                .foregroundColor(.secondary)
-        }
-        .navigationTitle("Favorites")
-    }
-}
