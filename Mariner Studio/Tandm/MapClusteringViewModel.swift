@@ -223,6 +223,7 @@ class MapClusteringViewModel: ObservableObject {
                 navObject.coordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
                 navObject.name = station.name
                 navObject.objectId = station.id // Store the ID for later lookup
+                navObject.currentBin = station.currentBin  // Store the bin value
                 return navObject
             }
             
@@ -245,6 +246,7 @@ class MapClusteringViewModel: ObservableObject {
             }
         }
     }
+    
     
     // MARK: - Spatial Indexing Methods
     

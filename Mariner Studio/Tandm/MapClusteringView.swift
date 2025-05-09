@@ -20,11 +20,22 @@ struct MapClusteringView: View {
     @State private var showNavUnits = true
     @State private var showTidalHeightStations = true
     @State private var showTidalCurrentStations = true
+    
+    // NavUnit navigation state
     @State private var selectedNavUnitId: String? = nil
     @State private var showNavUnitDetails = false
+    
+    // Tidal height station navigation state
     @State private var selectedTidalHeightStationId: String? = nil
     @State private var selectedTidalHeightStationName: String? = nil
     @State private var showTidalHeightDetails = false
+    
+    // Tidal current station navigation state
+    @State private var selectedTidalCurrentStationId: String? = nil
+    @State private var selectedTidalCurrentStationBin: Int? = nil
+    @State private var selectedTidalCurrentStationName: String? = nil
+    @State private var showTidalCurrentDetails = false
+    
     @EnvironmentObject var serviceProvider: ServiceProvider
     
     // MARK: - Initialization
@@ -74,6 +85,12 @@ struct MapClusteringView: View {
                     selectedTidalHeightStationId = stationId
                     selectedTidalHeightStationName = stationName
                     showTidalHeightDetails = true
+                },
+                onTidalCurrentStationSelected: { stationId, bin, stationName in
+                    selectedTidalCurrentStationId = stationId
+                    selectedTidalCurrentStationBin = bin
+                    selectedTidalCurrentStationName = stationName
+                    showTidalCurrentDetails = true
                 }
             )
             .edgesIgnoringSafeArea(.all)
@@ -142,6 +159,7 @@ struct MapClusteringView: View {
         }
         .background(
             Group {
+                // Navigation link for NavUnits
                 NavigationLink(
                     isActive: $showNavUnitDetails,
                     destination: {
@@ -164,6 +182,7 @@ struct MapClusteringView: View {
                 )
                 .hidden()
                 
+                // Navigation link for Tidal Height Stations
                 NavigationLink(
                     isActive: $showTidalHeightDetails,
                     destination: {
@@ -176,6 +195,27 @@ struct MapClusteringView: View {
                             )
                         } else {
                             Text("Tidal Height Station not found")
+                        }
+                    },
+                    label: { EmptyView() }
+                )
+                .hidden()
+                
+                // Navigation link for Tidal Current Stations
+                NavigationLink(
+                    isActive: $showTidalCurrentDetails,
+                    destination: {
+                        if let stationId = selectedTidalCurrentStationId,
+                           let bin = selectedTidalCurrentStationBin,
+                           let stationName = selectedTidalCurrentStationName {
+                            TidalCurrentPredictionView(
+                                stationId: stationId,
+                                bin: bin,
+                                stationName: stationName,
+                                currentStationService: serviceProvider.currentStationService
+                            )
+                        } else {
+                            Text("Tidal Current Station not found")
                         }
                     },
                     label: { EmptyView() }
@@ -249,6 +289,14 @@ struct MapClusteringView: View {
         self.selectedTidalHeightStationName = stationName
         self.showTidalHeightDetails = true
     }
+    
+    // Navigate to Tidal Current details
+    func navigateToTidalCurrentDetails(stationId: String, bin: Int, stationName: String) {
+        self.selectedTidalCurrentStationId = stationId
+        self.selectedTidalCurrentStationBin = bin
+        self.selectedTidalCurrentStationName = stationName
+        self.showTidalCurrentDetails = true
+    }
 }
 
 // MARK: - Location Button Overlay
@@ -258,6 +306,7 @@ struct MapViewWithOverlay: View {
     var viewModel: MapClusteringViewModel
     var onNavUnitSelected: (String) -> Void
     var onTidalHeightStationSelected: (String, String) -> Void
+    var onTidalCurrentStationSelected: (String, Int, String) -> Void
     
     var body: some View {
         ZStack {
@@ -266,7 +315,8 @@ struct MapViewWithOverlay: View {
                 annotations: annotations,
                 viewModel: viewModel,
                 onNavUnitSelected: onNavUnitSelected,
-                onTidalHeightStationSelected: onTidalHeightStationSelected
+                onTidalHeightStationSelected: onTidalHeightStationSelected,
+                onTidalCurrentStationSelected: onTidalCurrentStationSelected
             )
             
             VStack {
@@ -302,3 +352,5 @@ struct MapViewWithOverlay: View {
         }
     }
 }
+
+

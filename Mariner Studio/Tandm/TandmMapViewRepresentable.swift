@@ -9,6 +9,7 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
     var viewModel: MapClusteringViewModel
     var onNavUnitSelected: (String) -> Void
     var onTidalHeightStationSelected: (String, String) -> Void
+    var onTidalCurrentStationSelected: (String, Int, String) -> Void
     
     func makeUIView(context: Context) -> MKMapView {
         let mapView = MKMapView()
@@ -43,6 +44,7 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
         // Update the callbacks
         context.coordinator.onNavUnitSelected = onNavUnitSelected
         context.coordinator.onTidalHeightStationSelected = onTidalHeightStationSelected
+        context.coordinator.onTidalCurrentStationSelected = onTidalCurrentStationSelected
         
         // Use efficient annotation updates - only update what changed
         context.coordinator.updateAnnotations(in: mapView, newAnnotations: annotations)
@@ -60,11 +62,13 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
         var lastUpdateTime: Date = Date()
         var onNavUnitSelected: ((String) -> Void)?
         var onTidalHeightStationSelected: ((String, String) -> Void)?
+        var onTidalCurrentStationSelected: ((String, Int, String) -> Void)?
         
         init(_ parent: TandmMapViewRepresentable) {
             self.parent = parent
             self.onNavUnitSelected = parent.onNavUnitSelected
             self.onTidalHeightStationSelected = parent.onTidalHeightStationSelected
+            self.onTidalCurrentStationSelected = parent.onTidalCurrentStationSelected
         }
         
         // Center map on user's location
@@ -156,8 +160,15 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
                         }
                     }
                 case .tidalcurrentstation:
-                    print("Tapped on Tidal Current Station: \(navObject.name)")
-                    // Additional code to handle the tidal current station tap
+                    print("Tapped on Tidal Current Station: \(navObject.name), ID: \(navObject.objectId)")
+                    // Navigate to Tidal Current Prediction view
+                    DispatchQueue.main.async {
+                        if !navObject.objectId.isEmpty {
+                            // Get the bin value from the NavObject, with a default of 0 if nil
+                            let bin = navObject.currentBin ?? 0
+                            self.onTidalCurrentStationSelected?(navObject.objectId, bin, navObject.name)
+                        }
+                    }
                 }
             } else if let cluster = annotation as? MKClusterAnnotation {
                 print("Tapped on cluster with \(cluster.memberAnnotations.count) annotations")
@@ -249,3 +260,8 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
         }
     }
 }
+
+
+
+
+

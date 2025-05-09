@@ -1,5 +1,4 @@
 
-
 import MapKit
 import CoreLocation
 
@@ -28,6 +27,7 @@ class NavObject: NSObject, Decodable, MKAnnotation {
     var type: NavObjectType = .navunit
     var name: String = "" // Added name property
     var objectId: String = "" // Added objectId to store the original identifier
+    var currentBin: Int? = nil // Added currentBin for tidal current stations
     
     private var latitude: CLLocationDegrees = 0
     private var longitude: CLLocationDegrees = 0
