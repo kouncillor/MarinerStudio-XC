@@ -1,8 +1,13 @@
+
 import SwiftUI
 
 struct WeatherMenuView: View {
     // We'll use environment objects for service dependencies
     @EnvironmentObject var serviceProvider: ServiceProvider
+    
+    // Add a flag to control visibility of the settings option
+    // Set to false to hide it, can be changed to true later when needed
+    private let showSettingsOption = false
 
     var body: some View {
         ScrollView {
@@ -45,14 +50,15 @@ struct WeatherMenuView: View {
                     )
                 }
 
-                // Settings - System Icon
-                NavigationLink(destination: WeatherSettingsView()) {
-                    MenuButtonContent(
-                        //iconType: .system("gearshape.fill"), // Specify system icon
-                        iconType: .system("line.3.horizontal"), // <-- Changed icon name
-                        title: "SETTINGS",
-                        color: .blue
-                    )
+                // Settings - System Icon - Only show if showSettingsOption is true
+                if showSettingsOption {
+                    NavigationLink(destination: WeatherSettingsView()) {
+                        MenuButtonContent(
+                            iconType: .system("line.3.horizontal"),
+                            title: "SETTINGS",
+                            color: .blue
+                        )
+                    }
                 }
             }
             .padding()
@@ -95,7 +101,7 @@ struct WeatherMenuView: View {
     }
 }
 
-// MenuButtonContent component - updated to handle both icon types
+// The rest of the code remains unchanged
 struct MenuButtonContent: View {
     // Enum to define icon type
     enum IconType {
@@ -167,4 +173,3 @@ struct WeatherFavoritesView: View {
         .navigationTitle("Favorites")
     }
 }
-
