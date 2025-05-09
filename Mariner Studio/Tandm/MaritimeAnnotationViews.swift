@@ -21,7 +21,7 @@ class NavUnitAnnotationView: MKMarkerAnnotationView {
         markerTintColor = UIColor.systemBlue // Changed to Blue
         
         // Use the n.circle.fill SF Symbol
-        glyphImage = UIImage(systemName: "n.square")
+        glyphImage = UIImage(systemName: "n.circle")
     }
 }
 
@@ -44,7 +44,7 @@ class TidalHeightStationAnnotationView: MKMarkerAnnotationView {
         markerTintColor = UIColor.systemGreen // Changed to Blue
         
         // Use the n.circle.fill SF Symbol
-        glyphImage = UIImage(systemName: "t.square")
+        glyphImage = UIImage(systemName: "t.circle")
     }
 }
 
@@ -65,7 +65,7 @@ class TidalCurrentStationAnnotationView: MKMarkerAnnotationView {
         super.prepareForDisplay()
         displayPriority = .defaultHigh
         markerTintColor = UIColor.systemRed // Changed to Red
-        glyphImage = UIImage(systemName: "c.square")
+        glyphImage = UIImage(systemName: "c.circle")
     }
 }
 

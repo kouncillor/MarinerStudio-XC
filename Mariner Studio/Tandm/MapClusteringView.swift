@@ -72,8 +72,8 @@ struct MapClusteringView: View {
     
     var body: some View {
         ZStack {
-            // Use MapViewWithOverlay
-            MapViewWithOverlay(
+            // Use TandmMapViewRepresentable directly
+            TandmMapViewRepresentable(
                 region: $mapRegion,
                 annotations: filteredAnnotations(),
                 viewModel: viewModel,
@@ -130,13 +130,34 @@ struct MapClusteringView: View {
                 .padding(.top)
             }
             
-            // Floating filter button
+            // Floating buttons - now with both location and filter buttons inline
             VStack {
                 Spacer()
                 
                 HStack {
                     Spacer()
                     
+                    // Location button (moved from overlay)
+                    Button(action: {
+                        print("Location button tapped")
+                        if let mapView = TandmMapViewProxy.shared.mapView,
+                           let coordinator = TandmMapViewProxy.shared.coordinator {
+                            coordinator.centerMapOnUserLocation(mapView)
+                        } else {
+                            print("MapView or Coordinator not available")
+                        }
+                    }) {
+                        Image(systemName: "location.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(.white)
+                            .padding(12)
+                            .background(Color.orange)
+                            .clipShape(Circle())
+                            .shadow(radius: 4)
+                    }
+                    .padding(.trailing, 8) // Add spacing between buttons
+                    
+                    // Filter button (already exists)
                     Button(action: {
                         showFilterOptions.toggle()
                     }) {
@@ -148,9 +169,9 @@ struct MapClusteringView: View {
                             .clipShape(Circle())
                             .shadow(radius: 4)
                     }
-                    .padding(.trailing, 16)
-                    .padding(.bottom, 16)
                 }
+                .padding(.trailing, 16)
+                .padding(.bottom, 16)
             }
         }
         .navigationTitle("Maritime Map")
@@ -159,13 +180,32 @@ struct MapClusteringView: View {
             filterOptionsView
         }
         .onAppear {
-            // Initialize the map region from the view model if needed
-            if let initialRegion = viewModel.currentRegion {
+            // First try to center on user's location immediately
+            if let userLocation = viewModel.locationService.currentLocation?.coordinate {
+                print("Centering map on initial user location: \(userLocation.latitude), \(userLocation.longitude)")
+                mapRegion = MKCoordinateRegion(
+                    center: userLocation,
+                    span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+                )
+            }
+            // Fall back to view model's region if no user location
+            else if let initialRegion = viewModel.currentRegion {
                 mapRegion = initialRegion
             }
             
             // Load the data when view appears
             viewModel.loadData()
+            
+            // Schedule a delayed attempt to center on user location (in case it wasn't available immediately)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                if let userLocation = viewModel.locationService.currentLocation?.coordinate {
+                    print("Delayed centering on user location: \(userLocation.latitude), \(userLocation.longitude)")
+                    mapRegion = MKCoordinateRegion(
+                        center: userLocation,
+                        span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+                    )
+                }
+            }
         }
         .background(
             Group {
@@ -302,59 +342,5 @@ struct MapClusteringView: View {
         selectedTidalCurrentStationBin = nil
         selectedTidalCurrentStationName = nil
         showTidalCurrentDetails = false
-    }
-}
-
-// MARK: - Location Button Overlay
-struct MapViewWithOverlay: View {
-    @Binding var region: MKCoordinateRegion
-    var annotations: [NavObject]
-    var viewModel: MapClusteringViewModel
-    var onNavUnitSelected: (String) -> Void
-    var onTidalHeightStationSelected: (String, String) -> Void
-    var onTidalCurrentStationSelected: (String, Int, String) -> Void
-    
-    var body: some View {
-        ZStack {
-            TandmMapViewRepresentable(
-                region: $region,
-                annotations: annotations,
-                viewModel: viewModel,
-                onNavUnitSelected: onNavUnitSelected,
-                onTidalHeightStationSelected: onTidalHeightStationSelected,
-                onTidalCurrentStationSelected: onTidalCurrentStationSelected
-            )
-            
-            VStack {
-                Spacer()
-                
-                HStack {
-                    // Location button on the left
-                    Button(action: {
-                        print("Location button tapped")
-                        if let mapView = TandmMapViewProxy.shared.mapView,
-                           let coordinator = TandmMapViewProxy.shared.coordinator {
-                            coordinator.centerMapOnUserLocation(mapView)
-                        } else {
-                            print("MapView or Coordinator not available")
-                        }
-                    }) {
-                        Image(systemName: "location.fill")
-                            .font(.system(size: 20))
-                            .foregroundColor(.white)
-                            .frame(width: 44, height: 44)
-                            .background(Color.blue)
-                            .clipShape(Circle())
-                            .shadow(radius: 4)
-                    }
-                    .padding(.leading, 16)
-                    
-                    Spacer()
-                    
-                    // Note: The filter button is in the parent view
-                }
-                .padding(.bottom, 16)
-            }
-        }
     }
 }
