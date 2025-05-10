@@ -1,3 +1,4 @@
+
 import SwiftUI
 import RevenueCat // Ensure RevenueCat is imported
 import RevenueCatUI
@@ -5,6 +6,10 @@ import RevenueCatUI
 struct MainView: View {
     @EnvironmentObject var serviceProvider: ServiceProvider
     @State private var showSettings = false
+    @State private var selectedRoute: GpxRoute? = nil
+    @State private var routeAverageSpeed: String = ""
+    @State private var navigateToGpxView = false
+    @State private var navigateToRouteDetails = false
 
     var body: some View {
         NavigationStack {
@@ -100,56 +105,48 @@ struct MainView: View {
                         )
                     }
 
-                    
-                    // Update just the Route button action in MainView.swift
+                    // Route Button - Updated with correct navigation
+                    Button(action: {
+                        navigateToGpxView = true
+                    }) {
+                        HStack {
+                            Image("tsixseven") // Assuming this is an intended placeholder or actual image
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 67, height: 67)
+                                .padding(.leading, 5)
 
-                    RouteButton(action: {
-                        // Create GpxViewModel with dependencies
-                        let gpxService = GpxServiceImpl()
-                        let routeCalculationService = RouteCalculationServiceImpl()
-                        
-                        // Create navigation closure
-                        let navigationClosure = { (parameters: [String: Any]) in
-                            guard let route = parameters["route"] as? GpxRoute,
-                                  let averageSpeed = parameters["averageSpeed"] as? String else {
-                                return
+                            VStack(alignment: .leading) {
+                                Text("Route")
+                                    .font(.headline)
+                                Text("View Route from GPX File")
+                                    .font(.subheadline)
+                                    .foregroundColor(.gray)
                             }
-                            
-                            // Create RouteDetailsViewModel with the passed parameters
-                            let routeDetailsViewModel = RouteDetailsViewModel(
-                                weatherService: serviceProvider.openMeteoService,
-                                routeCalculationService: routeCalculationService
-                            )
-                            
-                            // Apply the route data to the view model
-                            routeDetailsViewModel.applyRouteData(route, averageSpeed: averageSpeed)
-                            
-                            // Navigate to the RouteDetailsView with the configured ViewModel
-                            NavigationLink(destination: RouteDetailsView(viewModel: routeDetailsViewModel)) {
-                                EmptyView()
-                            }
-                            .hidden()
-                            .frame(width: 0, height: 0)
+                            .padding(.leading, 10)
+                            .frame(height: 67)
+                            .padding(.vertical, 10)
+
+                            Spacer()
                         }
-                        
-                        let gpxViewModel = GpxViewModel(
-                            gpxService: gpxService,
-                            routeCalculationService: routeCalculationService,
-                            navigationService: navigationClosure
+                        .frame(maxWidth: .infinity)
+                        .padding(10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .strokeBorder(Color(UIColor.lightGray), lineWidth: 1)
+                                .background(RoundedRectangle(cornerRadius: 10).fill(Color.white))
                         )
-                        
-                        // Navigate to GpxView
-                        NavigationLink(destination: GpxView(viewModel: gpxViewModel)) {
-                            EmptyView()
-                        }
-                        .hidden()
-                        .frame(width: 0, height: 0)
-                    })
+                    }
+                    .buttonStyle(PlainButtonStyle())
                     
+                    // Navigation links
+                    NavigationLink(destination: createGpxView(), isActive: $navigateToGpxView) {
+                        EmptyView()
+                    }
                     
-                    
-                    
-                    
+                    NavigationLink(destination: createRouteDetailsView(), isActive: $navigateToRouteDetails) {
+                        EmptyView()
+                    }
                 }
                 .padding()
             }
@@ -175,18 +172,48 @@ struct MainView: View {
         // Apply the .presentPaywallIfNeeded modifier to the NavigationStack
         // This will present the paywall if the "Pro" entitlement is not active
         // when MainView appears.
-     //   .presentPaywallIfNeeded(requiredEntitlementIdentifier: "Pro")
-        
-        
-        
-        
-        
         .presentPaywallIfNeeded(
-                    requiredEntitlementIdentifier: "Pro",
-                    
-                    presentationMode: .fullScreen
-                )
+            requiredEntitlementIdentifier: "Pro",
+            presentationMode: .fullScreen
+        )
+    }
     
+    // Function to create the GpxView with necessary dependencies
+    private func createGpxView() -> some View {
+        let gpxService = GpxServiceImpl()
+        let routeCalculationService = RouteCalculationServiceImpl()
+        
+        let gpxViewModel = GpxViewModel(
+            gpxService: gpxService,
+            routeCalculationService: routeCalculationService,
+            navigationService: { parameters in
+                if let route = parameters["route"] as? GpxRoute,
+                   let averageSpeed = parameters["averageSpeed"] as? String {
+                    selectedRoute = route
+                    routeAverageSpeed = averageSpeed
+                    navigateToGpxView = false // Close the GpxView
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        navigateToRouteDetails = true // Navigate to RouteDetailsView
+                    }
+                }
+            }
+        )
+        
+        return GpxView(viewModel: gpxViewModel)
+    }
+    
+    // Function to create the RouteDetailsView with the selected route
+    private func createRouteDetailsView() -> some View {
+        let routeDetailsViewModel = RouteDetailsViewModel(
+            weatherService: serviceProvider.openMeteoService,
+            routeCalculationService: RouteCalculationServiceImpl()
+        )
+        
+        if let route = selectedRoute {
+            routeDetailsViewModel.applyRouteData(route, averageSpeed: routeAverageSpeed)
+        }
+        
+        return RouteDetailsView(viewModel: routeDetailsViewModel)
     }
 }
 
@@ -236,49 +263,3 @@ struct NavigationButtonContent: View {
         )
     }
 }
-
-struct RouteButton: View {
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack {
-                Image("tsixseven") // Assuming this is an intended placeholder or actual image
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 67, height: 67)
-                    .padding(.leading, 5)
-
-                VStack(alignment: .leading) {
-                    Text("Route")
-                        .font(.headline)
-                    Text("View Route from GPX File")
-                        .font(.subheadline)
-                        .foregroundColor(.gray)
-                }
-                .padding(.leading, 10)
-                .frame(height: 67)
-                .padding(.vertical, 10)
-
-                Spacer()
-            }
-            .frame(maxWidth: .infinity)
-            .padding(10)
-            .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .strokeBorder(Color(UIColor.lightGray), lineWidth: 1)
-                    .background(RoundedRectangle(cornerRadius: 10).fill(Color.white))
-            )
-        }
-        .buttonStyle(PlainButtonStyle())
-    }
-}
-
-// Make sure you have placeholders or actual implementations for:
-// ServiceProvider, MapClusteringView, WeatherMenuView, TidalHeightStationsView,
-// TidalCurrentStationsView, NavUnitsView, WeatherSettingsView,
-// TidalHeightServiceImpl, TidalCurrentServiceImpl, and any services they depend on.
-
-// Also, ensure RevenueCat SDK is configured, typically in your App's init or onAppear:
-// Purchases.configure(withAPIKey: "your_api_key")
-// And that you have defined an entitlement named "Pro" in your RevenueCat dashboard.

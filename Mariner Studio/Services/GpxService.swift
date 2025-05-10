@@ -17,34 +17,32 @@ class GpxServiceImpl: GpxService {
         let data = try Data(contentsOf: url)
         
         // Parse XML into a GpxFile object
-        let decoder = XMLDecoder()
-        return try decoder.decode(GpxFile.self, from: data)
-    }
-}
-
-// XML Decoder for GPX files
-class XMLDecoder {
-    func decode<T: Decodable>(_ type: T.Type, from data: Data) throws -> T {
         let parser = XMLParser(data: data)
-        let delegate = GPXParserDelegate(targetType: type)
+        let delegate = GPXParserDelegate()
         parser.delegate = delegate
-        parser.parse()
         
-        if let error = delegate.error {
-            throw error
+        let success = parser.parse()
+        
+        if !success {
+            if let error = parser.parserError {
+                throw error
+            } else if let delegateError = delegate.error {
+                throw delegateError
+            } else {
+                throw XMLDecodingError.parsingFailed
+            }
         }
         
-        guard let result = delegate.result as? T else {
-            throw XMLDecodingError.typeMismatch(expected: T.self, actual: type(of: delegate.result))
+        guard let gpxFile = delegate.gpxFile else {
+            throw XMLDecodingError.noResult
         }
         
-        return result
+        return gpxFile
     }
 }
 
 class GPXParserDelegate: NSObject, XMLParserDelegate {
-    var targetType: Decodable.Type
-    var result: Any?
+    var gpxFile: GpxFile?
     var error: Error?
     
     private var currentElement = ""
@@ -52,10 +50,6 @@ class GPXParserDelegate: NSObject, XMLParserDelegate {
     private var currentRoutePoints: [GpxRoutePoint] = []
     private var currentRoutePoint: GpxRoutePoint?
     private var routeName: String?
-    
-    init(targetType: Decodable.Type) {
-        self.targetType = targetType
-    }
     
     func parser(_ parser: XMLParser, didStartElement elementName: String, namespaceURI: String?, qualifiedName qName: String?, attributes attributeDict: [String: String] = [:]) {
         currentElement = elementName
@@ -88,8 +82,7 @@ class GPXParserDelegate: NSObject, XMLParserDelegate {
                 currentRoute = route
                 
                 // Create the GpxFile with the route
-                let gpxFile = GpxFile(route: route)
-                result = gpxFile
+                gpxFile = GpxFile(route: route)
             }
         case "rtept":
             // End of route point - add to current route points
@@ -127,5 +120,7 @@ class GPXParserDelegate: NSObject, XMLParserDelegate {
 }
 
 enum XMLDecodingError: Error {
+    case parsingFailed
+    case noResult
     case typeMismatch(expected: Any.Type, actual: Any.Type)
 }

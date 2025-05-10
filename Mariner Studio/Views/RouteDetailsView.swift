@@ -30,11 +30,11 @@ struct RouteDetailsView: View {
                                 
                                 // Route details grid
                                 VStack(spacing: 10) {
-                                    DetailRow(label: "Departure:", value: viewModel.departureTime)
-                                    DetailRow(label: "Arrival:", value: viewModel.arrivalTime)
-                                    DetailRow(label: "Total Distance:", value: viewModel.totalDistance)
-                                    DetailRow(label: "Average Speed:", value: viewModel.averageSpeed)
-                                    DetailRow(label: "Duration:", value: viewModel.duration)
+                                    RouteDetailRow(label: "Departure:", value: viewModel.departureTime)
+                                    RouteDetailRow(label: "Arrival:", value: viewModel.arrivalTime)
+                                    RouteDetailRow(label: "Total Distance:", value: viewModel.totalDistance)
+                                    RouteDetailRow(label: "Average Speed:", value: viewModel.averageSpeed)
+                                    RouteDetailRow(label: "Duration:", value: viewModel.duration)
                                 }
                             }
                             .padding()
@@ -157,7 +157,7 @@ struct RouteDetailsView: View {
 
 // Helper Views
 
-struct DetailRow: View {
+struct RouteDetailRow: View {
     let label: String
     let value: String
     
@@ -240,217 +240,211 @@ struct WaypointView: View {
                     Spacer()
                     
                     Text(waypoint.visibilityDisplay)
-                    Text(waypoint.weatherCondition)
-                                            .font(.body)
-                                        
-                                        Spacer()
-                                        
-                                        Text(waypoint.visibilityDisplay)
-                                            .font(.caption)
-                                    }
-                                    .padding(.vertical, 5)
-                                    
-                                    // Weather data
-                                    HStack(alignment: .top) {
-                                        VStack(alignment: .leading, spacing: 5) {
-                                            Text(waypoint.temperatureDisplay)
-                                                .font(.headline)
-                                            Text(waypoint.dewPointDisplay + " DP")
-                                                .font(.caption)
-                                                .foregroundColor(.secondary)
-                                            Text(waypoint.humidityDisplay + " RH")
-                                                .font(.caption)
-                                                .foregroundColor(.secondary)
-                                        }
-                                        
-                                        Spacer()
-                                        
-                                        VStack(alignment: .trailing, spacing: 5) {
-                                            Text("Wind: " + waypoint.windSpeedDisplay)
-                                                .font(.subheadline)
-                                            Text("from " + waypoint.windDirection)
-                                                .font(.caption)
-                                                .foregroundColor(.secondary)
-                                            Text("Gusts: " + waypoint.windGustsDisplay)
-                                                .font(.caption)
-                                                .foregroundColor(.secondary)
-                                        }
-                                    }
-                                    .padding()
-                                    .background(Color.green.opacity(0.1))
-                                    .cornerRadius(8)
-                                } else {
-                                    Text("Weather data not available")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                        .frame(maxWidth: .infinity, alignment: .center)
-                                        .padding(.vertical, 5)
-                                }
-                                
-                                // Marine data
-                                if waypoint.marineDataAvailable {
-                                    VStack(spacing: 10) {
-                                        HStack {
-                                            // Total Wave
-                                            MarineDataBox(
-                                                title: "Total Wave",
-                                                value1: waypoint.waveHeightDisplay,
-                                                value2: "From: \(waypoint.waveDirectionCardinal)",
-                                                value3: "\(Int(waypoint.wavePeriod))s period"
-                                            )
-                                            
-                                            // Wind Wave
-                                            MarineDataBox(
-                                                title: "Wind Wave",
-                                                value1: waypoint.windWaveHeightDisplay,
-                                                value2: "From: \(waypoint.windWaveDirectionCardinal)",
-                                                value3: ""
-                                            )
-                                        }
-                                        
-                                        // Swell
-                                        VStack(alignment: .leading, spacing: 5) {
-                                            Text("Swell")
-                                                .font(.headline)
-                                            
-                                            HStack {
-                                                VStack(alignment: .leading) {
-                                                    Text("Height")
-                                                        .font(.caption)
-                                                    Text(waypoint.swellHeightDisplay)
-                                                        .font(.subheadline)
-                                                }
-                                                
-                                                Spacer()
-                                                
-                                                VStack(alignment: .leading) {
-                                                    Text("Direction")
-                                                        .font(.caption)
-                                                    Text(waypoint.swellDirectionCardinal)
-                                                        .font(.subheadline)
-                                                }
-                                                
-                                                Spacer()
-                                                
-                                                VStack(alignment: .leading) {
-                                                    Text("Period")
-                                                        .font(.caption)
-                                                    Text("\(Int(waypoint.swellPeriod))s")
-                                                        .font(.subheadline)
-                                                }
-                                            }
-                                        }
-                                        .padding()
-                                        .background(Color.blue.opacity(0.1))
-                                        .cornerRadius(8)
-                                        
-                                        HStack {
-                                            // Course and wave directions
-                                            VStack(alignment: .leading, spacing: 5) {
-                                                Text("Course True: \(waypoint.courseDisplay)")
-                                                    .font(.caption)
-                                                Text("Wave True: \(waypoint.waveDisplay)")
-                                                    .font(.caption)
-                                                Text("Wave Relative: \(waypoint.relativeWaveDisplay)")
-                                                    .font(.caption)
-                                            }
-                                            .padding()
-                                            .background(Color.blue.opacity(0.1))
-                                            .cornerRadius(8)
-                                            
-                                            // Wave direction arrow
-                                            RelativeWaveDirectionView(waypoint: waypoint)
-                                                .frame(width: 100, height: 100)
-                                                .background(Color(UIColor.tertiarySystemBackground))
-                                                .cornerRadius(8)
-                                        }
-                                    }
-                                } else {
-                                    Text("Marine data not available")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                        .frame(maxWidth: .infinity, alignment: .center)
-                                        .padding(.vertical, 5)
-                                }
-                            }
-                            .padding()
-                            .background(Color(UIColor.secondarySystemBackground))
-                            .cornerRadius(10)
-                        }
-                        
-                        private func formatDate(_ date: Date) -> String {
-                            let formatter = DateFormatter()
-                            formatter.dateFormat = "MM/dd HH:mm"
-                            return formatter.string(from: date)
-                        }
+                        .font(.caption)
+                }
+                .padding(.vertical, 5)
+                
+                // Weather data
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text(waypoint.temperatureDisplay)
+                            .font(.headline)
+                        Text(waypoint.dewPointDisplay + " DP")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Text(waypoint.humidityDisplay + " RH")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
-
-                    struct MarineDataBox: View {
-                        let title: String
-                        let value1: String
-                        let value2: String
-                        let value3: String
+                    
+                    Spacer()
+                    
+                    VStack(alignment: .trailing, spacing: 5) {
+                        Text("Wind: " + waypoint.windSpeedDisplay)
+                            .font(.subheadline)
+                        Text("from " + waypoint.windDirection)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Text("Gusts: " + waypoint.windGustsDisplay)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .padding()
+                .background(Color.green.opacity(0.1))
+                .cornerRadius(8)
+            } else {
+                Text("Weather data not available")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 5)
+            }
+            
+            // Marine data
+            if waypoint.marineDataAvailable {
+                VStack(spacing: 10) {
+                    HStack {
+                        // Total Wave
+                        MarineDataBox(
+                            title: "Total Wave",
+                            value1: waypoint.waveHeightDisplay,
+                            value2: "From: \(waypoint.waveDirectionCardinal)",
+                            value3: "\(Int(waypoint.wavePeriod))s period"
+                        )
                         
-                        var body: some View {
-                            VStack(alignment: .leading, spacing: 5) {
-                                Text(title)
-                                    .font(.headline)
-                                
-                                Text(value1)
-                                    .font(.subheadline)
-                                
-                                Text(value2)
+                        // Wind Wave
+                        MarineDataBox(
+                            title: "Wind Wave",
+                            value1: waypoint.windWaveHeightDisplay,
+                            value2: "From: \(waypoint.windWaveDirectionCardinal)",
+                            value3: ""
+                        )
+                    }
+                    
+                    // Swell
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("Swell")
+                            .font(.headline)
+                        
+                        HStack {
+                            VStack(alignment: .leading) {
+                                Text("Height")
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
-                                
-                                if !value3.isEmpty {
-                                    Text(value3)
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
+                                Text(waypoint.swellHeightDisplay)
+                                    .font(.subheadline)
                             }
-                            .padding()
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(Color.blue.opacity(0.1))
+                            
+                            Spacer()
+                            
+                            VStack(alignment: .leading) {
+                                Text("Direction")
+                                    .font(.caption)
+                                Text(waypoint.swellDirectionCardinal)
+                                    .font(.subheadline)
+                            }
+                            
+                            Spacer()
+                            
+                            VStack(alignment: .leading) {
+                                Text("Period")
+                                    .font(.caption)
+                                Text("\(Int(waypoint.swellPeriod))s")
+                                    .font(.subheadline)
+                            }
+                        }
+                    }
+                    .padding()
+                    .background(Color.blue.opacity(0.1))
+                    .cornerRadius(8)
+                    
+                    HStack {
+                        // Course and wave directions
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text("Course True: \(waypoint.courseDisplay)")
+                                .font(.caption)
+                            Text("Wave True: \(waypoint.waveDisplay)")
+                                .font(.caption)
+                            Text("Wave Relative: \(waypoint.relativeWaveDisplay)")
+                                .font(.caption)
+                        }
+                        .padding()
+                        .background(Color.blue.opacity(0.1))
+                        .cornerRadius(8)
+                        
+                        // Wave direction arrow
+                        RelativeWaveDirectionView(waypoint: waypoint)
+                            .frame(width: 100, height: 100)
+                            .background(Color(UIColor.tertiarySystemBackground))
                             .cornerRadius(8)
-                        }
                     }
+                }
+            } else {
+                Text("Marine data not available")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 5)
+            }
+        }
+        .padding()
+        .background(Color(UIColor.secondarySystemBackground))
+        .cornerRadius(10)
+    }
+    
+    private func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MM/dd HH:mm"
+        return formatter.string(from: date)
+    }
+}
 
-                    struct RelativeWaveDirectionView: View {
-                        @ObservedObject var waypoint: WaypointItem
-                        
-                        var body: some View {
-                            ZStack {
-                                // Compass background
-                                Image("compasscard")
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fit)
-                                
-                                // Wave direction arrow
-                                Image(getWaveDirectionImage())
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fit)
-                                    .scaleEffect(0.8)
-                            }
-                        }
-                        
-                        private func getWaveDirectionImage() -> String {
-                            if waypoint.displayImageOne { return "wavefromzero" }
-                            else if waypoint.displayImageTwo { return "wavefromtwentytwofive" }
-                            else if waypoint.displayImageThree { return "wavefromfortyfive" }
-                            else if waypoint.displayImageFour { return "wavefromsixtysevenfive" }
-                            else if waypoint.displayImageFive { return "wavefromninety" }
-                            else if waypoint.displayImageSix { return "wavefromonetwelvepointfive" }
-                            else if waypoint.displayImageSeven { return "wavefromonethirtyfive" }
-                            else if waypoint.displayImageEight { return "wavefromeonefiftysevenfive" }
-                            else if waypoint.displayImageNine { return "wavefromoneeighty" }
-                            else if waypoint.displayImageTen { return "wavefromtwohundredtwofive" }
-                            else if waypoint.displayImageEleven { return "wavefromtwotwentyfive" }
-                            else if waypoint.displayImageTwelve { return "wavefromtwofortysevenfive" }
-                            else if waypoint.displayImageThirteen { return "wavefromtwoseventy" }
-                            else if waypoint.displayImageFourteen { return "wavefromtwoninetytwofive" }
-                            else if waypoint.displayImageFifteen { return "wavefromthreefifteen" }
-                            else if waypoint.displayImageSixteen { return "wavefromthreethirtysevenfive" }
-                            else { return "wavefromzero" } // Default
-                        }
-                    }
+struct MarineDataBox: View {
+    let title: String
+    let value1: String
+    let value2: String
+    let value3: String
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(title)
+                .font(.headline)
+            
+            Text(value1)
+                .font(.subheadline)
+            
+            Text(value2)
+                .font(.caption)
+                .foregroundColor(.secondary)
+            
+            if !value3.isEmpty {
+                Text(value3)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.blue.opacity(0.1))
+        .cornerRadius(8)
+    }
+}
+
+struct RelativeWaveDirectionView: View {
+    @ObservedObject var waypoint: WaypointItem
+    
+    var body: some View {
+        ZStack {
+            // Compass background
+            Image("compasscard")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+            
+            // Wave direction arrow
+            Image(getWaveDirectionImage())
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .scaleEffect(0.8)
+        }
+    }
+    
+    private func getWaveDirectionImage() -> String {
+        if waypoint.displayImageOne { return "wavefromzero" }
+        else if waypoint.displayImageTwo { return "wavefromtwentytwofive" }
+        else if waypoint.displayImageThree { return "wavefromfortyfive" }
+        else if waypoint.displayImageFour { return "wavefromsixtysevenfive" }
+        else if waypoint.displayImageFive { return "wavefromninety" }
+        else if waypoint.displayImageSix { return "wavefromonetwelvepointfive" }
+        else if waypoint.displayImageSeven { return "wavefromonethirtyfive" }
+        else if waypoint.displayImageEight { return "wavefromeonefiftysevenfive" }
+        else if waypoint.displayImageNine { return "wavefromoneeighty" }
+        else if waypoint.displayImageTen { return "wavefromtwohundredtwofive" }
+        else if waypoint.displayImageEleven { return "wavefromtwotwentyfive" }
+        else if waypoint.displayImageTwelve { return "wavefromtwofortysevenfive" }
+        else if waypoint.displayImageThirteen { return "wavefromtwoseventy" }
+        else if waypoint.displayImageFourteen { return "wavefromtwoninetytwofive" }
+        else if waypoint.displayImageFifteen { return "wavefromthreefifteen" }
+        else if waypoint.displayImageSixteen { return "wavefromthreethirtysevenfive" }
+        else { return "wavefromzero" } // Default
+    }
+}

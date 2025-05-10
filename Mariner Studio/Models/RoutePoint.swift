@@ -1,39 +1,23 @@
-//
-//  RoutePoint.swift
-//  Mariner Studio
-//
-//  Created by Timothy Russell on 5/10/25.
-//
-
+// Create a new file or add to an existing one:
+// Mariner Studio/Models/RoutePoint.swift
 
 import Foundation
-import Combine
 
-class RoutePoint: ObservableObject, Identifiable {
-    let id = UUID()
+struct RoutePoint: Equatable {
+    var name: String
+    var latitude: Double
+    var longitude: Double
+    var eta: Date = Date()
+    var distanceToNext: Double = 0.0
+    var bearingToNext: Double = 0.0
     
-    @Published var name: String
-    @Published var latitude: Double
-    @Published var longitude: Double
-    @Published var eta: Date
-    @Published var distanceToNext: Double
-    @Published var bearingToNext: Double
-    
-    init(name: String = "", latitude: Double = 0.0, longitude: Double = 0.0, 
-         eta: Date = Date(), distanceToNext: Double = 0.0, bearingToNext: Double = 0.0) {
-        self.name = name
-        self.latitude = latitude
-        self.longitude = longitude
-        self.eta = eta
-        self.distanceToNext = distanceToNext
-        self.bearingToNext = bearingToNext
-    }
-    
-    var coordinates: String {
-        return "\(String(format: "%.6f", latitude))°, \(String(format: "%.6f", longitude))°"
-    }
-    
-    var courseDisplay: String {
-        return "\(String(format: "%.0f", bearingToNext))°"
+    // Implementation of Equatable
+    static func == (lhs: RoutePoint, rhs: RoutePoint) -> Bool {
+        return lhs.name == rhs.name &&
+               lhs.latitude == rhs.latitude &&
+               lhs.longitude == rhs.longitude &&
+               lhs.eta == rhs.eta &&
+               lhs.distanceToNext == rhs.distanceToNext &&
+               lhs.bearingToNext == rhs.bearingToNext
     }
 }

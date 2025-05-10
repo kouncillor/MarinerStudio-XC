@@ -1,10 +1,3 @@
-//
-//  GpxViewModel.swift
-//  Mariner Studio
-//
-//  Created by Timothy Russell on 5/10/25.
-//
-
 
 import Foundation
 import CoreLocation
@@ -53,8 +46,8 @@ class GpxViewModel: ObservableObject {
         clearRoute()
         
         do {
-            // Present document picker
-            let url = try await presentDocumentPicker(fileTypes: ["org.topografix.gpx"])
+            // Present document picker with updated file types
+            let url = try await presentDocumentPicker(fileTypes: ["com.topografix.gpx", "public.xml"])
             
             // Load GPX file
             let gpxFile = try await gpxService.loadGpxFile(from: url)
@@ -145,7 +138,7 @@ class GpxViewModel: ObservableObject {
         // Convert RoutePoints to GpxRoutePoints for the navigation
         let gpxRoutePoints = routePoints.map { point -> GpxRoutePoint in
             var gpxPoint = GpxRoutePoint(
-                latitude: point.latitude, 
+                latitude: point.latitude,
                 longitude: point.longitude,
                 name: point.name
             )
@@ -233,7 +226,7 @@ class DocumentPickerDelegate: NSObject, UIDocumentPickerDelegate {
     
     func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
         guard let url = urls.first else {
-            completion(.failure(NSError(domain: "com.marinerstudio", code: 404, 
+            completion(.failure(NSError(domain: "com.marinerstudio", code: 404,
                                userInfo: [NSLocalizedDescriptionKey: "No document selected"])))
             return
         }
@@ -250,7 +243,7 @@ class DocumentPickerDelegate: NSObject, UIDocumentPickerDelegate {
     }
     
     func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
-        completion(.failure(NSError(domain: "com.marinerstudio", code: 401, 
+        completion(.failure(NSError(domain: "com.marinerstudio", code: 401,
                            userInfo: [NSLocalizedDescriptionKey: "Document picker was cancelled"])))
     }
 }
