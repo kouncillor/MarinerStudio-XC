@@ -67,11 +67,18 @@ struct MainView: View {
                     }
 
                     // BUOYS
-                    NavigationButton(
-                        icon: "buoysixseven",
-                        title: "BUOYS",
-                        action: { print("Buoys tapped") }
-                    )
+                    NavigationLink {
+                        BuoyStationsView(
+                            buoyService: BuoyServiceImpl(),
+                            locationService: serviceProvider.locationService,
+                            buoyDatabaseService: serviceProvider.buoyService
+                        )
+                    } label: {
+                        NavigationButtonContent(
+                            icon: "buoysixseven",
+                            title: "BUOYS"
+                        )
+                    }
 
                     // TUGS
                     NavigationButton(
