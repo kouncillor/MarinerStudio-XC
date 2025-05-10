@@ -100,8 +100,56 @@ struct MainView: View {
                         )
                     }
 
-                    // ROUTE
-                    RouteButton(action: { print("Route tapped") })
+                    
+                    // Update just the Route button action in MainView.swift
+
+                    RouteButton(action: {
+                        // Create GpxViewModel with dependencies
+                        let gpxService = GpxServiceImpl()
+                        let routeCalculationService = RouteCalculationServiceImpl()
+                        
+                        // Create navigation closure
+                        let navigationClosure = { (parameters: [String: Any]) in
+                            guard let route = parameters["route"] as? GpxRoute,
+                                  let averageSpeed = parameters["averageSpeed"] as? String else {
+                                return
+                            }
+                            
+                            // Create RouteDetailsViewModel with the passed parameters
+                            let routeDetailsViewModel = RouteDetailsViewModel(
+                                weatherService: serviceProvider.openMeteoService,
+                                routeCalculationService: routeCalculationService
+                            )
+                            
+                            // Apply the route data to the view model
+                            routeDetailsViewModel.applyRouteData(route, averageSpeed: averageSpeed)
+                            
+                            // Navigate to the RouteDetailsView with the configured ViewModel
+                            NavigationLink(destination: RouteDetailsView(viewModel: routeDetailsViewModel)) {
+                                EmptyView()
+                            }
+                            .hidden()
+                            .frame(width: 0, height: 0)
+                        }
+                        
+                        let gpxViewModel = GpxViewModel(
+                            gpxService: gpxService,
+                            routeCalculationService: routeCalculationService,
+                            navigationService: navigationClosure
+                        )
+                        
+                        // Navigate to GpxView
+                        NavigationLink(destination: GpxView(viewModel: gpxViewModel)) {
+                            EmptyView()
+                        }
+                        .hidden()
+                        .frame(width: 0, height: 0)
+                    })
+                    
+                    
+                    
+                    
+                    
                 }
                 .padding()
             }
