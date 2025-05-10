@@ -1,10 +1,3 @@
-//
-//  GpxView.swift
-//  Mariner Studio
-//
-//  Created by Timothy Russell on 5/10/25.
-//
-
 
 import SwiftUI
 import MapKit
@@ -17,68 +10,72 @@ struct GpxView: View {
     
     var body: some View {
         GeometryReader { geometry in
-            VStack(spacing: 0) {
-                // Top Section
-                ScrollView {
-                    VStack(spacing: 10) {
-                        // Open GPX Button - Hides after file is loaded
+            ScrollView {
+                VStack(spacing: 10) {
+                    // Route Name
+                    if !viewModel.routeName.isEmpty {
+                        Text(viewModel.routeName)
+                            .font(.title)
+                            .fontWeight(.bold)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
+                    }
+                    
+                    // Route Direction Control - Only visible when route is loaded
+                    if viewModel.hasRoute {
+                        HStack {
+                            Text("Route Direction")
+                                .font(.headline)
+                            
+                            Spacer()
+                            
+                            Button(action: {
+                                viewModel.reverseRoute()
+                            }) {
+                                Text(viewModel.directionButtonText)
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .background(Color.blue)
+                                    .cornerRadius(8)
+                            }
+                        }
+                        .padding()
+                        .background(Color(UIColor.systemBackground))
+                        .cornerRadius(10)
+                        .shadow(radius: 2)
+                        .padding(.horizontal)
+                    }
+                    
+                    // Route Planning Form
+                    VStack(spacing: 15) {
+                        Text("Route Planning")
+                            .font(.headline)
+                            .padding(.top, 5)
+                        
                         if !viewModel.hasRoute {
+                            // Open GPX Button
                             Button(action: {
                                 Task {
                                     await viewModel.openGpxFile()
                                 }
                             }) {
-                                Text("Open GPX File")
-                                    .font(.headline)
-                                    .foregroundColor(.white)
-                                    .padding()
-                                    .background(Color.blue)
-                                    .cornerRadius(10)
-                            }
-                            .padding(.vertical)
-                        }
-                        
-                        // Route Name
-                        if !viewModel.routeName.isEmpty {
-                            Text(viewModel.routeName)
-                                .font(.title)
-                                .fontWeight(.bold)
-                                .multilineTextAlignment(.center)
-                                .padding(.horizontal)
-                        }
-                        
-                        // Route Direction Control - Only visible when route is loaded
-                        if viewModel.hasRoute {
-                            HStack {
-                                Text("Route Direction")
-                                    .font(.headline)
-                                
-                                Spacer()
-                                
-                                Button(action: {
-                                    viewModel.reverseRoute()
-                                }) {
-                                    Text(viewModel.directionButtonText)
-                                        .foregroundColor(.white)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 8)
-                                        .background(Color.blue)
-                                        .cornerRadius(8)
+                                HStack {
+                                    Image(systemName: "doc")
+                                        .imageScale(.large)
+                                    Text("Open GPX File")
+                                        .font(.headline)
                                 }
+                                .foregroundColor(.white)
+                                .padding()
+                                .frame(maxWidth: .infinity)
+                                .background(Color.blue)
+                                .cornerRadius(8)
                             }
-                            .padding()
-                            .background(Color(UIColor.systemBackground))
-                            .cornerRadius(10)
-                            .shadow(radius: 2)
                             .padding(.horizontal)
-                        }
-                        
-                        // Route Planning Form
-                        VStack(spacing: 15) {
-                            Text("Route Planning")
-                                .font(.headline)
-                                .padding(.top, 5)
-                            
+                            .padding(.bottom, 5)
+                        } else {
+                            // Route planning controls
                             VStack(spacing: 10) {
                                 HStack {
                                     VStack(alignment: .leading, spacing: 5) {
@@ -87,7 +84,6 @@ struct GpxView: View {
                                         
                                         DatePicker("", selection: $viewModel.startDate, displayedComponents: .date)
                                             .labelsHidden()
-                                            .disabled(!viewModel.hasRoute)
                                     }
                                     
                                     Spacer()
@@ -99,7 +95,6 @@ struct GpxView: View {
                                         TextField("10", text: $viewModel.averageSpeed)
                                             .keyboardType(.decimalPad)
                                             .textFieldStyle(RoundedBorderTextFieldStyle())
-                                            .disabled(!viewModel.hasRoute)
                                     }
                                 }
                                 
@@ -110,7 +105,6 @@ struct GpxView: View {
                                         
                                         DatePicker("", selection: $viewModel.startTime, displayedComponents: .hourAndMinute)
                                             .labelsHidden()
-                                            .disabled(!viewModel.hasRoute)
                                     }
                                     
                                     Spacer()
@@ -146,34 +140,44 @@ struct GpxView: View {
                             }
                             .padding()
                         }
-                        .padding()
-                        .background(Color(UIColor.secondarySystemBackground))
-                        .cornerRadius(10)
-                        .shadow(radius: 2)
-                        .padding(.horizontal)
-                        
-                        // Status Messages
-                        if !viewModel.errorMessage.isEmpty {
-                            Text(viewModel.errorMessage)
-                                .foregroundColor(.red)
-                                .padding()
-                        }
-                        
-                        if viewModel.isLoading {
-                            ProgressView()
-                                .padding()
-                        }
                     }
+                    .padding()
+                    .background(Color(UIColor.secondarySystemBackground))
+                    .cornerRadius(10)
+                    .shadow(radius: 2)
+                    .padding(.horizontal)
+                    
+                    // Status Messages
+                    if !viewModel.errorMessage.isEmpty {
+                        Text(viewModel.errorMessage)
+                            .foregroundColor(.red)
+                            .padding()
+                    }
+                    
+                    if viewModel.isLoading {
+                        ProgressView()
+                            .padding()
+                    }
+                    
+                    // Map in a card
+                    VStack {
+                        Text("Route Map")
+                            .font(.headline)
+                            .padding(.top, 10)
+                        
+                        MapView(region: $mapRegion, polyline: $polyline, annotations: $annotations)
+                            .frame(height: geometry.size.height * 0.55)
+                            .cornerRadius(8)
+                            .padding(.horizontal, 10)
+                            .padding(.bottom, 10)
+                    }
+                    .background(Color(UIColor.secondarySystemBackground))
+                    .cornerRadius(10)
+                    .shadow(radius: 2)
+                    .padding(.horizontal)
                     .padding(.bottom, 10)
                 }
-                .frame(height: geometry.size.height * 0.4)
-                
-                // Map
-                MapView(region: $mapRegion, polyline: $polyline, annotations: $annotations)
-                    .frame(height: geometry.size.height * 0.6)
-                    .ignoresSafeArea(edges: .bottom)
             }
-            .navigationTitle("GPX Route Planner")
             .onAppear {
                 setupLocationPermission()
             }
