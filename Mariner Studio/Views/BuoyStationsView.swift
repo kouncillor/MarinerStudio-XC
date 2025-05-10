@@ -1,11 +1,3 @@
-//
-//  BuoyStationsView.swift
-//  Mariner Studio
-//
-//  Created by Timothy Russell on 5/10/25.
-//
-
-
 import SwiftUI
 
 struct BuoyStationsView: View {
@@ -117,9 +109,9 @@ struct BuoyStationsView: View {
     private var stationsList: some View {
         List {
             ForEach(viewModel.stations) { stationWithDistance in
-                NavigationLink(destination: BuoyDetailView(
-                    stationId: stationWithDistance.station.id,
-                    stationName: stationWithDistance.station.name
+                NavigationLink(destination: BuoyStationWebView(
+                    station: stationWithDistance.station,
+                    buoyDatabaseService: viewModel.buoyDatabaseService
                 )) {
                     BuoyStationRow(
                         stationWithDistance: stationWithDistance,
@@ -190,26 +182,5 @@ struct BuoyStationRow: View {
             }
         }
         .padding(.vertical, 5)
-    }
-}
-
-// Placeholder for BuoyDetailView - to be implemented later
-struct BuoyDetailView: View {
-    let stationId: String
-    let stationName: String
-    
-    var body: some View {
-        VStack {
-            Text("Buoy Details: \(stationName)")
-                .font(.headline)
-            Text("Station ID: \(stationId)")
-                .font(.subheadline)
-            Text("Detailed information will be implemented in future updates")
-                .padding()
-                .multilineTextAlignment(.center)
-            Spacer()
-        }
-        .padding()
-        .navigationTitle(stationName)
     }
 }
