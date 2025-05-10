@@ -5,17 +5,28 @@ import SQLite
 
 class VesselDatabaseService {
     // MARK: - Table Definitions
-    private let tugs = Table("Tug")
-    private let tugNotes = Table("TugNote")
-    private let tugChangeRecommendations = Table("TugChangeRecommendation")
-    private let barges = Table("Barge")
+    private let tugs = Table("TUGS")
+    private let tugNotes = Table("TugNotes")
+    private let tugChangeRecommendations = Table("TugChangeRecommendations")
+    private let barges = Table("BARGES")
     
-    // MARK: - Column Definitions - Common
+    // MARK: - Column Definitions - Common for notes/recommendations
     private let colId = Expression<Int>("Id")
-    private let colVesselId = Expression<String>("VesselId")
-    private let colVesselName = Expression<String>("VesselName")
+    private let colVesselId = Expression<String>("VesselId")  // Used in notes/recommendations tables
     private let colCreatedAt = Expression<Date>("CreatedAt")
     private let colModifiedAt = Expression<Date?>("ModifiedAt")
+    
+    // MARK: - Column Definitions - TUGS table
+    private let colTugId = Expression<String>("TUG_ID")
+    private let colVesselName = Expression<String>("VS_NAME")
+    private let colVesselNumber = Expression<String?>("VS_NUMBER")
+    private let colCgNumber = Expression<String?>("CG_NUMBER")
+    private let colHorsepower = Expression<String?>("HP")
+    private let colState = Expression<String?>("STATE")
+    private let colBasePort1 = Expression<String?>("BASE1")
+    private let colBasePort2 = Expression<String?>("BASE2")
+    private let colOperator = Expression<String?>("TS_OPER")
+    private let colOverallLength = Expression<String?>("OVER_LNGTH")
     
     // MARK: - Column Definitions - Notes
     private let colNoteText = Expression<String>("NoteText")
@@ -34,25 +45,32 @@ class VesselDatabaseService {
     
     // MARK: - Tug Methods
     
-    // Get all tugs
+    // Get all tugs - Updated to use correct column names
     func getTugsAsync() async throws -> [Tug] {
         do {
             let db = try databaseCore.ensureConnection()
             
+            print("📊 VesselDatabaseService: Fetching tugs from database")
+            
             let query = tugs.order(colVesselName.asc)
+            print("📊 VesselDatabaseService: Executing query on TUGS table")
+            
             var results: [Tug] = []
             
             for row in try db.prepare(query) {
+                // Create an enhanced Tug model with additional properties
                 let tug = Tug(
-                    tugId: row[colVesselId],
+                    tugId: row[colTugId],
                     vesselName: row[colVesselName]
                 )
                 results.append(tug)
             }
             
+            print("📊 VesselDatabaseService: Successfully fetched \(results.count) tugs")
             return results
         } catch {
             print("Error fetching tugs: \(error.localizedDescription)")
+            print("Error details: \(error)")
             throw error
         }
     }

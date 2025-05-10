@@ -80,12 +80,16 @@ struct MainView: View {
                         )
                     }
 
-                    // TUGS
-                    NavigationButton(
-                        icon: "tugboatsixseven",
-                        title: "TUGS",
-                        action: { print("Tugs tapped") }
-                    )
+                    
+                    //TUGS
+                    NavigationLink(destination: TugsView(
+                        vesselService: serviceProvider.vesselService
+                    )) {
+                        NavigationButtonContent(
+                            icon: "tugboatsixseven",
+                            title: "TUGS"
+                        )
+                    }
 
                     // BARGES
                     NavigationButton(
