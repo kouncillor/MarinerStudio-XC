@@ -325,7 +325,12 @@ class VesselDatabaseService {
 
     // MARK: - Barge Methods
 
-    // Get all barges
+     
+    
+    
+    
+    // getBargesAsync() method:
+
     func getBargesAsync() async throws -> [Barge] {
         do {
             let db = try databaseCore.ensureConnection()
@@ -338,10 +343,11 @@ class VesselDatabaseService {
             var results: [Barge] = []
             
             for row in try db.prepare(query) {
-                // Create a basic Barge model with minimal properties
+                // Update to include vesselNumber
                 let barge = Barge(
                     bargeId: row[colBargeId],
-                    vesselName: row[colBargeVesselName]
+                    vesselName: row[colBargeVesselName],
+                    vesselNumber: row[colBargeVesselNumber]
                 )
                 results.append(barge)
             }
@@ -354,6 +360,12 @@ class VesselDatabaseService {
             throw error
         }
     }
+    
+    
+    
+    
+    
+    
 
     // Get detailed information for a single barge
     func getBargeDetailsAsync(bargeId: String) async throws -> Barge? {

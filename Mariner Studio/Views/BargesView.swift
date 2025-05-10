@@ -109,9 +109,18 @@ struct BargesView: View {
 struct BargeRow: View {
     let barge: Barge
     
+    // Computed property to format the vessel name with number
+    var formattedVesselName: String {
+        if let vesselNumber = barge.vesselNumber, !vesselNumber.isEmpty {
+            return "\(barge.vesselName)-\(vesselNumber)"
+        } else {
+            return barge.vesselName
+        }
+    }
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
-            Text(barge.vesselName)
+            Text(formattedVesselName)
                 .font(.headline)
             
             Text("Barge ID: \(barge.bargeId)")

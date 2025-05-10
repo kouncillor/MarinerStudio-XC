@@ -46,11 +46,12 @@ class BargesViewModel: ObservableObject {
             let response = try await vesselService.getBargesAsync()
             print("⏰ BargesViewModel: Finished database call for barges at \(Date()). Count: \(response.count)")
             
-            // For now, we'll just use the bargeId and vesselName
+            // Update mapping to include vesselNumber
             let mappedBarges = response.map { databaseBarge -> Barge in
                 return Barge(
                     bargeId: databaseBarge.bargeId,
-                    vesselName: databaseBarge.vesselName
+                    vesselName: databaseBarge.vesselName,
+                    vesselNumber: databaseBarge.vesselNumber
                 )
             }
             
@@ -88,7 +89,8 @@ class BargesViewModel: ObservableObject {
         let filtered = allBarges.filter { barge in
             searchText.isEmpty ||
             barge.vesselName.localizedCaseInsensitiveContains(searchText) ||
-            barge.bargeId.localizedCaseInsensitiveContains(searchText)
+            barge.bargeId.localizedCaseInsensitiveContains(searchText) ||
+            (barge.vesselNumber?.localizedCaseInsensitiveContains(searchText) ?? false)
         }
         
         let sorted = filtered.sorted { first, second in
