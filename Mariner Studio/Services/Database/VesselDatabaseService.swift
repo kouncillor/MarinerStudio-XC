@@ -45,6 +45,73 @@ class VesselDatabaseService {
     
     // MARK: - Tug Methods
     
+    // Add this method to VesselDatabaseService.swift
+
+    func getTugDetailsAsync(tugId: String) async throws -> Tug? {
+        do {
+            let db = try databaseCore.ensureConnection()
+            
+            print("📊 VesselDatabaseService: Fetching details for tug \(tugId)")
+            
+            let query = tugs.filter(colTugId == tugId)
+            
+            // Attempt to get the single row for this tug
+            if let row = try db.pluck(query) {
+                // Create a full Tug model with all available properties
+                let tug = Tug(
+                    tugId: row[colTugId],
+                    vesselName: row[colVesselName],
+                    vesselNumber: row[colVesselNumber],
+                    cgNumber: row[colCgNumber],
+                    vtcc: nil, // Add this column if it exists in your database
+                    icst: nil, // Add this column if it exists in your database
+                    nrt: nil, // Add this column if it exists in your database
+                    horsepower: row[colHorsepower],
+                    registeredLength: nil, // Add this column if it exists in your database
+                    overallLength: row[colOverallLength],
+                    registeredBreadth: nil, // Add this column if it exists in your database
+                    overallBreadth: nil, // Add this column if it exists in your database
+                    hfp: nil, // Add this column if it exists in your database
+                    capacityRef: nil, // Add this column if it exists in your database
+                    passengerCapacity: nil, // Add this column if it exists in your database
+                    tonnageCapacity: nil, // Add this column if it exists in your database
+                    year: nil, // Add this column if it exists in your database
+                    rebuilt: nil, // Add this column if it exists in your database
+                    yearRebuilt: nil, // Add this column if it exists in your database
+                    vesselYear: nil, // Add this column if it exists in your database
+                    loadDraft: nil, // Add this column if it exists in your database
+                    lightDraft: nil, // Add this column if it exists in your database
+                    equipment1: nil, // Add this column if it exists in your database
+                    equipment2: nil, // Add this column if it exists in your database
+                    state: row[colState],
+                    basePort1: row[colBasePort1],
+                    basePort2: row[colBasePort2],
+                    region: nil, // Add this column if it exists in your database
+                    operator_: row[colOperator],
+                    fleetYear: nil // Add this column if it exists in your database
+                )
+                
+                print("📊 VesselDatabaseService: Successfully fetched details for tug \(tugId)")
+                return tug
+            } else {
+                print("📊 VesselDatabaseService: No tug found with ID \(tugId)")
+                return nil
+            }
+        } catch {
+            print("Error fetching tug details: \(error.localizedDescription)")
+            print("Error details: \(error)")
+            throw error
+        }
+    }
+    
+    
+    
+    
+    
+    
+    
+    
+    
     // Get all tugs - Updated to use correct column names
     func getTugsAsync() async throws -> [Tug] {
         do {

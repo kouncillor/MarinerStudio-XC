@@ -1,9 +1,3 @@
-//
-//  TugsViewModel.swift
-//  Mariner Studio
-//
-//  Created by Timothy Russell on 5/10/25.
-//
 
 
 import Foundation
@@ -46,8 +40,16 @@ class TugsViewModel: ObservableObject {
             let response = try await vesselService.getTugsAsync()
             print("⏰ TugsViewModel: Finished database call for tugs at \(Date()). Count: \(response.count)")
             
+            // For now, we'll just use the tugId and vesselName
+            let mappedTugs = response.map { databaseTug -> Tug in
+                return Tug(
+                    tugId: databaseTug.tugId,
+                    vesselName: databaseTug.vesselName
+                )
+            }
+            
             await MainActor.run {
-                allTugs = response
+                allTugs = mappedTugs
                 filterTugs()
                 isLoading = false
                 print("⏰ TugsViewModel: UI state update complete at \(Date())")
