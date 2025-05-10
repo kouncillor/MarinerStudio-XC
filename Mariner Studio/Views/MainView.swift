@@ -91,12 +91,14 @@ struct MainView: View {
                         )
                     }
 
-                    // BARGES
-                    NavigationButton(
-                        icon: "bargesixseventwo",
-                        title: "BARGES",
-                        action: { print("Barges tapped") }
-                    )
+                    NavigationLink(destination: BargesView(
+                        vesselService: serviceProvider.vesselService
+                    )) {
+                        NavigationButtonContent(
+                            icon: "bargesixseventwo",
+                            title: "BARGES"
+                        )
+                    }
 
                     // ROUTE
                     RouteButton(action: { print("Route tapped") })

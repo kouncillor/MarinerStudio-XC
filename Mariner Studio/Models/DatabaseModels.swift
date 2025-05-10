@@ -19,11 +19,11 @@ struct TidalCurrentStationFavorite {
 //    let vesselName: String
 //}
 
-struct Barge: Identifiable {
-    let id = UUID()
-    let bargeId: String
-    let vesselName: String
-}
+//struct Barge: Identifiable {
+//    let id = UUID()
+//    let bargeId: String
+//    let vesselName: String
+//}
 
 struct PersonalNote: Identifiable {
     let id: Int

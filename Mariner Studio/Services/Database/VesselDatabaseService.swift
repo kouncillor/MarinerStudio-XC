@@ -286,29 +286,131 @@ class VesselDatabaseService {
             throw error
         }
     }
-    
+
+
     // MARK: - Barge Methods
-    
+
+    // Add these column definitions to VesselDatabaseService.swift
+    // MARK: - Column Definitions - BARGES table
+    private let colBargeId = Expression<String>("BARGE_ID")
+    private let colBargeVesselName = Expression<String>("VS_NAME")
+    private let colBargeVesselNumber = Expression<String?>("VS_NUMBER")
+    private let colBargeCgNumber = Expression<String?>("CG_NUMBER")
+    private let colBargeVtcc = Expression<String?>("VTCC")
+    private let colBargeIcst = Expression<String?>("ICST")
+    private let colBargeNrt = Expression<String?>("NRT")
+    private let colBargeHorsepower = Expression<String?>("HP")
+    private let colBargeRegLength = Expression<String?>("REG_LNGTH")
+    private let colBargeOverLength = Expression<String?>("OVER_LNGTH")
+    private let colBargeRegBreadth = Expression<String?>("REG_BRDTH")
+    private let colBargeOverBreadth = Expression<String?>("OVER_BRDTH")
+    private let colBargeHfp = Expression<String?>("HFP")
+    private let colBargeCapRef = Expression<String?>("CAP_REF")
+    private let colBargeCapPass = Expression<String?>("CAP_PASS")
+    private let colBargeCapTons = Expression<String?>("CAP_TONS")
+    private let colBargeYear = Expression<String?>("YEAR")
+    private let colBargeReblt = Expression<String?>("REBLT")
+    private let colBargeYearRebuilt = Expression<String?>("YEAR_REBUILT")
+    private let colBargeYearVessel = Expression<String?>("YEAR_VESSEL")
+    private let colBargeLoadDraft = Expression<String?>("LOAD_DRAFT")
+    private let colBargeLightDraft = Expression<String?>("LIGHT_DRAFT")
+    private let colBargeEquip1 = Expression<String?>("EQUP1")
+    private let colBargeEquip2 = Expression<String?>("EQUIP2")
+    private let colBargeState = Expression<String?>("STATE")
+    private let colBargeBase1 = Expression<String?>("BASE1")
+    private let colBargeBase2 = Expression<String?>("BASE2")
+    private let colBargeRegion = Expression<String?>("REGION")
+    private let colBargeOperator = Expression<String?>("TS_OPER")
+    private let colBargeFleetYear = Expression<String?>("FL_YR")
+
+    // MARK: - Barge Methods
+
     // Get all barges
     func getBargesAsync() async throws -> [Barge] {
         do {
             let db = try databaseCore.ensureConnection()
             
-            let query = barges.order(colVesselName.asc)
+            print("📊 VesselDatabaseService: Fetching barges from database")
+            
+            let query = barges.order(colBargeVesselName.asc)
+            print("📊 VesselDatabaseService: Executing query on BARGES table")
+            
             var results: [Barge] = []
             
             for row in try db.prepare(query) {
+                // Create a basic Barge model with minimal properties
                 let barge = Barge(
-                    bargeId: row[colVesselId],
-                    vesselName: row[colVesselName]
+                    bargeId: row[colBargeId],
+                    vesselName: row[colBargeVesselName]
                 )
                 results.append(barge)
             }
             
+            print("📊 VesselDatabaseService: Successfully fetched \(results.count) barges")
             return results
         } catch {
             print("Error fetching barges: \(error.localizedDescription)")
+            print("Error details: \(error)")
             throw error
         }
     }
+
+    // Get detailed information for a single barge
+    func getBargeDetailsAsync(bargeId: String) async throws -> Barge? {
+        do {
+            let db = try databaseCore.ensureConnection()
+            
+            print("📊 VesselDatabaseService: Fetching details for barge \(bargeId)")
+            
+            let query = barges.filter(colBargeId == bargeId)
+            
+            // Attempt to get the single row for this barge
+            if let row = try db.pluck(query) {
+                // Create a full Barge model with all available properties
+                let barge = Barge(
+                    bargeId: row[colBargeId],
+                    vesselName: row[colBargeVesselName],
+                    vesselNumber: row[colBargeVesselNumber],
+                    cgNumber: row[colBargeCgNumber],
+                    vtcc: row[colBargeVtcc],
+                    icst: row[colBargeIcst],
+                    nrt: row[colBargeNrt],
+                    horsepower: row[colBargeHorsepower],
+                    registeredLength: row[colBargeRegLength],
+                    overallLength: row[colBargeOverLength],
+                    registeredBreadth: row[colBargeRegBreadth],
+                    overallBreadth: row[colBargeOverBreadth],
+                    hfp: row[colBargeHfp],
+                    capacityRef: row[colBargeCapRef],
+                    passengerCapacity: row[colBargeCapPass],
+                    tonnageCapacity: row[colBargeCapTons],
+                    year: row[colBargeYear],
+                    rebuilt: row[colBargeReblt],
+                    yearRebuilt: row[colBargeYearRebuilt],
+                    vesselYear: row[colBargeYearVessel],
+                    loadDraft: row[colBargeLoadDraft],
+                    lightDraft: row[colBargeLightDraft],
+                    equipment1: row[colBargeEquip1],
+                    equipment2: row[colBargeEquip2],
+                    state: row[colBargeState],
+                    basePort1: row[colBargeBase1],
+                    basePort2: row[colBargeBase2],
+                    region: row[colBargeRegion],
+                    operator_: row[colBargeOperator],
+                    fleetYear: row[colBargeFleetYear]
+                )
+                
+                print("📊 VesselDatabaseService: Successfully fetched details for barge \(bargeId)")
+                return barge
+            } else {
+                print("📊 VesselDatabaseService: No barge found with ID \(bargeId)")
+                return nil
+            }
+        } catch {
+            print("Error fetching barge details: \(error.localizedDescription)")
+            print("Error details: \(error)")
+            throw error
+        }
+    }
+    
 }
