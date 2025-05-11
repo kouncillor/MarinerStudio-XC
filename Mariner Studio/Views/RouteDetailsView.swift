@@ -1,9 +1,3 @@
-//
-//  RouteDetailsView.swift
-//  Mariner Studio
-//
-//  Created by Timothy Russell on 5/10/25.
-//
 
 
 import SwiftUI
@@ -221,10 +215,7 @@ struct WaypointView: View {
                     .foregroundColor(.blue)
             }
             
-            // Coordinates
-            Text(waypoint.coordinates)
-                .font(.caption)
-                .foregroundColor(.secondary)
+
             
             // Weather condition
             if waypoint.weatherDataAvailable {
@@ -285,33 +276,34 @@ struct WaypointView: View {
             if waypoint.marineDataAvailable {
                 VStack(spacing: 10) {
                     HStack {
-                        // Total Wave
+                        // Swell - Now placed side by side with Wind Wave
                         MarineDataBox(
-                            title: "Total Wave",
-                            value1: waypoint.waveHeightDisplay,
-                            value2: "From: \(waypoint.waveDirectionCardinal)",
-                            value3: "\(Int(waypoint.wavePeriod))s period"
+                            title: "Swell",
+                            value1: waypoint.swellHeightDisplay,
+                            value2: "From: \(waypoint.swellDirectionCardinal)",
+                            value3: "\(Int(waypoint.swellPeriod))s period"
+                        
                         )
                         
-                        // Wind Wave
+                        // Wind Wave - Now placed side by side with Swell
                         MarineDataBox(
                             title: "Wind Wave",
                             value1: waypoint.windWaveHeightDisplay,
                             value2: "From: \(waypoint.windWaveDirectionCardinal)",
-                            value3: ""
+                            value3: "."
                         )
                     }
                     
-                    // Swell
+                    // Total Wave - Now placed below Swell and Wind Wave
                     VStack(alignment: .leading, spacing: 5) {
-                        Text("Swell")
+                        Text("Total Wave")
                             .font(.headline)
                         
                         HStack {
                             VStack(alignment: .leading) {
                                 Text("Height")
                                     .font(.caption)
-                                Text(waypoint.swellHeightDisplay)
+                                Text(waypoint.waveHeightDisplay)
                                     .font(.subheadline)
                             }
                             
@@ -320,7 +312,7 @@ struct WaypointView: View {
                             VStack(alignment: .leading) {
                                 Text("Direction")
                                     .font(.caption)
-                                Text(waypoint.swellDirectionCardinal)
+                                Text(waypoint.waveDirectionCardinal)
                                     .font(.subheadline)
                             }
                             
@@ -329,7 +321,7 @@ struct WaypointView: View {
                             VStack(alignment: .leading) {
                                 Text("Period")
                                     .font(.caption)
-                                Text("\(Int(waypoint.swellPeriod))s")
+                                Text("\(Int(waypoint.wavePeriod))s")
                                     .font(.subheadline)
                             }
                         }
@@ -337,18 +329,6 @@ struct WaypointView: View {
                     .padding()
                     .background(Color.blue.opacity(0.1))
                     .cornerRadius(8)
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
                     
                     // Modified HStack to use all available space
                     HStack(spacing: 10) {
@@ -362,7 +342,7 @@ struct WaypointView: View {
                                 .font(.caption)
                         }
                         .padding()
-                        .background(Color.green.opacity(0.1))
+                        .background(Color.orange.opacity(0.8))
                         .cornerRadius(8)
                         .frame(minWidth: 0, maxWidth: .infinity)  // Take up available width
                         .aspectRatio(1, contentMode: .fit)  // Make height proportional to width
@@ -375,24 +355,6 @@ struct WaypointView: View {
                             .aspectRatio(1, contentMode: .fit)  // Make height proportional to width
                     }
                     .frame(maxWidth: .infinity)  // Make the HStack use all available width
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-             
-                    
-                    
-                    
-                    
-                    
-                    
-                    
                 }
             } else {
                 Text("Marine data not available")

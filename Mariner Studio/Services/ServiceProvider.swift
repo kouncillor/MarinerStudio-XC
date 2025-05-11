@@ -20,6 +20,7 @@ class ServiceProvider: ObservableObject {
     // MARK: - Weather Services
     let openMeteoService: WeatherService
     let geocodingService: GeocodingService
+    let currentLocalWeatherService: CurrentLocalWeatherService
     
     // MARK: - Added Services for Nav Unit Details
     let navUnitFtpService: NavUnitFtpService
@@ -56,6 +57,7 @@ class ServiceProvider: ObservableObject {
         // --- Initialize Weather Services ---
         self.openMeteoService = WeatherServiceImpl()
         self.geocodingService = GeocodingServiceImpl()
+        self.currentLocalWeatherService = CurrentLocalWeatherServiceImpl()
         print("📦 ServiceProvider: Initialized weather services.")
         
         // --- Initialize Added Services ---

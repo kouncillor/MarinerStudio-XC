@@ -1,8 +1,16 @@
+//
+//  CurrentLocalWeatherView.swift
+//  Mariner Studio
+//
+//  Created by Timothy Russell on 5/11/25.
+//
+
+
 import SwiftUI
 import CoreLocation
 
 struct CurrentLocalWeatherView: View {
-    @StateObject private var viewModel = WeatherViewModel()
+    @StateObject private var viewModel = CurrentLocalWeatherViewModel()
     @EnvironmentObject var serviceProvider: ServiceProvider
     @Environment(\.colorScheme) var colorScheme
     
@@ -101,7 +109,7 @@ struct CurrentLocalWeatherView: View {
         .onAppear {
             // Initialize with services from the provider
             viewModel.initialize(
-                weatherService: serviceProvider.openMeteoService,
+                currentLocalWeatherService: serviceProvider.currentLocalWeatherService,
                 geocodingService: serviceProvider.geocodingService,
                 locationService: serviceProvider.locationService,
                 databaseService: serviceProvider.weatherService
