@@ -12,14 +12,7 @@ struct WeatherMenuView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
-                // Favorites - System Icon
-                NavigationLink(destination: WeatherFavoritesView()) {
-                    MenuButtonContent(
-                        iconType: .system("heart.fill"), // Specify system icon
-                        title: "FAVORITES",
-                        color: .red
-                    )
-                }
+
 
                 // Local Weather - System Icon
                 NavigationLink(destination: CurrentLocalWeatherView()) {
@@ -30,14 +23,7 @@ struct WeatherMenuView: View {
                     )
                 }
 
-                // Weather Map
-                NavigationLink(destination: WeatherMapView()) {
-                    MenuButtonContent(
-                        iconType: .custom("earthsixfour"), // Specify custom icon name
-                        title: "MAP",
-                        color: .blue // Color might not apply if asset isn't a Template
-                    )
-                }
+    
 
                 // Radar - System Icon
                 Button(action: {
