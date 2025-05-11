@@ -1,4 +1,3 @@
-
 import SwiftUI
 import RevenueCat // Ensure RevenueCat is imported
 import RevenueCatUI
@@ -154,20 +153,13 @@ struct MainView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(action: {
-                        showSettings = true
+                        // No action for now - dead button
                     }) {
                         Image(systemName: "line.3.horizontal")
                     }
                 }
             }
-            .sheet(isPresented: $showSettings) {
-                NavigationView { // Consider using .fullScreenCover or if NavigationView is essential here
-                    WeatherSettingsView()
-                        .navigationBarItems(trailing: Button("Done") {
-                            showSettings = false
-                        })
-                }
-            }
+            // Removed the sheet that was presenting WeatherSettingsView
         }
         // Apply the .presentPaywallIfNeeded modifier to the NavigationStack
         // This will present the paywall if the "Pro" entitlement is not active

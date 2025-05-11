@@ -1,19 +1,12 @@
-
 import SwiftUI
 
 struct WeatherMenuView: View {
     // We'll use environment objects for service dependencies
     @EnvironmentObject var serviceProvider: ServiceProvider
-    
-    // Add a flag to control visibility of the settings option
-    // Set to false to hide it, can be changed to true later when needed
-    private let showSettingsOption = false
 
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
-
-
                 // Local Weather - System Icon
                 NavigationLink(destination: CurrentLocalWeatherView()) {
                     MenuButtonContent(
@@ -22,8 +15,15 @@ struct WeatherMenuView: View {
                         color: .green
                     )
                 }
-
-    
+                
+                // Weather Map - System Icon
+                NavigationLink(destination: WeatherMapView()) {
+                    MenuButtonContent(
+                        iconType: .system("map.fill"), // Specify system icon for map
+                        title: "MAP",
+                        color: .blue
+                    )
+                }
 
                 // Radar - System Icon
                 Button(action: {
@@ -34,17 +34,6 @@ struct WeatherMenuView: View {
                         title: "RADAR",
                         color: .orange
                     )
-                }
-
-                // Settings - System Icon - Only show if showSettingsOption is true
-                if showSettingsOption {
-                    NavigationLink(destination: WeatherSettingsView()) {
-                        MenuButtonContent(
-                            iconType: .system("line.3.horizontal"),
-                            title: "SETTINGS",
-                            color: .blue
-                        )
-                    }
                 }
             }
             .padding()
@@ -102,7 +91,6 @@ struct MenuButtonContent: View {
     var body: some View {
         HStack {
             // Create the correct image based on type FIRST
-            // --- Start Changes ---
             Group {
                  switch iconType {
                  case .system(let name):
@@ -122,8 +110,6 @@ struct MenuButtonContent: View {
             }
             .frame(width: 40, height: 40) // Apply frame AFTER creating/modifying the image
             .padding(.horizontal, 20)
-            // --- End Changes ---
-
 
             Text(title)
                 .font(.title2)
@@ -144,4 +130,3 @@ struct MenuButtonContent: View {
         )
     }
 }
-
