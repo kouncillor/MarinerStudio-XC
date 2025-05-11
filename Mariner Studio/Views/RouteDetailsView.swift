@@ -338,7 +338,20 @@ struct WaypointView: View {
                     .background(Color.blue.opacity(0.1))
                     .cornerRadius(8)
                     
-                    HStack {
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    // Modified HStack to use all available space
+                    HStack(spacing: 10) {
                         // Course and wave directions
                         VStack(alignment: .leading, spacing: 5) {
                             Text("Course True: \(waypoint.courseDisplay)")
@@ -349,15 +362,37 @@ struct WaypointView: View {
                                 .font(.caption)
                         }
                         .padding()
-                        .background(Color.blue.opacity(0.1))
+                        .background(Color.green.opacity(0.1))
                         .cornerRadius(8)
+                        .frame(minWidth: 0, maxWidth: .infinity)  // Take up available width
+                        .aspectRatio(1, contentMode: .fit)  // Make height proportional to width
                         
                         // Wave direction arrow
                         RelativeWaveDirectionView(waypoint: waypoint)
-                            .frame(width: 100, height: 100)
-                            .background(Color(UIColor.tertiarySystemBackground))
+                            .background(Color.white)
                             .cornerRadius(8)
+                            .frame(minWidth: 0, maxWidth: .infinity)  // Take up available width
+                            .aspectRatio(1, contentMode: .fit)  // Make height proportional to width
                     }
+                    .frame(maxWidth: .infinity)  // Make the HStack use all available width
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+             
+                    
+                    
+                    
+                    
+                    
+                    
+                    
                 }
             } else {
                 Text("Marine data not available")
@@ -424,7 +459,7 @@ struct RelativeWaveDirectionView: View {
             Image(getWaveDirectionImage())
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .scaleEffect(0.8)
+                .scaleEffect(0.6)
         }
     }
     
