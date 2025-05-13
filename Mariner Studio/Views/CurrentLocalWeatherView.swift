@@ -1,10 +1,11 @@
+
+
 //
 //  CurrentLocalWeatherView.swift
 //  Mariner Studio
 //
 //  Created by Timothy Russell on 5/11/25.
 //
-
 
 import SwiftUI
 import CoreLocation
@@ -111,10 +112,10 @@ struct CurrentLocalWeatherView: View {
             viewModel.initialize(
                 currentLocalWeatherService: serviceProvider.currentLocalWeatherService,
                 geocodingService: serviceProvider.geocodingService,
-                locationService: serviceProvider.locationService,
                 databaseService: serviceProvider.weatherService
             )
             
+            // Load weather data (now includes location permission request)
             viewModel.loadWeatherData()
         }
         .background(
@@ -125,8 +126,7 @@ struct CurrentLocalWeatherView: View {
     }
 }
 
-// MARK: - Supporting Views
-
+// Supporting views remain unchanged
 struct FavoriteButton: View {
     let isFavorite: Bool
     let action: () -> Void

@@ -1,3 +1,5 @@
+
+
 //
 //  CurrentLocalWeatherViewModel.swift
 //  Mariner Studio
@@ -5,13 +7,12 @@
 //  Created by Timothy Russell on 5/11/25.
 //
 
-
 import Foundation
 import CoreLocation
 import SwiftUI
 import Combine
 
-class CurrentLocalWeatherViewModel: ObservableObject {
+class CurrentLocalWeatherViewModel: NSObject, ObservableObject, CLLocationManagerDelegate {
     // MARK: - Published Properties
     
     // Loading and error states
@@ -59,72 +60,186 @@ class CurrentLocalWeatherViewModel: ObservableObject {
     // MARK: - Private Properties
     private var currentLocalWeatherService: CurrentLocalWeatherService?
     private var geocodingService: GeocodingService?
-    private var locationService: LocationService?
     private var databaseService: WeatherDatabaseService?
     
+    // Location Manager (added directly to view model)
+    private let locationManager = CLLocationManager()
+    private var currentLocation: CLLocation?
+    
     private var cancellables = Set<AnyCancellable>()
-    private var locationTask: Task<Void, Never>?
+    private var weatherTask: Task<Void, Never>?
     
     // MARK: - Initialization
+    
+    override init() {
+        super.init()
+        // Initialize location manager right away
+        setupLocationManager()
+    }
     
     func initialize(
         currentLocalWeatherService: CurrentLocalWeatherService?,
         geocodingService: GeocodingService?,
-        locationService: LocationService?,
         databaseService: WeatherDatabaseService?
     ) {
         self.currentLocalWeatherService = currentLocalWeatherService
         self.geocodingService = geocodingService
-        self.locationService = locationService
         self.databaseService = databaseService
         
         print("🚀 CurrentLocalWeatherViewModel: Initialized with services")
     }
     
     deinit {
-        // Cancel any ongoing location task
-        locationTask?.cancel()
+        // Cancel any ongoing weather task
+        weatherTask?.cancel()
+    }
+    
+    // MARK: - Location Manager Setup
+    
+    private func setupLocationManager() {
+        locationManager.delegate = self
+        locationManager.desiredAccuracy = kCLLocationAccuracyBest
+        locationManager.distanceFilter = 10 // Update if device moves by 10 meters
+        
+        print("📍 LocationManager setup in CurrentLocalWeatherViewModel")
     }
     
     // MARK: - Public Methods
     
     func loadWeatherData() {
-        // Cancel any existing location task
-        locationTask?.cancel()
+        print("🌤️ CurrentLocalWeatherViewModel: loadWeatherData called")
+        
+        // Start by requesting location
+        requestLocationPermission()
+    }
+    
+    func requestLocationPermission() {
+        print("📍 CurrentLocalWeatherViewModel: Requesting location permission")
+        
+        switch locationManager.authorizationStatus {
+        case .authorizedWhenInUse, .authorizedAlways:
+            print("📍 Permission already granted, starting updates")
+            locationManager.startUpdatingLocation()
+            isLoading = true
+            
+        case .notDetermined:
+            print("📍 Permission not determined, requesting...")
+            locationManager.requestWhenInUseAuthorization()
+            isLoading = true
+            
+        case .denied, .restricted:
+            print("📍 Permission denied or restricted")
+            errorMessage = "Location access is restricted. Please enable location services in Settings."
+            isLoading = false
+            
+        @unknown default:
+            print("📍 Unknown location authorization status")
+            errorMessage = "Unable to determine location permission status."
+            isLoading = false
+        }
+    }
+    
+    // MARK: - CLLocationManagerDelegate Methods
+    
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        print("📍 Location authorization status changed: \(manager.authorizationStatus.rawValue)")
+        
+        switch manager.authorizationStatus {
+        case .authorizedWhenInUse, .authorizedAlways:
+            print("📍 Permission granted, starting updates")
+            locationManager.startUpdatingLocation()
+            
+        case .denied, .restricted:
+            print("📍 Permission denied or restricted after change")
+            DispatchQueue.main.async {
+                self.errorMessage = "Location access is restricted. Please enable location services in Settings."
+                self.isLoading = false
+            }
+            
+        case .notDetermined:
+            // Still waiting for user decision
+            print("📍 Permission still not determined after change")
+            
+        @unknown default:
+            print("📍 Unknown authorization status after change")
+            DispatchQueue.main.async {
+                self.errorMessage = "Unknown location authorization status."
+                self.isLoading = false
+            }
+        }
+    }
+    
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        guard let location = locations.last else {
+            print("📍 LocationManager: No locations received")
+            return
+        }
+        
+        print("📍 LocationManager: Received location - Lat: \(location.coordinate.latitude), Lon: \(location.coordinate.longitude), Acc: \(location.horizontalAccuracy)m")
+        
+        // Process only valid locations
+        guard location.horizontalAccuracy >= 0 else {
+            print("📍 Ignoring location with negative accuracy")
+            return
+        }
+        
+        // Update current location
+        self.currentLocation = location
+        
+        // Update published properties on main thread
+        DispatchQueue.main.async {
+            self.latitude = location.coordinate.latitude
+            self.longitude = location.coordinate.longitude
+            self.locationState = .highAccuracy(location: location, accuracy: location.horizontalAccuracy)
+            self.locationAccuracyDescription = self.locationState.description
+            
+            // Once we have a location, fetch weather data
+            self.fetchWeatherWithCurrentLocation()
+        }
+        
+        // We can stop updating location once we have a good one
+        if location.horizontalAccuracy <= 100 {
+            locationManager.stopUpdatingLocation()
+            print("📍 Got good location, stopped updates")
+        }
+    }
+    
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        print("📍 LocationManager error: \(error.localizedDescription)")
+        
+        DispatchQueue.main.async {
+            if self.currentLocation == nil {
+                // Only show error if we don't have any location yet
+                self.errorMessage = "Failed to get your location: \(error.localizedDescription)"
+                self.isLoading = false
+            }
+        }
+    }
+    
+    // MARK: - Weather Data Methods
+    
+    private func fetchWeatherWithCurrentLocation() {
+        // Cancel any existing weather task
+        weatherTask?.cancel()
+        
+        // Ensure we have a valid location
+        guard let location = self.currentLocation else {
+            print("⚠️ fetchWeatherWithCurrentLocation: No location available")
+            return
+        }
         
         // Start a new task for fetching weather data
-        locationTask = Task {
+        weatherTask = Task {
             if Task.isCancelled { return }
             
-            await MainActor.run {
-                isLoading = true
-                errorMessage = ""
-            }
-            
-            // Get current location directly from location service
-            guard let locationService = locationService,
-                  let currentLocation = locationService.currentLocation else {
-                await MainActor.run {
-                    errorMessage = "Could not retrieve your location. Please check your location settings and try again."
-                    isLoading = false
-                }
-                return
-            }
-            
-            // Update UI with location info
-            await MainActor.run {
-                latitude = currentLocation.coordinate.latitude
-                longitude = currentLocation.coordinate.longitude
-                locationState = .highAccuracy(location: currentLocation, accuracy: currentLocation.horizontalAccuracy)
-                locationAccuracyDescription = locationState.description
-            }
+            print("🌤️ Fetching weather for location (\(location.coordinate.latitude), \(location.coordinate.longitude))")
             
             // Get location name through geocoding
             if let geocodingService = geocodingService {
                 do {
                     let geocodingResult = try await geocodingService.reverseGeocode(
-                        latitude: currentLocation.coordinate.latitude,
-                        longitude: currentLocation.coordinate.longitude
+                        latitude: location.coordinate.latitude,
+                        longitude: location.coordinate.longitude
                     )
                     
                     if let locationResult = geocodingResult.results.first {
@@ -137,7 +252,7 @@ class CurrentLocalWeatherViewModel: ObservableObject {
                         }
                     }
                 } catch {
-                    print("⚠️ CurrentLocalWeatherViewModel: Geocoding error: \(error), continuing with coordinates only")
+                    print("⚠️ Geocoding error: \(error), continuing with coordinates only")
                     await MainActor.run {
                         locationDisplay = "Location at \(String(format: "%.4f", latitude))°, \(String(format: "%.4f", longitude))°"
                     }
@@ -147,22 +262,25 @@ class CurrentLocalWeatherViewModel: ObservableObject {
             // Get weather data using our dedicated weather service
             if let weatherService = currentLocalWeatherService {
                 do {
-                    print("🌤️ CurrentLocalWeatherViewModel: Fetching weather for location (\(latitude), \(longitude))")
                     let weather = try await weatherService.getWeather(
-                        latitude: currentLocation.coordinate.latitude,
-                        longitude: currentLocation.coordinate.longitude
+                        latitude: location.coordinate.latitude,
+                        longitude: location.coordinate.longitude
                     )
                     
                     if Task.isCancelled { return }
                     
-                    print("✅ CurrentLocalWeatherViewModel: Weather data received, processing...")
+                    print("✅ Weather data received, processing...")
                     await processWeatherData(weather)
                     
                     // Check if location is a favorite
                     await updateFavoriteStatus()
+                    
+                    await MainActor.run {
+                        isLoading = false
+                    }
                 } catch {
                     if !Task.isCancelled {
-                        print("❌ CurrentLocalWeatherViewModel: Weather API error: \(error)")
+                        print("❌ Weather API error: \(error)")
                         await MainActor.run {
                             errorMessage = "Weather data unavailable: \(error.localizedDescription)"
                             isLoading = false
@@ -177,17 +295,10 @@ class CurrentLocalWeatherViewModel: ObservableObject {
                     }
                 }
             }
-            
-            if !Task.isCancelled {
-                await MainActor.run {
-                    isLoading = false
-                }
-            }
         }
     }
     
-    // The rest of the methods can be kept as they are in the original WeatherViewModel
-    // I'm including only the essential methods here for brevity
+    // MARK: - Public Methods for User Interaction
     
     func toggleFavorite() {
         Task {

@@ -91,7 +91,7 @@ class NavUnitDatabaseService {
                 // Log raw values for debugging
                 let latValue = row[colLatitude]
                 let lonValue = row[colLongitude]
-                let unitId = row[colNavUnitId]
+                let _ = row[colNavUnitId]
                 if count < 10 {
          //           print(" S NavUnitDB (\(count)): ID \(unitId) - Raw Lat: \(String(describing: latValue)), Raw Lon: \(String(describing: lonValue))")
                 }
