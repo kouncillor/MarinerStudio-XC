@@ -1,9 +1,3 @@
-//
-//  TideMenuView.swift
-//  Mariner Studio
-//
-//  Created by Timothy Russell on 5/13/25.
-//
 
 
 import SwiftUI
@@ -25,7 +19,11 @@ struct TideMenuView: View {
                 }
                 
                 // Local Tides - System Icon
-                NavigationLink(destination: EmptyView()) {
+                NavigationLink(destination: TidalHeightStationsView(
+                    tidalHeightService: TidalHeightServiceImpl(),
+                    locationService: serviceProvider.locationService,
+                    tideStationService: serviceProvider.tideStationService
+                )) {
                     MenuButtonContentTide(
                         iconType: .system("location.fill"), // Specify system icon
                         title: "LOCAL",
