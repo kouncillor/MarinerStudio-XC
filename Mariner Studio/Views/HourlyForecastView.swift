@@ -1,3 +1,5 @@
+
+
 import SwiftUI
 
 struct HourlyForecastView: View {
@@ -31,6 +33,8 @@ struct HourlyForecastView: View {
                         .font(.headline)
                         .fontWeight(.bold)
                         .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                        .id("day-\(viewModel.currentDayIndex)") // Add ID to force refresh when day changes
                     
                     Button(action: {
                         viewModel.nextDay()
@@ -91,9 +95,13 @@ struct HourlyForecastView: View {
         .navigationBarBackButtonHidden(false)
         .background(Color(UIColor.systemGroupedBackground))
         .onAppear {
+            // Each time the view appears, reload data
+            print("🕐 HourlyForecastView appeared - loading forecasts for day \(viewModel.currentDayIndex) - \(viewModel.currentDayDisplay)")
             viewModel.loadHourlyForecasts()
         }
         .onDisappear {
+            // Properly clean up resources when view disappears
+            print("🕐 HourlyForecastView disappeared - cleaning up resources")
             viewModel.cleanup()
         }
     }
@@ -215,84 +223,3 @@ struct HourlyForecastRow: View {
         return WeatherIconMapper.colorForWeatherCode(code)
     }
 }
-// Create a preview
-struct HourlyForecastView_Previews: PreviewProvider {
-    static var previews: some View {
-        NavigationView {
-            HourlyForecastView(
-                viewModel: createSampleViewModel()
-            )
-        }
-    }
-    
-    static func createSampleViewModel() -> HourlyForecastViewModel {
-        let viewModel = HourlyForecastViewModel()
-        
-        // Create sample dates
-        let today = Date()
-        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: today)!
-        let dayAfter = Calendar.current.date(byAdding: .day, value: 2, to: today)!
-        
-        viewModel.initialize(
-            selectedDate: today,
-            allDates: [today, tomorrow, dayAfter],
-            latitude: 40.7128,
-            longitude: -74.0060,
-            locationName: "New York, NY"
-        )
-        
-        // Add some sample forecast data
-        let sampleForecasts1 = (0..<24).map { hour -> HourlyForecastItem in
-            let time = Calendar.current.date(bySettingHour: hour, minute: 0, second: 0, of: today)!
-            return createSampleForecast(time: time, rowIndex: hour)
-        }
-        
-        let sampleForecasts2 = (0..<24).map { hour -> HourlyForecastItem in
-            let time = Calendar.current.date(bySettingHour: hour, minute: 0, second: 0, of: tomorrow)!
-            return createSampleForecast(time: time, rowIndex: hour)
-        }
-        
-        viewModel.dailyHourlyForecasts = [
-            DailyHourlyForecast(date: today, hourlyForecasts: sampleForecasts1),
-            DailyHourlyForecast(date: tomorrow, hourlyForecasts: sampleForecasts2)
-        ]
-        
-        viewModel.updateCurrentDayForecasts()
-        
-        return viewModel
-    }
-    
-    static func createSampleForecast(time: Date, rowIndex: Int) -> HourlyForecastItem {
-        let isNight = time.hour >= 18 || time.hour < 6
-        let temp = 65.0 + Double((rowIndex % 10) - 5)
-        
-        return HourlyForecastItem(
-            time: time,
-            hour: time.formatted(date: .omitted, time: .shortened),
-            timeDisplay: time.formatted(date: .numeric, time: .standard),
-            temperature: temp,
-            humidity: 65 + (rowIndex % 20),
-            precipitation: Double(rowIndex % 5) * 0.1,
-            precipitationChance: Double((rowIndex * 3) % 100),
-            windSpeed: 5.0 + Double(rowIndex % 8),
-            windDirection: Double((rowIndex * 20) % 360),
-            windGusts: 8.0 + Double(rowIndex % 10),
-            dewPoint: temp - 10.0,
-            pressure: 29.92 + (Double(rowIndex % 10) - 5) * 0.01,
-            previousPressure: 29.90 + (Double((rowIndex - 1) % 10) - 5) * 0.01,
-            visibilityMeters: 10000.0 - Double((rowIndex * 500) % 5000),
-            weatherCode: (rowIndex % 5) * 2,
-            isNightTime: isNight,
-            cardinalDirection: ["N", "NE", "E", "SE", "S", "SW", "W", "NW"][rowIndex % 8],
-            weatherIcon: isNight ? "moon.stars" : "sun.max",
-            moonPhase: "moonphase.full.moon"
-        )
-    }
-    
-    
-    
-    
-    
-}
-
-

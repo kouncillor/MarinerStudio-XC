@@ -1,12 +1,4 @@
 
-
-//
-//  CurrentLocalWeatherViewModel.swift
-//  Mariner Studio
-//
-//  Created by Timothy Russell on 5/11/25.
-//
-
 import Foundation
 import CoreLocation
 import SwiftUI
@@ -109,8 +101,18 @@ class CurrentLocalWeatherViewModel: NSObject, ObservableObject, CLLocationManage
     func loadWeatherData() {
         print("🌤️ CurrentLocalWeatherViewModel: loadWeatherData called")
         
-        // Start by requesting location
-        requestLocationPermission()
+        // Reset loading state
+        isLoading = true
+        errorMessage = ""
+        
+        // Check if we already have location data
+        if let location = currentLocation {
+            print("📍 Already have location data, fetching weather directly")
+            fetchWeatherWithCurrentLocation()
+        } else {
+            // Start by requesting location
+            requestLocationPermission()
+        }
     }
     
     func requestLocationPermission() {
@@ -221,11 +223,24 @@ class CurrentLocalWeatherViewModel: NSObject, ObservableObject, CLLocationManage
     private func fetchWeatherWithCurrentLocation() {
         // Cancel any existing weather task
         weatherTask?.cancel()
+        weatherTask = nil
         
         // Ensure we have a valid location
         guard let location = self.currentLocation else {
             print("⚠️ fetchWeatherWithCurrentLocation: No location available")
+            
+            // Reset to error state if we don't have location but were expected to
+            DispatchQueue.main.async {
+                self.errorMessage = "Location data not available. Please try again."
+                self.isLoading = false
+            }
             return
+        }
+        
+        // Update loading state
+        DispatchQueue.main.async {
+            self.isLoading = true
+            self.errorMessage = ""
         }
         
         // Start a new task for fetching weather data
@@ -298,7 +313,14 @@ class CurrentLocalWeatherViewModel: NSObject, ObservableObject, CLLocationManage
         }
     }
     
-    // MARK: - Public Methods for User Interaction
+    // MARK: - Lifecycle Methods
+    
+    /// Call when view disappears to cancel tasks
+    func cleanup() {
+        // Cancel any ongoing weather task
+        weatherTask?.cancel()
+        weatherTask = nil
+    }
     
     func toggleFavorite() {
         Task {

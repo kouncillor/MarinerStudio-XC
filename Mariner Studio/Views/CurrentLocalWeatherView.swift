@@ -1,12 +1,5 @@
 
 
-//
-//  CurrentLocalWeatherView.swift
-//  Mariner Studio
-//
-//  Created by Timothy Russell on 5/11/25.
-//
-
 import SwiftUI
 import CoreLocation
 
@@ -63,25 +56,34 @@ struct CurrentLocalWeatherView: View {
                     DailyForecastView(
                         forecasts: viewModel.forecastPeriods,
                         onForecastSelected: { forecast in
-                            viewModel.navigateToHourlyForecast(forecast: forecast)
+                            print("🕐 Selected forecast for date: \(forecast.date), isToday: \(forecast.isToday)")
                             
-                            // Create the hourly forecast view model
-                            let hourlyVM = HourlyForecastViewModel(
-                                weatherService: serviceProvider.openMeteoService,
-                                databaseService: serviceProvider.weatherService
-                            )
+                            // Always force navigation to close first (if open)
+                            showHourlyForecast = false
                             
-                            hourlyVM.initialize(
-                                selectedDate: forecast.date,
-                                allDates: viewModel.forecastPeriods.map { $0.date },
-                                latitude: viewModel.latitude,
-                                longitude: viewModel.longitude,
-                                locationName: viewModel.locationDisplay
-                            )
+                            // Reset the view model reference
+                            hourlyViewModel = nil
                             
-                            // Store the view model and trigger navigation
-                            hourlyViewModel = hourlyVM
-                            showHourlyForecast = true
+                            // Create delay to ensure proper state reset
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                                // Create a brand new hourly forecast view model each time
+                                hourlyViewModel = HourlyForecastViewModel(
+                                    weatherService: serviceProvider.openMeteoService,
+                                    databaseService: serviceProvider.weatherService
+                                )
+                                
+                                // Initialize with the selected forecast date
+                                hourlyViewModel?.initialize(
+                                    selectedDate: forecast.date,
+                                    allDates: viewModel.forecastPeriods.map { $0.date },
+                                    latitude: viewModel.latitude,
+                                    longitude: viewModel.longitude,
+                                    locationName: viewModel.locationDisplay
+                                )
+                                
+                                // Trigger navigation
+                                showHourlyForecast = true
+                            }
                         }
                     )
                     .background(
@@ -108,7 +110,7 @@ struct CurrentLocalWeatherView: View {
         }
         .navigationTitle("Current Weather")
         .onAppear {
-            // Initialize with services from the provider
+            // Initialize with services from the provider, but not the location service
             viewModel.initialize(
                 currentLocalWeatherService: serviceProvider.currentLocalWeatherService,
                 geocodingService: serviceProvider.geocodingService,
@@ -117,6 +119,11 @@ struct CurrentLocalWeatherView: View {
             
             // Load weather data (now includes location permission request)
             viewModel.loadWeatherData()
+        }
+        .onDisappear {
+            // Cancel any ongoing tasks when view disappears
+            // This prevents stale tasks from continuing when we return
+            viewModel.cleanup()
         }
         .background(
             colorScheme == .dark ?
