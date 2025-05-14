@@ -1,5 +1,4 @@
 
-
 import SwiftUI
 import RevenueCat // Ensure RevenueCat is imported
 import RevenueCatUI
@@ -53,11 +52,8 @@ struct MainView: View {
                         )
                     }
 
-                    // NAV UNITS
-                    NavigationLink(destination: NavUnitsView(
-                        navUnitService: serviceProvider.navUnitService,
-                        locationService: serviceProvider.locationService
-                    )) {
+                    // NAV UNITS - Updated to use NavUnitMenuView instead of NavUnitsView
+                    NavigationLink(destination: NavUnitMenuView()) {
                         NavigationButtonContent(
                             icon: "nsixseven",
                             title: "NAV UNITS"
