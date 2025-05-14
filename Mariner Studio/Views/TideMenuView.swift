@@ -1,5 +1,6 @@
 
 
+
 import SwiftUI
 
 struct TideMenuView: View {
@@ -9,12 +10,12 @@ struct TideMenuView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
-                // Favorites - Heart Icon
-                NavigationLink(destination: EmptyView()) {
+                // Favorites - Star Icon
+                NavigationLink(destination: TideFavoritesView()) {
                     MenuButtonContentTide(
-                        iconType: .system("heart.fill"), // Heart icon for favorites
+                        iconType: .system("star.fill"), // Using star instead of heart to differentiate from weather
                         title: "FAVORITES",
-                        color: .red
+                        color: .yellow
                     )
                 }
                 

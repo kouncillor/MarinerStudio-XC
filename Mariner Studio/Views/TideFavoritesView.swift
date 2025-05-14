@@ -1,13 +1,12 @@
+
+
+
 import SwiftUI
 
 struct TideFavoritesView: View {
     @StateObject private var viewModel = TideFavoritesViewModel()
     @EnvironmentObject var serviceProvider: ServiceProvider
     @Environment(\.colorScheme) var colorScheme
-    
-    // State for navigation
-    @State private var selectedStation: TidalHeightStation?
-    @State private var showStationDetail = false
     
     var body: some View {
         Group {
@@ -63,12 +62,16 @@ struct TideFavoritesView: View {
             } else {
                 List {
                     ForEach(viewModel.favorites) { station in
-                        FavoriteStationRow(station: station)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                selectedStation = station
-                                showStationDetail = true
-                            }
+                        // New NavigationLink style that doesn't use isActive or destination
+                        NavigationLink {
+                            TidalHeightPredictionView(
+                                stationId: station.id,
+                                stationName: station.name,
+                                tideStationService: serviceProvider.tideStationService
+                            )
+                        } label: {
+                            FavoriteStationRow(station: station)
+                        }
                     }
                     .onDelete(perform: viewModel.removeFavorite)
                 }
@@ -79,21 +82,6 @@ struct TideFavoritesView: View {
             }
         }
         .navigationTitle("Favorite Tide Stations")
-        .background(
-            NavigationLink(
-                destination: Group {
-                    if let station = selectedStation {
-                        TidalHeightPredictionView(
-                            stationId: station.id,
-                            stationName: station.name,
-                            tideStationService: serviceProvider.tideStationService
-                        )
-                    }
-                },
-                isActive: $showStationDetail,
-                label: { EmptyView() }
-            )
-        )
         .onAppear {
             viewModel.initialize(
                 tideStationService: serviceProvider.tideStationService,
