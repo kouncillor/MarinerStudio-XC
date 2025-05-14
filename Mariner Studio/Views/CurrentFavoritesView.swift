@@ -80,7 +80,7 @@ struct CurrentFavoritesView: View {
                 }
             }
         }
-        .navigationTitle("Favorites")
+        .navigationTitle("Favorite Currents")
         .onAppear {
             viewModel.initialize(
                 currentStationService: serviceProvider.currentStationService,
@@ -130,9 +130,7 @@ struct FavoriteCurrentStationRow: View {
             
             Spacer()
             
-            // Navigate icon
-            Image(systemName: "chevron.right")
-                .foregroundColor(.green)
+    
         }
         .padding(.vertical, 12)
     }

@@ -93,7 +93,23 @@ struct WeatherFavoritesView: View {
                 }
             }
         }
-        .navigationTitle("Favorite Locations")
+        .navigationTitle("Favorites")
+        
+        
+//        .toolbar {
+//            ToolbarItem(placement: .principal) {
+//                Text(" Weather Favorites")
+//                    .font(.largeTitle.weight(.light)) // Less bold
+//                    .foregroundColor(.black) // Red color
+//            }
+//        }
+        
+        
+        
+
+        
+        
+        
         .background(
             NavigationLink(
                 destination: Group {
@@ -124,12 +140,16 @@ struct FavoriteLocationRow: View {
     var body: some View {
         HStack(spacing: 16) {
             // Location icon
-            Image(systemName: "mappin.circle.fill")
+           // Image(systemName: "mappin.circle.fill")
+            
+            Image("weathersixseventwo")
+            
+            
                 .resizable()
                 .frame(width: 36, height: 36)
                 .foregroundColor(.red)
                 .padding(8)
-                .background(Color.red.opacity(0.1))
+                .background(Color.white.opacity(0.1))
                 .clipShape(Circle())
             
             // Location info
@@ -169,3 +189,5 @@ struct FavoriteLocationRow: View {
             .environmentObject(ServiceProvider())
     }
 }
+
+

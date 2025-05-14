@@ -74,7 +74,7 @@ struct NavUnitFavoritesView: View {
                 }
             }
         }
-     //   .navigationTitle("Favorite Nav Units")
+       .navigationTitle("Favorite Nav Units")
         .onAppear {
             viewModel.initialize(
                 navUnitService: serviceProvider.navUnitService,
@@ -116,20 +116,13 @@ struct FavoriteNavUnitRow: View {
             }
             
             Spacer()
-            // Navigate icon
-            Image(systemName: "chevron.right")
-                .foregroundColor(.green)
+        
         }
         .padding(.vertical, 8)
     }
 }
 
-#Preview {
-    NavigationView {
-        NavUnitFavoritesView()
-            .environmentObject(ServiceProvider())
-    }
-}
+
 
 
 

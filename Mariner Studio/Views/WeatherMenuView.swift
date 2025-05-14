@@ -49,7 +49,9 @@ struct WeatherMenuView: View {
             }
             .padding()
         }
+        
         .navigationTitle("Weather")
+        
     }
 
     // Opens the NOAA radar website using Safari

@@ -103,6 +103,14 @@ struct NavUnitsView: View {
                         .foregroundColor(.blue)
                     Spacer()
                 }
+                
+                
+                
+                
+                
+                
+                
+                
                 .padding(.horizontal)
             }
         }

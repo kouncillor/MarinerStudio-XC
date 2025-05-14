@@ -81,7 +81,7 @@ struct TideFavoritesView: View {
                 }
             }
         }
-        .navigationTitle("Favorite Tide Stations")
+        .navigationTitle("Favorite Tides")
         .onAppear {
             viewModel.initialize(
                 tideStationService: serviceProvider.tideStationService,
@@ -134,9 +134,6 @@ struct FavoriteStationRow: View {
             
             Spacer()
             
-            // Navigate icon
-            Image(systemName: "chevron.right")
-                .foregroundColor(.secondary)
         }
         .padding(.vertical, 8)
     }
