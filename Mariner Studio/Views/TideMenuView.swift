@@ -1,6 +1,4 @@
 
-
-
 import SwiftUI
 
 struct TideMenuView: View {
@@ -13,9 +11,9 @@ struct TideMenuView: View {
                 // Favorites - Star Icon
                 NavigationLink(destination: TideFavoritesView()) {
                     MenuButtonContentTide(
-                        iconType: .system("heart.fill"), // Using star instead of heart to differentiate from weather
+                        iconType: .system("star.fill"), // Using star instead of heart to differentiate from weather
                         title: "FAVORITES",
-                        color: .red
+                        color: .yellow
                     )
                 }
                 

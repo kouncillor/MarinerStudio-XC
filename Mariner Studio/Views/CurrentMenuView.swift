@@ -1,3 +1,4 @@
+
 import SwiftUI
 
 struct CurrentMenuView: View {
@@ -10,9 +11,9 @@ struct CurrentMenuView: View {
                 // Favorites - Star Icon
                 NavigationLink(destination: CurrentFavoritesView()) {
                     MenuButtonContentCurrent(
-                        iconType: .system("heart.fill"),
+                        iconType: .system("star.fill"),
                         title: "FAVORITES",
-                        color: .red
+                        color: .yellow
                     )
                 }
                 

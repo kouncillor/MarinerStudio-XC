@@ -145,11 +145,11 @@ struct FavoriteButton: View {
             impactGenerator.impactOccurred()
             action()
         }) {
-            Image(systemName: isFavorite ? "heart.fill" : "heart")
+            Image(systemName: isFavorite ? "star.fill" : "star")
                 .resizable()
                 .aspectRatio(contentMode: .fit)
                 .frame(width: 24, height: 24)
-                .foregroundColor(isFavorite ? .red : .gray)
+                .foregroundColor(isFavorite ? .yellow : .gray)
                 .padding()
                 .background(Color(UIColor.tertiarySystemBackground))
                 .clipShape(Circle())
