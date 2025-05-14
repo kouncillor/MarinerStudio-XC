@@ -13,9 +13,9 @@ struct TideMenuView: View {
                 // Favorites - Star Icon
                 NavigationLink(destination: TideFavoritesView()) {
                     MenuButtonContentTide(
-                        iconType: .system("star.fill"), // Using star instead of heart to differentiate from weather
+                        iconType: .system("heart.fill"), // Using star instead of heart to differentiate from weather
                         title: "FAVORITES",
-                        color: .yellow
+                        color: .red
                     )
                 }
                 

@@ -10,9 +10,9 @@ struct CurrentMenuView: View {
                 // Favorites - Star Icon
                 NavigationLink(destination: CurrentFavoritesView()) {
                     MenuButtonContentCurrent(
-                        iconType: .system("star.fill"),
+                        iconType: .system("heart.fill"),
                         title: "FAVORITES",
-                        color: .yellow
+                        color: .red
                     )
                 }
                 

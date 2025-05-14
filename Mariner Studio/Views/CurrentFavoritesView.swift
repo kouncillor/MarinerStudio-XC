@@ -80,7 +80,7 @@ struct CurrentFavoritesView: View {
                 }
             }
         }
-        .navigationTitle("Favorite Current Stations")
+        .navigationTitle("Favorites")
         .onAppear {
             viewModel.initialize(
                 currentStationService: serviceProvider.currentStationService,
@@ -120,25 +120,11 @@ struct FavoriteCurrentStationRow: View {
                         .foregroundColor(.secondary)
                 }
                 
-                Text("Station ID: \(station.id)")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                
-                // Add depth information with bin value
-                if let depth = station.depth, let bin = station.currentBin {
-                    Text("Depth: \(String(format: "%.1f", depth)) ft (Bin: \(bin))")
-                        .font(.caption)
-                        .foregroundColor(.blue) // Make it stand out with a different color
-                } else if let bin = station.currentBin {
-                    Text("Bin: \(bin)")
+                // Modified to only show depth without bin number
+                if let depth = station.depth {
+                    Text("Depth: \(String(format: "%.1f", depth)) ft")
                         .font(.caption)
                         .foregroundColor(.blue)
-                }
-                
-                if let latitude = station.latitude, let longitude = station.longitude {
-                    Text("Coordinates: \(String(format: "%.4f", latitude)), \(String(format: "%.4f", longitude))")
-                        .font(.caption)
-                        .foregroundColor(.gray)
                 }
             }
             
@@ -146,9 +132,9 @@ struct FavoriteCurrentStationRow: View {
             
             // Navigate icon
             Image(systemName: "chevron.right")
-                .foregroundColor(.secondary)
+                .foregroundColor(.green)
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, 12)
     }
 }
 
