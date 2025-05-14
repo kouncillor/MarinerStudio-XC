@@ -1,10 +1,3 @@
-//
-//  CurrentFavoritesView.swift
-//  Mariner Studio
-//
-//  Created by Timothy Russell on 5/14/25.
-//
-
 
 import SwiftUI
 
@@ -66,7 +59,8 @@ struct CurrentFavoritesView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List {
-                    ForEach(viewModel.favorites) { station in
+                    // Use uniqueId for ForEach identifier instead of just id
+                    ForEach(viewModel.favorites, id: \.uniqueId) { station in
                         NavigationLink {
                             TidalCurrentPredictionView(
                                 stationId: station.id,
@@ -130,10 +124,15 @@ struct FavoriteCurrentStationRow: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
                 
-                if let bin = station.currentBin {
+                // Add depth information with bin value
+                if let depth = station.depth, let bin = station.currentBin {
+                    Text("Depth: \(String(format: "%.1f", depth)) ft (Bin: \(bin))")
+                        .font(.caption)
+                        .foregroundColor(.blue) // Make it stand out with a different color
+                } else if let bin = station.currentBin {
                     Text("Bin: \(bin)")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.blue)
                 }
                 
                 if let latitude = station.latitude, let longitude = station.longitude {

@@ -1,3 +1,7 @@
+
+
+
+
 import SwiftUI
 
 struct TidalCurrentStationsView: View {
@@ -98,7 +102,7 @@ struct TidalCurrentStationsView: View {
    
    private var stationsList: some View {
        List {
-           ForEach(viewModel.stations) { stationWithDistance in
+           ForEach(viewModel.stations, id: \.station.uniqueId) { stationWithDistance in
                NavigationLink(destination: TidalCurrentPredictionView(
                    stationId: stationWithDistance.station.id,
                    bin: stationWithDistance.station.currentBin ?? 0,
@@ -109,7 +113,10 @@ struct TidalCurrentStationsView: View {
                        stationWithDistance: stationWithDistance,
                        onToggleFavorite: {
                            Task {
-                               await viewModel.toggleStationFavorite(stationId: stationWithDistance.station.id)
+                               await viewModel.toggleStationFavorite(
+                                   stationId: stationWithDistance.station.id,
+                                   bin: stationWithDistance.station.currentBin
+                               )
                            }
                        }
                    )
@@ -148,6 +155,17 @@ struct TidalCurrentStationRow: View {
            Text("Station ID: \(stationWithDistance.station.id)")
                .font(.caption)
                .foregroundColor(.gray)
+           
+           // Add depth information with bin value
+           if let depth = stationWithDistance.station.depth, let bin = stationWithDistance.station.currentBin {
+               Text("Depth: \(String(format: "%.1f", depth)) ft (Bin: \(bin))")
+                   .font(.caption)
+                   .foregroundColor(.blue) // Make it stand out with a different color
+           } else if let bin = stationWithDistance.station.currentBin {
+               Text("Bin: \(bin)")
+                   .font(.caption)
+                   .foregroundColor(.blue)
+           }
            
            // Fixed line handling optional latitude and longitude
            if let latitude = stationWithDistance.station.latitude,

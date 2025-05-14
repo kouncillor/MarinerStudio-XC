@@ -1,3 +1,5 @@
+
+
 import Foundation
 import CoreLocation
 import SwiftUI
@@ -64,6 +66,17 @@ class TidalCurrentStationsViewModel: ObservableObject {
             let response = try await tidalCurrentService.getTidalCurrentStations()
             print("⏰ ViewModel (Currents): Finished API call for stations at \(Date()). Count: \(response.count)")
 
+            // Add debug code to check for stations with same ID but different bins
+            let stationsByID = Dictionary(grouping: response.stations) { $0.id }
+            for (id, stations) in stationsByID {
+                if stations.count > 1 {
+                    print("📊 Multiple stations found for ID \(id):")
+                    for station in stations {
+                        print("📊 - Bin: \(String(describing: station.currentBin)), Depth: \(String(describing: station.depth))")
+                    }
+                }
+            }
+
             var stations = response.stations
 
             print("⏰ ViewModel (Currents): Starting favorite checks at \(Date())")
@@ -79,12 +92,18 @@ class TidalCurrentStationsViewModel: ObservableObject {
                          return (station.id, station.currentBin, isFav)
                      }
                  }
-                 var favoriteStatuses: [String: (bin: Int?, isFav: Bool)] = [:]
+                 
+                 // Create a dictionary using composite keys (id + bin)
+                 var favoriteStatuses: [String: Bool] = [:]
                  for await (id, bin, isFav) in group {
-                     favoriteStatuses[id] = (bin: bin, isFav: isFav)
+                     let key = self.getCompositeKey(id: id, bin: bin)
+                     favoriteStatuses[key] = isFav
                  }
+                 
+                 // Update stations with favorite status
                  for i in 0..<stations.count {
-                     stations[i].isFavorite = favoriteStatuses[stations[i].id]?.isFav ?? false
+                     let key = self.getCompositeKey(id: stations[i].id, bin: stations[i].currentBin)
+                     stations[i].isFavorite = favoriteStatuses[key] ?? false
                  }
             }
             print("⏰ ViewModel (Currents): Finished favorite checks at \(Date())")
@@ -171,9 +190,13 @@ class TidalCurrentStationsViewModel: ObservableObject {
         filterStations()
     }
 
-    func toggleStationFavorite(stationId: String) async {
-        guard let stationToToggle = allStations.first(where: { $0.station.id == stationId })?.station else {
-            print("❌ ViewModel (Currents): Could not find station \(stationId) to toggle favorite.")
+    // Updated method to handle bin-specific favoriting
+    func toggleStationFavorite(stationId: String, bin: Int?) async {
+        // Find the station with matching ID AND bin
+        guard let stationToToggle = allStations.first(where: {
+            $0.station.id == stationId && $0.station.currentBin == bin
+        })?.station else {
+            print("❌ ViewModel (Currents): Could not find station \(stationId) with bin \(String(describing: bin)) to toggle favorite.")
             return
         }
 
@@ -187,19 +210,31 @@ class TidalCurrentStationsViewModel: ObservableObject {
         }
 
         await MainActor.run {
-            if let index = allStations.firstIndex(where: { $0.station.id == stationId }) {
+            // Find and update the specific station with matching ID AND bin
+            if let index = allStations.firstIndex(where: {
+                $0.station.id == stationId && $0.station.currentBin == bin
+            }) {
                 var updatedStation = allStations[index].station
                 updatedStation.isFavorite = newFavoriteStatus
                 allStations[index] = StationWithDistance(
                     station: updatedStation,
                     distanceFromUser: allStations[index].distanceFromUser
                 )
-                print("⭐ ViewModel (Currents): Updated allStations array for \(stationId) at \(Date())")
+                print("⭐ ViewModel (Currents): Updated allStations array for \(stationId) with bin \(String(describing: bin)) at \(Date())")
             } else {
-                 print("❌ ViewModel (Currents): Station \(stationId) not found in allStations after toggle at \(Date())")
+                print("❌ ViewModel (Currents): Station \(stationId) with bin \(String(describing: bin)) not found in allStations after toggle at \(Date())")
             }
 
             filterStations()
+        }
+    }
+    
+    // Helper method to create a composite key
+    private func getCompositeKey(id: String, bin: Int?) -> String {
+        if let bin = bin {
+            return "\(id)_\(bin)"
+        } else {
+            return id
         }
     }
 }

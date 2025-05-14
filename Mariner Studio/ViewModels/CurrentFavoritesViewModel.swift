@@ -1,10 +1,3 @@
-//
-//  CurrentFavoritesViewModel.swift
-//  Mariner Studio
-//
-//  Created by Timothy Russell on 5/14/25.
-//
-
 
 import Foundation
 import SwiftUI
@@ -97,10 +90,18 @@ class CurrentFavoritesViewModel: ObservableObject {
         var result: [TidalCurrentStation] = []
         
         for var station in allStations {
-            let isFavorite = await currentStationService.isCurrentStationFavorite(id: station.id)
-            if isFavorite {
-                station.isFavorite = true
-                result.append(station)
+            if let bin = station.currentBin {
+                let isFavorite = await currentStationService.isCurrentStationFavorite(id: station.id, bin: bin)
+                if isFavorite {
+                    station.isFavorite = true
+                    result.append(station)
+                }
+            } else {
+                let isFavorite = await currentStationService.isCurrentStationFavorite(id: station.id)
+                if isFavorite {
+                    station.isFavorite = true
+                    result.append(station)
+                }
             }
         }
         
@@ -129,7 +130,7 @@ class CurrentFavoritesViewModel: ObservableObject {
         }
     }
     
-    func toggleStationFavorite(stationId: String, bin: Int? = nil) async {
+    func toggleStationFavorite(stationId: String, bin: Int?) async {
         if let currentStationService = currentStationService {
             if let bin = bin {
                 _ = await currentStationService.toggleCurrentStationFavorite(id: stationId, bin: bin)

@@ -1,3 +1,5 @@
+
+
 // TidalCurrentStation.swift
 
 import Foundation
@@ -19,6 +21,15 @@ struct TidalCurrentStation: Identifiable, Codable {
     let selfUrl: String?
     let expand: String?
     var isFavorite: Bool = false
+    
+    // Add a computed property for a unique ID that combines station ID and bin
+    var uniqueId: String {
+        if let bin = currentBin {
+            return "\(id)_\(bin)"
+        } else {
+            return id
+        }
+    }
     
     // MARK: - Coding Keys
     enum CodingKeys: String, CodingKey {
