@@ -44,13 +44,9 @@ struct MainView: View {
                             title: "TIDES"
                         )
                     }
-
-                    // CURRENTS
-                    NavigationLink(destination: TidalCurrentStationsView(
-                        tidalCurrentService: TidalCurrentServiceImpl(),
-                        locationService: serviceProvider.locationService,
-                        currentStationService: serviceProvider.currentStationService
-                    )) {
+                    
+                    // In MainView.swift, update the NavigationLink for CURRENTS:
+                    NavigationLink(destination: CurrentMenuView()) {
                         NavigationButtonContent(
                             icon: "csixseven",
                             title: "CURRENTS"
