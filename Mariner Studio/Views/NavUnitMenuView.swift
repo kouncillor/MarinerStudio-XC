@@ -30,18 +30,18 @@ struct NavUnitMenuView: View {
                 }
                 
                 // NavUnit Map - System Icon
-                NavigationLink(destination: MapClusteringView(
-                    navUnitService: serviceProvider.navUnitService,
-                    tideStationService: serviceProvider.tideStationService,
-                    currentStationService: serviceProvider.currentStationService,
-                    locationService: serviceProvider.locationService
-                )) {
-                    MenuButtonContentNavUnit(
-                        iconType: .system("map.fill"),
-                        title: "MAP",
-                        color: .blue
-                    )
-                }
+//                NavigationLink(destination: MapClusteringView(
+//                    navUnitService: serviceProvider.navUnitService,
+//                    tideStationService: serviceProvider.tideStationService,
+//                    currentStationService: serviceProvider.currentStationService,
+//                    locationService: serviceProvider.locationService
+//                )) {
+//                    MenuButtonContentNavUnit(
+//                        iconType: .system("map.fill"),
+//                        title: "MAP",
+//                        color: .blue
+//                    )
+//                }
             }
             .padding()
         }
