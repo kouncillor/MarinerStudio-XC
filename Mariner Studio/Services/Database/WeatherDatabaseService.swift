@@ -156,4 +156,37 @@ class WeatherDatabaseService {
             throw error
         }
     }
+    
+    
+    
+    
+    // Add this method to WeatherDatabaseService
+    func updateWeatherLocationNameAsync(latitude: Double, longitude: Double, newName: String) async -> Bool {
+        do {
+            let db = try databaseCore.ensureConnection()
+            
+            let query = weatherLocationFavorites.filter(colLatitude == latitude && colLongitude == longitude)
+            
+            if let favorite = try db.pluck(query) {
+                let updatedRow = weatherLocationFavorites.filter(colLatitude == latitude && colLongitude == longitude)
+                try db.run(updatedRow.update(
+                    colLocationName <- newName
+                ))
+                
+                try await databaseCore.flushDatabaseAsync()
+                return true
+            } else {
+                return false
+            }
+        } catch {
+            print("Error updating weather location name: \(error.localizedDescription)")
+            return false
+        }
+    }
+    
+    
+    
+    
+    
+    
 }

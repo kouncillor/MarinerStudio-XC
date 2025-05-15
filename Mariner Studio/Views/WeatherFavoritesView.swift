@@ -1,10 +1,3 @@
-//
-//  WeatherFavoritesView.swift
-//  Mariner Studio
-//
-//  Created by Timothy Russell on 5/13/25.
-//
-
 
 import SwiftUI
 
@@ -84,8 +77,24 @@ struct WeatherFavoritesView: View {
                                 selectedFavorite = favorite
                                 showWeatherDetail = true
                             }
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    if let index = viewModel.favorites.firstIndex(where: { $0.id == favorite.id }) {
+                                        viewModel.removeFavorite(at: IndexSet(integer: index))
+                                    }
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
+                            .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                                Button {
+                                    viewModel.prepareForEditing(favorite: favorite)
+                                } label: {
+                                    Label("Rename", systemImage: "pencil")
+                                }
+                                .tint(.blue)
+                            }
                     }
-                    .onDelete(perform: viewModel.removeFavorite)
                 }
                 .listStyle(InsetGroupedListStyle())
                 .refreshable {
@@ -94,22 +103,26 @@ struct WeatherFavoritesView: View {
             }
         }
         .navigationTitle("Favorites")
-        
-        
-//        .toolbar {
-//            ToolbarItem(placement: .principal) {
-//                Text(" Weather Favorites")
-//                    .font(.largeTitle.weight(.light)) // Less bold
-//                    .foregroundColor(.black) // Red color
-//            }
-//        }
-        
-        
-        
-
-        
-        
-        
+        .sheet(isPresented: $viewModel.isEditingName) {
+            // Reset values when sheet is dismissed
+            viewModel.favoriteToEdit = nil
+            viewModel.newLocationName = ""
+        } content: {
+            if let favorite = viewModel.favoriteToEdit {
+                RenameLocationView(
+                    locationName: $viewModel.newLocationName,
+                    isPresented: $viewModel.isEditingName,
+                    onSave: {
+                        Task {
+                            await viewModel.updateLocationName(
+                                favorite: favorite,
+                                newName: viewModel.newLocationName
+                            )
+                        }
+                    }
+                )
+            }
+        }
         .background(
             NavigationLink(
                 destination: Group {
@@ -134,17 +147,42 @@ struct WeatherFavoritesView: View {
     }
 }
 
+// Add this new view for renaming a location
+struct RenameLocationView: View {
+    @Binding var locationName: String
+    @Binding var isPresented: Bool
+    var onSave: () -> Void
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                Section(header: Text("Location Name")) {
+                    TextField("Enter location name", text: $locationName)
+                        .autocapitalization(.words)
+                }
+            }
+            .navigationTitle("Rename Location")
+            .navigationBarItems(
+                leading: Button("Cancel") {
+                    isPresented = false
+                },
+                trailing: Button("Save") {
+                    onSave()
+                    isPresented = false
+                }
+                .disabled(locationName.isEmpty)
+            )
+        }
+    }
+}
+
 struct FavoriteLocationRow: View {
     let favorite: WeatherLocationFavorite
     
     var body: some View {
         HStack(spacing: 16) {
             // Location icon
-           // Image(systemName: "mappin.circle.fill")
-            
             Image("weathersixseventwo")
-            
-            
                 .resizable()
                 .frame(width: 36, height: 36)
                 .foregroundColor(.red)
@@ -182,12 +220,3 @@ struct FavoriteLocationRow: View {
         return formatter.string(from: date)
     }
 }
-
-#Preview {
-    NavigationView {
-        WeatherFavoritesView()
-            .environmentObject(ServiceProvider())
-    }
-}
-
-

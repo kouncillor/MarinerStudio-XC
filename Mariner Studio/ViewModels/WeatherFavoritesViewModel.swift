@@ -95,4 +95,48 @@ class WeatherFavoritesViewModel: ObservableObject {
     func cleanup() {
         loadTask?.cancel()
     }
+    
+    
+    
+    
+    
+    
+    // Add these properties to WeatherFavoritesViewModel
+    @Published var isEditingName = false
+    @Published var favoriteToEdit: WeatherLocationFavorite?
+    @Published var newLocationName = ""
+
+    // Add this method to WeatherFavoritesViewModel
+    func updateLocationName(favorite: WeatherLocationFavorite, newName: String) async {
+        guard !newName.isEmpty else { return }
+        
+        if let databaseService = databaseService {
+            let success = await databaseService.updateWeatherLocationNameAsync(
+                latitude: favorite.latitude,
+                longitude: favorite.longitude,
+                newName: newName
+            )
+            
+            if success {
+                // Reload favorites to reflect the changes
+                loadFavorites()
+            }
+        }
+    }
+
+    // Add this method to prepare for editing
+    func prepareForEditing(favorite: WeatherLocationFavorite) {
+        favoriteToEdit = favorite
+        newLocationName = favorite.locationName
+        isEditingName = true
+    }
+    
+    
+    
+    
+    
+    
+    
+    
+    
 }
