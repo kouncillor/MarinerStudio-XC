@@ -1,3 +1,6 @@
+
+
+
 import SwiftUI
 
 struct BuoyStationsView: View {
@@ -22,9 +25,6 @@ struct BuoyStationsView: View {
         VStack(spacing: 0) {
             // Search Bar and Filters
             searchAndFilterBar
-            
-            // Status Information
-            statusBar
             
             // Main Content
             ZStack {
@@ -83,29 +83,6 @@ struct BuoyStationsView: View {
         .padding([.horizontal, .top])
     }
     
-    private var statusBar: some View {
-        VStack(spacing: 4) {
-            HStack {
-                Text("Total Stations: \(viewModel.totalStations)")
-                    .font(.footnote)
-                Spacer()
-                Text("Location: \(viewModel.isLocationEnabled ? "Enabled" : "Disabled")")
-                    .font(.footnote)
-            }
-            
-            if viewModel.isLocationEnabled {
-                HStack {
-                    Text("Your Position: \(viewModel.userLatitude), \(viewModel.userLongitude)")
-                        .font(.footnote)
-                        .foregroundColor(.blue)
-                    Spacer()
-                }
-            }
-        }
-        .padding(.horizontal)
-        .padding(.bottom, 5)
-    }
-    
     private var stationsList: some View {
         List {
             ForEach(viewModel.stations) { stationWithDistance in
@@ -138,7 +115,15 @@ struct BuoyStationRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             HStack {
-                Text(stationWithDistance.station.name)
+                // Process the name to remove any ID prefix if present
+                // This handles cases where the name might be formatted as "ID-Name" or empty
+                let displayName = stationWithDistance.station.name.isEmpty
+                    ? "Unnamed Station"
+                    : (stationWithDistance.station.name.contains("-")
+                        ? stationWithDistance.station.name.components(separatedBy: "-").dropFirst().joined(separator: "-").trimmingCharacters(in: .whitespaces)
+                        : stationWithDistance.station.name)
+                
+                Text(displayName)
                     .font(.headline)
                 Spacer()
                 Button(action: onToggleFavorite) {

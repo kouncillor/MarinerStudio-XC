@@ -1,8 +1,8 @@
 
 import SwiftUI
 
-struct CurrentFavoritesView: View {
-    @StateObject private var viewModel = CurrentFavoritesViewModel()
+struct BuoyFavoritesView: View {
+    @StateObject private var viewModel = BuoyFavoritesViewModel()
     @EnvironmentObject var serviceProvider: ServiceProvider
     @Environment(\.colorScheme) var colorScheme
     
@@ -30,24 +30,27 @@ struct CurrentFavoritesView: View {
                         .foregroundColor(.gray)
                         .padding()
                     
-                    Text("No Favorite Stations")
+                    Text("No Favorite Buoys")
                         .font(.title2)
                         .fontWeight(.semibold)
                     
-                    Text("Current stations you mark as favorites will appear here.")
+                    Text("Buoy stations you mark as favorites will appear here.")
                         .multilineTextAlignment(.center)
                         .foregroundColor(.secondary)
                     
                     Spacer().frame(height: 20)
                     
-                    NavigationLink(destination: TidalCurrentStationsView(
-                        tidalCurrentService: TidalCurrentServiceImpl(),
+                    NavigationLink(destination: BuoyStationsView(
+                        buoyService: BuoyServiceImpl(),
                         locationService: serviceProvider.locationService,
-                        currentStationService: serviceProvider.currentStationService
+                        buoyDatabaseService: serviceProvider.buoyService
                     )) {
                         HStack {
-                            Image(systemName: "arrow.left.arrow.right")
-                            Text("Browse All Current Stations")
+                            Image("buoysixseven")
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 24, height: 24)
+                            Text("Browse All Buoy Stations")
                         }
                         .padding()
                         .background(Color.blue)
@@ -59,17 +62,14 @@ struct CurrentFavoritesView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List {
-                    // Use uniqueId for ForEach identifier instead of just id
-                    ForEach(viewModel.favorites, id: \.uniqueId) { station in
+                    ForEach(viewModel.favorites) { station in
                         NavigationLink {
-                            TidalCurrentPredictionView(
-                                stationId: station.id,
-                                bin: station.currentBin ?? 0,
-                                stationName: station.name,
-                                currentStationService: serviceProvider.currentStationService
+                            BuoyStationWebView(
+                                station: station,
+                                buoyDatabaseService: serviceProvider.buoyService
                             )
                         } label: {
-                            FavoriteCurrentStationRow(station: station)
+                            FavoriteBuoyStationRow(station: station)
                         }
                     }
                     .onDelete(perform: viewModel.removeFavorite)
@@ -80,11 +80,11 @@ struct CurrentFavoritesView: View {
                 }
             }
         }
-        .navigationTitle("Favorite Currents")
+        .navigationTitle("Favorite Buoys")
         .onAppear {
             viewModel.initialize(
-                currentStationService: serviceProvider.currentStationService,
-                tidalCurrentService: TidalCurrentServiceImpl(),
+                buoyDatabaseService: serviceProvider.buoyService,
+                buoyService: BuoyServiceImpl(),
                 locationService: serviceProvider.locationService
             )
             viewModel.loadFavorites()
@@ -95,54 +95,71 @@ struct CurrentFavoritesView: View {
     }
 }
 
-struct FavoriteCurrentStationRow: View {
-    let station: TidalCurrentStation
+struct FavoriteBuoyStationRow: View {
+    let station: BuoyStation
     
     var body: some View {
         HStack(spacing: 16) {
-            // Station icon
-            Image(systemName: "arrow.left.arrow.right")
+            // Buoy icon - using the custom image from MainView
+            Image("buoysixseven")
                 .resizable()
-                .frame(width: 28, height: 28)
-                .foregroundColor(.blue)
-                .padding(8)
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 32, height: 32)
+                .padding(6)
                 .background(Color.blue.opacity(0.1))
                 .clipShape(Circle())
             
             // Station info
             VStack(alignment: .leading, spacing: 4) {
-                Text(station.name)
+                // Process the name to remove any ID prefix if present
+                let displayName = station.name.isEmpty
+                    ? "Unnamed Station"
+                    : (station.name.contains("-")
+                        ? station.name.components(separatedBy: "-").dropFirst().joined(separator: "-").trimmingCharacters(in: .whitespaces)
+                        : station.name)
+                
+                Text(displayName)
                     .font(.headline)
                 
-                if let state = station.state, !state.isEmpty {
-                    Text(state)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
+                Text("Type: \(station.type)")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                
+                Text("Station ID: \(station.id)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                
+                // Handle optional latitude and longitude
+                if let latitude = station.latitude,
+                   let longitude = station.longitude {
+                    Text("Lat: \(String(format: "%.4f", latitude)), Long: \(String(format: "%.4f", longitude))")
+                        .font(.caption)
+                        .foregroundColor(.gray)
                 }
                 
-                // Modified to only show depth without bin number
-                if let depth = station.depth {
-                    Text("Depth: \(String(format: "%.1f", depth)) ft")
+                // Show additional properties if available
+                if let met = station.meteorological, met == "y" {
+                    Text("Meteorological: Yes")
                         .font(.caption)
-                        .foregroundColor(.blue)
+                        .foregroundColor(.green)
+                }
+                
+                if let currents = station.currents, currents == "y" {
+                    Text("Current Data: Yes")
+                        .font(.caption)
+                        .foregroundColor(.green)
                 }
             }
             
             Spacer()
-            
-    
         }
-        .padding(.vertical, 12)
+        .padding(.vertical, 8)
     }
 }
 
 #Preview {
     NavigationView {
-        CurrentFavoritesView()
+        BuoyFavoritesView()
             .environmentObject(ServiceProvider())
     }
 }
-
-
-
-

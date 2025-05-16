@@ -60,14 +60,8 @@ struct MainView: View {
                         )
                     }
 
-                    // BUOYS
-                    NavigationLink {
-                        BuoyStationsView(
-                            buoyService: BuoyServiceImpl(),
-                            locationService: serviceProvider.locationService,
-                            buoyDatabaseService: serviceProvider.buoyService
-                        )
-                    } label: {
+                    // BUOYS - Updated to use BuoyMenuView
+                    NavigationLink(destination: BuoyMenuView()) {
                         NavigationButtonContent(
                             icon: "buoysixseven",
                             title: "BUOYS"
