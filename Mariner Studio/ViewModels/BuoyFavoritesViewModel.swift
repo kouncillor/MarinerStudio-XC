@@ -19,7 +19,7 @@ class BuoyFavoritesViewModel: ObservableObject {
     
     // MARK: - Private Properties
     private var buoyDatabaseService: BuoyDatabaseService?
-    private var buoyService: BuoyService?
+    private var buoyService: BuoyApiService?
     private var locationService: LocationService?
     private var cancellables = Set<AnyCancellable>()
     private var loadTask: Task<Void, Never>?
@@ -27,7 +27,7 @@ class BuoyFavoritesViewModel: ObservableObject {
     // MARK: - Initialization
     func initialize(
         buoyDatabaseService: BuoyDatabaseService?,
-        buoyService: BuoyService?,
+        buoyService: BuoyApiService?,
         locationService: LocationService?
     ) {
         self.buoyDatabaseService = buoyDatabaseService

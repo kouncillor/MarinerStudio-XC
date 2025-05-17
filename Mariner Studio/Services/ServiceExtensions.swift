@@ -34,8 +34,8 @@ extension EnvironmentObject where ObjectType == ServiceProvider {
         wrappedValue.vesselService
     }
     
-    var buoyService: BuoyDatabaseService {
-        wrappedValue.buoyService
+    var buoyDatabaseService: BuoyDatabaseService {
+        wrappedValue.buoyDatabaseService
     }
     
     var weatherService: WeatherDatabaseService {

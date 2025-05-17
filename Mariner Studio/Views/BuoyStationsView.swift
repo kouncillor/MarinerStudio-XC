@@ -9,7 +9,7 @@ struct BuoyStationsView: View {
     
     // MARK: - Initialization
     init(
-        buoyService: BuoyService = BuoyServiceImpl(),
+        buoyService: BuoyApiService = BuoyServiceImpl(),
         locationService: LocationService = LocationServiceImpl(),
         buoyDatabaseService: BuoyDatabaseService
     ) {

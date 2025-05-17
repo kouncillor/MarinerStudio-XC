@@ -83,7 +83,7 @@ struct BuoyFavoritesView: View {
         .navigationTitle("Favorite Buoys")
         .onAppear {
             viewModel.initialize(
-                buoyDatabaseService: serviceProvider.buoyService,
+                buoyDatabaseService: serviceProvider.buoyDatabaseService,
                 buoyService: BuoyServiceImpl(),
                 locationService: serviceProvider.locationService
             )

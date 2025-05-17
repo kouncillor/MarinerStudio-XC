@@ -14,7 +14,7 @@ class MapClusterAnnotationView: MKAnnotationView {
         // Performance optimizations
         displayPriority = .defaultHigh
     }
-
+    
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
@@ -57,20 +57,20 @@ class MapClusterAnnotationView: MKAnnotationView {
             displayPriority = .defaultHigh
         }
     }
-
+    
     // Renamed from drawRatioBicycleToTricycle
     private func drawRatioTidalCurrentToTidalHeight(_ currentCount: Int, to totalCount: Int) -> UIImage {
         return drawRatio(currentCount, to: totalCount,
-                        fractionColor: UIColor.systemRed, // Changed to Red (Tidal Current)
-                        wholeColor: UIColor.systemGreen) // Changed to Green (Tidal Height)
+                         fractionColor: UIColor.systemRed, // Changed to Red (Tidal Current)
+                         wholeColor: UIColor.systemGreen) // Changed to Green (Tidal Height)
     }
-
+    
     // Renamed from drawUnicycleCount
     private func drawNavUnitCount(count: Int) -> UIImage {
         return drawRatio(0, to: count, fractionColor: nil,
-                        wholeColor: UIColor.systemBlue) // Changed to Blue (NavUnit)
+                         wholeColor: UIColor.systemBlue) // Changed to Blue (NavUnit)
     }
-
+    
     private func drawRatio(_ fraction: Int, to whole: Int, fractionColor: UIColor?, wholeColor: UIColor?) -> UIImage {
         // For extremely large clusters, cap the displayed number to improve performance
         let displayCount = min(whole, 999)
@@ -80,7 +80,7 @@ class MapClusterAnnotationView: MKAnnotationView {
             // Fill full circle with wholeColor
             wholeColor?.setFill()
             UIBezierPath(ovalIn: CGRect(x: 0, y: 0, width: 40, height: 40)).fill()
-
+            
             // Fill pie with fractionColor
             if let fractionColor = fractionColor, fraction > 0 {
                 fractionColor.setFill()
@@ -92,16 +92,16 @@ class MapClusterAnnotationView: MKAnnotationView {
                 piePath.close()
                 piePath.fill()
             }
-
+            
             // Fill inner circle with white color
             UIColor.white.setFill()
             UIBezierPath(ovalIn: CGRect(x: 8, y: 8, width: 24, height: 24)).fill()
-
+            
             // Finally draw count text vertically and horizontally centered
             // Use smaller font for large numbers
             let fontSize: CGFloat = displayCount < 100 ? 20 : 16
             let attributes = [ NSAttributedString.Key.foregroundColor: UIColor.black,
-                              NSAttributedString.Key.font: UIFont.boldSystemFont(ofSize: fontSize)]
+                               NSAttributedString.Key.font: UIFont.boldSystemFont(ofSize: fontSize)]
             
             // Format the text with a + for very large numbers
             let text = displayCount < 999 ? "\(displayCount)" : "999+"
@@ -110,7 +110,34 @@ class MapClusterAnnotationView: MKAnnotationView {
             text.draw(in: rect, withAttributes: attributes)
         }
     }
-
+    
+    // Optimized method to count different types of annotations
+//    private func getCounts(from cluster: MKClusterAnnotation) -> (navUnits: Int, tidalHeight: Int, tidalCurrent: Int) {
+//        var navUnitCount = 0
+//        var tidalHeightCount = 0
+//        var tidalCurrentCount = 0
+//        
+//        // Use a faster approach without extra allocations
+//        for case let navObject as NavObject in cluster.memberAnnotations {
+//            switch navObject.type {
+//            case .navunit:
+//                navUnitCount += 1
+//            case .tidalheightstation:
+//                tidalHeightCount += 1
+//            case .tidalcurrentstation:
+//                tidalCurrentCount += 1
+//                
+//            }
+//        }
+//        
+//        return (navUnitCount, tidalHeightCount, tidalCurrentCount)
+//    }
+//    
+    
+    
+    
+    
+    
     // Optimized method to count different types of annotations
     private func getCounts(from cluster: MKClusterAnnotation) -> (navUnits: Int, tidalHeight: Int, tidalCurrent: Int) {
         var navUnitCount = 0
@@ -126,9 +153,24 @@ class MapClusterAnnotationView: MKAnnotationView {
                 tidalHeightCount += 1
             case .tidalcurrentstation:
                 tidalCurrentCount += 1
+            case .buoystation: // Added case for buoy stations
+                // We're not counting buoy stations separately in this method,
+                // but we need to handle the case to make the switch exhaustive
+                break
             }
         }
         
         return (navUnitCount, tidalHeightCount, tidalCurrentCount)
     }
+    
+    
+    
+    
+    
+    
+    
+    
 }
+
+
+

@@ -29,13 +29,13 @@ class BuoyStationsViewModel: ObservableObject {
 
     // MARK: - Properties
     let buoyDatabaseService: BuoyDatabaseService
-    private let buoyService: BuoyService
+    private let buoyService: BuoyApiService
     private let locationService: LocationService
     private var allStations: [StationWithDistance<BuoyStation>] = []
 
     // MARK: - Initialization
     init(
-        buoyService: BuoyService,
+        buoyService: BuoyApiService,
         locationService: LocationService,
         buoyDatabaseService: BuoyDatabaseService
     ) {

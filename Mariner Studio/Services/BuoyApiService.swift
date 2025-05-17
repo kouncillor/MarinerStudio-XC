@@ -8,11 +8,11 @@
 
 import Foundation
 
-protocol BuoyService {
+protocol BuoyApiService {
     func getBuoyStations() async throws -> BuoyStationResponse
 }
 
-class BuoyServiceImpl: BuoyService {
+class BuoyServiceImpl: BuoyApiService {
     // MARK: - Properties
     private let activeStationsUrl = "https://www.ndbc.noaa.gov/activestations.xml"
     

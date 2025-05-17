@@ -28,7 +28,7 @@ struct BuoyMenuView: View {
                 NavigationLink(destination: BuoyStationsView(
                     buoyService: BuoyServiceImpl(),
                     locationService: serviceProvider.locationService,
-                    buoyDatabaseService: serviceProvider.buoyService
+                    buoyDatabaseService: serviceProvider.buoyDatabaseService
                 )) {
                     MenuButtonContentBuoy(
                         iconType: .system("location.fill"),
