@@ -99,9 +99,17 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
            self._onBuoyStationSelected = parent.onBuoyStationSelected // Initialize buoy station callback
        }
        
-       // Center map on user's location
+       
+       
+       
+       // This is an improved version of the centerMapOnUserLocation method
+       // to be incorporated into TandmMapViewRepresentable.swift
+
        func centerMapOnUserLocation(_ mapView: MKMapView) {
            print("Attempting to center on user location")
+           
+           // Explicitly start location updates
+           parent.viewModel.locationService.startUpdatingLocation()
            
            if let userLocation = parent.viewModel.locationService.currentLocation?.coordinate {
                print("User location found: \(userLocation.latitude), \(userLocation.longitude)")
@@ -111,23 +119,88 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
                    span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
                )
                
+               // Set flag to prevent feedback loops
                isUpdatingRegion = true
+               
+               // Use animated transition for better UX
                mapView.setRegion(newRegion, animated: true)
                
-               // Update the parent's region binding
+               // Update the parent's region binding on main thread
                DispatchQueue.main.async {
                    self.parent.region = newRegion
                    
                    // Update the viewModel's current region
                    self.parent.viewModel.updateMapRegion(newRegion)
+                   
+                   // Reset flag
                    self.isUpdatingRegion = false
                    
                    print("Map centered on user location")
                }
            } else {
-               print("User location not available")
+               print("User location not available, requesting updates")
+               // Try to force location service to update again with a different method
+               parent.viewModel.locationService.startUpdatingLocation()
+               
+               // Try again after a short delay
+               DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                   // Force location updates again
+                   self.parent.viewModel.locationService.startUpdatingLocation()
+                   
+                   if let userLocation = self.parent.viewModel.locationService.currentLocation?.coordinate {
+                       print("User location found after retry: \(userLocation.latitude), \(userLocation.longitude)")
+                       
+                       let newRegion = MKCoordinateRegion(
+                           center: userLocation,
+                           span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+                       )
+                       
+                       self.isUpdatingRegion = true
+                       mapView.setRegion(newRegion, animated: true)
+                       
+                       DispatchQueue.main.async {
+                           self.parent.region = newRegion
+                           self.parent.viewModel.updateMapRegion(newRegion)
+                           self.isUpdatingRegion = false
+                           print("Map centered on user location after retry")
+                       }
+                   } else {
+                       print("User location still not available after retry, trying one more time")
+                       
+                       // One final attempt after a slightly longer delay
+                       DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                           // Force location updates one more time
+                           self.parent.viewModel.locationService.startUpdatingLocation()
+                           
+                           if let userLocation = self.parent.viewModel.locationService.currentLocation?.coordinate {
+                               print("User location found after final retry: \(userLocation.latitude), \(userLocation.longitude)")
+                               
+                               let newRegion = MKCoordinateRegion(
+                                   center: userLocation,
+                                   span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+                               )
+                               
+                               self.isUpdatingRegion = true
+                               mapView.setRegion(newRegion, animated: true)
+                               
+                               DispatchQueue.main.async {
+                                   self.parent.region = newRegion
+                                   self.parent.viewModel.updateMapRegion(newRegion)
+                                   self.isUpdatingRegion = false
+                                   print("Map centered on user location after final retry")
+                               }
+                           } else {
+                               print("User location still not available after multiple retries")
+                           }
+                       }
+                   }
+               }
            }
        }
+       
+       
+       
+       
        
        func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
            // Return nil for user location annotation

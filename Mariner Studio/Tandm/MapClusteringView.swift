@@ -11,6 +11,10 @@ class TandmMapViewProxy {
 }
 
 struct MapClusteringView: View {
+   // State for tracking if user location was attempted to be set
+   @State private var userLocationUsed = false
+   
+   // We'll still have a default region but will prefer not to use it
    @State private var mapRegion = MKCoordinateRegion(
        center: CLLocationCoordinate2D(latitude: 37.8050315413548, longitude: -122.413632917219),
        span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
@@ -21,7 +25,7 @@ struct MapClusteringView: View {
    @State private var showNavUnits = true
    @State private var showTidalHeightStations = true
    @State private var showTidalCurrentStations = true
-   @State private var showBuoyStations = true // Added state for buoy stations
+   @State private var showBuoyStations = true
    
    // NavUnit navigation state
    @State private var selectedNavUnitId: String? = nil
@@ -54,8 +58,8 @@ struct MapClusteringView: View {
            currentStationService: CurrentStationDatabaseService(databaseCore: DatabaseCore()),
            tidalHeightService: TidalHeightServiceImpl(),
            tidalCurrentService: TidalCurrentServiceImpl(),
-           buoyService: BuoyServiceImpl(), // Added BuoyServiceImpl
-           buoyDatabaseService: BuoyDatabaseService(databaseCore: DatabaseCore()), // Added BuoyDatabaseService
+           buoyService: BuoyServiceImpl(),
+           buoyDatabaseService: BuoyDatabaseService(databaseCore: DatabaseCore()),
            locationService: LocationServiceImpl()
        ))
    }
@@ -64,12 +68,12 @@ struct MapClusteringView: View {
    init(navUnitService: NavUnitDatabaseService,
         tideStationService: TideStationDatabaseService,
         currentStationService: CurrentStationDatabaseService,
-        buoyDatabaseService: BuoyDatabaseService, // Added parameter
+        buoyDatabaseService: BuoyDatabaseService,
         locationService: LocationService) {
        // Create the required service implementations
        let tidalHeightService = TidalHeightServiceImpl()
        let tidalCurrentService = TidalCurrentServiceImpl()
-       let buoyService = BuoyServiceImpl() // Added BuoyServiceImpl
+       let buoyService = BuoyServiceImpl()
        
        _viewModel = StateObject(wrappedValue: MapClusteringViewModel(
            navUnitService: navUnitService,
@@ -77,10 +81,41 @@ struct MapClusteringView: View {
            currentStationService: currentStationService,
            tidalHeightService: tidalHeightService,
            tidalCurrentService: tidalCurrentService,
-           buoyService: buoyService, // Added buoyService
-           buoyDatabaseService: buoyDatabaseService, // Added buoyDatabaseService
+           buoyService: buoyService,
+           buoyDatabaseService: buoyDatabaseService,
            locationService: locationService
        ))
+   }
+   
+   // Helper method to update the map region based on user location
+   private func updateMapToUserLocation() {
+       // Force location service to start updating
+       viewModel.locationService.startUpdatingLocation()
+       
+       if let userLocation = viewModel.locationService.currentLocation?.coordinate {
+           print("Setting map to user location: \(userLocation.latitude), \(userLocation.longitude)")
+           
+           // Update our state
+           userLocationUsed = true
+           
+           // Create a new region centered on the user location
+           let newRegion = MKCoordinateRegion(
+               center: userLocation,
+               span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+           )
+           
+           // Update the map region
+           mapRegion = newRegion
+           
+           // Also update the viewModel's current region
+           viewModel.updateMapRegion(newRegion)
+           
+           print("Map centered on user location")
+       } else {
+           print("User location not available yet, starting location updates")
+           // Explicitly force location updates to start - this is important
+           viewModel.locationService.startUpdatingLocation()
+       }
    }
    
    var body: some View {
@@ -129,6 +164,56 @@ struct MapClusteringView: View {
                // FORCE RESET all navigation state when the map view appears
                print("MapClusteringView appeared - Resetting all navigation state")
                resetAllNavigationState()
+               
+               // Ensure location service is active as soon as possible
+               viewModel.locationService.startUpdatingLocation()
+               
+               // First attempt immediately
+               updateMapToUserLocation()
+               
+               // Schedule multiple attempts with a more aggressive strategy
+               for (index, delaySeconds) in [0.3, 0.7, 1.5, 2.5, 4.0, 7.0].enumerated() {
+                   DispatchQueue.main.asyncAfter(deadline: .now() + delaySeconds) {
+                       // Only try to update if we haven't successfully used user location yet
+                       if !userLocationUsed {
+                           print("Delayed attempt #\(index + 1) (\(delaySeconds)s) to get user location")
+                           
+                           // Explicitly force location service to update
+                           viewModel.locationService.startUpdatingLocation()
+                           
+                           // Try to get the location - this attempt might work after startUpdatingLocation
+                           if let userLocation = viewModel.locationService.currentLocation?.coordinate {
+                               print("User location found on attempt #\(index + 1): \(userLocation.latitude), \(userLocation.longitude)")
+                               
+                               userLocationUsed = true
+                               
+                               let newRegion = MKCoordinateRegion(
+                                   center: userLocation,
+                                   span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+                               )
+                               
+                               mapRegion = newRegion
+                               viewModel.updateMapRegion(newRegion)
+                               
+                               print("Map centered on user location")
+                           } else {
+                               // If we're on the last attempt and still no location, try to use the location button method
+                               if index == 5 {
+                                   print("Last attempt - trying location button approach")
+                                   if let mapView = TandmMapViewProxy.shared.mapView,
+                                      let coordinator = TandmMapViewProxy.shared.coordinator {
+                                       coordinator.centerMapOnUserLocation(mapView)
+                                   }
+                               } else {
+                                   print("User location still not available on attempt #\(index + 1)")
+                               }
+                           }
+                       }
+                   }
+               }
+               
+               // Load the data when view appears
+               viewModel.loadData()
            }
            
            // Loading indicator
@@ -198,34 +283,6 @@ struct MapClusteringView: View {
        .navigationBarTitleDisplayMode(.inline)
        .sheet(isPresented: $showFilterOptions) {
            filterOptionsView
-       }
-       .onAppear {
-           // First try to center on user's location immediately
-           if let userLocation = viewModel.locationService.currentLocation?.coordinate {
-               print("Centering map on initial user location: \(userLocation.latitude), \(userLocation.longitude)")
-               mapRegion = MKCoordinateRegion(
-                   center: userLocation,
-                   span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
-               )
-           }
-           // Fall back to view model's region if no user location
-           else if let initialRegion = viewModel.currentRegion {
-               mapRegion = initialRegion
-           }
-           
-           // Load the data when view appears
-           viewModel.loadData()
-           
-           // Schedule a delayed attempt to center on user location (in case it wasn't available immediately)
-           DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-               if let userLocation = viewModel.locationService.currentLocation?.coordinate {
-                   print("Delayed centering on user location: \(userLocation.latitude), \(userLocation.longitude)")
-                   mapRegion = MKCoordinateRegion(
-                       center: userLocation,
-                       span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
-                   )
-               }
-           }
        }
        .background(
            Group {
@@ -338,7 +395,7 @@ struct MapClusteringView: View {
            Toggle("Show Tidal Current Stations", isOn: $showTidalCurrentStations)
                .padding(.horizontal)
            
-           Toggle("Show Buoy Stations", isOn: $showBuoyStations) // Added toggle for buoy stations
+           Toggle("Show Buoy Stations", isOn: $showBuoyStations)
                .padding(.horizontal)
            
            Button("Close") {
@@ -361,7 +418,7 @@ struct MapClusteringView: View {
        return viewModel.isLoadingNavUnits ||
               viewModel.isLoadingTideStations ||
               viewModel.isLoadingCurrentStations ||
-              viewModel.isLoadingBuoyStations // Added buoy stations loading check
+              viewModel.isLoadingBuoyStations
    }
    
    // Filter annotations based on user preferences
@@ -375,7 +432,7 @@ struct MapClusteringView: View {
            case .tidalcurrentstation:
                return showTidalCurrentStations
            case .buoystation:
-               return showBuoyStations // Added case for buoy stations
+               return showBuoyStations
            }
        }
    }
