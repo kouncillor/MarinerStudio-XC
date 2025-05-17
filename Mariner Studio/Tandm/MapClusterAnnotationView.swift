@@ -112,33 +112,6 @@ class MapClusterAnnotationView: MKAnnotationView {
     }
     
     // Optimized method to count different types of annotations
-//    private func getCounts(from cluster: MKClusterAnnotation) -> (navUnits: Int, tidalHeight: Int, tidalCurrent: Int) {
-//        var navUnitCount = 0
-//        var tidalHeightCount = 0
-//        var tidalCurrentCount = 0
-//        
-//        // Use a faster approach without extra allocations
-//        for case let navObject as NavObject in cluster.memberAnnotations {
-//            switch navObject.type {
-//            case .navunit:
-//                navUnitCount += 1
-//            case .tidalheightstation:
-//                tidalHeightCount += 1
-//            case .tidalcurrentstation:
-//                tidalCurrentCount += 1
-//                
-//            }
-//        }
-//        
-//        return (navUnitCount, tidalHeightCount, tidalCurrentCount)
-//    }
-//    
-    
-    
-    
-    
-    
-    // Optimized method to count different types of annotations
     private func getCounts(from cluster: MKClusterAnnotation) -> (navUnits: Int, tidalHeight: Int, tidalCurrent: Int) {
         var navUnitCount = 0
         var tidalHeightCount = 0
@@ -162,13 +135,6 @@ class MapClusterAnnotationView: MKAnnotationView {
         
         return (navUnitCount, tidalHeightCount, tidalCurrentCount)
     }
-    
-    
-    
-    
-    
-    
-    
     
 }
 

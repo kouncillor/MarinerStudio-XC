@@ -41,9 +41,9 @@ struct BuoyFavoritesView: View {
                     Spacer().frame(height: 20)
                     
                     NavigationLink(destination: BuoyStationsView(
-                        buoyService: BuoyServiceImpl(),
+                        buoyService: serviceProvider.buoyApiservice,
                         locationService: serviceProvider.locationService,
-                        buoyDatabaseService: serviceProvider.buoyService
+                        buoyDatabaseService: serviceProvider.buoyDatabaseService
                     )) {
                         HStack {
                             Image("buoysixseven")
@@ -66,7 +66,7 @@ struct BuoyFavoritesView: View {
                         NavigationLink {
                             BuoyStationWebView(
                                 station: station,
-                                buoyDatabaseService: serviceProvider.buoyService
+                                buoyDatabaseService: serviceProvider.buoyDatabaseService
                             )
                         } label: {
                             FavoriteBuoyStationRow(station: station)
@@ -84,7 +84,7 @@ struct BuoyFavoritesView: View {
         .onAppear {
             viewModel.initialize(
                 buoyDatabaseService: serviceProvider.buoyDatabaseService,
-                buoyService: BuoyServiceImpl(),
+                buoyService: serviceProvider.buoyApiservice,
                 locationService: serviceProvider.locationService
             )
             viewModel.loadFavorites()

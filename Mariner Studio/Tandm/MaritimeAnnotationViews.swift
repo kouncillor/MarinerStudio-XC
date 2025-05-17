@@ -25,13 +25,6 @@ class NavUnitAnnotationView: MKMarkerAnnotationView {
     }
 }
 
-
-
-
-
-
-
-
 class TidalHeightStationAnnotationView: MKMarkerAnnotationView {
     static let ReuseID = "tidalheightstationAnnotation"
 
