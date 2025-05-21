@@ -51,7 +51,7 @@ struct WeatherDetailsView: View {
                 
                 // Pressure - using SF Symbol with purple color
                 DetailRow(
-                    iconSource: .system("arrow.down.to.line", .purple),
+                    iconSource: .custom("pressuresixseven", .purple),
                     title: "Pressure",
                     value: "\(pressure)\""
                 )
