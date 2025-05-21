@@ -1,4 +1,11 @@
+
 import SwiftUI
+
+// Define how the icon should be displayed
+enum IconSource {
+    case system(String, Color? = nil)  // SF Symbol with name and optional color
+    case custom(String, Color? = nil)  // Custom image from asset catalog with name and optional color
+}
 
 struct WeatherDetailsView: View {
     let windSpeed: String
@@ -20,52 +27,52 @@ struct WeatherDetailsView: View {
             
             // Weather detail grid
             VStack(spacing: 25) {
-                // Wind
+                // Wind - using SF Symbol with blue color
                 DetailRow(
-                    icon: "wind",
+                    iconSource: .system("wind", .blue),
                     title: "Wind",
                     subtitle: windDirection,
                     value: windSpeed
                 )
                 
-                // Gusts
+                // Gusts - using custom image with red color
                 DetailRow(
-                    icon: "wind.snow",
+                    iconSource: .system("wind", .red),
                     title: "Gusts",
                     value: windGusts
                 )
                 
-                // Visibility
+                // Visibility - using SF Symbol with green color
                 DetailRow(
-                    icon: "eye",
+                    iconSource: .custom("visibilitysixseven"),
                     title: "Visibility",
                     value: visibility
                 )
                 
-                // Pressure
+                // Pressure - using SF Symbol with purple color
                 DetailRow(
-                    icon: "arrow.down.to.line",
+                    iconSource: .system("arrow.down.to.line", .purple),
                     title: "Pressure",
                     value: "\(pressure)\""
                 )
                 
-                // Humidity
+                // Humidity - using SF Symbol with cyan color
                 DetailRow(
-                    icon: "humidity",
+                    iconSource: .system("humidity", .cyan),
                     title: "Humidity",
                     value: "\(humidity)%"
                 )
                 
-                // Dew Point
+                // Dew Point - using SF Symbol with orange color
                 DetailRow(
-                    icon: "drop",
+                    iconSource: .system("drop", .orange),
                     title: "Dew Point",
                     value: "\(dewPoint)°"
                 )
                 
-                // Precipitation
+                // Precipitation - using SF Symbol with default color
                 DetailRow(
-                    icon: "cloud.rain",
+                    iconSource: .system("cloud.rain"),
                     title: "24-hr Precip Estimate",
                     value: "\(precipitation) in"
                 )
@@ -82,19 +89,30 @@ struct WeatherDetailsView: View {
 }
 
 struct DetailRow: View {
-    let icon: String
+    let iconSource: IconSource
     let title: String
     var subtitle: String? = nil
     let value: String
     
     var body: some View {
         HStack {
-            Image(systemName: icon)
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 24, height: 24)
-                .foregroundColor(.primary.opacity(0.8))
-                .padding(.trailing, 16)
+            // Display either SF Symbol or custom image based on iconSource
+            Group {
+                switch iconSource {
+                case .system(let name, let color):
+                    Image(systemName: name)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .foregroundColor(color ?? .primary.opacity(0.8))
+                case .custom(let name, let color):
+                    Image(name)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .foregroundColor(color ?? .primary.opacity(0.8))
+                }
+            }
+            .frame(width: 24, height: 24)
+            .padding(.trailing, 16)
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)

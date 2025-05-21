@@ -202,9 +202,3 @@ struct ErrorView: View {
     }
 }
 
-#Preview {
-    NavigationView {
-        CurrentLocalWeatherView()
-            .environmentObject(ServiceProvider())
-    }
-}
