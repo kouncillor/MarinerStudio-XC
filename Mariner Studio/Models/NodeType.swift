@@ -1,9 +1,3 @@
-//
-//  NodeType.swift
-//  Mariner Studio
-//
-//  Created by Timothy Russell on 5/21/25.
-//
 
 
 import Foundation
@@ -123,9 +117,18 @@ let navigationFlowData: [NavigationFlowSection] = [
                 position: 2
             ),
             NavigationNode(
+                id: "weather_detail_for_favorites",
+                name: "CurrentLocalWeatherViewForFavorites",
+                description: "Weather from favorites",
+                type: .detail,
+                filePath: "CurrentLocalWeatherViewForFavorites.swift",
+                level: 3,
+                position: 0
+            ),
+            NavigationNode(
                 id: "weather_detail_for_map",
                 name: "CurrentLocalWeatherViewForMap",
-                description: "Weather at location",
+                description: "Weather at map location",
                 type: .detail,
                 filePath: "CurrentLocalWeatherViewForMap.swift",
                 level: 3,
@@ -137,7 +140,7 @@ let navigationFlowData: [NavigationFlowSection] = [
                 description: "Hourly forecast",
                 type: .detail,
                 filePath: "HourlyForecastView.swift",
-                level: 3,
+                level: 4,
                 position: 1
             )
         ],
@@ -146,8 +149,10 @@ let navigationFlowData: [NavigationFlowSection] = [
             NodeConnection(from: "weather_menu", to: "weather_favorites"),
             NodeConnection(from: "weather_menu", to: "current_local_weather"),
             NodeConnection(from: "weather_menu", to: "weather_map"),
+            NodeConnection(from: "weather_favorites", to: "weather_detail_for_favorites"),
             NodeConnection(from: "weather_map", to: "weather_detail_for_map"),
             NodeConnection(from: "current_local_weather", to: "hourly_forecast"),
+            NodeConnection(from: "weather_detail_for_favorites", to: "hourly_forecast"),
             NodeConnection(from: "weather_detail_for_map", to: "hourly_forecast")
         ]
     ),

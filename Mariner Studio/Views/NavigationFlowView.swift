@@ -1,10 +1,11 @@
+
+
 //
 //  NavigationFlowView.swift
 //  Mariner Studio
 //
 //  Created by Timothy Russell on 5/21/25.
 //
-
 
 import SwiftUI
 
@@ -41,8 +42,8 @@ struct NavigationFlowView: View {
         if !searchText.isEmpty {
             filtered = filtered.map { section in
                 var newSection = section
-                newSection.nodes = section.nodes.filter { 
-                    $0.name.lowercased().contains(searchText.lowercased()) 
+                newSection.nodes = section.nodes.filter {
+                    $0.name.lowercased().contains(searchText.lowercased())
                 }
                 return newSection
             }.filter { !$0.nodes.isEmpty }
@@ -92,12 +93,13 @@ struct NavigationFlowView: View {
             ScrollView([.horizontal, .vertical], showsIndicators: true) {
                 ZStack {
                     // Flow sections
-                    VStack(alignment: .leading, spacing: 60) {
+                    VStack(alignment: .leading, spacing: 80) {
                         ForEach(filteredFlowData) { section in
-                            VStack(alignment: .leading, spacing: 16) {
+                            VStack(alignment: .leading, spacing: 20) {
                                 Text(section.category)
-                                    .font(.headline)
-                                    .padding(.bottom, 8)
+                                    .font(.title2)
+                                    .fontWeight(.bold)
+                                    .padding(.bottom, 10)
                                 
                                 FlowSection(section: section, onViewSelected: { node in
                                     selectedView = node
@@ -106,12 +108,12 @@ struct NavigationFlowView: View {
                             }
                             .padding()
                             .background(Color(.systemBackground))
-                            .cornerRadius(12)
-                            .shadow(radius: 2)
+                            .cornerRadius(15)
+                            .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
                         }
                     }
-                    .frame(minWidth: 1000, minHeight: 1000) // Minimum size to allow scrolling
-                    .padding(40)
+                    .frame(minWidth: 1200, minHeight: 1200) // Increased minimum size for larger flows
+                    .padding(50)
                 }
                 .scaleEffect(zoomScale)
                 .offset(offset)
@@ -184,10 +186,10 @@ struct FlowSection: View {
     let section: NavigationFlowSection
     let onViewSelected: (NavigationNode) -> Void
     
-    private let nodeWidth: CGFloat = 140
-    private let nodeHeight: CGFloat = 70
-    private let horizontalSpacing: CGFloat = 80
-    private let verticalSpacing: CGFloat = 100
+    private let nodeWidth: CGFloat = 160  // Increased width for better readability
+    private let nodeHeight: CGFloat = 80  // Increased height
+    private let horizontalSpacing: CGFloat = 100  // Increased spacing
+    private let verticalSpacing: CGFloat = 120    // Increased spacing
     
     var body: some View {
         ZStack {
@@ -195,43 +197,47 @@ struct FlowSection: View {
             ForEach(section.connections, id: \.id) { connection in
                 if let fromNode = section.nodes.first(where: { $0.id == connection.from }),
                    let toNode = section.nodes.first(where: { $0.id == connection.to }) {
+                    
+                    let fromPos = nodePosition(fromNode)
+                    let toPos = nodePosition(toNode)
+                    
                     Path { path in
-                        let fromPos = nodePosition(fromNode)
-                        let toPos = nodePosition(toNode)
+                        let startX = fromPos.x + nodeWidth
+                        let startY = fromPos.y + nodeHeight/2
+                        let endX = toPos.x
+                        let endY = toPos.y + nodeHeight/2
                         
-                        path.move(to: CGPoint(x: fromPos.x + nodeWidth/2, y: fromPos.y + nodeHeight/2))
+                        path.move(to: CGPoint(x: startX, y: startY))
                         
-                        // Calculate control points for a curved path
-                        let controlX = (fromPos.x + toPos.x) / 2
-                        let controlY1 = fromPos.y + nodeHeight/2 + 20
-                        let controlY2 = toPos.y + nodeHeight/2 - 20
+                        // Create smooth bezier curve for connections
+                        let controlPointOffset = horizontalSpacing * 0.6
+                        let control1X = startX + controlPointOffset
+                        let control2X = endX - controlPointOffset
                         
-                        // Draw a curved path using cubic Bezier
-                        if fromPos.y == toPos.y {
-                            // Horizontal connection
-                            path.addLine(to: CGPoint(x: toPos.x + nodeWidth/2, y: toPos.y + nodeHeight/2))
-                        } else {
-                            // Vertical or diagonal connection
-                            path.addCurve(
-                                to: CGPoint(x: toPos.x + nodeWidth/2, y: toPos.y + nodeHeight/2),
-                                control1: CGPoint(x: controlX, y: controlY1),
-                                control2: CGPoint(x: controlX, y: controlY2)
-                            )
-                        }
+                        path.addCurve(
+                            to: CGPoint(x: endX, y: endY),
+                            control1: CGPoint(x: control1X, y: startY),
+                            control2: CGPoint(x: control2X, y: endY)
+                        )
                     }
-                    .stroke(Color.gray, lineWidth: 1.5)
+                    .stroke(
+                        LinearGradient(
+                            gradient: Gradient(colors: [Color.blue.opacity(0.6), Color.purple.opacity(0.4)]),
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        ),
+                        style: StrokeStyle(lineWidth: 2.5, lineCap: .round)
+                    )
                     
                     // Arrow at the end of the connection
-                    let toPos = nodePosition(toNode)
-                    let arrowSize: CGFloat = 6
-                    
+                    let arrowSize: CGFloat = 8
                     Path { path in
-                        path.move(to: CGPoint(x: toPos.x + nodeWidth/2, y: toPos.y + nodeHeight/2))
-                        path.addLine(to: CGPoint(x: toPos.x + nodeWidth/2 - arrowSize, y: toPos.y + nodeHeight/2 - arrowSize))
-                        path.addLine(to: CGPoint(x: toPos.x + nodeWidth/2 - arrowSize, y: toPos.y + nodeHeight/2 + arrowSize))
+                        path.move(to: CGPoint(x: toPos.x, y: toPos.y + nodeHeight/2))
+                        path.addLine(to: CGPoint(x: toPos.x - arrowSize, y: toPos.y + nodeHeight/2 - arrowSize/2))
+                        path.addLine(to: CGPoint(x: toPos.x - arrowSize, y: toPos.y + nodeHeight/2 + arrowSize/2))
                         path.closeSubpath()
                     }
-                    .fill(Color.gray)
+                    .fill(Color.purple.opacity(0.7))
                 }
             }
             
@@ -240,23 +246,41 @@ struct FlowSection: View {
                 let position = nodePosition(node)
                 
                 ZStack {
-                    RoundedRectangle(cornerRadius: 8)
+                    RoundedRectangle(cornerRadius: 12)
                         .fill(nodeColor(for: node))
                         .frame(width: nodeWidth, height: nodeHeight)
-                        .shadow(radius: 2)
+                        .shadow(color: Color.black.opacity(0.2), radius: 3, x: 0, y: 2)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(nodeBorderColor(for: node), lineWidth: 2)
+                        )
                     
-                    VStack {
+                    VStack(spacing: 4) {
                         Text(node.name)
-                            .font(.system(size: 12, weight: .medium))
+                            .font(.system(size: 12, weight: .semibold))
                             .multilineTextAlignment(.center)
-                            .padding(.horizontal, 4)
+                            .lineLimit(2)
+                            .padding(.horizontal, 6)
                         
                         if !node.description.isEmpty {
                             Text(node.description)
-                                .font(.system(size: 9))
+                                .font(.system(size: 10))
                                 .foregroundColor(.secondary)
-                                .lineLimit(1)
+                                .lineLimit(2)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 4)
                         }
+                        
+                        // Node type indicator
+                        Text(node.type.rawValue.uppercased())
+                            .font(.system(size: 8, weight: .medium))
+                            .foregroundColor(nodeBorderColor(for: node))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(
+                                RoundedRectangle(cornerRadius: 4)
+                                    .fill(nodeBorderColor(for: node).opacity(0.2))
+                            )
                     }
                 }
                 .position(x: position.x + nodeWidth/2, y: position.y + nodeHeight/2)
@@ -275,39 +299,55 @@ struct FlowSection: View {
         return CGPoint(x: x, y: y)
     }
     
-    // Determine color based on node type
+    // Determine background color based on node type
     private func nodeColor(for node: NavigationNode) -> Color {
         switch node.type {
-        case .menu:
-            return Color.blue.opacity(0.2)
-        case .detail:
-            return Color.green.opacity(0.2)
         case .mainCategory:
-            return Color.orange.opacity(0.3)
+            return Color.orange.opacity(0.15)
+        case .menu:
+            return Color.blue.opacity(0.15)
         case .list:
-            return Color.purple.opacity(0.2)
+            return Color.purple.opacity(0.15)
+        case .detail:
+            return Color.green.opacity(0.15)
         case .functional:
-            return Color.red.opacity(0.2)
+            return Color.red.opacity(0.15)
+        }
+    }
+    
+    // Determine border color based on node type
+    private func nodeBorderColor(for node: NavigationNode) -> Color {
+        switch node.type {
+        case .mainCategory:
+            return Color.orange
+        case .menu:
+            return Color.blue
+        case .list:
+            return Color.purple
+        case .detail:
+            return Color.green
+        case .functional:
+            return Color.red
         }
     }
     
     // Calculate the total width needed for this section
     private func calculateWidth() -> CGFloat {
         if section.nodes.isEmpty {
-            return 0
+            return nodeWidth
         }
         
-        let maxLevel = section.nodes.map { $0.level }.max()!
+        let maxLevel = section.nodes.map { $0.level }.max() ?? 0
         return CGFloat(maxLevel + 1) * (nodeWidth + horizontalSpacing)
     }
     
     // Calculate the total height needed for this section
     private func calculateHeight() -> CGFloat {
         if section.nodes.isEmpty {
-            return 0
+            return nodeHeight
         }
         
-        let maxPosition = section.nodes.map { $0.position }.max()!
+        let maxPosition = section.nodes.map { $0.position }.max() ?? 0
         return CGFloat(maxPosition + 1) * (nodeHeight + verticalSpacing)
     }
 }
@@ -319,7 +359,7 @@ struct ViewDetailSheet: View {
     
     var body: some View {
         NavigationView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 20) {
                 // View name
                 Text(node.name)
                     .font(.title)
@@ -327,34 +367,58 @@ struct ViewDetailSheet: View {
                 
                 Divider()
                 
-                // View type
+                // View type with colored indicator
                 HStack {
                     Text("Type:")
                         .fontWeight(.semibold)
                     Text(node.type.rawValue.capitalized)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
                         .background(
-                            RoundedRectangle(cornerRadius: 4)
+                            RoundedRectangle(cornerRadius: 8)
                                 .fill(typeColor(for: node.type).opacity(0.2))
                         )
+                        .foregroundColor(typeColor(for: node.type))
+                        .fontWeight(.medium)
                 }
                 
                 // View description
                 if !node.description.isEmpty {
-                    Text("Description:")
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Description:")
+                            .fontWeight(.semibold)
+                        Text(node.description)
+                            .padding()
+                            .background(Color(.systemGray6))
+                            .cornerRadius(8)
+                    }
+                }
+                
+                // Position in flow
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Position in Flow:")
                         .fontWeight(.semibold)
-                    Text(node.description)
+                    HStack {
+                        VStack(alignment: .leading) {
+                            Text("Level: \(node.level)")
+                            Text("Position: \(node.position)")
+                        }
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .cornerRadius(8)
+                    }
                 }
                 
                 // File path
-                Text("File Path:")
-                    .fontWeight(.semibold)
-                Text(node.filePath)
-                    .font(.system(.body, design: .monospaced))
-                    .padding(8)
-                    .background(Color(.systemGray6))
-                    .cornerRadius(4)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("File Path:")
+                        .fontWeight(.semibold)
+                    Text(node.filePath)
+                        .font(.system(.body, design: .monospaced))
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .cornerRadius(8)
+                }
                 
                 Spacer()
             }
@@ -368,14 +432,14 @@ struct ViewDetailSheet: View {
     
     private func typeColor(for type: NodeType) -> Color {
         switch type {
-        case .menu:
-            return Color.blue
-        case .detail:
-            return Color.green
         case .mainCategory:
             return Color.orange
+        case .menu:
+            return Color.blue
         case .list:
             return Color.purple
+        case .detail:
+            return Color.green
         case .functional:
             return Color.red
         }
@@ -385,6 +449,12 @@ struct ViewDetailSheet: View {
 // Preview provider
 struct NavigationFlowView_Previews: PreviewProvider {
     static var previews: some View {
-        NavigationFlowView()
+        NavigationView {
+            NavigationFlowView()
+        }
     }
 }
+
+
+
+
