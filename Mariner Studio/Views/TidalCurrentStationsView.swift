@@ -39,7 +39,7 @@ struct TidalCurrentStationsView: View {
                }
            }
        }
-     //  .navigationTitle("Tidal Current Stations")
+       .navigationTitle("Tidal Current Stations")
        .withHomeButton()
        .task {
            await viewModel.loadStations()
@@ -117,19 +117,11 @@ struct TidalCurrentStationRow: View {
    let stationWithDistance: StationWithDistance<TidalCurrentStation>
    let onToggleFavorite: () -> Void
    
-   // Define color palette
-   private let stationNameColor = Color(.sRGB, red: 0.0, green: 0.2, blue: 0.4, opacity: 1.0) // Deep Navy Blue
-   private let stateColor = Color(.sRGB, red: 0.4, green: 0.45, blue: 0.5, opacity: 1.0) // Slate Gray
-   private let depthColor = Color(.sRGB, red: 0.0, green: 0.5, blue: 0.5, opacity: 1.0) // Teal
-   private let distanceColor = Color(.sRGB, red: 0.9, green: 0.6, blue: 0.0, opacity: 1.0) // Amber
-   
    var body: some View {
        VStack(alignment: .leading, spacing: 5) {
            HStack {
                Text(stationWithDistance.station.name)
-                   .font(.title)
-                   .fontWeight(.medium)
-                   .foregroundColor(stationNameColor)
+                   .font(.headline)
                Spacer()
                Button(action: onToggleFavorite) {
                    Image(systemName: stationWithDistance.station.isFavorite ? "star.fill" : "star")
@@ -140,20 +132,23 @@ struct TidalCurrentStationRow: View {
            if let state = stationWithDistance.station.state, !state.isEmpty {
                Text(state)
                    .font(.subheadline)
-                   .foregroundColor(stateColor)
+                   .foregroundColor(.gray)
            }
            
-           // Show depth information with the new teal color
+           Text("Station ID: \(stationWithDistance.station.id)")
+               .font(.caption)
+               .foregroundColor(.gray)
+           
            if let depth = stationWithDistance.station.depth {
                Text("Depth: \(String(format: "%.1f", depth)) ft")
-                   .font(.headline)
-                   .foregroundColor(depthColor)
+                   .font(.caption)
+                   .foregroundColor(.gray)
            }
            
            if !stationWithDistance.distanceDisplay.isEmpty {
                Text("Distance: \(stationWithDistance.distanceDisplay)")
-                   .font(.headline)
-                   .foregroundColor(distanceColor)
+                   .font(.caption)
+                   .foregroundColor(.gray)
            }
        }
        .padding(.vertical, 5)
