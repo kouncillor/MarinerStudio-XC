@@ -1,3 +1,5 @@
+
+
 import Foundation
 import CoreLocation
 import SwiftUI
@@ -156,6 +158,15 @@ class CurrentLocalWeatherViewModelForMap: ObservableObject {
                 }
             }
         }
+    }
+    
+    // MARK: - Lifecycle Methods
+    
+    /// Call when view disappears to cancel tasks
+    func cleanup() {
+        // Cancel any ongoing weather task
+        weatherTask?.cancel()
+        weatherTask = nil
     }
     
     func toggleFavorite() {
@@ -439,5 +450,3 @@ class CurrentLocalWeatherViewModelForMap: ObservableObject {
         return directions[index]
     }
 }
-
-
