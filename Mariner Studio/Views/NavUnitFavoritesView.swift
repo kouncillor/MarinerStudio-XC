@@ -59,10 +59,18 @@ struct NavUnitFavoritesView: View {
             } else {
                 List {
                     ForEach(viewModel.favorites, id: \.navUnitId) { navUnit in
-                        NavigationLink(
-                            destination: Text("Nav Unit Details: \(navUnit.navUnitName)")
-                                .navigationTitle(navUnit.navUnitName)
-                        ) {
+                        NavigationLink {
+                            // Create the destination view with proper NavUnitDetailsViewModel
+                            let detailsViewModel = NavUnitDetailsViewModel(
+                                navUnit: navUnit,
+                                databaseService: serviceProvider.navUnitService,
+                                photoService: serviceProvider.photoService,
+                                navUnitFtpService: serviceProvider.navUnitFtpService,
+                                imageCacheService: serviceProvider.imageCacheService,
+                                favoritesService: serviceProvider.favoritesService
+                            )
+                            NavUnitDetailsView(viewModel: detailsViewModel)
+                        } label: {
                             FavoriteNavUnitRow(navUnit: navUnit)
                         }
                     }
@@ -123,12 +131,3 @@ struct FavoriteNavUnitRow: View {
         .padding(.vertical, 8)
     }
 }
-
-
-
-
-
-
-
-
-
