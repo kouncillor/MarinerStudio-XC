@@ -127,7 +127,7 @@ struct WeatherFavoritesView: View {
             NavigationLink(
                 destination: Group {
                     if let favorite = selectedFavorite {
-                        CurrentLocalWeatherViewForMap(
+                        CurrentLocalWeatherViewForFavorites(
                             latitude: favorite.latitude,
                             longitude: favorite.longitude
                         )
