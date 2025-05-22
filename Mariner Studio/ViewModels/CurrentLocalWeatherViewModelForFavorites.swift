@@ -1,3 +1,4 @@
+
 //
 //  CurrentLocalWeatherViewModelForFavorites.swift
 //  Mariner Studio
@@ -164,6 +165,15 @@ class CurrentLocalWeatherViewModelForFavorites: ObservableObject {
                 }
             }
         }
+    }
+    
+    // MARK: - Lifecycle Methods
+    
+    /// Call when view disappears to cancel tasks
+    func cleanup() {
+        // Cancel any ongoing weather task
+        weatherTask?.cancel()
+        weatherTask = nil
     }
     
     func toggleFavorite() {
