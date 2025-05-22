@@ -81,7 +81,7 @@ struct MainView: View {
                         vesselService: serviceProvider.vesselService
                     )) {
                         NavigationButtonContent(
-                            icon: "bargesixseventwo",
+                            icon: "crewsixseven",
                             title: "BARGES"
                         )
                     }
@@ -91,13 +91,13 @@ struct MainView: View {
                         navigateToGpxView = true
                     }) {
                         VStack(alignment: .center, spacing: 8) {
-                            Image("tsixseven")
+                            Image("greencompasssixseven")
                                 .resizable()
                                 .aspectRatio(contentMode: .fit)
                                 .frame(width: 67, height: 67)
 
                             VStack(alignment: .center) {
-                                Text("Route")
+                                Text("ROUTES")
                                     .font(.headline)
                             }
                         }

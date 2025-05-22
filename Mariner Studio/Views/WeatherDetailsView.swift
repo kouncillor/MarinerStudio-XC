@@ -1,12 +1,6 @@
 
 import SwiftUI
 
-// Define how the icon should be displayed
-enum IconSource {
-    case system(String, Color? = nil)  // SF Symbol with name and optional color
-    case custom(String, Color? = nil)  // Custom image from asset catalog with name and optional color
-}
-
 struct WeatherDetailsView: View {
     let windSpeed: String
     let windDirection: String
@@ -136,19 +130,4 @@ struct DetailRow: View {
     }
 }
 
-#Preview {
-    VStack {
-        WeatherDetailsView(
-            windSpeed: "10 mph",
-            windDirection: "from N",
-            windGusts: "15 mph",
-            visibility: "10 mi",
-            pressure: "30.12",
-            humidity: "65",
-            dewPoint: "55.1",
-            precipitation: "0.25"
-        )
-        .padding()
-    }
-    .background(Color(UIColor.systemGroupedBackground))
-}
+
