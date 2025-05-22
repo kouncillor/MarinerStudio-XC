@@ -75,6 +75,8 @@ struct NavUnitFavoritesView: View {
             }
         }
        .navigationTitle("Favorite Nav Units")
+       .withHomeButton()
+        
         .onAppear {
             viewModel.initialize(
                 navUnitService: serviceProvider.navUnitService,

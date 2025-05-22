@@ -81,6 +81,8 @@ struct BuoyFavoritesView: View {
             }
         }
         .navigationTitle("Favorite Buoys")
+        .withHomeButton()
+        
         .onAppear {
             viewModel.initialize(
                 buoyDatabaseService: serviceProvider.buoyDatabaseService,

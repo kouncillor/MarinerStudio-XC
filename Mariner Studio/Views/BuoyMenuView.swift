@@ -40,6 +40,8 @@ struct BuoyMenuView: View {
             .padding()
         }
         .navigationTitle("Buoys")
+        .withHomeButton()
+        
     }
 }
 

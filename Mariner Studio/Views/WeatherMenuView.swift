@@ -1,5 +1,4 @@
 
-
 import SwiftUI
 
 struct WeatherMenuView: View {
@@ -51,8 +50,7 @@ struct WeatherMenuView: View {
         }
         
         .navigationTitle("Weather")
-        
-    }
+        .withHomeButton()    }
 
     // Opens the NOAA radar website using Safari
     private func openRadarWebsite() {

@@ -41,6 +41,8 @@ struct BuoyStationsView: View {
             }
         }
         .navigationTitle("Buoy Stations")
+        .withHomeButton()
+        
         .task {
             await viewModel.loadStations()
         }

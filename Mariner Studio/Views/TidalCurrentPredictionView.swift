@@ -58,6 +58,9 @@ struct TidalCurrentPredictionView: View {
             .padding()
         }
         .navigationTitle("Current Predictions")
+        .withHomeButton()
+        
+        
         .overlay {
             if viewModel.isLoading {
                 ProgressView()

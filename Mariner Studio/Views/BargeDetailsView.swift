@@ -103,6 +103,8 @@ struct BargeDetailsView: View {
             }
         }
         .navigationTitle("Barge Details")
+        .withHomeButton()
+        
     }
     
     // MARK: - View Components

@@ -30,18 +30,12 @@ struct TideMenuView: View {
                     )
                 }
                 
-                // Tide Map - System Icon
-//                NavigationLink(destination: EmptyView()) {
-//                    MenuButtonContentTide(
-//                        iconType: .system("map.fill"), // Specify system icon for map
-//                        title: "MAP",
-//                        color: .blue
-//                    )
-//                }
+        
             }
             .padding()
         }
         .navigationTitle("Tides")
+        .withHomeButton()
     }
 }
 

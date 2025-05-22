@@ -1,5 +1,4 @@
 
-
 import SwiftUI
 
 struct RouteDetailsView: View {
@@ -122,6 +121,8 @@ struct RouteDetailsView: View {
             }
         }
         .navigationTitle("Route Details")
+        .withHomeButton()
+        
         .navigationBarItems(trailing:
             Button(action: {
                 viewModel.toggleSummary()

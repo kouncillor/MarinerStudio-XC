@@ -30,20 +30,12 @@ struct CurrentMenuView: View {
                     )
                 }
                 
-//                // Current Map - System Icon
-//                NavigationLink(destination: EmptyView()) {
-//                    MenuButtonContentCurrent(
-//                        iconType: .system("map.fill"),
-//                        title: "MAP",
-//                        color: .blue
-//                    )
-//                }
-                
                 
             }
             .padding()
         }
         .navigationTitle("Currents")
+        .withHomeButton()
     }
 }
 

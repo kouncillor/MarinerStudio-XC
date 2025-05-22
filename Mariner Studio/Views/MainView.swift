@@ -10,6 +10,14 @@ struct MainView: View {
     @State private var routeAverageSpeed: String = ""
     @State private var navigateToGpxView = false
     @State private var navigateToRouteDetails = false
+    @State private var navigationPath = NavigationPath()
+    
+    // Parameter to indicate if navigation should be cleared
+    let shouldClearNavigation: Bool
+    
+    init(shouldClearNavigation: Bool = false) {
+        self.shouldClearNavigation = shouldClearNavigation
+    }
 
     let columns: [GridItem] = [
         GridItem(.flexible(), spacing: 12),
@@ -17,7 +25,7 @@ struct MainView: View {
     ]
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ScrollView {
                 LazyVGrid(columns: columns, spacing: 12) {
                     NavigationLink(destination: MapClusteringView()) {
@@ -147,10 +155,9 @@ struct MainView: View {
             .navigationTitle("Mariner Studio")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: {
-                        // No action for now - dead button
-                    }) {
-                        Image(systemName: "line.3.horizontal")
+                    Button(action: navigateToHome) {
+                        Image(systemName: "house.fill")
+                            .foregroundColor(.blue)
                     }
                 }
             }
@@ -158,7 +165,71 @@ struct MainView: View {
                 requiredEntitlementIdentifier: "Pro",
                 presentationMode: .fullScreen
             )
+            .onAppear {
+                // Clear navigation if we arrived here via home button
+                if shouldClearNavigation {
+                    clearNavigationStack()
+                }
+            }
         }
+    }
+    
+    // MARK: - Navigation Actions
+    
+    private func clearNavigationStack() {
+        // Small delay to ensure view is fully loaded
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            // Reset the navigation path
+            navigationPath = NavigationPath()
+            
+            // Also clear any local navigation state
+            navigateToGpxView = false
+            navigateToRouteDetails = false
+            selectedRoute = nil
+            routeAverageSpeed = ""
+            
+            // Try to clear the broader navigation context
+            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+               let window = windowScene.windows.first,
+               let rootViewController = window.rootViewController {
+                
+                clearNavigationHierarchy(from: rootViewController)
+            }
+        }
+    }
+    
+    private func clearNavigationHierarchy(from viewController: UIViewController) {
+        // If it's a navigation controller, pop to root
+        if let navController = viewController as? UINavigationController {
+            navController.popToRootViewController(animated: false)
+        }
+        
+        // Check for tab bar controllers
+        if let tabBarController = viewController as? UITabBarController,
+           let selectedNavController = tabBarController.selectedViewController as? UINavigationController {
+            selectedNavController.popToRootViewController(animated: false)
+        }
+        
+        // Recursively check child view controllers
+        for child in viewController.children {
+            clearNavigationHierarchy(from: child)
+        }
+    }
+    
+    private func navigateToHome() {
+        // Provide haptic feedback
+        let impactGenerator = UIImpactFeedbackGenerator(style: .medium)
+        impactGenerator.prepare()
+        impactGenerator.impactOccurred()
+        
+        // Reset the navigation path to go back to root
+        navigationPath = NavigationPath()
+        
+        // Reset any local navigation state
+        navigateToGpxView = false
+        navigateToRouteDetails = false
+        selectedRoute = nil
+        routeAverageSpeed = ""
     }
     
     private func createGpxView() -> some View {

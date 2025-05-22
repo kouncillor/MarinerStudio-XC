@@ -67,6 +67,8 @@ struct NavUnitDetailsView: View {
             .padding()
         }
         .navigationBarTitle("Navigation Unit Details", displayMode: .inline)
+        .withHomeButton()
+        
     }
     
     // MARK: - View Components
@@ -96,19 +98,6 @@ struct NavUnitDetailsView: View {
             .padding()
         }
     }
-    
-   
-    
-    
-    
-   
-    
-    
-    
-    
-    
-    // Updated mapView component for NavUnitDetailsView.swift
-    // This replaces the existing mapView implementation to use the new iOS 17+ Map API
 
     private var mapView: some View {
         ZStack {

@@ -94,6 +94,8 @@ struct TugDetailsView: View {
             }
         }
         .navigationTitle("Tug Details")
+        .withHomeButton()
+        
     }
     
     // MARK: - View Components

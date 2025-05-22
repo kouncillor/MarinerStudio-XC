@@ -109,6 +109,8 @@ struct CurrentLocalWeatherView: View {
             .padding()
         }
         .navigationTitle("Current Weather")
+        .withHomeButton()
+        
         .onAppear {
             // Initialize with services from the provider, but not the location service
             viewModel.initialize(

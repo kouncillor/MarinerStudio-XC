@@ -103,6 +103,8 @@ struct WeatherFavoritesView: View {
             }
         }
         .navigationTitle("Favorites")
+        .withHomeButton()
+        
         .sheet(isPresented: $viewModel.isEditingName) {
             // Reset values when sheet is dismissed
             viewModel.favoriteToEdit = nil

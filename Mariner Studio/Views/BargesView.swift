@@ -44,6 +44,8 @@ struct BargesView: View {
             }
         }
         .navigationTitle("Barges")
+        .withHomeButton()
+        
         .task {
             await viewModel.loadBarges()
         }

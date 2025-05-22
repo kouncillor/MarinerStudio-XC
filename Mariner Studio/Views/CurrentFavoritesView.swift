@@ -81,6 +81,8 @@ struct CurrentFavoritesView: View {
             }
         }
         .navigationTitle("Favorite Currents")
+        .withHomeButton()
+        
         .onAppear {
             viewModel.initialize(
                 currentStationService: serviceProvider.currentStationService,

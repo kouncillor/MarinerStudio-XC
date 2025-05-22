@@ -113,6 +113,9 @@ struct CurrentLocalWeatherViewForFavorites: View {
             .padding()
         }
         .navigationTitle("Current Weather")
+        .withHomeButton()
+        
+        
         .onAppear {
             // Initialize with services and location coordinates
             viewModel.initialize(

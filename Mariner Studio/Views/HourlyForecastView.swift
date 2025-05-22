@@ -91,6 +91,9 @@ struct HourlyForecastView: View {
             }
         }
         .navigationBarTitle("Hourly Forecast", displayMode: .inline)
+        .withHomeButton()
+        
+        
         .navigationBarBackButtonHidden(false)
         .background(Color(UIColor.systemGroupedBackground))
         .onAppear {

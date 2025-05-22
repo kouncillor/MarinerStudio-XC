@@ -1,6 +1,4 @@
 
-
-
 import SwiftUI
 
 struct TideFavoritesView: View {
@@ -82,6 +80,11 @@ struct TideFavoritesView: View {
             }
         }
         .navigationTitle("Favorite Tides")
+        .withHomeButton()
+        
+        
+        
+        
         .onAppear {
             viewModel.initialize(
                 tideStationService: serviceProvider.tideStationService,

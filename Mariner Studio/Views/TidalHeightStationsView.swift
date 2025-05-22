@@ -42,6 +42,10 @@ struct TidalHeightStationsView: View {
             }
         }
         .navigationTitle("Tidal Height Stations")
+        .withHomeButton()
+        
+        
+        
         .task {
             await viewModel.loadStations()
         }
