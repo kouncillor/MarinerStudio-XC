@@ -1,3 +1,4 @@
+
 import SwiftUI
 
 struct TidalHeightStationsView: View {
@@ -23,9 +24,6 @@ struct TidalHeightStationsView: View {
         VStack(spacing: 0) {
             // Search Bar and Filters
             searchAndFilterBar
-            
-            // Status Information
-            statusBar
             
             // Main Content
             ZStack {
@@ -86,29 +84,6 @@ struct TidalHeightStationsView: View {
             }
         }
         .padding([.horizontal, .top])
-    }
-    
-    private var statusBar: some View {
-        VStack(spacing: 4) {
-            HStack {
-                Text("Total Stations: \(viewModel.totalStations)")
-                    .font(.footnote)
-                Spacer()
-                Text("Location: \(viewModel.isLocationEnabled ? "Enabled" : "Disabled")")
-                    .font(.footnote)
-            }
-            
-            if viewModel.isLocationEnabled {
-                HStack {
-                    Text("Your Position: \(viewModel.userLatitude), \(viewModel.userLongitude)")
-                        .font(.footnote)
-                        .foregroundColor(.blue)
-                    Spacer()
-                }
-            }
-        }
-        .padding(.horizontal)
-        .padding(.bottom, 5)
     }
     
     private var stationsList: some View {
