@@ -1,3 +1,4 @@
+//
 //import Foundation
 //import SwiftUI
 //import CoreLocation
@@ -65,10 +66,24 @@
 //        self.navUnitFtpService = NavUnitFtpServiceImpl()
 //        self.imageCacheService = ImageCacheServiceImpl()
 //        self.favoritesService = FavoritesServiceImpl()
+//        
+//        // Initialize BuoyApiService - make sure this is initialized AFTER all other properties
+//        self.buoyApiservice = BuoyServiceImpl()
+//        
 //        print("📦 ServiceProvider: Initialized NavUnit detail services.")
 //        
 //        // --- Asynchronous Initialization Tasks ---
+//        // Only start these tasks AFTER all properties are initialized
 //        
+//        // Mark the end of initialization - this means all properties are now initialized
+//        print("📦 ServiceProvider initialization complete (sync portion).")
+//        
+//        // Now we can safely use self in closures
+//        self.setupAsyncTasks()
+//    }
+//    
+//    // This method is called after all properties have been initialized
+//    private func setupAsyncTasks() {
 //        // Task 1: Initialize database
 //        Task(priority: .utility) {
 //            do {
@@ -124,19 +139,9 @@
 //        print("📦 ServiceProvider initialization complete (async tasks launched).")
 //    }
 //}
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
+
+
+
 
 
 
@@ -171,6 +176,9 @@ class ServiceProvider: ObservableObject {
     let navUnitFtpService: NavUnitFtpService
     let imageCacheService: ImageCacheService
     let favoritesService: FavoritesService
+    
+    // MARK: - NOAA Chart Service
+    let noaaChartService: NOAAChartService
     
     // MARK: - Initialization
     init(locationService: LocationService? = nil) {
@@ -213,7 +221,10 @@ class ServiceProvider: ObservableObject {
         // Initialize BuoyApiService - make sure this is initialized AFTER all other properties
         self.buoyApiservice = BuoyServiceImpl()
         
-        print("📦 ServiceProvider: Initialized NavUnit detail services.")
+        // Initialize NOAA Chart Service
+        self.noaaChartService = NOAAChartServiceImpl()
+        
+        print("📦 ServiceProvider: Initialized NavUnit detail services and NOAA Chart Service.")
         
         // --- Asynchronous Initialization Tasks ---
         // Only start these tasks AFTER all properties are initialized
