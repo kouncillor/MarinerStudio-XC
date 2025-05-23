@@ -1,3 +1,4 @@
+
 //
 //  NauticalMapView.swift
 //  Mariner Studio
@@ -12,13 +13,15 @@ import CoreLocation
 struct NauticalMapView: View {
     @EnvironmentObject var serviceProvider: ServiceProvider
     @State private var mapRegion = MKCoordinateRegion()
-    @State private var chartOverlay: MKTileOverlay?
-    @State private var currentChartType: NOAAChartType = .traditional
-    @State private var showingChartTypeSelector = false
+    @State private var chartOverlay: NOAAChartTileOverlay?
     @State private var userLocation: CLLocation?
     @State private var isLoading = true
     @State private var errorMessage = ""
     @State private var showingChartInfo = false
+    @State private var currentLayerCount = 1 // Start with 1 layer
+    
+    private let maxAllowedLayers = 15
+    private let minAllowedLayers = 1
     
     var body: some View {
         GeometryReader { geometry in
@@ -26,7 +29,10 @@ struct NauticalMapView: View {
                 // Main Map View
                 NauticalChartMapView(
                     region: $mapRegion,
-                    chartOverlay: $chartOverlay,
+                    chartOverlay: Binding<MKTileOverlay?>(
+                        get: { chartOverlay },
+                        set: { chartOverlay = $0 as? NOAAChartTileOverlay }
+                    ),
                     userLocation: $userLocation
                 )
                 .ignoresSafeArea(edges: .all)
@@ -62,29 +68,11 @@ struct NauticalMapView: View {
                     .transition(.opacity)
                 }
                 
-                // Chart Type & Info Controls
+                // Chart Controls
                 VStack {
                     HStack {
                         Spacer()
                         VStack(spacing: 8) {
-                            // Chart Type Toggle Button
-                            Button(action: {
-                                showingChartTypeSelector = true
-                            }) {
-                                VStack(spacing: 4) {
-                                    Image(systemName: "map.fill")
-                                        .font(.title2)
-                                    Text(currentChartType == .traditional ? "Traditional" : "ECDIS")
-                                        .font(.caption2)
-                                        .fontWeight(.medium)
-                                }
-                                .foregroundColor(.blue)
-                                .padding(8)
-                                .background(Color.white.opacity(0.9))
-                                .cornerRadius(8)
-                                .shadow(radius: 2)
-                            }
-                            
                             // Chart Info Button
                             Button(action: {
                                 showingChartInfo = true
@@ -103,22 +91,52 @@ struct NauticalMapView: View {
                     
                     Spacer()
                     
-                    // Chart Status Indicator
+                    // Layer Control Section
                     HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("NOAA Nautical Charts")
-                                .font(.caption)
-                                .fontWeight(.semibold)
-                            Text(currentChartType == .traditional ? "Traditional Paper Chart Style" : "ECDIS S-52 Compliant")
-                                .font(.caption2)
-                            Text("Zoom in for chart details")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
+                        VStack(alignment: .leading, spacing: 8) {
+                            // Layer Counter Display
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Chart Layers")
+                                    .font(.caption)
+                                    .fontWeight(.semibold)
+                                Text("Showing \(currentLayerCount) of \(maxAllowedLayers)")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                            
+                            // Layer Control Buttons
+                            HStack(spacing: 12) {
+                                // Minus Button
+                                Button(action: {
+                                    decreaseLayerCount()
+                                }) {
+                                    Image(systemName: "minus.circle.fill")
+                                        .font(.title2)
+                                        .foregroundColor(currentLayerCount > minAllowedLayers ? .red : .gray)
+                                }
+                                .disabled(currentLayerCount <= minAllowedLayers)
+                                
+                                // Current Layer Count
+                                Text("\(currentLayerCount)")
+                                    .font(.headline)
+                                    .fontWeight(.bold)
+                                    .frame(minWidth: 30)
+                                
+                                // Plus Button
+                                Button(action: {
+                                    increaseLayerCount()
+                                }) {
+                                    Image(systemName: "plus.circle.fill")
+                                        .font(.title2)
+                                        .foregroundColor(currentLayerCount < maxAllowedLayers ? .green : .gray)
+                                }
+                                .disabled(currentLayerCount >= maxAllowedLayers)
+                            }
                         }
                         .foregroundColor(.primary)
-                        .padding(8)
+                        .padding(12)
                         .background(Color.white.opacity(0.9))
-                        .cornerRadius(8)
+                        .cornerRadius(10)
                         .shadow(radius: 2)
                         
                         Spacer()
@@ -127,7 +145,6 @@ struct NauticalMapView: View {
                 }
             }
         }
-        .navigationTitle("Nautical Chart")
         .withHomeButton()
         .onAppear {
             setupChartDisplay()
@@ -135,24 +152,45 @@ struct NauticalMapView: View {
         .alert("Chart Information", isPresented: $showingChartInfo) {
             Button("OK") { }
         } message: {
-            Text("NOAA Official Charts\n\nDisplaying official NOAA Electronic Navigational Charts (ENCs) with \(currentChartType == .traditional ? "traditional paper chart" : "ECDIS S-52 compliant") symbology.\n\nData Source: NOAA Chart Display Service\n\nZoom in to see nautical features like depth soundings, buoys, and navigation aids.")
-        }
-        .actionSheet(isPresented: $showingChartTypeSelector) {
-            ActionSheet(
-                title: Text("Chart Type"),
-                message: Text("Choose the nautical chart display style"),
-                buttons: [
-                    .default(Text("Traditional Paper Chart Style")) {
-                        switchChartType(to: .traditional)
-                    },
-                    .default(Text("ECDIS S-52 Compliant")) {
-                        switchChartType(to: .ecdis)
-                    },
-                    .cancel()
-                ]
-            )
+            Text("NOAA Official Charts\n\nDisplaying official NOAA Electronic Navigational Charts (ENCs) with official marine chart symbology.\n\nData Source: NOAA Chart Display Service\n\nCurrently showing \(currentLayerCount) chart layers. Use +/- buttons to add or remove detail levels.")
         }
     }
+    
+    // MARK: - Layer Control Methods
+    
+    private func increaseLayerCount() {
+        guard currentLayerCount < maxAllowedLayers else { return }
+        currentLayerCount += 1
+        updateChartOverlay()
+        
+        // Provide haptic feedback
+        let impactGenerator = UIImpactFeedbackGenerator(style: .light)
+        impactGenerator.impactOccurred()
+        
+        print("➕ NauticalMapView: Increased layer count to \(currentLayerCount)")
+    }
+    
+    private func decreaseLayerCount() {
+        guard currentLayerCount > minAllowedLayers else { return }
+        currentLayerCount -= 1
+        updateChartOverlay()
+        
+        // Provide haptic feedback
+        let impactGenerator = UIImpactFeedbackGenerator(style: .light)
+        impactGenerator.impactOccurred()
+        
+        print("➖ NauticalMapView: Decreased layer count to \(currentLayerCount)")
+    }
+    
+    private func updateChartOverlay() {
+        // Create new overlay with updated layer count (using traditional type)
+        let newOverlay = NOAAChartTileOverlay(chartType: .traditional, maxLayers: currentLayerCount)
+        chartOverlay = newOverlay
+        
+        print("🔄 NauticalMapView: Updated chart overlay with \(currentLayerCount) layers")
+    }
+    
+    // MARK: - Chart Setup Methods
     
     private func setupChartDisplay() {
         print("🗺️ NauticalMapView: Setting up chart display")
@@ -160,8 +198,8 @@ struct NauticalMapView: View {
         // Setup location first
         setupUserLocation()
         
-        // Create NOAA chart overlay with current type
-        let overlay = serviceProvider.noaaChartService.createChartTileOverlay(chartType: currentChartType)
+        // Create NOAA chart overlay with current settings
+        let overlay = NOAAChartTileOverlay(chartType: .traditional, maxLayers: currentLayerCount)
         chartOverlay = overlay
         
         // Simulate loading time and remove loading indicator
@@ -171,19 +209,7 @@ struct NauticalMapView: View {
             }
         }
         
-        print("✅ NauticalMapView: Chart overlay configured with \(currentChartType == .traditional ? "Traditional" : "ECDIS") chart type")
-    }
-    
-    private func switchChartType(to newType: NOAAChartType) {
-        print("🗺️ NauticalMapView: Switching chart type from \(currentChartType == .traditional ? "Traditional" : "ECDIS") to \(newType == .traditional ? "Traditional" : "ECDIS")")
-        
-        currentChartType = newType
-        
-        // Create new overlay with the selected chart type
-        let newOverlay = serviceProvider.noaaChartService.createChartTileOverlay(chartType: currentChartType)
-        chartOverlay = newOverlay
-        
-        print("✅ NauticalMapView: Chart type switched successfully")
+        print("✅ NauticalMapView: Chart overlay configured with Traditional chart type and \(currentLayerCount) layers")
     }
     
     private func setupUserLocation() {
@@ -266,7 +292,7 @@ struct NauticalMapView: View {
     }
 }
 
-// MARK: - NauticalChartMapView
+// MARK: - NauticalChartMapView (Updated for NOAAChartTileOverlay)
 
 struct NauticalChartMapView: UIViewRepresentable {
     @Binding var region: MKCoordinateRegion
@@ -303,6 +329,19 @@ struct NauticalChartMapView: UIViewRepresentable {
         if let overlay = chartOverlay {
             mapView.addOverlay(overlay, level: .aboveLabels)
             print("🗺️ NauticalChartMapView: Added NOAA chart overlay")
+            
+            // Force a refresh by slightly adjusting the map region
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                let currentRegion = mapView.region
+                let adjustedRegion = MKCoordinateRegion(
+                    center: currentRegion.center,
+                    span: MKCoordinateSpan(
+                        latitudeDelta: currentRegion.span.latitudeDelta,
+                        longitudeDelta: currentRegion.span.longitudeDelta
+                    )
+                )
+                mapView.setRegion(adjustedRegion, animated: false)
+            }
         }
     }
     
@@ -318,19 +357,38 @@ struct NauticalChartMapView: UIViewRepresentable {
         }
         
         func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
-            if let tileOverlay = overlay as? MKTileOverlay {
+            if let tileOverlay = overlay as? NOAAChartTileOverlay {
                 let renderer = MKTileOverlayRenderer(tileOverlay: tileOverlay)
-                renderer.alpha = 0.9 // Make charts more visible
+                renderer.alpha = 0.8
+                print("🎨 NauticalChartMapView: Created NOAA tile overlay renderer with alpha 0.8")
                 return renderer
             }
+            
+            if let tileOverlay = overlay as? MKTileOverlay {
+                let renderer = MKTileOverlayRenderer(tileOverlay: tileOverlay)
+                renderer.alpha = 0.8
+                print("🎨 NauticalChartMapView: Created generic tile overlay renderer")
+                return renderer
+            }
+            
             return MKOverlayRenderer(overlay: overlay)
         }
         
         func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
-            // Update the binding when user pans/zooms
             DispatchQueue.main.async {
                 self.parent.region = mapView.region
             }
+            
+            let zoomLevel = log2(360 / mapView.region.span.longitudeDelta)
+            print("🔍 NauticalChartMapView: Map region changed, zoom level: \(Int(zoomLevel))")
+        }
+        
+        func mapViewDidFinishLoadingMap(_ mapView: MKMapView) {
+            print("✅ NauticalChartMapView: Map finished loading")
+        }
+        
+        func mapView(_ mapView: MKMapView, didAdd renderers: [MKOverlayRenderer]) {
+            print("➕ NauticalChartMapView: Added \(renderers.count) overlay renderer(s)")
         }
     }
 }
