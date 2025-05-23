@@ -1,10 +1,3 @@
-//
-//  BargesView.swift
-//  Mariner Studio
-//
-//  Created by Timothy Russell on 5/10/25.
-//
-
 
 import SwiftUI
 
@@ -25,9 +18,6 @@ struct BargesView: View {
         VStack(spacing: 0) {
             // Search Bar
             searchBar
-            
-            // Status Information
-            statusBar
             
             // Main Content
             ZStack {
@@ -78,16 +68,6 @@ struct BargesView: View {
             .padding(.trailing, 8)
         }
         .padding([.horizontal, .top])
-    }
-    
-    private var statusBar: some View {
-        HStack {
-            Text("Total Barges: \(viewModel.totalBarges)")
-                .font(.footnote)
-            Spacer()
-        }
-        .padding(.horizontal)
-        .padding(.bottom, 5)
     }
     
     private var bargesList: some View {

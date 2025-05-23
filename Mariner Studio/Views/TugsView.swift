@@ -1,4 +1,5 @@
 
+
 import SwiftUI
 
 struct TugsView: View {
@@ -18,9 +19,6 @@ struct TugsView: View {
         VStack(spacing: 0) {
             // Search Bar
             searchBar
-            
-            // Status Information
-            statusBar
             
             // Main Content
             ZStack {
@@ -71,16 +69,6 @@ struct TugsView: View {
             .padding(.trailing, 8)
         }
         .padding([.horizontal, .top])
-    }
-    
-    private var statusBar: some View {
-        HStack {
-            Text("Total Tugs: \(viewModel.totalTugs)")
-                .font(.footnote)
-            Spacer()
-        }
-        .padding(.horizontal)
-        .padding(.bottom, 5)
     }
     
     private var tugsList: some View {

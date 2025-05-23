@@ -1,5 +1,4 @@
 //
-//
 //import SwiftUI
 //import RevenueCat // Ensure RevenueCat is imported
 //import RevenueCatUI
@@ -89,12 +88,12 @@
 //                        vesselService: serviceProvider.vesselService
 //                    )) {
 //                        NavigationButtonContent(
-//                            icon: "crewsixseven",
+//                            icon: "bargesixseventwo",
 //                            title: "BARGES"
 //                        )
 //                    }
 //
-//                    // Route and Navigation Flow on a row but with separate cells
+//                    // ROUTES button
 //                    Button(action: {
 //                        navigateToGpxView = true
 //                    }) {
@@ -120,7 +119,17 @@
 //                    }
 //                    .buttonStyle(PlainButtonStyle())
 //                    
-//                    // NEW: Navigation Flow Visualization Button
+//                    // CREW button - New addition
+//                    NavigationLink(destination: CrewManagementView()) {
+//                        NavigationButtonContent(
+//                            icon: "person.3.fill",
+//                            title: "CREW",
+//                            isSystemIcon: true,
+//                            iconColor: .orange
+//                        )
+//                    }
+//                    
+//                    // Navigation Flow - Left column only
 //                    NavigationLink(destination: NavigationFlowView()) {
 //                        VStack(alignment: .center, spacing: 8) {
 //                            Image(systemName: "arrow.triangle.branch")
@@ -132,6 +141,7 @@
 //                            VStack(alignment: .center) {
 //                                Text("Navigation Flow")
 //                                    .font(.headline)
+//                                    .multilineTextAlignment(.center)
 //                            }
 //                        }
 //                        .frame(maxWidth: .infinity)
@@ -143,6 +153,10 @@
 //                        )
 //                        .frame(minHeight: 120)
 //                    }
+//                    
+//                    // Empty space for right column in the last row
+//                    Color.clear
+//                        .frame(minHeight: 120)
 //                }
 //                .padding()
 //            }
@@ -340,6 +354,9 @@
 
 
 
+
+
+
 import SwiftUI
 import RevenueCat // Ensure RevenueCat is imported
 import RevenueCatUI
@@ -434,10 +451,8 @@ struct MainView: View {
                         )
                     }
 
-                    // ROUTES button
-                    Button(action: {
-                        navigateToGpxView = true
-                    }) {
+                    // ROUTES - Now navigates to RoutesMenuView
+                    NavigationLink(destination: RoutesMenuView()) {
                         VStack(alignment: .center, spacing: 8) {
                             Image("greencompasssixseven")
                                 .resizable()
@@ -458,9 +473,8 @@ struct MainView: View {
                         )
                         .frame(minHeight: 120)
                     }
-                    .buttonStyle(PlainButtonStyle())
                     
-                    // CREW button - New addition
+                    // CREW button
                     NavigationLink(destination: CrewManagementView()) {
                         NavigationButtonContent(
                             icon: "person.3.fill",
