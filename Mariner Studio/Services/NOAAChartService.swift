@@ -10,15 +10,9 @@ import Foundation
 import MapKit
 import CoreLocation
 
-enum NOAAChartType {
-    case traditional  // NOAA Chart Display Service (traditional paper chart style)
-    case ecdis       // NOAA ECDIS Display Service (S-52 compliant)
-}
-
 protocol NOAAChartService {
-    func createChartTileOverlay(chartType: NOAAChartType, maxLayers: Int) -> NOAAChartTileOverlay
+    func createChartTileOverlay(selectedLayers: Set<Int>) -> NOAAChartTileOverlay
     func getAvailableChartLayers() -> [NOAAChartLayer]
-    func getAvailableChartTypes() -> [NOAAChartType]
     func testNOAAConnection() async -> Bool
 }
 
@@ -45,11 +39,13 @@ class NOAAChartServiceImpl: NOAAChartService {
         NOAAChartLayer(id: "9", name: "Seabed Features", description: "Bottom characteristics and features", isVisible: true),
         NOAAChartLayer(id: "10", name: "Traffic Schemes", description: "Traffic separation schemes and routing", isVisible: true),
         NOAAChartLayer(id: "11", name: "Text & Labels", description: "Place names and chart annotations", isVisible: true),
-        NOAAChartLayer(id: "12", name: "Additional Features", description: "Supplementary chart information", isVisible: true)
+        NOAAChartLayer(id: "12", name: "Additional Features", description: "Supplementary chart information", isVisible: true),
+        NOAAChartLayer(id: "13", name: "Deep Water Routes", description: "Deep water routing information", isVisible: true),
+        NOAAChartLayer(id: "14", name: "Quality of Data", description: "Data quality indicators", isVisible: true)
     ]
     
     init() {
-        print("🗺️ NOAAChartService: Initialized with layer control support")
+        print("🗺️ NOAAChartService: Initialized with layer selection support")
         
         // Test NOAA connection in background
         Task {
@@ -58,14 +54,10 @@ class NOAAChartServiceImpl: NOAAChartService {
         }
     }
     
-    func createChartTileOverlay(chartType: NOAAChartType = .traditional, maxLayers: Int = 1) -> NOAAChartTileOverlay {
-        let overlay = NOAAChartTileOverlay(chartType: chartType, maxLayers: maxLayers)
-        print("🗺️ NOAAChartService: Created NOAA \(chartType == .traditional ? "Traditional" : "ECDIS") chart tile overlay with \(maxLayers) layers")
+    func createChartTileOverlay(selectedLayers: Set<Int>) -> NOAAChartTileOverlay {
+        let overlay = NOAAChartTileOverlay(selectedLayers: selectedLayers)
+        print("🗺️ NOAAChartService: Created NOAA chart tile overlay with layers: \(selectedLayers.sorted())")
         return overlay
-    }
-    
-    func getAvailableChartTypes() -> [NOAAChartType] {
-        return [.traditional, .ecdis]
     }
     
     func getAvailableChartLayers() -> [NOAAChartLayer] {
