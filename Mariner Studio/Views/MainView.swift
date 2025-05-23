@@ -781,8 +781,8 @@ struct MainView: View {
 
                     NavigationLink(destination: NavUnitMenuView()) {
                         NavigationButtonContent(
-                            icon: "refinerysixseven",
-                            title: "NAV UNITS"
+                            icon: "docksixseven",
+                            title: "DOCKS"
                         )
                     }
 
