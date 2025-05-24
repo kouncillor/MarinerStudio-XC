@@ -1,15 +1,10 @@
 
-
 import SwiftUI
 import RevenueCat // Ensure RevenueCat is imported
 import RevenueCatUI
 
 struct MainView: View {
     @EnvironmentObject var serviceProvider: ServiceProvider
-    @State private var selectedRoute: GpxRoute? = nil
-    @State private var routeAverageSpeed: String = ""
-    @State private var navigateToGpxView = false
-    @State private var navigateToRouteDetails = false
     @State private var navigationPath = NavigationPath()
     
     // Parameter to indicate if navigation should be cleared
@@ -94,33 +89,19 @@ struct MainView: View {
                         )
                     }
 
-                    // ROUTES button
-                    Button(action: {
-                        navigateToGpxView = true
-                    }) {
-                        VStack(alignment: .center, spacing: 8) {
-                            Image("greencompasssixseven")
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .frame(width: 67, height: 67)
-
-                            VStack(alignment: .center) {
-                                Text("ROUTES")
-                                    .font(.headline)
-                            }
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(10)
-                        .background(
-                            RoundedRectangle(cornerRadius: 10)
-                                .strokeBorder(Color(UIColor.lightGray), lineWidth: 1)
-                                .background(RoundedRectangle(cornerRadius: 10).fill(Color.white))
+                    // ROUTES button - now navigates to RouteMenuView
+                    NavigationLink(destination: RouteMenuView()) {
+                        NavigationButtonContent(
+                            icon: "greencompasssixseven",
+                            title: "ROUTES"
                         )
-                        .frame(minHeight: 120)
                     }
-                    .buttonStyle(PlainButtonStyle())
                     
-                    // CREW button
+                    // HIDDEN: CREW, NAVIGATION FLOW, and NAUTICAL MAP buttons
+                    // These have been removed as requested
+                    
+                    /*
+                    // CREW button - HIDDEN
                     NavigationLink(destination: CrewManagementView()) {
                         NavigationButtonContent(
                             icon: "person.3.fill",
@@ -130,7 +111,7 @@ struct MainView: View {
                         )
                     }
                     
-                    // Navigation Flow - Left column
+                    // Navigation Flow - HIDDEN
                     NavigationLink(destination: NavigationFlowView()) {
                         VStack(alignment: .center, spacing: 8) {
                             Image(systemName: "arrow.triangle.branch")
@@ -155,7 +136,7 @@ struct MainView: View {
                         .frame(minHeight: 120)
                     }
                     
-                    // NAUTICAL MAP button - Right column, below CREW
+                    // NAUTICAL MAP button - HIDDEN
                     NavigationLink(destination: NauticalMapView()) {
                         NavigationButtonContent(
                             icon: "map.fill",
@@ -164,15 +145,10 @@ struct MainView: View {
                             iconColor: .blue
                         )
                     }
+                    */
                 }
                 .padding()
             }
-            .background(
-                Group {
-                    NavigationLink(destination: createGpxView(), isActive: $navigateToGpxView) { EmptyView() }
-                    NavigationLink(destination: createRouteDetailsView(), isActive: $navigateToRouteDetails) { EmptyView() }
-                }
-            )
             .navigationTitle("Mariner Studio")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -202,12 +178,6 @@ struct MainView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             // Reset the navigation path
             navigationPath = NavigationPath()
-            
-            // Also clear any local navigation state
-            navigateToGpxView = false
-            navigateToRouteDetails = false
-            selectedRoute = nil
-            routeAverageSpeed = ""
             
             // Try to clear the broader navigation context
             if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
@@ -245,48 +215,6 @@ struct MainView: View {
         
         // Reset the navigation path to go back to root
         navigationPath = NavigationPath()
-        
-        // Reset any local navigation state
-        navigateToGpxView = false
-        navigateToRouteDetails = false
-        selectedRoute = nil
-        routeAverageSpeed = ""
-    }
-    
-    private func createGpxView() -> some View {
-        let gpxService = GpxServiceImpl()
-        let routeCalculationService = RouteCalculationServiceImpl()
-        
-        let gpxViewModel = GpxViewModel(
-            gpxService: gpxService,
-            routeCalculationService: routeCalculationService,
-            navigationService: { parameters in
-                if let route = parameters["route"] as? GpxRoute,
-                   let averageSpeed = parameters["averageSpeed"] as? String {
-                    selectedRoute = route
-                    routeAverageSpeed = averageSpeed
-                    navigateToGpxView = false
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        navigateToRouteDetails = true
-                    }
-                }
-            }
-        )
-        
-        return GpxView(viewModel: gpxViewModel)
-    }
-    
-    private func createRouteDetailsView() -> some View {
-        let routeDetailsViewModel = RouteDetailsViewModel(
-            weatherService: serviceProvider.openMeteoService,
-            routeCalculationService: RouteCalculationServiceImpl()
-        )
-        
-        if let route = selectedRoute {
-            routeDetailsViewModel.applyRouteData(route, averageSpeed: routeAverageSpeed)
-        }
-        
-        return RouteDetailsView(viewModel: routeDetailsViewModel)
     }
 }
 
