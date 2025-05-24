@@ -1,5 +1,4 @@
 
-
 import SwiftUI
 import MapKit
 
@@ -55,7 +54,20 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
        )
        
        // Handle chart overlay updates
-       context.coordinator.updateChartOverlay(in: mapView, newOverlay: chartOverlay)
+      // context.coordinator.updateChartOverlay(in: mapView, newOverlay: chartOverlay)
+       
+       // Handle chart overlay updates - now respects the toggle state
+       if viewModel.isChartOverlayEnabled {
+           context.coordinator.updateChartOverlay(in: mapView, newOverlay: chartOverlay)
+       } else {
+           context.coordinator.updateChartOverlay(in: mapView, newOverlay: nil)
+       }
+       
+       
+       
+       
+       
+       
        
        // Use efficient annotation updates - only update what changed
        context.coordinator.updateAnnotations(in: mapView, newAnnotations: annotations)

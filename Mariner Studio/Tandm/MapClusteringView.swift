@@ -63,7 +63,8 @@ struct MapClusteringView: View {
            buoyService: BuoyServiceImpl(),
            buoyDatabaseService: BuoyDatabaseService(databaseCore: DatabaseCore()),
            locationService: LocationServiceImpl(),
-           noaaChartService: NOAAChartServiceImpl()
+           noaaChartService: NOAAChartServiceImpl(),
+           mapOverlayService: MapOverlayDatabaseService(databaseCore: DatabaseCore()) // NEW SERVICE
        ))
    }
    
@@ -73,7 +74,8 @@ struct MapClusteringView: View {
         currentStationService: CurrentStationDatabaseService,
         buoyDatabaseService: BuoyDatabaseService,
         locationService: LocationService,
-        noaaChartService: NOAAChartService) {
+        noaaChartService: NOAAChartService,
+        mapOverlayService: MapOverlayDatabaseService) { // NEW PARAMETER
        // Create the required service implementations
        let tidalHeightService = TidalHeightServiceImpl()
        let tidalCurrentService = TidalCurrentServiceImpl()
@@ -88,7 +90,8 @@ struct MapClusteringView: View {
            buoyService: buoyService,
            buoyDatabaseService: buoyDatabaseService,
            locationService: locationService,
-           noaaChartService: noaaChartService
+           noaaChartService: noaaChartService,
+           mapOverlayService: mapOverlayService // NEW SERVICE
        ))
    }
    
@@ -241,16 +244,16 @@ struct MapClusteringView: View {
                .padding(.top)
            }
            
-           // Floating buttons - now with location, filter, and chart buttons
+           // Floating buttons - now with location, filter, and chart TOGGLE buttons
            VStack {
                Spacer()
                
                HStack {
                    Spacer()
                    
-                   // Chart overlay button - now shows blue when any layers are active
+                   // Chart overlay TOGGLE button - now shows state-based colors
                    Button(action: {
-                       showChartOptions.toggle()
+                       viewModel.toggleChartOverlay()
                    }) {
                        Image("overlaysixseven")
                            .resizable()
@@ -258,13 +261,13 @@ struct MapClusteringView: View {
                            .frame(width: 24, height: 24)
                            .foregroundColor(.white)
                            .padding(12)
-                           .background(viewModel.selectedChartLayers.count > 1 ? Color.blue : Color.gray)
+                           .background(viewModel.isChartOverlayEnabled ? Color.blue : Color.gray)
                            .clipShape(Circle())
                            .shadow(radius: 4)
                    }
                    .padding(.trailing, 8)
                    
-                   // Location button
+                   // Location button (unchanged)
                    Button(action: {
                        print("Location button tapped")
                        if let mapView = TandmMapViewProxy.shared.mapView,
@@ -284,7 +287,7 @@ struct MapClusteringView: View {
                    }
                    .padding(.trailing, 8)
                    
-                   // Filter button
+                   // Filter button (unchanged)
                    Button(action: {
                        showFilterOptions.toggle()
                    }) {
@@ -404,175 +407,90 @@ struct MapClusteringView: View {
        )
    }
    
-   // MARK: - Filter options sheet view
-//   private var filterOptionsView: some View {
-//       VStack(spacing: 20) {
-//           Text("Filter Map Annotations")
-//               .font(.headline)
-//               .padding(.top)
-//           
-//           Toggle("Show Navigation Units", isOn: $showNavUnits)
-//               .padding(.horizontal)
-//           
-//           Toggle("Show Tidal Height Stations", isOn: $showTidalHeightStations)
-//               .padding(.horizontal)
-//           
-//           Toggle("Show Tidal Current Stations", isOn: $showTidalCurrentStations)
-//               .padding(.horizontal)
-//           
-//           Toggle("Show Buoy Stations", isOn: $showBuoyStations)
-//               .padding(.horizontal)
-//           
-//           Button("Close") {
-//               showFilterOptions = false
-//           }
-//           .padding()
-//           .background(Color.blue)
-//           .foregroundColor(.white)
-//           .cornerRadius(8)
-//           
-//           Spacer()
-//       }
-//       .padding()
-//   }
-//
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    // MARK: - Combined filter options sheet view (annotations + chart layers)
-    private var filterOptionsView: some View {
-        NavigationView {
-            VStack(spacing: 0) {
-                // Main content in a List for better organization
-                List {
-                    // MARK: - Map Annotations Section
-                    Section(header: Text("Map Annotations").font(.headline).foregroundColor(.primary)) {
-                        Toggle("Show Navigation Units", isOn: $showNavUnits)
-                            .padding(.vertical, 4)
-                        
-                        Toggle("Show Tidal Height Stations", isOn: $showTidalHeightStations)
-                            .padding(.vertical, 4)
-                        
-                        Toggle("Show Tidal Current Stations", isOn: $showTidalCurrentStations)
-                            .padding(.vertical, 4)
-                        
-                        Toggle("Show Buoy Stations", isOn: $showBuoyStations)
-                            .padding(.vertical, 4)
-                    }
-                    
-                    // MARK: - Chart Layers Section
-                    Section(header:
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Chart Layers").font(.headline).foregroundColor(.primary)
-                            Text("Showing \(viewModel.selectedChartLayers.count - 1) of 14 layers")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    ) {
-                        ForEach(chartLayerInfo.filter { $0.id != 0 }, id: \.id) { layer in
-                            HStack {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Layer \(layer.id)")
-                                        .font(.subheadline)
-                                        .fontWeight(.medium)
-                                        .foregroundColor(.primary)
-                                    
-                                    Text(layer.name)
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                        .fixedSize(horizontal: false, vertical: true)
-                                }
-                                
-                                Spacer()
-                                
-                                Toggle("", isOn: Binding(
-                                    get: { viewModel.selectedChartLayers.contains(layer.id) },
-                                    set: { isSelected in
-                                        if isSelected {
-                                            viewModel.addChartLayer(layer.id)
-                                        } else {
-                                            viewModel.removeChartLayer(layer.id)
-                                        }
-                                    }
-                                ))
-                                .toggleStyle(SwitchToggleStyle())
-                            }
-                            .padding(.vertical, 2)
-                        }
-                    }
-                }
-                .listStyle(GroupedListStyle())
-                
-                // Close button at bottom
-                VStack {
-                    Button("Close") {
-                        showFilterOptions = false
-                    }
-                    .padding()
-                    .background(Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
-                    .padding(.bottom)
-                }
-            }
-            .navigationTitle("Map Display Options")
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarItems(trailing: Button("Done") {
-                showFilterOptions = false
-            })
-        }
-    }
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+   // MARK: - Combined filter options sheet view (annotations + chart layers)
+   private var filterOptionsView: some View {
+       NavigationView {
+           VStack(spacing: 0) {
+               // Main content in a List for better organization
+               List {
+                   // MARK: - Map Annotations Section
+                   Section(header: Text("Map Annotations").font(.headline).foregroundColor(.primary)) {
+                       Toggle("Show Navigation Units", isOn: $showNavUnits)
+                           .padding(.vertical, 4)
+                       
+                       Toggle("Show Tidal Height Stations", isOn: $showTidalHeightStations)
+                           .padding(.vertical, 4)
+                       
+                       Toggle("Show Tidal Current Stations", isOn: $showTidalCurrentStations)
+                           .padding(.vertical, 4)
+                       
+                       Toggle("Show Buoy Stations", isOn: $showBuoyStations)
+                           .padding(.vertical, 4)
+                   }
+                   
+                   // MARK: - Chart Layers Section
+                   Section(header:
+                       VStack(alignment: .leading, spacing: 4) {
+                           Text("Chart Layers").font(.headline).foregroundColor(.primary)
+                           Text("Showing \(viewModel.selectedChartLayers.count - 1) of 14 layers")
+                               .font(.caption)
+                               .foregroundColor(.secondary)
+                       }
+                   ) {
+                       ForEach(chartLayerInfo.filter { $0.id != 0 }, id: \.id) { layer in
+                           HStack {
+                               VStack(alignment: .leading, spacing: 4) {
+                                   Text("Layer \(layer.id)")
+                                       .font(.subheadline)
+                                       .fontWeight(.medium)
+                                       .foregroundColor(.primary)
+                                   
+                                   Text(layer.name)
+                                       .font(.caption)
+                                       .foregroundColor(.secondary)
+                                       .fixedSize(horizontal: false, vertical: true)
+                               }
+                               
+                               Spacer()
+                               
+                               Toggle("", isOn: Binding(
+                                   get: { viewModel.selectedChartLayers.contains(layer.id) },
+                                   set: { isSelected in
+                                       if isSelected {
+                                           viewModel.addChartLayer(layer.id)
+                                       } else {
+                                           viewModel.removeChartLayer(layer.id)
+                                       }
+                                   }
+                               ))
+                               .toggleStyle(SwitchToggleStyle())
+                           }
+                           .padding(.vertical, 2)
+                       }
+                   }
+               }
+               .listStyle(GroupedListStyle())
+               
+               // Close button at bottom
+               VStack {
+                   Button("Close") {
+                       showFilterOptions = false
+                   }
+                   .padding()
+                   .background(Color.blue)
+                   .foregroundColor(.white)
+                   .cornerRadius(8)
+                   .padding(.bottom)
+               }
+           }
+           .navigationTitle("Map Display Options")
+           .navigationBarTitleDisplayMode(.inline)
+           .navigationBarItems(trailing: Button("Done") {
+               showFilterOptions = false
+           })
+       }
+   }
+   
    // MARK: - Chart layers sheet view (simplified - direct to layers)
    private var chartLayersView: some View {
        NavigationView {

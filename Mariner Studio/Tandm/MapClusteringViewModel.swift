@@ -11,10 +11,10 @@ class MapClusteringViewModel: ObservableObject {
    @Published var isLoadingCurrentStations = false
    @Published var isLoadingBuoyStations = false
    
-   // MARK: - Chart Overlay Properties (updated to always be on)
-   @Published var isChartOverlayVisible = true // Always true now
+   // MARK: - Chart Overlay Properties (updated for toggle functionality)
+   @Published var isChartOverlayEnabled = false // NEW: Toggle state (starts OFF)
    @Published var chartOverlay: NOAAChartTileOverlay?
-   @Published var selectedChartLayers: Set<Int> = [0, 1, 2, 6] // Layer 0 always included
+   @Published var selectedChartLayers: Set<Int> = [0] // Start with only Layer 0
    
    // MARK: - Map Properties
    private var allNavObjects: [NavObject] = []
@@ -33,6 +33,11 @@ class MapClusteringViewModel: ObservableObject {
    // MARK: - NavUnit Storage
    private var navUnits: [NavUnit] = []
    
+   // MARK: - Persistence Properties
+   private let viewId = "MapClusteringView" // Unique identifier for this view
+   private let defaultChartLayers: Set<Int> = [0, 1, 2, 6] // Default layers when first enabled
+   private var hasLoadedSettings = false
+   
    // MARK: - Services
    let navUnitService: NavUnitDatabaseService
    private let tideStationService: TideStationDatabaseService
@@ -43,6 +48,7 @@ class MapClusteringViewModel: ObservableObject {
    private let buoyDatabaseService: BuoyDatabaseService
    let locationService: LocationService
    private let noaaChartService: NOAAChartService
+   private let mapOverlayService: MapOverlayDatabaseService // NEW SERVICE
    
    // MARK: - Initialization
    init(navUnitService: NavUnitDatabaseService,
@@ -53,7 +59,8 @@ class MapClusteringViewModel: ObservableObject {
         buoyService: BuoyApiService,
         buoyDatabaseService: BuoyDatabaseService,
         locationService: LocationService,
-        noaaChartService: NOAAChartService) {
+        noaaChartService: NOAAChartService,
+        mapOverlayService: MapOverlayDatabaseService) {
        self.navUnitService = navUnitService
        self.tideStationService = tideStationService
        self.currentStationService = currentStationService
@@ -63,6 +70,7 @@ class MapClusteringViewModel: ObservableObject {
        self.buoyDatabaseService = buoyDatabaseService
        self.locationService = locationService
        self.noaaChartService = noaaChartService
+       self.mapOverlayService = mapOverlayService
        
        // Set initial region based on user location if available
        if let userLocation = locationService.currentLocation {
@@ -78,15 +86,16 @@ class MapClusteringViewModel: ObservableObject {
            )
        }
        
-       // Initialize chart overlay immediately since it's always on
-       createChartOverlay()
-       
-       print("🗺️ MapClusteringViewModel: Initialized with NOAA Chart Service support (always on)")
+       print("🗺️ MapClusteringViewModel: Initialized with toggle functionality (starts OFF)")
    }
    
    // MARK: - Public Methods
    func loadData() {
        Task {
+           // Load overlay settings first
+           await loadOverlaySettings()
+           
+           // Then load map data
            await loadNavUnits()
            await loadTidalHeightStations()
            await loadTidalCurrentStations()
@@ -128,13 +137,42 @@ class MapClusteringViewModel: ObservableObject {
        return navUnits.first { $0.navUnitId == navUnitId }
    }
    
-   // MARK: - Chart Overlay Methods (simplified)
+   // MARK: - Chart Overlay Toggle Methods (NEW)
+   
+   func toggleChartOverlay() {
+       isChartOverlayEnabled.toggle()
+       
+       if isChartOverlayEnabled {
+           // Turning ON: Use saved layers or defaults
+           if selectedChartLayers.count <= 1 { // Only has Layer 0
+               selectedChartLayers = defaultChartLayers
+               print("🔛 MapClusteringViewModel: Overlay turned ON - using default layers: \(defaultChartLayers)")
+           } else {
+               print("🔛 MapClusteringViewModel: Overlay turned ON - using saved layers: \(selectedChartLayers)")
+           }
+           createChartOverlay()
+       } else {
+           // Turning OFF: Keep selected layers but remove overlay
+           chartOverlay = nil
+           print("📴 MapClusteringViewModel: Overlay turned OFF - layers preserved: \(selectedChartLayers)")
+       }
+       
+       // Save settings
+       saveOverlaySettings()
+   }
+   
+   // MARK: - Chart Layer Methods (updated for persistence)
    
    func addChartLayer(_ layerId: Int) {
        selectedChartLayers.insert(layerId)
        // Always ensure Layer 0 is included
        selectedChartLayers.insert(0)
-       updateChartOverlay()
+       
+       if isChartOverlayEnabled {
+           updateChartOverlay()
+       }
+       
+       saveOverlaySettings()
        print("➕ MapClusteringViewModel: Added chart layer \(layerId)")
    }
    
@@ -148,11 +186,21 @@ class MapClusteringViewModel: ObservableObject {
        selectedChartLayers.remove(layerId)
        // Always ensure Layer 0 remains
        selectedChartLayers.insert(0)
-       updateChartOverlay()
+       
+       if isChartOverlayEnabled {
+           updateChartOverlay()
+       }
+       
+       saveOverlaySettings()
        print("➖ MapClusteringViewModel: Removed chart layer \(layerId)")
    }
    
    private func createChartOverlay() {
+       guard isChartOverlayEnabled else {
+           chartOverlay = nil
+           return
+       }
+       
        chartOverlay = noaaChartService.createChartTileOverlay(
            selectedLayers: selectedChartLayers
        )
@@ -162,7 +210,60 @@ class MapClusteringViewModel: ObservableObject {
        createChartOverlay()
    }
    
-   // MARK: - Private Methods
+   // MARK: - Persistence Methods (NEW)
+   
+   private func loadOverlaySettings() async {
+       do {
+           if let settings = try await mapOverlayService.getOverlaySettingsAsync(viewId: viewId) {
+               await MainActor.run {
+                   self.isChartOverlayEnabled = settings.isOverlayEnabled
+                   self.selectedChartLayers = settings.selectedLayers
+                   
+                   // Create overlay if enabled
+                   if self.isChartOverlayEnabled {
+                       self.createChartOverlay()
+                   }
+                   
+                   self.hasLoadedSettings = true
+                   print("📊 MapClusteringViewModel: Loaded settings - enabled: \(settings.isOverlayEnabled), layers: \(settings.selectedLayers)")
+               }
+           } else {
+               await MainActor.run {
+                   // No saved settings - use defaults
+                   self.isChartOverlayEnabled = false
+                   self.selectedChartLayers = [0] // Only Layer 0
+                   self.hasLoadedSettings = true
+                   print("📊 MapClusteringViewModel: No saved settings - using defaults (OFF)")
+               }
+           }
+       } catch {
+           print("❌ MapClusteringViewModel: Error loading overlay settings: \(error.localizedDescription)")
+           await MainActor.run {
+               self.hasLoadedSettings = true
+           }
+       }
+   }
+   
+   private func saveOverlaySettings() {
+       guard hasLoadedSettings else { return } // Don't save until we've loaded initial settings
+       
+       let settings = MapOverlaySettings(
+           viewId: viewId,
+           isOverlayEnabled: isChartOverlayEnabled,
+           selectedLayers: selectedChartLayers
+       )
+       
+       Task {
+           do {
+               try await mapOverlayService.saveOverlaySettingsAsync(settings: settings)
+               print("💾 MapClusteringViewModel: Saved overlay settings")
+           } catch {
+               print("❌ MapClusteringViewModel: Error saving overlay settings: \(error.localizedDescription)")
+           }
+       }
+   }
+   
+   // MARK: - Private Methods (unchanged from original)
    private func loadNavUnits() async {
        if isLoadingNavUnits { return }
        
