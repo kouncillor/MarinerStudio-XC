@@ -1,10 +1,3 @@
-//
-//  GpxServiceProtocol.swift
-//  Mariner Studio
-//
-//  Created by Timothy Russell on 5/24/25.
-//
-
 
 //
 //  GpxServiceProtocol.swift

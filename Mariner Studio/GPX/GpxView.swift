@@ -4,9 +4,12 @@ import MapKit
 
 struct GpxView: View {
     @ObservedObject var viewModel: GpxViewModel
+    let serviceProvider: ServiceProvider
     @State private var mapRegion = MKCoordinateRegion()
     @State private var polyline: MKPolyline?
     @State private var annotations: [RouteAnnotation] = []
+    @State private var showingRouteDetails = false
+    @State private var routeDetailsViewModel: RouteDetailsViewModel?
     
     var body: some View {
         GeometryReader { geometry in
@@ -127,7 +130,7 @@ struct GpxView: View {
                                 
                                 // Row 5: View Route Details Button
                                 Button(action: {
-                                    viewModel.viewRouteDetails()
+                                    navigateToRouteDetails()
                                 }) {
                                     Text("View Route Details")
                                         .foregroundColor(.white)
@@ -181,8 +184,49 @@ struct GpxView: View {
             .onChange(of: viewModel.routePoints) { _, newPoints in
                 updateMapDisplay(with: newPoints)
             }
-            .withHomeButton()  // Add this line here
+            .withHomeButton()
+            .navigationDestination(isPresented: $showingRouteDetails) {
+                if let routeDetailsViewModel = routeDetailsViewModel {
+                    RouteDetailsView(viewModel: routeDetailsViewModel)
+                }
+            }
         }
+    }
+    
+    // Navigate to route details
+    private func navigateToRouteDetails() {
+        guard viewModel.etasCalculated else { return }
+        
+        // Convert RoutePoints to GpxRoutePoints for the route details
+        let gpxRoutePoints = viewModel.routePoints.map { point -> GpxRoutePoint in
+            var gpxPoint = GpxRoutePoint(
+                latitude: point.latitude,
+                longitude: point.longitude,
+                name: point.name
+            )
+            gpxPoint.eta = point.eta
+            gpxPoint.distanceToNext = point.distanceToNext
+            gpxPoint.bearingToNext = point.bearingToNext
+            return gpxPoint
+        }
+        
+        // Create route for route details
+        let route = GpxRoute(
+            name: viewModel.routeName,
+            routePoints: gpxRoutePoints
+        )
+        
+        // Create RouteDetailsViewModel with services
+        routeDetailsViewModel = RouteDetailsViewModel(
+            weatherService: serviceProvider.openMeteoService,
+            routeCalculationService: serviceProvider.routeCalculationService
+        )
+        
+        // Apply route data to the view model
+        routeDetailsViewModel?.applyRouteData(route, averageSpeed: viewModel.averageSpeed)
+        
+        // Show the route details view
+        showingRouteDetails = true
     }
     
     // Request location permission and set initial map location
