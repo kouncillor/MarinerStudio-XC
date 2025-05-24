@@ -252,13 +252,33 @@ struct MapClusteringView: View {
                    Spacer()
                    
                    // Chart overlay TOGGLE button - now shows state-based colors
+//                   Button(action: {
+//                       viewModel.toggleChartOverlay()
+//                   }) {
+//                       Image("overlaysixseven")
+//                           .resizable()
+//                           .aspectRatio(contentMode: .fit)
+//                           .frame(width: 24, height: 24)
+//                           .foregroundColor(.white)
+//                           .padding(12)
+//                           .background(viewModel.isChartOverlayEnabled ? Color.blue : Color.gray)
+//                           .clipShape(Circle())
+//                           .shadow(radius: 4)
+//                   }
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   // Chart overlay TOGGLE button - now uses map/map.fill icons
                    Button(action: {
                        viewModel.toggleChartOverlay()
                    }) {
-                       Image("overlaysixseven")
-                           .resizable()
-                           .aspectRatio(contentMode: .fit)
-                           .frame(width: 24, height: 24)
+                       Image(systemName: viewModel.isChartOverlayEnabled ? "map.fill" : "map")
+                           .font(.system(size: 24))
                            .foregroundColor(.white)
                            .padding(12)
                            .background(viewModel.isChartOverlayEnabled ? Color.blue : Color.gray)
@@ -638,3 +658,4 @@ struct MapClusteringView: View {
        showBuoyStationDetails = false
    }
 }
+
