@@ -1,6 +1,15 @@
 {
-  "originHash" : "7fbb8ef432aa9fb0da328b6636e05eb3d71334ecfa19ec315704526fd6e8fbab",
+  "originHash" : "298250492f953944ff0ef67fcec355f2089e7a9d0082ebed5ce74a998677f402",
   "pins" : [
+    {
+      "identity" : "coregpx",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/vincentneo/CoreGPX.git",
+      "state" : {
+        "revision" : "42662cc9235d385bdd0356c8f4cb7b581da24e39",
+        "version" : "0.9.3"
+      }
+    },
     {
       "identity" : "purchases-ios",
       "kind" : "remoteSourceControl",

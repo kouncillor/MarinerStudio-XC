@@ -40,7 +40,8 @@ class CoreGpxService: ExtendedGpxServiceProtocol {
                     let gpxData = try Data(contentsOf: url)
                     
                     // Parse with CoreGPX
-                    guard let coreGpxRoot = GPXRoot(data: gpxData) else {
+                    let parser = GPXParser(withData: gpxData)
+                    guard let coreGpxRoot = parser.parsedData() else {
                         continuation.resume(throwing: GpxServiceError.parsingFailed("Failed to parse GPX data"))
                         return
                     }
@@ -101,23 +102,23 @@ class CoreGpxService: ExtendedGpxServiceProtocol {
     
     private func convertCoreGpxToGpxFile(_ coreGpxRoot: GPXRoot) throws -> GpxFile {
         // Look for routes first, then tracks, then waypoints
-        if let route = coreGpxRoot.routes?.first {
-            return try convertRouteToGpxFile(route)
-        } else if let track = coreGpxRoot.tracks?.first {
-            return try convertTrackToGpxFile(track)
-        } else if let waypoints = coreGpxRoot.waypoints, !waypoints.isEmpty {
-            return try convertWaypointsToGpxFile(waypoints)
+        if !coreGpxRoot.routes.isEmpty {
+            return try convertRouteToGpxFile(coreGpxRoot.routes.first!)
+        } else if !coreGpxRoot.tracks.isEmpty {
+            return try convertTrackToGpxFile(coreGpxRoot.tracks.first!)
+        } else if !coreGpxRoot.waypoints.isEmpty {
+            return try convertWaypointsToGpxFile(coreGpxRoot.waypoints)
         } else {
             throw GpxServiceError.noRouteData
         }
     }
     
     private func convertRouteToGpxFile(_ coreRoute: GPXRoute) throws -> GpxFile {
-        guard let routePoints = coreRoute.points, !routePoints.isEmpty else {
+        guard !coreRoute.points.isEmpty else {
             throw GpxServiceError.noRouteData
         }
         
-        let gpxRoutePoints = routePoints.map { corePoint in
+        let gpxRoutePoints = coreRoute.points.map { corePoint in
             var gpxPoint = GpxRoutePoint(
                 latitude: corePoint.latitude ?? 0.0,
                 longitude: corePoint.longitude ?? 0.0,
@@ -141,16 +142,14 @@ class CoreGpxService: ExtendedGpxServiceProtocol {
     }
     
     private func convertTrackToGpxFile(_ coreTrack: GPXTrack) throws -> GpxFile {
-        guard let segments = coreTrack.segments, !segments.isEmpty else {
+        guard !coreTrack.segments.isEmpty else {
             throw GpxServiceError.noRouteData
         }
         
         // Combine all track points from all segments
         var allTrackPoints: [GPXTrackPoint] = []
-        for segment in segments {
-            if let points = segment.points {
-                allTrackPoints.append(contentsOf: points)
-            }
+        for segment in coreTrack.segments {
+            allTrackPoints.append(contentsOf: segment.points)
         }
         
         guard !allTrackPoints.isEmpty else {
@@ -211,16 +210,24 @@ class CoreGpxService: ExtendedGpxServiceProtocol {
         let coreRoute = GPXRoute()
         coreRoute.name = gpxFile.route.name
         
-        // Convert route points
-        let coreRoutePoints = gpxFile.route.routePoints.map { gpxPoint in
+        // Initialize points array if needed
+        if coreRoute.points == nil {
+            coreRoute.points = []
+        }
+        
+        // Convert route points using direct array manipulation
+        for gpxPoint in gpxFile.route.routePoints {
             let corePoint = GPXRoutePoint(latitude: gpxPoint.latitude, longitude: gpxPoint.longitude)
             corePoint.name = gpxPoint.name
             corePoint.time = gpxPoint.eta
-            return corePoint
+            coreRoute.points.append(corePoint)
         }
         
-        coreRoute.add(routePoints: coreRoutePoints)
-        root.add(route: coreRoute)
+        // Add route to root using direct array manipulation
+        if root.routes == nil {
+            root.routes = []
+        }
+        root.routes.append(coreRoute)
         
         return root
     }

@@ -1,3 +1,4 @@
+
 //
 //  GpxServiceFactory.swift
 //  Mariner Studio
@@ -23,7 +24,7 @@ class GpxServiceFactory {
     static let shared = GpxServiceFactory()
     
     // MARK: - Properties
-    private var defaultType: GpxServiceType = .legacy
+    private var defaultType: GpxServiceType = .automatic
     private var cachedServices: [GpxServiceType: ExtendedGpxServiceProtocol] = [:]
     
     // MARK: - Initialization
@@ -49,10 +50,11 @@ class GpxServiceFactory {
     
     func setDefaultServiceType(_ type: GpxServiceType) {
         defaultType = type
+        print("📦 GpxServiceFactory: Default service type set to \(type)")
     }
     
     func getAvailableServices() -> [GpxServiceType] {
-        return [.legacy] // Will expand when CoreGPX is added
+        return [.legacy, .coreGpx, .automatic]
     }
     
     func isServiceTypeAvailable(_ type: GpxServiceType) -> Bool {
@@ -60,7 +62,22 @@ class GpxServiceFactory {
         case .legacy, .automatic:
             return true
         case .coreGpx:
-            return false // Will be true in Phase 2
+            return true // Now available!
+        }
+    }
+    
+    // MARK: - Service Selection Logic
+    
+    func recommendServiceForTask(_ task: GpxTask) -> GpxServiceType {
+        switch task {
+        case .readSimpleRoute:
+            return .legacy
+        case .readComplexGpx:
+            return .coreGpx
+        case .writeGpxFile:
+            return .coreGpx
+        case .validateGpxFile:
+            return .coreGpx
         }
     }
     
@@ -78,19 +95,39 @@ class GpxServiceFactory {
     }
     
     private func chooseBestAvailableService() -> GpxServiceType {
-        // Future logic: choose based on requirements
-        // For now, always use legacy
-        return .legacy
+        // Smart service selection logic
+        // For now, prefer CoreGPX if available, fallback to legacy
+        if isServiceTypeAvailable(.coreGpx) {
+            print("📦 GpxServiceFactory: Auto-selecting CoreGPX service")
+            return .coreGpx
+        } else {
+            print("📦 GpxServiceFactory: Auto-selecting Legacy service")
+            return .legacy
+        }
     }
     
     private func instantiateService(_ type: GpxServiceType) -> ExtendedGpxServiceProtocol {
         switch type {
-        case .legacy, .automatic:
+        case .legacy:
+            print("📦 GpxServiceFactory: Creating Legacy GPX service")
             return LegacyGpxServiceWrapper()
         case .coreGpx:
-            fatalError("CoreGPX service not implemented yet")
+            print("📦 GpxServiceFactory: Creating CoreGPX service")
+            return CoreGpxService()
+        case .automatic:
+            // This should never happen due to resolveServiceType
+            return LegacyGpxServiceWrapper()
         }
     }
+}
+
+// MARK: - Task Types
+
+enum GpxTask {
+    case readSimpleRoute
+    case readComplexGpx
+    case writeGpxFile
+    case validateGpxFile
 }
 
 // MARK: - Convenience Methods
@@ -103,5 +140,40 @@ extension GpxServiceFactory {
     
     func createCoreGpxService() -> ExtendedGpxServiceProtocol {
         return createGpxService(type: .coreGpx)
+    }
+    
+    func createServiceForWriting() -> ExtendedGpxServiceProtocol {
+        return createGpxService(type: .coreGpx)
+    }
+    
+    func createServiceForReading() -> ExtendedGpxServiceProtocol {
+        return createGpxService(type: .automatic)
+    }
+    
+    // Reset cached services (useful for testing or configuration changes)
+    func clearCache() {
+        cachedServices.removeAll()
+        print("📦 GpxServiceFactory: Service cache cleared")
+    }
+}
+
+// MARK: - Debug and Monitoring
+
+extension GpxServiceFactory {
+    
+    func getServiceInfo() -> [String: Any] {
+        return [
+            "defaultType": String(describing: defaultType),
+            "availableServices": getAvailableServices().map { String(describing: $0) },
+            "cachedServices": cachedServices.keys.map { String(describing: $0) }
+        ]
+    }
+    
+    func printServiceStatus() {
+        let info = getServiceInfo()
+        print("📊 GpxServiceFactory Status:")
+        print("  Default Type: \(info["defaultType"] ?? "unknown")")
+        print("  Available: \(info["availableServices"] ?? [])")
+        print("  Cached: \(info["cachedServices"] ?? [])")
     }
 }

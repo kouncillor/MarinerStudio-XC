@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		2E2F40E02DBF09510005CB80 /* SQLite in Frameworks */ = {isa = PBXBuildFile; productRef = 2E2F40DF2DBF09510005CB80 /* SQLite */; };
+		2E540EA72DE2BDDD00D8A826 /* CoreGPX in Frameworks */ = {isa = PBXBuildFile; productRef = 2E540EA62DE2BDDD00D8A826 /* CoreGPX */; };
 		2E5E9FA42DCBD39D00F97B95 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 2E5E9FA32DCBD39D00F97B95 /* RevenueCat */; };
 		2E5E9FA62DCBD39D00F97B95 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 2E5E9FA52DCBD39D00F97B95 /* RevenueCatUI */; };
 /* End PBXBuildFile section */
@@ -32,6 +33,7 @@
 				2E5E9FA42DCBD39D00F97B95 /* RevenueCat in Frameworks */,
 				2E2F40E02DBF09510005CB80 /* SQLite in Frameworks */,
 				2E5E9FA62DCBD39D00F97B95 /* RevenueCatUI in Frameworks */,
+				2E540EA72DE2BDDD00D8A826 /* CoreGPX in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -77,6 +79,7 @@
 				2E2F40DF2DBF09510005CB80 /* SQLite */,
 				2E5E9FA32DCBD39D00F97B95 /* RevenueCat */,
 				2E5E9FA52DCBD39D00F97B95 /* RevenueCatUI */,
+				2E540EA62DE2BDDD00D8A826 /* CoreGPX */,
 			);
 			productName = "Mariner Studio";
 			productReference = 2EB41CD02DBC80CC009FC129 /* Mariner Studio.app */;
@@ -109,6 +112,7 @@
 			packageReferences = (
 				2E2F40DE2DBF09510005CB80 /* XCRemoteSwiftPackageReference "SQLite" */,
 				2E5E9FA22DCBD39D00F97B95 /* XCRemoteSwiftPackageReference "purchases-ios" */,
+				2E540EA52DE2BDDD00D8A826 /* XCRemoteSwiftPackageReference "CoreGPX" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 2EB41CD12DBC80CC009FC129 /* Products */;
@@ -377,6 +381,14 @@
 				minimumVersion = 0.15.3;
 			};
 		};
+		2E540EA52DE2BDDD00D8A826 /* XCRemoteSwiftPackageReference "CoreGPX" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/vincentneo/CoreGPX.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.9.3;
+			};
+		};
 		2E5E9FA22DCBD39D00F97B95 /* XCRemoteSwiftPackageReference "purchases-ios" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/RevenueCat/purchases-ios.git";
@@ -392,6 +404,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 2E2F40DE2DBF09510005CB80 /* XCRemoteSwiftPackageReference "SQLite" */;
 			productName = SQLite;
+		};
+		2E540EA62DE2BDDD00D8A826 /* CoreGPX */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2E540EA52DE2BDDD00D8A826 /* XCRemoteSwiftPackageReference "CoreGPX" */;
+			productName = CoreGPX;
 		};
 		2E5E9FA32DCBD39D00F97B95 /* RevenueCat */ = {
 			isa = XCSwiftPackageProductDependency;
