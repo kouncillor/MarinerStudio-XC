@@ -5,75 +5,124 @@
 //  Created by Timothy Russell on 5/23/25.
 //
 
-
 import SwiftUI
 
 struct CreateRouteView: View {
+    @EnvironmentObject var serviceProvider: ServiceProvider
+    @State private var routeName: String = ""
+    @State private var showingMapView = false
+    
     var body: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "plus.circle")
-                .font(.system(size: 80))
-                .foregroundColor(.orange)
+        VStack(spacing: 30) {
+            Spacer()
             
-            Text("Create New Route")
-                .font(.largeTitle)
-                .fontWeight(.bold)
-            
-            Text("Plan and create custom navigation routes with waypoints, estimated times, and route optimization.")
-                .font(.body)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal)
+            // Header
+            VStack(spacing: 16) {
+                Image(systemName: "plus.circle.fill")
+                    .font(.system(size: 80))
+                    .foregroundColor(.orange)
+                
+                Text("Create New Route")
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+                
+                Text("Plan your navigation route by selecting waypoints on an interactive map.")
+                    .font(.body)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+            }
             
             Spacer()
             
-            VStack(spacing: 16) {
-                Text("Planned Features:")
+            // Route Name Input
+            VStack(spacing: 20) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Route Name")
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    
+                    TextField("Enter route name (e.g., 'Baltimore to Annapolis')", text: $routeName)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .font(.body)
+                }
+                
+                Button("Start Creating Route") {
+                    showingMapView = true
+                }
+                .disabled(routeName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .padding()
+                .frame(maxWidth: .infinity)
+                .background(routeName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Color.gray : Color.blue)
+                .foregroundColor(.white)
+                .cornerRadius(12)
+                .font(.headline)
+            }
+            .padding(.horizontal, 24)
+            
+            Spacer()
+            
+            // Instructions
+            VStack(spacing: 12) {
+                Text("Next Steps:")
                     .font(.headline)
                     .foregroundColor(.primary)
                 
                 VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Image(systemName: "location.circle.fill")
-                            .foregroundColor(.orange)
-                        Text("Interactive waypoint selection on map")
-                    }
+                    InstructionRow(
+                        icon: "hand.tap.fill",
+                        text: "Tap anywhere on the map to add waypoints"
+                    )
                     
-                    HStack {
-                        Image(systemName: "clock.circle.fill")
-                            .foregroundColor(.orange)
-                        Text("Automatic ETA calculations")
-                    }
+                    InstructionRow(
+                        icon: "pencil.circle.fill",
+                        text: "Name each waypoint as you create it"
+                    )
                     
-                    HStack {
-                        Image(systemName: "chart.line.uptrend.xyaxis.circle.fill")
-                            .foregroundColor(.orange)
-                        Text("Route optimization algorithms")
-                    }
+                    InstructionRow(
+                        icon: "arrow.triangle.2.circlepath",
+                        text: "Reorder or delete waypoints as needed"
+                    )
                     
-                    HStack {
-                        Image(systemName: "square.and.arrow.up.circle.fill")
-                            .foregroundColor(.orange)
-                        Text("Export to GPX format")
-                    }
-                    
-                    HStack {
-                        Image(systemName: "water.waves.circle.fill")
-                            .foregroundColor(.orange)
-                        Text("Integration with tide and weather data")
-                    }
+                    InstructionRow(
+                        icon: "square.and.arrow.up.fill",
+                        text: "Export as GPX file when complete"
+                    )
                 }
                 .font(.subheadline)
             }
             .padding()
             .background(Color(UIColor.secondarySystemBackground))
             .cornerRadius(12)
-            .padding(.horizontal)
+            .padding(.horizontal, 24)
             
             Spacer()
         }
-        .padding()
         .navigationTitle("Create Route")
         .navigationBarTitleDisplayMode(.inline)
+        .withHomeButton()
+        .navigationDestination(isPresented: $showingMapView) {
+            RouteCreationMapView(routeName: routeName, serviceProvider: serviceProvider)
+        }
+    }
+}
+
+// MARK: - Helper Views
+
+struct InstructionRow: View {
+    let icon: String
+    let text: String
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .foregroundColor(.orange)
+                .frame(width: 20)
+            
+            Text(text)
+                .foregroundColor(.primary)
+            
+            Spacer()
+        }
     }
 }
