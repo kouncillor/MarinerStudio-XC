@@ -20,14 +20,14 @@ struct RouteMenuView: View {
     var body: some View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: 12) {
-                // Open GPX File - Uses ServiceProvider with enhanced capabilities
-                NavigationLink(destination: createGpxView()) {
+                // Route Favorites
+                NavigationLink(destination: RouteFavoritesView()) {
                     RouteMenuButtonContent(
-                        icon: "doc.fill",
-                        title: "OPEN GPX FILE",
-                        subtitle: "Legacy & Modern GPX Support",
+                        icon: "star.fill",
+                        title: "FAVORITES",
+                        subtitle: "Saved Routes",
                         isSystemIcon: true,
-                        iconColor: .blue
+                        iconColor: .yellow
                     )
                 }
                 
@@ -42,25 +42,14 @@ struct RouteMenuView: View {
                     )
                 }
                 
-                // Download Routes
-                NavigationLink(destination: DownloadRoutesView()) {
+                // Open GPX File - Uses ServiceProvider with enhanced capabilities
+                NavigationLink(destination: createGpxView()) {
                     RouteMenuButtonContent(
-                        icon: "arrow.down.circle.fill",
-                        title: "DOWNLOAD ROUTES",
-                        subtitle: "Online Route Library",
+                        icon: "doc.fill",
+                        title: "OPEN GPX FILE",
+                        subtitle: "Legacy & Modern GPX Support",
                         isSystemIcon: true,
-                        iconColor: .green
-                    )
-                }
-                
-                // Route Favorites
-                NavigationLink(destination: RouteFavoritesView()) {
-                    RouteMenuButtonContent(
-                        icon: "star.fill",
-                        title: "FAVORITES",
-                        subtitle: "Saved Routes",
-                        isSystemIcon: true,
-                        iconColor: .yellow
+                        iconColor: .blue
                     )
                 }
                 
@@ -85,6 +74,19 @@ struct RouteMenuView: View {
                         iconColor: .indigo
                     )
                 }
+                
+                // Download Routes - COMMENTED OUT
+                /*
+                NavigationLink(destination: DownloadRoutesView()) {
+                    RouteMenuButtonContent(
+                        icon: "arrow.down.circle.fill",
+                        title: "DOWNLOAD ROUTES",
+                        subtitle: "Online Route Library",
+                        isSystemIcon: true,
+                        iconColor: .green
+                    )
+                }
+                */
             }
             .padding()
         }
@@ -319,4 +321,3 @@ struct RouteConverterView: View {
             .navigationTitle("Convert Routes")
     }
 }
-
