@@ -10,6 +10,9 @@ struct GpxView: View {
     @State private var annotations: [RouteAnnotation] = []
     @State private var showingRouteDetails = false
     @State private var routeDetailsViewModel: RouteDetailsViewModel?
+    @State private var isFavorite = false
+    @State private var showingFavoriteSuccess = false
+    @State private var favoriteMessage = ""
     
     var body: some View {
         GeometryReader { geometry in
@@ -17,30 +20,49 @@ struct GpxView: View {
                 VStack(spacing: 10) {
                     // Route Name
                     if !viewModel.routeName.isEmpty {
-                        Text(viewModel.routeName)
-                            .font(.title)
-                            .fontWeight(.bold)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal)
+                        HStack {
+                            Text(viewModel.routeName)
+                                .font(.title)
+                                .fontWeight(.bold)
+                                .multilineTextAlignment(.center)
+                            
+                            Spacer()
+                            
+                            // Favorite button (only show when route is loaded)
+                            if viewModel.hasRoute {
+                                Button(action: {
+                                    Task {
+                                        await toggleFavorite()
+                                    }
+                                }) {
+                                    Image(systemName: isFavorite ? "star.fill" : "star")
+                                        .foregroundColor(isFavorite ? .yellow : .gray)
+                                        .font(.title2)
+                                }
+                            }
+                        }
+                        .padding(.horizontal)
                     }
                     
                     // Route Direction Control - Only visible when route is loaded
                     if viewModel.hasRoute {
-                        HStack {
-                            Text("Route Direction")
-                                .font(.headline)
-                            
-                            Spacer()
-                            
-                            Button(action: {
-                                viewModel.reverseRoute()
-                            }) {
-                                Text(viewModel.directionButtonText)
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 8)
-                                    .background(Color.blue)
-                                    .cornerRadius(8)
+                        VStack(spacing: 10) {
+                            HStack {
+                                Text("Route Direction")
+                                    .font(.headline)
+                                
+                                Spacer()
+                                
+                                Button(action: {
+                                    viewModel.reverseRoute()
+                                }) {
+                                    Text(viewModel.directionButtonText)
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 8)
+                                        .background(Color.blue)
+                                        .cornerRadius(8)
+                                }
                             }
                         }
                         .padding()
@@ -163,6 +185,16 @@ struct GpxView: View {
                             .padding()
                     }
                     
+                    // Favorite success message
+                    if showingFavoriteSuccess {
+                        Text(favoriteMessage)
+                            .foregroundColor(.white)
+                            .padding()
+                            .background(Color.green)
+                            .cornerRadius(8)
+                            .transition(.move(edge: .top))
+                    }
+                    
                     // Map in a card
                     VStack {
                         MapView(region: $mapRegion, polyline: $polyline, annotations: $annotations)
@@ -183,11 +215,102 @@ struct GpxView: View {
             }
             .onChange(of: viewModel.routePoints) { _, newPoints in
                 updateMapDisplay(with: newPoints)
+                checkFavoriteStatus()
             }
             .withHomeButton()
             .navigationDestination(isPresented: $showingRouteDetails) {
                 if let routeDetailsViewModel = routeDetailsViewModel {
                     RouteDetailsView(viewModel: routeDetailsViewModel)
+                }
+            }
+        }
+    }
+    
+    // MARK: - Favorites Functions
+    
+    private func checkFavoriteStatus() {
+        guard viewModel.hasRoute else { return }
+        
+        Task {
+            let isRouteAlreadyFavorite = await serviceProvider.routeFavoritesService.isRouteFavoriteAsync(
+                name: viewModel.routeName,
+                waypointCount: viewModel.routePoints.count
+            )
+            
+            await MainActor.run {
+                isFavorite = isRouteAlreadyFavorite
+            }
+        }
+    }
+    
+    private func toggleFavorite() async {
+        if isFavorite {
+            // Remove from favorites - would need to implement remove functionality
+            favoriteMessage = "Removed from favorites"
+        } else {
+            await addToFavorites()
+        }
+    }
+    
+    private func addToFavorites() async {
+        guard viewModel.hasRoute else { return }
+        
+        do {
+            // Create GPX file from current route
+            let gpxRoutePoints = viewModel.routePoints.map { point -> GpxRoutePoint in
+                var gpxPoint = GpxRoutePoint(
+                    latitude: point.latitude,
+                    longitude: point.longitude,
+                    name: point.name
+                )
+                gpxPoint.eta = point.eta
+                gpxPoint.distanceToNext = point.distanceToNext
+                gpxPoint.bearingToNext = point.bearingToNext
+                return gpxPoint
+            }
+            
+            let gpxRoute = GpxRoute(
+                name: viewModel.routeName,
+                routePoints: gpxRoutePoints
+            )
+            
+            let gpxFile = GpxFile(route: gpxRoute)
+            
+            // Serialize GPX to string for database storage
+            let gpxString = try await serviceProvider.gpxService.serializeGpxFile(gpxFile)
+            
+            // Calculate total distance
+            let totalDistance = viewModel.routePoints.reduce(0.0) { $0 + $1.distanceToNext }
+            
+            // Create route favorite
+            let routeFavorite = RouteFavorite(
+                name: viewModel.routeName,
+                gpxData: gpxString,
+                waypointCount: viewModel.routePoints.count,
+                totalDistance: totalDistance
+            )
+            
+            // Save to database
+            _ = try await serviceProvider.routeFavoritesService.addRouteFavoriteAsync(favorite: routeFavorite)
+            
+            await MainActor.run {
+                isFavorite = true
+                favoriteMessage = "Route added to favorites!"
+                showingFavoriteSuccess = true
+                
+                // Hide success message after 3 seconds
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                    showingFavoriteSuccess = false
+                }
+            }
+            
+        } catch {
+            await MainActor.run {
+                favoriteMessage = "Failed to add to favorites: \(error.localizedDescription)"
+                showingFavoriteSuccess = true
+                
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                    showingFavoriteSuccess = false
                 }
             }
         }

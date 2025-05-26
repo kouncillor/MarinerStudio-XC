@@ -4,6 +4,7 @@ import SwiftUI
 struct RouteDetailsView: View {
     @ObservedObject var viewModel: RouteDetailsViewModel
     @State private var scrollToWaypointIndex: Int?
+    @EnvironmentObject var serviceProvider: ServiceProvider
     
     var body: some View {
         GeometryReader { geometry in
@@ -122,7 +123,6 @@ struct RouteDetailsView: View {
         }
         .navigationTitle("Route Details")
         .withHomeButton()
-        
         .navigationBarItems(trailing:
             Button(action: {
                 viewModel.toggleSummary()

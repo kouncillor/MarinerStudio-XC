@@ -1,3 +1,4 @@
+
 //
 //  CoreGpxService.swift
 //  Mariner Studio
@@ -59,6 +60,36 @@ class CoreGpxService: ExtendedGpxServiceProtocol {
         }
     }
     
+    func loadGpxFile(from xmlString: String) async throws -> GpxFile {
+        return try await withCheckedThrowingContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                do {
+                    // Convert string to data
+                    guard let gpxData = xmlString.data(using: .utf8) else {
+                        continuation.resume(throwing: GpxServiceError.parsingFailed("Invalid XML string encoding"))
+                        return
+                    }
+                    
+                    // Parse with CoreGPX
+                    let parser = GPXParser(withData: gpxData)
+                    guard let coreGpxRoot = parser.parsedData() else {
+                        continuation.resume(throwing: GpxServiceError.parsingFailed("Failed to parse GPX data from string"))
+                        return
+                    }
+                    
+                    // Convert CoreGPX to our model
+                    let gpxFile = try self.convertCoreGpxToGpxFile(coreGpxRoot)
+                    
+                    continuation.resume(returning: gpxFile)
+                } catch let error as GpxServiceError {
+                    continuation.resume(throwing: error)
+                } catch {
+                    continuation.resume(throwing: self.mapCoreGpxError(error))
+                }
+            }
+        }
+    }
+    
     // MARK: - ExtendedGpxServiceProtocol Implementation
     
     func writeGpxFile(_ gpxFile: GpxFile, to url: URL) async throws {
@@ -95,6 +126,27 @@ class CoreGpxService: ExtendedGpxServiceProtocol {
             return true
         } catch {
             return false
+        }
+    }
+    
+    func serializeGpxFile(_ gpxFile: GpxFile) async throws -> String {
+        return try await withCheckedThrowingContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                do {
+                    // Convert our model to CoreGPX
+                    let coreGpxRoot = try self.convertGpxFileToCoreGpx(gpxFile)
+                    
+                    // Generate GPX XML string
+                    let gpxString = coreGpxRoot.gpx()
+                    
+                    print("✅ CoreGpxService: Successfully serialized GPX file")
+                    continuation.resume(returning: gpxString)
+                } catch let error as GpxServiceError {
+                    continuation.resume(throwing: error)
+                } catch {
+                    continuation.resume(throwing: self.mapCoreGpxError(error))
+                }
+            }
         }
     }
     

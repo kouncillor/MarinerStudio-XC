@@ -19,6 +19,7 @@ class ServiceProvider: ObservableObject {
     let buoyApiservice: BuoyApiService
     let weatherService: WeatherDatabaseService
     let mapOverlayService: MapOverlayDatabaseService
+    let routeFavoritesService: RouteFavoritesDatabaseService
     
     // MARK: - Weather Services
     let openMeteoService: WeatherService
@@ -59,6 +60,7 @@ class ServiceProvider: ObservableObject {
         self.buoyDatabaseService = BuoyDatabaseService(databaseCore: databaseCore)
         self.weatherService = WeatherDatabaseService(databaseCore: databaseCore)
         self.mapOverlayService = MapOverlayDatabaseService(databaseCore: databaseCore)
+        self.routeFavoritesService = RouteFavoritesDatabaseService(databaseCore: databaseCore)
         print("📦 ServiceProvider: Initialized all database services.")
         
         // Initialize Weather Services
@@ -99,8 +101,9 @@ class ServiceProvider: ObservableObject {
                 try await self.photoService.initializeBargePhotosTableAsync()
                 try await self.weatherService.initializeWeatherLocationFavoritesTableAsync()
                 try await self.mapOverlayService.initializeMapOverlaySettingsTableAsync()
+                try await self.routeFavoritesService.initializeRouteFavoritesTableAsync()
                 
-                print("📊 Tables initialized including MapOverlaySettings")
+                print("📊 Tables initialized including RouteFavorites")
                 
                 // Test database operations to verify connection
                 try await self.databaseCore.checkConnectionWithTestQuery()

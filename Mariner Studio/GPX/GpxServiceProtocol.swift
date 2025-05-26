@@ -12,6 +12,7 @@ import Foundation
 
 protocol GpxServiceProtocol {
     func loadGpxFile(from url: URL) async throws -> GpxFile
+    func loadGpxFile(from xmlString: String) async throws -> GpxFile
 }
 
 // MARK: - Extended GPX Service Protocol
@@ -20,6 +21,7 @@ protocol ExtendedGpxServiceProtocol: GpxServiceProtocol {
     var capabilities: GpxServiceCapabilities { get }
     func writeGpxFile(_ gpxFile: GpxFile, to url: URL) async throws
     func validateGpxFile(at url: URL) async throws -> Bool
+    func serializeGpxFile(_ gpxFile: GpxFile) async throws -> String
 }
 
 // MARK: - GPX Service Errors
@@ -32,6 +34,7 @@ enum GpxServiceError: Error, LocalizedError {
     case noRouteData
     case fileAccessDenied
     case writeNotSupported
+    case serializationFailed
     
     var errorDescription: String? {
         switch self {
@@ -49,6 +52,8 @@ enum GpxServiceError: Error, LocalizedError {
             return "Access to GPX file denied"
         case .writeNotSupported:
             return "Writing GPX files is not supported by this service"
+        case .serializationFailed:
+            return "Failed to serialize GPX data to string"
         }
     }
 }

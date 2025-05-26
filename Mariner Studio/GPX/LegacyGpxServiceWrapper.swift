@@ -1,4 +1,12 @@
 
+
+
+
+
+
+
+
+
 //
 //  LegacyGpxServiceWrapper.swift
 //  Mariner Studio
@@ -33,6 +41,40 @@ class LegacyGpxServiceWrapper: ExtendedGpxServiceProtocol {
         }
     }
     
+    func loadGpxFile(from xmlString: String) async throws -> GpxFile {
+        do {
+            // Create temporary data from string
+            guard let xmlData = xmlString.data(using: .utf8) else {
+                throw GpxServiceError.parsingFailed("Invalid XML string encoding")
+            }
+            
+            // Parse XML into a GpxFile object using existing parser logic
+            let parser = XMLParser(data: xmlData)
+            let delegate = GPXParserDelegate()
+            parser.delegate = delegate
+            
+            let success = parser.parse()
+            
+            if !success {
+                if let error = parser.parserError {
+                    throw error
+                } else if let delegateError = delegate.error {
+                    throw delegateError
+                } else {
+                    throw XMLDecodingError.parsingFailed
+                }
+            }
+            
+            guard let gpxFile = delegate.gpxFile else {
+                throw XMLDecodingError.noResult
+            }
+            
+            return gpxFile
+        } catch {
+            throw convertToStandardError(error)
+        }
+    }
+    
     // MARK: - ExtendedGpxServiceProtocol Implementation
     
     func writeGpxFile(_ gpxFile: GpxFile, to url: URL) async throws {
@@ -46,6 +88,11 @@ class LegacyGpxServiceWrapper: ExtendedGpxServiceProtocol {
         } catch {
             return false
         }
+    }
+    
+    func serializeGpxFile(_ gpxFile: GpxFile) async throws -> String {
+        // Legacy service doesn't support serialization
+        throw GpxServiceError.serializationFailed
     }
     
     // MARK: - Private Methods

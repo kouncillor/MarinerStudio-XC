@@ -20,12 +20,12 @@ struct RouteMenuView: View {
     var body: some View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: 12) {
-                // Route Favorites
+                // Route Favorites - Now fully functional
                 NavigationLink(destination: RouteFavoritesView()) {
                     RouteMenuButtonContent(
                         icon: "star.fill",
                         title: "FAVORITES",
-                        subtitle: "Saved Routes",
+                        subtitle: "Your Saved Routes",
                         isSystemIcon: true,
                         iconColor: .yellow
                     )
@@ -124,13 +124,6 @@ struct RouteMenuView: View {
             serviceProvider: serviceProvider
         )
     }
-    
-    
-    
-    
-    
-    
-    
 }
 
 // MARK: - Enhanced Button Content
@@ -300,13 +293,6 @@ struct ServiceInfoView: View {
 }
 
 // MARK: - Placeholder Views (for future implementation)
-
-struct RouteFavoritesView: View {
-    var body: some View {
-        Text("Route Favorites - Coming Soon")
-            .navigationTitle("Favorites")
-    }
-}
 
 struct CloudImportView: View {
     var body: some View {
