@@ -14,6 +14,29 @@ struct GpxView: View {
     @State private var showingFavoriteSuccess = false
     @State private var favoriteMessage = ""
     
+    // MARK: - Initializers
+    
+    // Original initializer for GPX file loading
+    init(viewModel: GpxViewModel, serviceProvider: ServiceProvider) {
+        self.viewModel = viewModel
+        self.serviceProvider = serviceProvider
+    }
+    
+    // New initializer for pre-loaded route data
+    init(serviceProvider: ServiceProvider, preLoadedRoute: GpxFile, routeName: String? = nil) {
+        self.serviceProvider = serviceProvider
+        self.viewModel = GpxViewModel(
+            gpxService: serviceProvider.gpxService,
+            routeCalculationService: serviceProvider.routeCalculationService,
+            preLoadedRoute: preLoadedRoute
+        )
+        
+        // Set custom route name if provided
+        if let customName = routeName {
+            self.viewModel.routeName = customName
+        }
+    }
+    
     var body: some View {
         GeometryReader { geometry in
             ScrollView {
@@ -28,8 +51,8 @@ struct GpxView: View {
                             
                             Spacer()
                             
-                            // Favorite button (only show when route is loaded)
-                            if viewModel.hasRoute {
+                            // Favorite button (only show when route is loaded and not pre-loaded)
+                            if viewModel.hasRoute && !viewModel.isPreLoaded {
                                 Button(action: {
                                     Task {
                                         await toggleFavorite()
@@ -72,8 +95,9 @@ struct GpxView: View {
                         .padding(.horizontal)
                     }
                     
-                    // Route Planning Form (Removed "Route Planning" text)
+                    // Route Planning Form
                     VStack(spacing: 15) {
+                        // Show "Open GPX File" button only if no route is loaded
                         if !viewModel.hasRoute {
                             // Open GPX Button
                             Button(action: {
@@ -98,6 +122,19 @@ struct GpxView: View {
                         } else {
                             // Route planning controls
                             VStack(spacing: 15) {
+                                // Show route source info for pre-loaded routes
+                                if viewModel.isPreLoaded {
+                                    HStack {
+                                        Image(systemName: "star.fill")
+                                            .foregroundColor(.yellow)
+                                        Text("Loaded from Favorites")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                        Spacer()
+                                    }
+                                    .padding(.bottom, 5)
+                                }
+                                
                                 // Row 1: Start Date
                                 HStack {
                                     Text("Start Date:")
@@ -212,10 +249,18 @@ struct GpxView: View {
             }
             .onAppear {
                 setupLocationPermission()
+                
+                // If this is a pre-loaded route, update the map immediately
+                if viewModel.isPreLoaded {
+                    updateMapDisplay(with: viewModel.routePoints)
+                    checkFavoriteStatus()
+                }
             }
             .onChange(of: viewModel.routePoints) { _, newPoints in
                 updateMapDisplay(with: newPoints)
-                checkFavoriteStatus()
+                if !viewModel.isPreLoaded {
+                    checkFavoriteStatus()
+                }
             }
             .withHomeButton()
             .navigationDestination(isPresented: $showingRouteDetails) {
