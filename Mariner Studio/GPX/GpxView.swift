@@ -16,7 +16,7 @@ struct GpxView: View {
     
     // MARK: - Initializers
     
-    // Original initializer for GPX file loading
+    // Original initializer for GPX file loading - now expects pre-loaded data
     init(viewModel: GpxViewModel, serviceProvider: ServiceProvider) {
         self.viewModel = viewModel
         self.serviceProvider = serviceProvider
@@ -95,120 +95,94 @@ struct GpxView: View {
                         .padding(.horizontal)
                     }
                     
-                    // Route Planning Form
-                    VStack(spacing: 15) {
-                        // Show "Open GPX File" button only if no route is loaded
-                        if !viewModel.hasRoute {
-                            // Open GPX Button
+                    // Route Planning Form - Only show if route is loaded
+                    if viewModel.hasRoute {
+                        VStack(spacing: 15) {
+                            // Show route source info for pre-loaded routes
+                            if viewModel.isPreLoaded {
+                                HStack {
+                                    Image(systemName: "star.fill")
+                                        .foregroundColor(.yellow)
+                                    Text("Loaded from Favorites")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                    Spacer()
+                                }
+                                .padding(.bottom, 5)
+                            }
+                            
+                            // Row 1: Start Date
+                            HStack {
+                                Text("Start Date:")
+                                    .font(.subheadline)
+                                    .frame(width: 120, alignment: .leading)
+                                
+                                Spacer()
+                                
+                                DatePicker("", selection: $viewModel.startDate, displayedComponents: .date)
+                                    .labelsHidden()
+                            }
+                            
+                            // Row 2: Start Time
+                            HStack {
+                                Text("Start Time:")
+                                    .font(.subheadline)
+                                    .frame(width: 120, alignment: .leading)
+                                
+                                Spacer()
+                                
+                                DatePicker("", selection: $viewModel.startTime, displayedComponents: .hourAndMinute)
+                                    .labelsHidden()
+                            }
+                            
+                            // Row 3: Average Speed
+                            HStack {
+                                Text("Average Speed (knots):")
+                                    .font(.subheadline)
+                                    .frame(width: 180, alignment: .leading)
+                                
+                                Spacer()
+                                
+                                TextField("10", text: $viewModel.averageSpeed)
+                                    .keyboardType(.decimalPad)
+                                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                                    .frame(width: 80)
+                            }
+                            
+                            // Row 4: Calculate ETAs Button
                             Button(action: {
-                                Task {
-                                    await viewModel.openGpxFile()
-                                }
+                                viewModel.calculateETAs()
                             }) {
-                                HStack {
-                                    Image(systemName: "doc")
-                                        .imageScale(.large)
-                                    Text("Open GPX File")
-                                        .font(.headline)
-                                }
-                                .foregroundColor(.white)
-                                .padding()
-                                .frame(maxWidth: .infinity)
-                                .background(Color.blue)
-                                .cornerRadius(8)
+                                Text("Calculate ETAs")
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .frame(maxWidth: .infinity)
+                                    .background(viewModel.canCalculateETAs ? Color.blue : Color.gray)
+                                    .cornerRadius(8)
                             }
-                            .padding(.horizontal)
-                            .padding(.bottom, 5)
-                        } else {
-                            // Route planning controls
-                            VStack(spacing: 15) {
-                                // Show route source info for pre-loaded routes
-                                if viewModel.isPreLoaded {
-                                    HStack {
-                                        Image(systemName: "star.fill")
-                                            .foregroundColor(.yellow)
-                                        Text("Loaded from Favorites")
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                        Spacer()
-                                    }
-                                    .padding(.bottom, 5)
-                                }
-                                
-                                // Row 1: Start Date
-                                HStack {
-                                    Text("Start Date:")
-                                        .font(.subheadline)
-                                        .frame(width: 120, alignment: .leading)
-                                    
-                                    Spacer()
-                                    
-                                    DatePicker("", selection: $viewModel.startDate, displayedComponents: .date)
-                                        .labelsHidden()
-                                }
-                                
-                                // Row 2: Start Time
-                                HStack {
-                                    Text("Start Time:")
-                                        .font(.subheadline)
-                                        .frame(width: 120, alignment: .leading)
-                                    
-                                    Spacer()
-                                    
-                                    DatePicker("", selection: $viewModel.startTime, displayedComponents: .hourAndMinute)
-                                        .labelsHidden()
-                                }
-                                
-                                // Row 3: Average Speed
-                                HStack {
-                                    Text("Average Speed (knots):")
-                                        .font(.subheadline)
-                                        .frame(width: 180, alignment: .leading)
-                                    
-                                    Spacer()
-                                    
-                                    TextField("10", text: $viewModel.averageSpeed)
-                                        .keyboardType(.decimalPad)
-                                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                                        .frame(width: 80)
-                                }
-                                
-                                // Row 4: Calculate ETAs Button
-                                Button(action: {
-                                    viewModel.calculateETAs()
-                                }) {
-                                    Text("Calculate ETAs")
-                                        .foregroundColor(.white)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 8)
-                                        .frame(maxWidth: .infinity)
-                                        .background(viewModel.canCalculateETAs ? Color.blue : Color.gray)
-                                        .cornerRadius(8)
-                                }
-                                .disabled(!viewModel.canCalculateETAs)
-                                
-                                // Row 5: View Route Details Button
-                                Button(action: {
-                                    navigateToRouteDetails()
-                                }) {
-                                    Text("View Route Details")
-                                        .foregroundColor(.white)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 8)
-                                        .frame(maxWidth: .infinity)
-                                        .background(viewModel.etasCalculated ? Color.blue : Color.gray)
-                                        .cornerRadius(8)
-                                }
-                                .disabled(!viewModel.etasCalculated)
+                            .disabled(!viewModel.canCalculateETAs)
+                            
+                            // Row 5: View Route Details Button
+                            Button(action: {
+                                navigateToRouteDetails()
+                            }) {
+                                Text("View Route Details")
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .frame(maxWidth: .infinity)
+                                    .background(viewModel.etasCalculated ? Color.blue : Color.gray)
+                                    .cornerRadius(8)
                             }
-                            .padding()
+                            .disabled(!viewModel.etasCalculated)
                         }
+                        .padding()
+                        .background(Color(UIColor.secondarySystemBackground))
+                        .cornerRadius(10)
+                        .shadow(radius: 2)
+                        .padding(.horizontal)
                     }
-                    .padding()
-                    .background(Color(UIColor.secondarySystemBackground))
-                    .cornerRadius(10)
-                    .shadow(radius: 2)
-                    .padding(.horizontal)
                     
                     // Status Messages
                     if !viewModel.errorMessage.isEmpty {
@@ -232,19 +206,21 @@ struct GpxView: View {
                             .transition(.move(edge: .top))
                     }
                     
-                    // Map in a card
-                    VStack {
-                        MapView(region: $mapRegion, polyline: $polyline, annotations: $annotations)
-                            .frame(height: geometry.size.height * 0.55)
-                            .cornerRadius(8)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 10)
+                    // Map in a card - Only show if route is loaded
+                    if viewModel.hasRoute {
+                        VStack {
+                            MapView(region: $mapRegion, polyline: $polyline, annotations: $annotations)
+                                .frame(height: geometry.size.height * 0.55)
+                                .cornerRadius(8)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 10)
+                        }
+                        .background(Color(UIColor.secondarySystemBackground))
+                        .cornerRadius(10)
+                        .shadow(radius: 2)
+                        .padding(.horizontal)
+                        .padding(.bottom, 10)
                     }
-                    .background(Color(UIColor.secondarySystemBackground))
-                    .cornerRadius(10)
-                    .shadow(radius: 2)
-                    .padding(.horizontal)
-                    .padding(.bottom, 10)
                 }
             }
             .onAppear {
