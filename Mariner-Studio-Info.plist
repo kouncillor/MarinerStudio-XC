@@ -4,5 +4,21 @@
 <dict>
 	<key>CFBundleGetInfoString</key>
 	<string></string>
+	<key>CFBundleIconFile</key>
+	<string></string>
+	<key>CFBundleSignature</key>
+	<string></string>
+	
+	<!-- Camera Usage Description -->
+	<key>NSCameraUsageDescription</key>
+	<string>Mariner Studio needs camera access to take photos of navigation units for your personal records.</string>
+	
+	<!-- Photo Library Usage Description -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Mariner Studio needs photo library access to select existing photos of navigation units for your personal records.</string>
+	
+	<!-- Photo Library Add Usage Description (for iOS 11+) -->
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Mariner Studio needs permission to save photos to your photo library.</string>
 </dict>
 </plist>
