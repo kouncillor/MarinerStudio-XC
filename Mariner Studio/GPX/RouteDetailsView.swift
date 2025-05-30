@@ -333,17 +333,31 @@ struct WaypointView: View {
                     
                     // Modified HStack to use all available space
                     HStack(spacing: 10) {
-                        // Course and wave directions
-                        VStack(alignment: .leading, spacing: 5) {
-                            Text("Course True: \(waypoint.courseDisplay)")
-                                .font(.caption)
-                            Text("Wave True: \(waypoint.waveDisplay)")
-                                .font(.caption)
-                            Text("Wave Relative: \(waypoint.relativeWaveDisplay)")
-                                .font(.caption)
+                        // Course and wave directions with compass background
+                        ZStack {
+                            // Compass background
+                            Image("compasscard")
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                            
+                            // Text overlay
+                            VStack(alignment: .center, spacing: 5) {
+                                Text("Course True: \(waypoint.courseDisplay)")
+                                    .font(.caption)
+                                    .fontWeight(.semibold)
+                                Text("Wave True: \(waypoint.waveDisplay)")
+                                    .font(.caption)
+                                    .fontWeight(.semibold)
+                                Text("Wave Relative: \(waypoint.relativeWaveDisplay)")
+                                    .font(.caption)
+                                    .fontWeight(.semibold)
+                            }
+                            .foregroundColor(.black)
+                            .padding(8)
+                            .background(Color.white.opacity(0.8))
+                            .cornerRadius(6)
                         }
-                        .padding()
-                        .background(Color.orange.opacity(0.8))
+                        .background(Color.white)
                         .cornerRadius(8)
                         .frame(minWidth: 0, maxWidth: .infinity)  // Take up available width
                         .aspectRatio(1, contentMode: .fit)  // Make height proportional to width
@@ -434,7 +448,7 @@ struct RelativeWaveDirectionView: View {
         else if waypoint.displayImageFive { return "wavefromninety" }
         else if waypoint.displayImageSix { return "wavefromonetwelvepointfive" }
         else if waypoint.displayImageSeven { return "wavefromonethirtyfive" }
-        else if waypoint.displayImageEight { return "wavefromeonefiftysevenfive" }
+        else if waypoint.displayImageEight { return "wavefromonefiftysevenfive" }
         else if waypoint.displayImageNine { return "wavefromoneeighty" }
         else if waypoint.displayImageTen { return "wavefromtwohundredtwofive" }
         else if waypoint.displayImageEleven { return "wavefromtwotwentyfive" }

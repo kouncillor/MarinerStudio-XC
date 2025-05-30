@@ -10,8 +10,6 @@ import SwiftUI
 
 struct RouteMenuView: View {
     @EnvironmentObject var serviceProvider: ServiceProvider
-    @State private var showingServiceSelector = false
-    @State private var selectedServiceType: GpxServiceType = .automatic
     @State private var showingGpxView = false
     @State private var loadedGpxFile: GpxFile?
     @State private var isLoadingFile = false
@@ -62,7 +60,8 @@ struct RouteMenuView: View {
                 }
                 .disabled(isLoadingFile)
                 
-                // Import from Cloud Services
+                // Import from Cloud Services - COMMENTED OUT
+                /*
                 NavigationLink(destination: CloudImportView()) {
                     RouteMenuButtonContent(
                         icon: "icloud.and.arrow.down.fill",
@@ -72,6 +71,7 @@ struct RouteMenuView: View {
                         iconColor: .purple
                     )
                 }
+                */
                 
                 // Route Converter - Convert between formats
                 NavigationLink(destination: RouteConverterView()) {
@@ -124,21 +124,6 @@ struct RouteMenuView: View {
         }
         .navigationTitle("Routes")
         .navigationBarTitleDisplayMode(.large)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button("Settings") {
-                    showingServiceSelector = true
-                }
-            }
-        }
-        .sheet(isPresented: $showingServiceSelector) {
-            ServiceSelectorView(
-                selectedServiceType: $selectedServiceType,
-                onServiceChanged: { newType in
-                    GpxServiceFactory.shared.setDefaultServiceType(newType)
-                }
-            )
-        }
         .navigationDestination(isPresented: $showingGpxView) {
             if let gpxFile = loadedGpxFile {
                 GpxView(
@@ -322,122 +307,7 @@ struct RouteMenuButtonContent: View {
     }
 }
 
-// MARK: - Service Selector View
-
-struct ServiceSelectorView: View {
-    @Binding var selectedServiceType: GpxServiceType
-    let onServiceChanged: (GpxServiceType) -> Void
-    @Environment(\.dismiss) private var dismiss
-    
-    var body: some View {
-        NavigationView {
-            List {
-                Section(header: Text("GPX Service Engine")) {
-                    ForEach(GpxServiceFactory.shared.getAvailableServices(), id: \.self) { serviceType in
-                        ServiceTypeRow(
-                            serviceType: serviceType,
-                            isSelected: selectedServiceType == serviceType
-                        ) {
-                            selectedServiceType = serviceType
-                            onServiceChanged(serviceType)
-                        }
-                    }
-                }
-                
-                Section(header: Text("Service Information")) {
-                    ServiceInfoView()
-                }
-            }
-            .navigationTitle("Service Settings")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                }
-            }
-        }
-    }
-}
-
-struct ServiceTypeRow: View {
-    let serviceType: GpxServiceType
-    let isSelected: Bool
-    let onTap: () -> Void
-    
-    var body: some View {
-        Button(action: onTap) {
-            HStack {
-                VStack(alignment: .leading) {
-                    Text(serviceDisplayName(serviceType))
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                    
-                    Text(serviceDescription(serviceType))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                
-                Spacer()
-                
-                if isSelected {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.blue)
-                }
-            }
-        }
-    }
-    
-    private func serviceDisplayName(_ type: GpxServiceType) -> String {
-        switch type {
-        case .legacy:
-            return "Legacy Service"
-        case .coreGpx:
-            return "CoreGPX Service"
-        case .automatic:
-            return "Automatic Selection"
-        }
-    }
-    
-    private func serviceDescription(_ type: GpxServiceType) -> String {
-        switch type {
-        case .legacy:
-            return "Your original GPX parser - simple and reliable"
-        case .coreGpx:
-            return "Full-featured GPX 1.1 support with read/write capabilities"
-        case .automatic:
-            return "Automatically choose the best service for each task"
-        }
-    }
-}
-
-struct ServiceInfoView: View {
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            let info = GpxServiceFactory.shared.getServiceInfo()
-            
-            Text("Current Default: \(info["defaultType"] as? String ?? "Unknown")")
-                .font(.caption)
-            
-            Text("Available Services: \((info["availableServices"] as? [String] ?? []).joined(separator: ", "))")
-                .font(.caption)
-            
-            Text("Cached Instances: \((info["cachedServices"] as? [String] ?? []).joined(separator: ", "))")
-                .font(.caption)
-        }
-        .foregroundColor(.secondary)
-    }
-}
-
 // MARK: - Placeholder Views (for future implementation)
-
-struct CloudImportView: View {
-    var body: some View {
-        Text("Cloud Import - Coming Soon")
-            .navigationTitle("Cloud Import")
-    }
-}
 
 struct RouteConverterView: View {
     var body: some View {
