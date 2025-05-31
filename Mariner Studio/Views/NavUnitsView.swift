@@ -296,7 +296,8 @@ struct NavUnitsView: View {
                         imageCacheService: serviceProvider.imageCacheService,
                         favoritesService: serviceProvider.favoritesService,
                         photoCaptureService: serviceProvider.photoCaptureService,
-                        fileStorageService: serviceProvider.fileStorageService
+                        fileStorageService: serviceProvider.fileStorageService,
+                        iCloudSyncService: serviceProvider.iCloudSyncService
                     )
                     NavUnitDetailsView(viewModel: detailsViewModel)
                 } label: {

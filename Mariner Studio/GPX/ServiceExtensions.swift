@@ -75,6 +75,15 @@
 //    var routeCalculationService: RouteCalculationService {
 //        wrappedValue.routeCalculationService
 //    }
+//    
+//    // Photo Services
+//    var photoCaptureService: PhotoCaptureService {
+//        wrappedValue.photoCaptureService
+//    }
+//    
+//    var fileStorageService: FileStorageService {
+//        wrappedValue.fileStorageService
+//    }
 //}
 //
 //// Extension for converting degrees to cardinal directions
@@ -145,6 +154,7 @@
 //        return self / 25.4
 //    }
 //}
+
 
 
 
@@ -236,6 +246,15 @@ extension EnvironmentObject where ObjectType == ServiceProvider {
     var fileStorageService: FileStorageService {
         wrappedValue.fileStorageService
     }
+    
+        
+        var iCloudSyncService: iCloudSyncService {
+            wrappedValue.iCloudSyncService
+        }
+    
+    
+    
+    
 }
 
 // Extension for converting degrees to cardinal directions

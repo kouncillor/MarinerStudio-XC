@@ -32,6 +32,10 @@
 //    let favoritesService: FavoritesService
 //    let noaaChartService: NOAAChartService
 //    
+//    // MARK: - Photo Services
+//    let photoCaptureService: PhotoCaptureService
+//    let fileStorageService: FileStorageService
+//    
 //    // MARK: - GPX and Route Services
 //    let gpxService: ExtendedGpxServiceProtocol
 //    let routeCalculationService: RouteCalculationService
@@ -75,7 +79,17 @@
 //        self.favoritesService = FavoritesServiceImpl()
 //        self.buoyApiservice = BuoyServiceImpl()
 //        self.noaaChartService = NOAAChartServiceImpl()
-//        print("📦 ServiceProvider: Initialized navigation services.")
+//        
+//        // Initialize Photo Services
+//        do {
+//            self.fileStorageService = try FileStorageServiceImpl()
+//        } catch {
+//            print("❌ ServiceProvider: Failed to initialize FileStorageService: \(error.localizedDescription)")
+//            fatalError("Critical error: Cannot initialize file storage service")
+//        }
+//        self.photoCaptureService = PhotoCaptureServiceImpl()
+//        
+//        print("📦 ServiceProvider: Initialized navigation and photo services.")
 //        
 //        // Initialize GPX and Route Services
 //        self.gpxService = GpxServiceFactory.shared.getDefaultGpxService()
@@ -146,6 +160,8 @@
 
 
 
+
+
 import Foundation
 import SwiftUI
 import CoreLocation
@@ -182,6 +198,7 @@ class ServiceProvider: ObservableObject {
     // MARK: - Photo Services
     let photoCaptureService: PhotoCaptureService
     let fileStorageService: FileStorageService
+    let iCloudSyncService: iCloudSyncService
     
     // MARK: - GPX and Route Services
     let gpxService: ExtendedGpxServiceProtocol
@@ -235,6 +252,7 @@ class ServiceProvider: ObservableObject {
             fatalError("Critical error: Cannot initialize file storage service")
         }
         self.photoCaptureService = PhotoCaptureServiceImpl()
+        self.iCloudSyncService = iCloudSyncServiceImpl(fileStorageService: self.fileStorageService)
         
         print("📦 ServiceProvider: Initialized navigation and photo services.")
         
