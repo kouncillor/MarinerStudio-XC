@@ -1,3 +1,4 @@
+
 import Foundation
 import UIKit
 
@@ -56,14 +57,34 @@ class FileStorageServiceImpl: FileStorageService {
         // Write to file
         try imageData.write(to: fileURL)
         
+        // Return RELATIVE path from Documents directory
+        let relativePath = "NavUnitPhotos/\(navUnitId)/\(fileName)"
+        
         print("💾 FileStorageService: Saved photo to: \(fileURL.path)")
-        return (filePath: fileURL.path, fileName: fileName)
+        print("💾 FileStorageService: Relative path stored: \(relativePath)")
+        
+        return (filePath: relativePath, fileName: fileName)
     }
     
     func loadImage(from filePath: String) async -> UIImage? {
         return await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
-                let image = UIImage(contentsOfFile: filePath)
+                // Convert relative path to absolute path
+                let absolutePath = self.getAbsolutePath(from: filePath)
+                print("🔍 FileStorageService: Converting relative path '\(filePath)' to absolute: '\(absolutePath)'")
+                
+                // Check if file exists
+                let fileExists = FileManager.default.fileExists(atPath: absolutePath)
+                print("🔍 FileStorageService: File exists at path: \(fileExists)")
+                
+                let image = UIImage(contentsOfFile: absolutePath)
+                
+                if let image = image {
+                    print("✅ FileStorageService: Successfully loaded image from: \(absolutePath)")
+                } else {
+                    print("❌ FileStorageService: Failed to load image from: \(absolutePath)")
+                }
+                
                 DispatchQueue.main.async {
                     continuation.resume(returning: image)
                 }
@@ -74,12 +95,19 @@ class FileStorageServiceImpl: FileStorageService {
     func generateThumbnail(from filePath: String, maxSize: CGSize = CGSize(width: 200, height: 200)) async -> UIImage? {
         return await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
-                guard let originalImage = UIImage(contentsOfFile: filePath) else {
+                // Convert relative path to absolute path
+                let absolutePath = self.getAbsolutePath(from: filePath)
+                print("🔍 FileStorageService: Generating thumbnail from relative path '\(filePath)' -> absolute: '\(absolutePath)'")
+                
+                guard let originalImage = UIImage(contentsOfFile: absolutePath) else {
+                    print("❌ FileStorageService: Failed to load original image for thumbnail generation: \(absolutePath)")
                     DispatchQueue.main.async {
                         continuation.resume(returning: nil)
                     }
                     return
                 }
+                
+                print("✅ FileStorageService: Original image loaded, generating thumbnail...")
                 
                 // Calculate thumbnail size while maintaining aspect ratio
                 let aspectRatio = originalImage.size.width / originalImage.size.height
@@ -99,6 +127,8 @@ class FileStorageServiceImpl: FileStorageService {
                     originalImage.draw(in: CGRect(origin: .zero, size: thumbnailSize))
                 }
                 
+                print("✅ FileStorageService: Thumbnail generated successfully")
+                
                 DispatchQueue.main.async {
                     continuation.resume(returning: thumbnail)
                 }
@@ -107,13 +137,15 @@ class FileStorageServiceImpl: FileStorageService {
     }
     
     func deletePhoto(at filePath: String) async throws {
-        let fileURL = URL(fileURLWithPath: filePath)
+        // Convert relative path to absolute path
+        let absolutePath = getAbsolutePath(from: filePath)
+        let fileURL = URL(fileURLWithPath: absolutePath)
         
         try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
                 do {
                     try FileManager.default.removeItem(at: fileURL)
-                    print("🗑️ FileStorageService: Deleted photo at: \(filePath)")
+                    print("🗑️ FileStorageService: Deleted photo at: \(absolutePath)")
                     continuation.resume()
                 } catch {
                     print("❌ FileStorageService: Failed to delete photo: \(error.localizedDescription)")
@@ -137,6 +169,18 @@ class FileStorageServiceImpl: FileStorageService {
         }
         
         return navUnitDirectory
+    }
+    
+    // MARK: - Helper Methods
+    
+    private func getAbsolutePath(from relativePath: String) -> String {
+        // If it's already an absolute path (starts with /), return as-is for backward compatibility
+        if relativePath.hasPrefix("/") {
+            return relativePath
+        }
+        
+        // Otherwise, treat it as relative to Documents directory
+        return documentsDirectory.appendingPathComponent(relativePath).path
     }
 }
 
