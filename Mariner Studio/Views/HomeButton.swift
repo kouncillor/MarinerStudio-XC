@@ -18,8 +18,15 @@ struct HomeButton: View {
 
 // MARK: - Toolbar Extension
 extension View {
+    @ViewBuilder
     func withHomeButton() -> some View {
-        self.toolbar {
+        self.modifier(HomeButtonModifier())
+    }
+}
+
+struct HomeButtonModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        content.toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 HomeButton()
             }

@@ -43,6 +43,12 @@
 //    @Published var showingPhotoGallery: Bool = false
 //    @Published var selectedPhotoIndex: Int = 0
 //    
+//    // iCloud sync status tracking
+//    @Published var photoSyncStatuses: [Int: PhotoSyncStatus] = [:]
+//    @Published var iCloudAccountStatus: String = "Unknown"
+//    @Published var iCloudAccountStatusIcon: String = "questionmark.circle.fill"
+//    @Published var iCloudAccountStatusColor: Color = .gray
+//    
 //    // MARK: - Map-related Properties
 //    @Published var mapRegion: MapRegion?
 //    @Published var mapAnnotation: NavUnitMapAnnotation?
@@ -55,6 +61,7 @@
 //    private let favoritesService: FavoritesService
 //    private let photoCaptureService: PhotoCaptureService
 //    private let fileStorageService: FileStorageService
+//    let iCloudSyncService: iCloudSyncService // Made public for PhotoSyncSettingsView access
 //    
 //    // Used to manage and cancel any ongoing tasks
 //    private var cancellables = Set<AnyCancellable>()
@@ -107,7 +114,8 @@
 //        imageCacheService: ImageCacheService,
 //        favoritesService: FavoritesService,
 //        photoCaptureService: PhotoCaptureService,
-//        fileStorageService: FileStorageService
+//        fileStorageService: FileStorageService,
+//        iCloudSyncService: iCloudSyncService
 //    ) {
 //        self.databaseService = databaseService
 //        self.photoService = photoService
@@ -116,6 +124,9 @@
 //        self.favoritesService = favoritesService
 //        self.photoCaptureService = photoCaptureService
 //        self.fileStorageService = fileStorageService
+//        self.iCloudSyncService = iCloudSyncService
+//        
+//        setupiCloudStatusMonitoring()
 //    }
 //    
 //    // New initializer that takes a NavUnit
@@ -127,7 +138,8 @@
 //        imageCacheService: ImageCacheService,
 //        favoritesService: FavoritesService,
 //        photoCaptureService: PhotoCaptureService,
-//        fileStorageService: FileStorageService
+//        fileStorageService: FileStorageService,
+//        iCloudSyncService: iCloudSyncService
 //    ) {
 //        self.databaseService = databaseService
 //        self.photoService = photoService
@@ -136,6 +148,9 @@
 //        self.favoritesService = favoritesService
 //        self.photoCaptureService = photoCaptureService
 //        self.fileStorageService = fileStorageService
+//        self.iCloudSyncService = iCloudSyncService
+//        
+//        setupiCloudStatusMonitoring()
 //        
 //        // Set the nav unit and update display properties
 //        self.unit = navUnit
@@ -149,6 +164,132 @@
 //                try await loadAllPhotos()
 //            } catch {
 //                errorMessage = "Failed to load photos: \(error.localizedDescription)"
+//            }
+//        }
+//    }
+//    
+//    // MARK: - iCloud Status Monitoring
+//    
+//    private func setupiCloudStatusMonitoring() {
+//        // Check initial status once on initialization
+//        Task {
+//            await updateiCloudAccountStatus()
+//        }
+//        
+//        // Removed reactive monitoring to prevent infinite loop
+//        // Status will be updated when user opens sync settings or manually refreshes
+//    }
+//    
+//    @MainActor
+//    private func updateiCloudAccountStatus() async {
+//        let status = await iCloudSyncService.checkAccountStatus()
+//        
+//        switch status {
+//        case .available:
+//            iCloudAccountStatus = "Available"
+//            iCloudAccountStatusIcon = "icloud.fill"
+//            iCloudAccountStatusColor = .green
+//        case .noAccount:
+//            iCloudAccountStatus = "No Account"
+//            iCloudAccountStatusIcon = "person.crop.circle.badge.xmark"
+//            iCloudAccountStatusColor = .red
+//        case .restricted:
+//            iCloudAccountStatus = "Restricted"
+//            iCloudAccountStatusIcon = "lock.circle.fill"
+//            iCloudAccountStatusColor = .orange
+//        case .couldNotDetermine:
+//            iCloudAccountStatus = "Unknown"
+//            iCloudAccountStatusIcon = "questionmark.circle.fill"
+//            iCloudAccountStatusColor = .gray
+//        case .temporarilyUnavailable:
+//            iCloudAccountStatus = "Unavailable"
+//            iCloudAccountStatusIcon = "exclamationmark.circle.fill"
+//            iCloudAccountStatusColor = .yellow
+//        @unknown default:
+//            iCloudAccountStatus = "Unknown"
+//            iCloudAccountStatusIcon = "questionmark.circle.fill"
+//            iCloudAccountStatusColor = .gray
+//        }
+//    }
+//    
+//    // MARK: - Sync Status Management
+//    
+//    func getSyncStatus(for photoId: Int) -> PhotoSyncStatus {
+//        return photoSyncStatuses[photoId] ?? .notSynced
+//    }
+//    
+//    func setSyncStatus(for photoId: Int, status: PhotoSyncStatus) {
+//        photoSyncStatuses[photoId] = status
+//    }
+//    
+//    func retrySyncForPhoto(_ photoId: Int) async {
+//        guard let photo = localPhotos.first(where: { $0.id == photoId }),
+//              iCloudSyncService.isEnabled else { return }
+//        
+//        await MainActor.run {
+//            setSyncStatus(for: photoId, status: .syncing)
+//        }
+//        
+//        do {
+//            // Load image data for sync
+//            if let image = await fileStorageService.loadImage(from: photo.filePath),
+//               let imageData = image.jpegData(compressionQuality: 0.8) {
+//                
+//                let recordID = try await iCloudSyncService.uploadPhoto(photo, imageData: imageData)
+//                
+//                await MainActor.run {
+//                    setSyncStatus(for: photoId, status: .synced)
+//                }
+//                
+//                print("✅ NavUnitDetailsViewModel: Retry sync successful for photo \(photoId) with record ID: \(recordID)")
+//            } else {
+//                throw NSError(domain: "PhotoSync", code: 1, userInfo: [NSLocalizedDescriptionKey: "Failed to load image data"])
+//            }
+//        } catch {
+//            await MainActor.run {
+//                setSyncStatus(for: photoId, status: .failed)
+//            }
+//            print("❌ NavUnitDetailsViewModel: Retry sync failed for photo \(photoId): \(error.localizedDescription)")
+//        }
+//    }
+//    
+//    func manualSyncPhoto(_ photoId: Int) async {
+//        guard let photo = localPhotos.first(where: { $0.id == photoId }),
+//              iCloudSyncService.isEnabled else { return }
+//        
+//        await MainActor.run {
+//            setSyncStatus(for: photoId, status: .syncing)
+//        }
+//        
+//        do {
+//            // Load image data for sync
+//            if let image = await fileStorageService.loadImage(from: photo.filePath),
+//               let imageData = image.jpegData(compressionQuality: 0.8) {
+//                
+//                let recordID = try await iCloudSyncService.uploadPhoto(photo, imageData: imageData)
+//                
+//                await MainActor.run {
+//                    setSyncStatus(for: photoId, status: .synced)
+//                }
+//                
+//                print("✅ NavUnitDetailsViewModel: Manual sync successful for photo \(photoId) with record ID: \(recordID)")
+//            } else {
+//                throw NSError(domain: "PhotoSync", code: 1, userInfo: [NSLocalizedDescriptionKey: "Failed to load image data"])
+//            }
+//        } catch {
+//            await MainActor.run {
+//                setSyncStatus(for: photoId, status: .failed)
+//            }
+//            print("❌ NavUnitDetailsViewModel: Manual sync failed for photo \(photoId): \(error.localizedDescription)")
+//        }
+//    }
+//    
+//    private func initializeSyncStatusForPhotos() {
+//        // Initialize sync status for all loaded photos
+//        for photo in localPhotos {
+//            if photoSyncStatuses[photo.id] == nil {
+//                // Default to not synced - in a real implementation, you might check if it's already synced
+//                photoSyncStatuses[photo.id] = .notSynced
 //            }
 //        }
 //    }
@@ -178,6 +319,7 @@
 //            let photos = try await photoService.getNavUnitPhotosAsync(navUnitId: unit.navUnitId)
 //            await MainActor.run {
 //                self.localPhotos = photos
+//                self.initializeSyncStatusForPhotos()
 //            }
 //        } catch {
 //            print("Error loading local photos: \(error.localizedDescription)")
@@ -431,6 +573,46 @@
 //            let photoId = try await photoService.addNavUnitPhotoAsync(photo: navUnitPhoto)
 //            print("📸 NavUnitDetailsViewModel: Saved photo with ID: \(photoId)")
 //            
+//            // Initialize sync status as not synced
+//            await MainActor.run {
+//                setSyncStatus(for: photoId, status: .notSynced)
+//            }
+//            
+//            // Sync to iCloud if enabled
+//            if iCloudSyncService.isEnabled {
+//                await MainActor.run {
+//                    setSyncStatus(for: photoId, status: .syncing)
+//                }
+//                
+//                do {
+//                    let updatedPhoto = NavUnitPhoto(
+//                        id: photoId,
+//                        navUnitId: navUnitPhoto.navUnitId,
+//                        filePath: navUnitPhoto.filePath,
+//                        fileName: navUnitPhoto.fileName,
+//                        thumbPath: navUnitPhoto.thumbPath,
+//                        description: navUnitPhoto.description,
+//                        createdAt: navUnitPhoto.createdAt
+//                    )
+//                    
+//                    // Convert image to data for iCloud upload
+//                    let imageData = image.jpegData(compressionQuality: 0.8) ?? Data()
+//                    let recordID = try await iCloudSyncService.uploadPhoto(updatedPhoto, imageData: imageData)
+//                    
+//                    await MainActor.run {
+//                        setSyncStatus(for: photoId, status: .synced)
+//                    }
+//                    
+//                    print("☁️ NavUnitDetailsViewModel: Photo synced to iCloud with record ID: \(recordID)")
+//                } catch {
+//                    await MainActor.run {
+//                        setSyncStatus(for: photoId, status: .failed)
+//                    }
+//                    print("❌ NavUnitDetailsViewModel: Failed to sync photo to iCloud: \(error.localizedDescription)")
+//                    // Continue anyway - photo is saved locally
+//                }
+//            }
+//            
 //            // Reload photos to show the new one
 //            await loadLocalPhotos()
 //            
@@ -453,6 +635,11 @@
 //            // Delete from database
 //            let deleteResult = try await photoService.deleteNavUnitPhotoAsync(photoId: photoId)
 //            print("🗑️ NavUnitDetailsViewModel: Delete result: \(deleteResult)")
+//            
+//            // Remove sync status
+//            await MainActor.run {
+//                photoSyncStatuses.removeValue(forKey: photoId)
+//            }
 //            
 //            // Reload local photos
 //            await loadLocalPhotos()
@@ -499,6 +686,7 @@
 //            let photos = try await photoService.getNavUnitPhotosAsync(navUnitId: unit.navUnitId)
 //            await MainActor.run {
 //                self.localPhotos = photos
+//                self.initializeSyncStatusForPhotos()
 //            }
 //        } catch {
 //            await MainActor.run {
@@ -646,6 +834,12 @@ class NavUnitDetailsViewModel: ObservableObject {
     @Published var showingPhotoGallery: Bool = false
     @Published var selectedPhotoIndex: Int = 0
     
+    // iCloud sync status tracking
+    @Published var photoSyncStatuses: [Int: PhotoSyncStatus] = [:]
+    @Published var iCloudAccountStatus: String = "Unknown"
+    @Published var iCloudAccountStatusIcon: String = "questionmark.circle.fill"
+    @Published var iCloudAccountStatusColor: Color = .gray
+    
     // MARK: - Map-related Properties
     @Published var mapRegion: MapRegion?
     @Published var mapAnnotation: NavUnitMapAnnotation?
@@ -658,7 +852,7 @@ class NavUnitDetailsViewModel: ObservableObject {
     private let favoritesService: FavoritesService
     private let photoCaptureService: PhotoCaptureService
     private let fileStorageService: FileStorageService
-    private let iCloudSyncService: iCloudSyncService
+    let iCloudSyncService: iCloudSyncService // Made public for PhotoSyncSettingsView access
     
     // Used to manage and cancel any ongoing tasks
     private var cancellables = Set<AnyCancellable>()
@@ -722,6 +916,8 @@ class NavUnitDetailsViewModel: ObservableObject {
         self.photoCaptureService = photoCaptureService
         self.fileStorageService = fileStorageService
         self.iCloudSyncService = iCloudSyncService
+        
+        setupiCloudStatusMonitoring()
     }
     
     // New initializer that takes a NavUnit
@@ -745,6 +941,8 @@ class NavUnitDetailsViewModel: ObservableObject {
         self.fileStorageService = fileStorageService
         self.iCloudSyncService = iCloudSyncService
         
+        setupiCloudStatusMonitoring()
+        
         // Set the nav unit and update display properties
         self.unit = navUnit
         updateDisplayProperties()
@@ -757,6 +955,132 @@ class NavUnitDetailsViewModel: ObservableObject {
                 try await loadAllPhotos()
             } catch {
                 errorMessage = "Failed to load photos: \(error.localizedDescription)"
+            }
+        }
+    }
+    
+    // MARK: - iCloud Status Monitoring
+    
+    private func setupiCloudStatusMonitoring() {
+        // Check initial status once on initialization
+        Task {
+            await updateiCloudAccountStatus()
+        }
+        
+        // Removed reactive monitoring to prevent infinite loop
+        // Status will be updated when user opens sync settings or manually refreshes
+    }
+    
+    @MainActor
+    private func updateiCloudAccountStatus() async {
+        let status = await iCloudSyncService.checkAccountStatus()
+        
+        switch status {
+        case .available:
+            iCloudAccountStatus = "Available"
+            iCloudAccountStatusIcon = "icloud.fill"
+            iCloudAccountStatusColor = .green
+        case .noAccount:
+            iCloudAccountStatus = "No Account"
+            iCloudAccountStatusIcon = "person.crop.circle.badge.xmark"
+            iCloudAccountStatusColor = .red
+        case .restricted:
+            iCloudAccountStatus = "Restricted"
+            iCloudAccountStatusIcon = "lock.circle.fill"
+            iCloudAccountStatusColor = .orange
+        case .couldNotDetermine:
+            iCloudAccountStatus = "Unknown"
+            iCloudAccountStatusIcon = "questionmark.circle.fill"
+            iCloudAccountStatusColor = .gray
+        case .temporarilyUnavailable:
+            iCloudAccountStatus = "Unavailable"
+            iCloudAccountStatusIcon = "exclamationmark.circle.fill"
+            iCloudAccountStatusColor = .yellow
+        @unknown default:
+            iCloudAccountStatus = "Unknown"
+            iCloudAccountStatusIcon = "questionmark.circle.fill"
+            iCloudAccountStatusColor = .gray
+        }
+    }
+    
+    // MARK: - Sync Status Management
+    
+    func getSyncStatus(for photoId: Int) -> PhotoSyncStatus {
+        return photoSyncStatuses[photoId] ?? .notSynced
+    }
+    
+    func setSyncStatus(for photoId: Int, status: PhotoSyncStatus) {
+        photoSyncStatuses[photoId] = status
+    }
+    
+    func retrySyncForPhoto(_ photoId: Int) async {
+        guard let photo = localPhotos.first(where: { $0.id == photoId }),
+              iCloudSyncService.isEnabled else { return }
+        
+        await MainActor.run {
+            setSyncStatus(for: photoId, status: .syncing)
+        }
+        
+        do {
+            // Load image data for sync
+            if let image = await fileStorageService.loadImage(from: photo.filePath),
+               let imageData = image.jpegData(compressionQuality: 0.8) {
+                
+                let recordID = try await iCloudSyncService.uploadPhoto(photo, imageData: imageData)
+                
+                await MainActor.run {
+                    setSyncStatus(for: photoId, status: .synced)
+                }
+                
+                print("✅ NavUnitDetailsViewModel: Retry sync successful for photo \(photoId) with record ID: \(recordID)")
+            } else {
+                throw NSError(domain: "PhotoSync", code: 1, userInfo: [NSLocalizedDescriptionKey: "Failed to load image data"])
+            }
+        } catch {
+            await MainActor.run {
+                setSyncStatus(for: photoId, status: .failed)
+            }
+            print("❌ NavUnitDetailsViewModel: Retry sync failed for photo \(photoId): \(error.localizedDescription)")
+        }
+    }
+    
+    func manualSyncPhoto(_ photoId: Int) async {
+        guard let photo = localPhotos.first(where: { $0.id == photoId }),
+              iCloudSyncService.isEnabled else { return }
+        
+        await MainActor.run {
+            setSyncStatus(for: photoId, status: .syncing)
+        }
+        
+        do {
+            // Load image data for sync
+            if let image = await fileStorageService.loadImage(from: photo.filePath),
+               let imageData = image.jpegData(compressionQuality: 0.8) {
+                
+                let recordID = try await iCloudSyncService.uploadPhoto(photo, imageData: imageData)
+                
+                await MainActor.run {
+                    setSyncStatus(for: photoId, status: .synced)
+                }
+                
+                print("✅ NavUnitDetailsViewModel: Manual sync successful for photo \(photoId) with record ID: \(recordID)")
+            } else {
+                throw NSError(domain: "PhotoSync", code: 1, userInfo: [NSLocalizedDescriptionKey: "Failed to load image data"])
+            }
+        } catch {
+            await MainActor.run {
+                setSyncStatus(for: photoId, status: .failed)
+            }
+            print("❌ NavUnitDetailsViewModel: Manual sync failed for photo \(photoId): \(error.localizedDescription)")
+        }
+    }
+    
+    private func initializeSyncStatusForPhotos() {
+        // Initialize sync status for all loaded photos
+        for photo in localPhotos {
+            if photoSyncStatuses[photo.id] == nil {
+                // Default to not synced - in a real implementation, you might check if it's already synced
+                photoSyncStatuses[photo.id] = .notSynced
             }
         }
     }
@@ -786,6 +1110,7 @@ class NavUnitDetailsViewModel: ObservableObject {
             let photos = try await photoService.getNavUnitPhotosAsync(navUnitId: unit.navUnitId)
             await MainActor.run {
                 self.localPhotos = photos
+                self.initializeSyncStatusForPhotos()
             }
         } catch {
             print("Error loading local photos: \(error.localizedDescription)")
@@ -1016,16 +1341,23 @@ class NavUnitDetailsViewModel: ObservableObject {
     }
     
     func saveNewPhoto(_ image: UIImage) async {
+        print("🚀 NavUnitDetailsViewModel: saveNewPhoto() started")
+        
         guard let unit = unit else {
+            print("❌ NavUnitDetailsViewModel: No navigation unit selected")
             await MainActor.run {
                 errorMessage = "No navigation unit selected"
             }
             return
         }
         
+        print("✅ NavUnitDetailsViewModel: Unit found: \(unit.navUnitId)")
+        
         do {
+            print("💾 NavUnitDetailsViewModel: Starting file save...")
             // Save image to file system
             let (filePath, fileName) = try await fileStorageService.savePhoto(image, for: unit.navUnitId)
+            print("✅ NavUnitDetailsViewModel: File saved - Path: \(filePath), Name: \(fileName)")
             
             // Create NavUnitPhoto object
             let navUnitPhoto = NavUnitPhoto(
@@ -1034,14 +1366,33 @@ class NavUnitDetailsViewModel: ObservableObject {
                 fileName: fileName,
                 description: "Photo taken on \(Date().formatted())"
             )
+            print("✅ NavUnitDetailsViewModel: NavUnitPhoto object created")
             
+            print("💾 NavUnitDetailsViewModel: Starting database save...")
             // Save to database
             let photoId = try await photoService.addNavUnitPhotoAsync(photo: navUnitPhoto)
-            print("📸 NavUnitDetailsViewModel: Saved photo with ID: \(photoId)")
+            print("✅ NavUnitDetailsViewModel: Saved to database with ID: \(photoId)")
             
-            // Sync to iCloud if enabled
+            // Initialize sync status as not synced
+            await MainActor.run {
+                setSyncStatus(for: photoId, status: .notSynced)
+            }
+            print("✅ NavUnitDetailsViewModel: Sync status initialized as .notSynced")
+            
+            // Check if iCloud sync is enabled
+            print("☁️ NavUnitDetailsViewModel: Checking iCloud sync status...")
+            print("☁️ NavUnitDetailsViewModel: iCloudSyncService.isEnabled = \(iCloudSyncService.isEnabled)")
+            
             if iCloudSyncService.isEnabled {
+                print("🚀 NavUnitDetailsViewModel: iCloud sync is ENABLED - starting upload process")
+                
+                await MainActor.run {
+                    setSyncStatus(for: photoId, status: .syncing)
+                }
+                print("✅ NavUnitDetailsViewModel: Set sync status to .syncing")
+                
                 do {
+                    print("🔄 NavUnitDetailsViewModel: Creating updated photo object for iCloud...")
                     let updatedPhoto = NavUnitPhoto(
                         id: photoId,
                         navUnitId: navUnitPhoto.navUnitId,
@@ -1051,26 +1402,66 @@ class NavUnitDetailsViewModel: ObservableObject {
                         description: navUnitPhoto.description,
                         createdAt: navUnitPhoto.createdAt
                     )
+                    print("✅ NavUnitDetailsViewModel: Updated photo object created")
                     
+                    print("🖼️ NavUnitDetailsViewModel: Converting image to data...")
                     // Convert image to data for iCloud upload
                     let imageData = image.jpegData(compressionQuality: 0.8) ?? Data()
+                    print("✅ NavUnitDetailsViewModel: Image converted to data - Size: \(imageData.count) bytes")
+                    
+                    if imageData.isEmpty {
+                        print("❌ NavUnitDetailsViewModel: Image data is empty!")
+                        throw NSError(domain: "PhotoSync", code: 2, userInfo: [NSLocalizedDescriptionKey: "Image data is empty"])
+                    }
+                    
+                    print("☁️ NavUnitDetailsViewModel: Calling iCloudSyncService.uploadPhoto()...")
                     let recordID = try await iCloudSyncService.uploadPhoto(updatedPhoto, imageData: imageData)
-                    print("☁️ NavUnitDetailsViewModel: Photo synced to iCloud with record ID: \(recordID)")
+                    print("🎉 NavUnitDetailsViewModel: iCloud upload SUCCESS! Record ID: \(recordID)")
+                    
+                    await MainActor.run {
+                        setSyncStatus(for: photoId, status: .synced)
+                    }
+                    print("✅ NavUnitDetailsViewModel: Set sync status to .synced")
+                    
                 } catch {
-                    print("❌ NavUnitDetailsViewModel: Failed to sync photo to iCloud: \(error.localizedDescription)")
+                    print("💥 NavUnitDetailsViewModel: iCloud upload FAILED with error: \(error)")
+                    print("💥 NavUnitDetailsViewModel: Error description: \(error.localizedDescription)")
+                    
+                    if let nsError = error as? NSError {
+                        print("💥 NavUnitDetailsViewModel: NSError domain: \(nsError.domain)")
+                        print("💥 NavUnitDetailsViewModel: NSError code: \(nsError.code)")
+                    }
+                    
+                    await MainActor.run {
+                        setSyncStatus(for: photoId, status: .failed)
+                    }
+                    print("✅ NavUnitDetailsViewModel: Set sync status to .failed")
                     // Continue anyway - photo is saved locally
                 }
+            } else {
+                print("⚠️ NavUnitDetailsViewModel: iCloud sync is DISABLED - skipping upload")
             }
             
+            print("🔄 NavUnitDetailsViewModel: Reloading local photos...")
             // Reload photos to show the new one
             await loadLocalPhotos()
+            print("✅ NavUnitDetailsViewModel: Local photos reloaded")
             
         } catch {
+            print("💥 NavUnitDetailsViewModel: saveNewPhoto() FAILED with error: \(error)")
+            print("💥 NavUnitDetailsViewModel: Error description: \(error.localizedDescription)")
+            
+            if let nsError = error as? NSError {
+                print("💥 NavUnitDetailsViewModel: NSError domain: \(nsError.domain)")
+                print("💥 NavUnitDetailsViewModel: NSError code: \(nsError.code)")
+            }
+            
             await MainActor.run {
                 errorMessage = "Failed to save photo: \(error.localizedDescription)"
             }
-            print("❌ NavUnitDetailsViewModel: Error saving photo: \(error.localizedDescription)")
         }
+        
+        print("🏁 NavUnitDetailsViewModel: saveNewPhoto() completed")
     }
     
     func deletePhoto(_ photoId: Int) async {
@@ -1084,6 +1475,11 @@ class NavUnitDetailsViewModel: ObservableObject {
             // Delete from database
             let deleteResult = try await photoService.deleteNavUnitPhotoAsync(photoId: photoId)
             print("🗑️ NavUnitDetailsViewModel: Delete result: \(deleteResult)")
+            
+            // Remove sync status
+            await MainActor.run {
+                photoSyncStatuses.removeValue(forKey: photoId)
+            }
             
             // Reload local photos
             await loadLocalPhotos()
@@ -1130,6 +1526,7 @@ class NavUnitDetailsViewModel: ObservableObject {
             let photos = try await photoService.getNavUnitPhotosAsync(navUnitId: unit.navUnitId)
             await MainActor.run {
                 self.localPhotos = photos
+                self.initializeSyncStatusForPhotos()
             }
         } catch {
             await MainActor.run {

@@ -9,6 +9,7 @@ struct NavUnitDetailsView: View {
     
     // State for photo picker and gallery
     @State private var showingPhotoPicker = false
+    @State private var showingSyncSettings = false
     
     // Simple initializer that takes a view model
     init(viewModel: NavUnitDetailsViewModel) {
@@ -70,12 +71,38 @@ struct NavUnitDetailsView: View {
             .padding()
         }
         .navigationBarTitle("Navigation Unit Details", displayMode: .inline)
-        .withHomeButton()
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                NavigationLink(destination: MainView(shouldClearNavigation: true)) {
+                    Image(systemName: "house.fill")
+                        .foregroundColor(.blue)
+                }
+                .simultaneousGesture(TapGesture().onEnded {
+                    // Provide haptic feedback
+                    let impactGenerator = UIImpactFeedbackGenerator(style: .medium)
+                    impactGenerator.prepare()
+                    impactGenerator.impactOccurred()
+                })
+            }
+        }
         .sheet(isPresented: $showingPhotoPicker) {
             PhotoPickerView(isPresented: $showingPhotoPicker) { image in
                 Task {
                     await viewModel.saveNewPhoto(image)
                 }
+            }
+        }
+        .sheet(isPresented: $showingSyncSettings) {
+            NavigationView {
+                PhotoSyncSettingsView(iCloudService: viewModel.iCloudSyncService as! iCloudSyncServiceImpl)
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarTrailing) {
+                            Button("Done") {
+                                showingSyncSettings = false
+                            }
+                        }
+                    }
             }
         }
         .fullScreenCover(isPresented: $viewModel.showingPhotoGallery) {
@@ -205,11 +232,33 @@ struct NavUnitDetailsView: View {
                 .background(RoundedRectangle(cornerRadius: 10).fill(Color.white))
             
             VStack(spacing: 15) {
+                // Header with sync settings button
+                HStack {
+                    Text("Private Photos")
+                        .font(.title3)
+                        .fontWeight(.bold)
+                    
+                    Spacer()
+                    
+                    // iCloud sync status indicator
+                    HStack(spacing: 8) {
+                        Image(systemName: viewModel.iCloudAccountStatusIcon)
+                            .foregroundColor(viewModel.iCloudAccountStatusColor)
+                            .font(.caption)
+                        
+                        Button(action: {
+                            showingSyncSettings = true
+                        }) {
+                            Image(systemName: "gear")
+                                .foregroundColor(.blue)
+                                .font(.caption)
+                        }
+                    }
+                }
+                .padding(.horizontal)
+                
                 if viewModel.localPhotos.isEmpty {
                     VStack {
-                        Text("Private Photos")
-                            .font(.title3)
-                        
                         Text("No photos yet")
                             .foregroundColor(.gray)
                     }
@@ -246,14 +295,27 @@ struct NavUnitDetailsView: View {
     
     private func photoItem(photo: NavUnitPhoto) -> some View {
         ZStack(alignment: .topTrailing) {
-            // Async image loading with thumbnail
-            AsyncPhotoThumbnail(photo: photo, viewModel: viewModel)
-                .frame(width: 180, height: 180)
-                .cornerRadius(8)
-                .onTapGesture {
-                    viewModel.viewPhoto(photo)
+            ZStack(alignment: .topLeading) {
+                // Async image loading with thumbnail
+                AsyncPhotoThumbnail(photo: photo, viewModel: viewModel)
+                    .frame(width: 180, height: 180)
+                    .cornerRadius(8)
+                    .onTapGesture {
+                        viewModel.viewPhoto(photo)
+                    }
+                
+                // Sync status indicator in top-left
+                VStack {
+                    HStack {
+                        syncStatusIndicator(for: photo)
+                        Spacer()
+                    }
+                    Spacer()
                 }
+                .padding(8)
+            }
             
+            // Delete button in top-right
             Button(action: {
                 Task {
                     await viewModel.deletePhoto(photo.id)
@@ -272,6 +334,37 @@ struct NavUnitDetailsView: View {
             .padding(5)
         }
         .frame(width: 180, height: 180)
+    }
+    
+    private func syncStatusIndicator(for photo: NavUnitPhoto) -> some View {
+        let status = viewModel.getSyncStatus(for: photo.id)
+        
+        return ZStack {
+            Circle()
+                .fill(Color.black.opacity(0.6))
+                .frame(width: 24, height: 24)
+            
+            Group {
+                if status == .syncing {
+                    ProgressView()
+                        .scaleEffect(0.7)
+                        .tint(.white)
+                } else {
+                    Image(systemName: status.iconName)
+                        .foregroundColor(syncStatusColor(for: status))
+                        .font(.system(size: 12))
+                }
+            }
+        }
+    }
+    
+    private func syncStatusColor(for status: PhotoSyncStatus) -> Color {
+        switch status {
+        case .notSynced: return .gray
+        case .syncing: return .blue
+        case .synced: return .green
+        case .failed: return .red
+        }
     }
     
     private var remotePhotosSection: some View {

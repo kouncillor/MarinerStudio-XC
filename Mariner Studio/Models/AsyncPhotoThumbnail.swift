@@ -38,9 +38,83 @@ struct AsyncPhotoThumbnail: View {
                         }
                     )
             }
+            
+            // Sync status overlay
+            if !isLoading && thumbnail != nil {
+                VStack {
+                    HStack {
+                        syncStatusOverlay
+                        Spacer()
+                    }
+                    Spacer()
+                }
+                .padding(6)
+            }
         }
         .task {
             await loadThumbnail()
+        }
+        .onChange(of: photo.id) { _ in
+            // Reset state when photo changes
+            isLoading = true
+            hasError = false
+            thumbnail = nil
+            
+            Task {
+                await loadThumbnail()
+            }
+        }
+    }
+    
+    private var syncStatusOverlay: some View {
+        let status = viewModel.getSyncStatus(for: photo.id)
+        
+        return ZStack {
+            Circle()
+                .fill(Color.black.opacity(0.7))
+                .frame(width: 20, height: 20)
+            
+            Group {
+                if status == .syncing {
+                    ProgressView()
+                        .scaleEffect(0.5)
+                        .tint(.white)
+                } else {
+                    Image(systemName: status.iconName)
+                        .foregroundColor(syncStatusColor(for: status))
+                        .font(.system(size: 10, weight: .medium))
+                }
+            }
+        }
+        .onTapGesture {
+            // Handle sync status tap (could show detailed info or retry)
+            handleSyncStatusTap(status: status)
+        }
+    }
+    
+    private func syncStatusColor(for status: PhotoSyncStatus) -> Color {
+        switch status {
+        case .notSynced: return .gray
+        case .syncing: return .blue
+        case .synced: return .green
+        case .failed: return .red
+        }
+    }
+    
+    private func handleSyncStatusTap(status: PhotoSyncStatus) {
+        switch status {
+        case .failed:
+            // Retry sync for failed photos
+            Task {
+                await viewModel.retrySyncForPhoto(photo.id)
+            }
+        case .notSynced:
+            // Manually trigger sync for unsynced photos
+            Task {
+                await viewModel.manualSyncPhoto(photo.id)
+            }
+        default:
+            break
         }
     }
     
