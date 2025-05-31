@@ -1,10 +1,3 @@
-//
-//  PhotoGalleryView.swift
-//  Mariner Studio
-//
-//  Created by Timothy Russell on 5/31/25.
-//
-
 
 import SwiftUI
 
@@ -144,8 +137,29 @@ struct PhotoGalleryView: View {
         } message: {
             Text("Are you sure you want to delete this photo? This action cannot be undone.")
         }
+        .sheet(isPresented: $viewModel.showingShareSheet) {
+            if !viewModel.currentShareItems.isEmpty {
+                ShareSheet(items: viewModel.currentShareItems)
+            }
+        }
     }
 }
+
+// MARK: - ShareSheet UIViewControllerRepresentable
+
+struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+    
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let activityVC = UIActivityViewController(activityItems: items, applicationActivities: nil)
+        return activityVC
+    }
+    
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {
+        // No updates needed
+    }
+}
+
 
 // MARK: - Preview Helper
 
@@ -164,7 +178,7 @@ struct PhotoGalleryView_Previews: PreviewProvider {
                     ),
                     NavUnitPhoto(
                         id: 2,
-                        navUnitId: "TEST001", 
+                        navUnitId: "TEST001",
                         filePath: "/test/path/photo2.jpg",
                         fileName: "photo2.jpg",
                         description: "Test photo 2"

@@ -1,10 +1,3 @@
-//
-//  PhotoGalleryViewModel.swift
-//  Mariner Studio
-//
-//  Created by Timothy Russell on 5/31/25.
-//
-
 
 import Foundation
 import SwiftUI
@@ -44,7 +37,7 @@ class PhotoGalleryViewModel: ObservableObject {
     }
     
     // MARK: - Initialization
-    init(photos: [NavUnitPhoto], 
+    init(photos: [NavUnitPhoto],
          startingIndex: Int = 0,
          fileStorageService: FileStorageService,
          photoService: PhotoDatabaseService) {
@@ -91,6 +84,7 @@ class PhotoGalleryViewModel: ObservableObject {
                 }
                 
                 // Show share sheet
+                showingShareSheet = true
                 presentShareSheet(with: shareItems)
             } else {
                 errorMessage = "Failed to load image for sharing"
@@ -157,26 +151,11 @@ class PhotoGalleryViewModel: ObservableObject {
     }
     
     // MARK: - Share Sheet
+    var currentShareItems: [Any] = []
+    
     private func presentShareSheet(with items: [Any]) {
-        #if os(iOS)
-        let activityVC = UIActivityViewController(activityItems: items, applicationActivities: nil)
-        
-        // Get the root view controller to present the share sheet from
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let rootViewController = windowScene.windows.first?.rootViewController {
-            
-            // For iPad - set popover presentation controller
-            if let popover = activityVC.popoverPresentationController {
-                popover.sourceView = rootViewController.view
-                popover.sourceRect = CGRect(x: rootViewController.view.bounds.midX, 
-                                         y: rootViewController.view.bounds.midY, 
-                                         width: 0, height: 0)
-                popover.permittedArrowDirections = []
-            }
-            
-            rootViewController.present(activityVC, animated: true)
-        }
-        #endif
+        currentShareItems = items
+        showingShareSheet = true
     }
     
     // MARK: - Error Handling
