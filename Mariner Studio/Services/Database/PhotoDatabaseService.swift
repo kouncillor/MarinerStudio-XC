@@ -1,3 +1,4 @@
+
 import Foundation
 #if canImport(SQLite)
 import SQLite
@@ -73,6 +74,36 @@ class PhotoDatabaseService {
             return results
         } catch {
             print("Error fetching nav unit photos: \(error.localizedDescription)")
+            throw error
+        }
+    }
+    
+    // Get all nav unit photos from the database (for bulk sync operations)
+    func getAllNavUnitPhotosAsync() async throws -> [NavUnitPhoto] {
+        print("📊 PhotoDatabaseService: Getting all nav unit photos...")
+        
+        do {
+            let db = try databaseCore.ensureConnection()
+            
+            let query = navUnitPhotos.order(colCreatedAt.desc)
+            var results: [NavUnitPhoto] = []
+            
+            for row in try db.prepare(query) {
+                let photo = NavUnitPhoto(
+                    id: row[colId],
+                    navUnitId: row[colNavUnitId],
+                    filePath: row[colFilePath],
+                    fileName: row[colFileName],
+                    thumbPath: row[colThumbPath],
+                    createdAt: row[colCreatedAt]
+                )
+                results.append(photo)
+            }
+            
+            print("✅ PhotoDatabaseService: Retrieved \(results.count) total photos")
+            return results
+        } catch {
+            print("❌ PhotoDatabaseService: Error getting all photos: \(error.localizedDescription)")
             throw error
         }
     }

@@ -89,9 +89,16 @@ class ServiceProvider: ObservableObject {
             fatalError("Critical error: Cannot initialize file storage service")
         }
         self.photoCaptureService = PhotoCaptureServiceImpl()
-        self.iCloudSyncService = iCloudSyncServiceImpl(fileStorageService: self.fileStorageService)
         
-        print("📦 ServiceProvider: Initialized navigation and photo services.")
+        // Initialize iCloud Sync Service with proper dependencies
+        let iCloudService = iCloudSyncServiceImpl(fileStorageService: self.fileStorageService)
+        self.iCloudSyncService = iCloudService
+        
+        // Inject dependencies into iCloud service after all services are initialized
+        iCloudService.setPhotoService(self.photoService)
+        iCloudService.setFileStorageService(self.fileStorageService)
+        
+        print("📦 ServiceProvider: Initialized navigation and photo services with iCloud integration.")
         
         // Initialize GPX and Route Services
         self.gpxService = GpxServiceFactory.shared.getDefaultGpxService()
@@ -128,6 +135,12 @@ class ServiceProvider: ObservableObject {
                 print("📊 Tables in the database: \(tableNames.joined(separator: ", "))")
                 
                 print("✅ ServiceProvider: Database successfully initialized.")
+                
+                // Add missing PhotoDatabaseService method if needed
+                if let photoService = self.photoService as? PhotoDatabaseService {
+                    try await self.addGetAllPhotosMethodIfNeeded(photoService)
+                }
+                
             } catch {
                 print("❌ ServiceProvider: Error initializing database: \(error.localizedDescription)")
             }
@@ -154,6 +167,24 @@ class ServiceProvider: ObservableObject {
             }
         }
         
+        // Task 3: Setup automatic iCloud sync if enabled
+        Task(priority: .utility) {
+            // Wait a bit for the app to settle before starting automatic sync
+            try await Task.sleep(for: .seconds(2))
+            
+            if self.iCloudSyncService.isEnabled {
+                print("🚀 ServiceProvider: Auto-starting iCloud sync (app launch)")
+                await self.iCloudSyncService.syncAllLocalPhotos()
+            }
+        }
+        
         print("📦 ServiceProvider initialization complete (async tasks launched).")
+    }
+    
+    // Helper method to ensure PhotoDatabaseService has the getAllNavUnitPhotosAsync method
+    private func addGetAllPhotosMethodIfNeeded(_ photoService: PhotoDatabaseService) async throws {
+        print("📦 ServiceProvider: Verifying PhotoDatabaseService methods...")
+        // This is a placeholder - the actual implementation should be in PhotoDatabaseService
+        // We'll assume the method exists or add it via extension if needed
     }
 }

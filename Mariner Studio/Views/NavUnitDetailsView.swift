@@ -224,7 +224,10 @@ struct NavUnitDetailsView: View {
         }
         .disabled(!isEnabled)
     }
-    
+     
+    // Add this section to the localPhotosSection in NavUnitDetailsView.swift
+    // Replace the existing localPhotosSection with this updated version:
+
     private var localPhotosSection: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 10)
@@ -240,6 +243,17 @@ struct NavUnitDetailsView: View {
                     
                     Spacer()
                     
+                    // Auto-sync indicator
+                    if viewModel.isAutoSyncing {
+                        HStack(spacing: 4) {
+                            ProgressView()
+                                .scaleEffect(0.6)
+                            Text("Syncing...")
+                                .font(.caption)
+                                .foregroundColor(.blue)
+                        }
+                    }
+                    
                     // iCloud sync status indicator
                     HStack(spacing: 8) {
                         Image(systemName: viewModel.iCloudAccountStatusIcon)
@@ -252,6 +266,19 @@ struct NavUnitDetailsView: View {
                             Image(systemName: "gear")
                                 .foregroundColor(.blue)
                                 .font(.caption)
+                        }
+                        
+                        // Manual sync button
+                        if viewModel.iCloudSyncService.isEnabled && !viewModel.isAutoSyncing {
+                            Button(action: {
+                                Task {
+                                    await viewModel.manualSyncNavUnit()
+                                }
+                            }) {
+                                Image(systemName: "arrow.clockwise")
+                                    .foregroundColor(.blue)
+                                    .font(.caption)
+                            }
                         }
                     }
                 }
@@ -292,6 +319,10 @@ struct NavUnitDetailsView: View {
             .padding()
         }
     }
+    
+    
+    
+    
     
     private func photoItem(photo: NavUnitPhoto) -> some View {
         ZStack(alignment: .topTrailing) {

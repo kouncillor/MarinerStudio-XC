@@ -1,10 +1,3 @@
-//
-//  PhotoSyncSettingsView.swift
-//  Mariner Studio
-//
-//  Created by Timothy Russell on 5/31/25.
-//
-
 
 import SwiftUI
 import CloudKit
@@ -75,9 +68,53 @@ struct PhotoSyncSettingsView: View {
                         }
                     }
                     .foregroundColor(.blue)
+                    .disabled(iCloudService.syncProgress.isInProgress)
                 }
                 
-                Section(footer: Text("Photos are automatically synced when you take them. Use 'Sync All Photos Now' to upload any photos that haven't been synced yet.")) {
+                // Sync Progress Section
+                if iCloudService.syncProgress.isInProgress || iCloudService.syncProgress.errorMessage != nil {
+                    Section(header: Text("Sync Status")) {
+                        if iCloudService.syncProgress.isInProgress {
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack {
+                                    ProgressView()
+                                        .scaleEffect(0.8)
+                                    Text("Syncing photos...")
+                                        .font(.subheadline)
+                                    Spacer()
+                                }
+                                
+                                if iCloudService.syncProgress.totalPhotos > 0 {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("\(iCloudService.syncProgress.processedPhotos) of \(iCloudService.syncProgress.totalPhotos) photos")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                        
+                                        ProgressView(value: iCloudService.syncProgress.progressPercentage)
+                                            .progressViewStyle(LinearProgressViewStyle())
+                                    }
+                                }
+                            }
+                            .padding(.vertical, 4)
+                        }
+                        
+                        if let errorMessage = iCloudService.syncProgress.errorMessage {
+                            HStack {
+                                Image(systemName: iCloudService.syncProgress.isInProgress ? "info.circle" :
+                                      errorMessage.contains("failed") ? "exclamationmark.triangle" : "checkmark.circle")
+                                    .foregroundColor(iCloudService.syncProgress.isInProgress ? .blue :
+                                                   errorMessage.contains("failed") ? .orange : .green)
+                                Text(errorMessage)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                Spacer()
+                            }
+                            .padding(.vertical, 2)
+                        }
+                    }
+                }
+                
+                Section(footer: Text("Photos are automatically synced when you take them and when you view navigation units. Use 'Sync All Photos Now' to upload any photos that haven't been synced yet.")) {
                     EmptyView()
                 }
             }

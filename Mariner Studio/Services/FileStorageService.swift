@@ -43,10 +43,11 @@ class FileStorageServiceImpl: FileStorageService {
         // Create directory for this nav unit
         let navUnitDirectory = try createNavUnitDirectory(for: navUnitId)
         
-        // Generate unique filename with timestamp
+        // Generate truly unique filename with UUID + timestamp + navUnitId
+        let uuid = UUID().uuidString.prefix(8) // First 8 chars of UUID
         let timestamp = ISO8601DateFormatter().string(from: Date())
         let cleanTimestamp = timestamp.replacingOccurrences(of: ":", with: "-")
-        let fileName = "photo_\(cleanTimestamp).jpg"
+        let fileName = "\(navUnitId)_\(cleanTimestamp)_\(uuid).jpg"
         let fileURL = navUnitDirectory.appendingPathComponent(fileName)
         
         // Convert image to JPEG data (use default quality)
@@ -62,6 +63,7 @@ class FileStorageServiceImpl: FileStorageService {
         
         print("💾 FileStorageService: Saved photo to: \(fileURL.path)")
         print("💾 FileStorageService: Relative path stored: \(relativePath)")
+        print("🔍 FileStorageService: Unique filename: \(fileName)")
         
         return (filePath: relativePath, fileName: fileName)
     }
