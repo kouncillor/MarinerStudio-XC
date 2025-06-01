@@ -52,6 +52,10 @@ class NavUnitDetailsViewModel: ObservableObject {
     // Auto-sync state
     @Published var isAutoSyncing: Bool = false
     
+    // NEW: Enhanced deletion state
+    @Published var isDeletingPhoto: Bool = false
+    @Published var deletionStatusMessage: String = ""
+    
     // MARK: - Sync Throttling
     private var lastSyncTime: [String: Date] = [:] // Track last sync time per navUnitId
     private let syncThrottleInterval: TimeInterval = 10 // Minimum 10 seconds between syncs
@@ -425,8 +429,12 @@ class NavUnitDetailsViewModel: ObservableObject {
         // Initialize sync status for all loaded photos
         for photo in localPhotos {
             if photoSyncStatuses[photo.id] == nil {
-                // Default to not synced - in a real implementation, you might check if it's already synced
-                photoSyncStatuses[photo.id] = .notSynced
+                // Check if photo has CloudKit record ID to determine initial sync status
+                if photo.isSyncedToiCloud {
+                    photoSyncStatuses[photo.id] = .synced
+                } else {
+                    photoSyncStatuses[photo.id] = .notSynced
+                }
             }
         }
     }
@@ -820,87 +828,78 @@ class NavUnitDetailsViewModel: ObservableObject {
         print("🏁 NavUnitDetailsViewModel: Enhanced saveNewPhoto() completed")
     }
     
-//    func deletePhoto(_ photoId: Int) async {
-//        do {
-//            // Get the photo first to get the file path
-//            if let photoToDelete = localPhotos.first(where: { $0.id == photoId }) {
-//                // Delete from file system
-//                try await fileStorageService.deletePhoto(at: photoToDelete.filePath)
-//            }
-//            
-//            // Delete from database
-//            let deleteResult = try await photoService.deleteNavUnitPhotoAsync(photoId: photoId)
-//            print("🗑️ NavUnitDetailsViewModel: Delete result: \(deleteResult)")
-//            
-//            // Remove sync status
-//            await MainActor.run {
-//                photoSyncStatuses.removeValue(forKey: photoId)
-//            }
-//            
-//            // Reload local photos
-//            await loadLocalPhotos()
-//        } catch {
-//            await MainActor.run {
-//                self.errorMessage = "Error deleting photo: \(error.localizedDescription)"
-//            }
-//        }
-//    }
-//
+    // MARK: - Enhanced Photo Deletion with iCloud Support
     
     func deletePhoto(_ photoId: Int) async {
-        print("🗑️ NavUnitDetailsViewModel: Starting delete for photo ID: \(photoId)")
+        print("🗑️ NavUnitDetailsViewModel: Starting enhanced deletion for photo ID: \(photoId)")
         
-        do {
-            // Get the photo first to get the file path
-            if let photoToDelete = localPhotos.first(where: { $0.id == photoId }) {
-                print("🗑️ Found photo to delete: \(photoToDelete.fileName)")
-                print("🗑️ File path: \(photoToDelete.filePath)")
-                
-                // Delete from file system
-                try await fileStorageService.deletePhoto(at: photoToDelete.filePath)
-                print("✅ File deleted successfully")
-            } else {
-                print("❌ Photo not found in localPhotos array")
-            }
-            
-            // Delete from database
-            let deleteResult = try await photoService.deleteNavUnitPhotoAsync(photoId: photoId)
-            print("✅ Database delete result: \(deleteResult)")
-            
-            // Remove sync status
+        // Find the photo to get its details
+        guard let photoToDelete = localPhotos.first(where: { $0.id == photoId }) else {
+            print("❌ NavUnitDetailsViewModel: Photo \(photoId) not found in localPhotos")
             await MainActor.run {
-                photoSyncStatuses.removeValue(forKey: photoId)
+                errorMessage = "Photo not found"
+            }
+            return
+        }
+        
+        print("📋 NavUnitDetailsViewModel: Found photo to delete:")
+        print("📋   ID: \(photoToDelete.id)")
+        print("📋   File: \(photoToDelete.fileName)")
+        print("📋   CloudRecordID: \(photoToDelete.cloudRecordID ?? "none")")
+        print("📋   isSyncedToiCloud: \(photoToDelete.isSyncedToiCloud)")
+        
+        await MainActor.run {
+            isDeletingPhoto = true
+            errorMessage = ""
+            deletionStatusMessage = "Preparing to delete photo..."
+        }
+        
+        // Use the enhanced deletion method from iCloudSyncService
+        do {
+            print("🚀 NavUnitDetailsViewModel: Calling enhanced iCloud deletion service...")
+            await MainActor.run {
+                deletionStatusMessage = photoToDelete.isSyncedToiCloud ? "Deleting from iCloud and device..." : "Deleting photo..."
             }
             
-            // Reload local photos
-            await loadLocalPhotos()
-            print("✅ Photos reloaded")
+            // This method handles both iCloud and local deletion with proper fallbacks
+            try await iCloudSyncService.deletePhotoByLocalID(photoId)
+            
+            print("🎉 NavUnitDetailsViewModel: Enhanced deletion successful!")
+            
+            await MainActor.run {
+                deletionStatusMessage = photoToDelete.isSyncedToiCloud ? "Deleted from iCloud and device" : "Photo deleted successfully"
+                
+                // Remove from local array
+                if let index = localPhotos.firstIndex(where: { $0.id == photoId }) {
+                    localPhotos.remove(at: index)
+                    print("✅ NavUnitDetailsViewModel: Removed photo from local array")
+                }
+                
+                // Remove sync status
+                photoSyncStatuses.removeValue(forKey: photoId)
+                
+                isDeletingPhoto = false
+                
+                // Clear status message after a delay
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                    self.deletionStatusMessage = ""
+                }
+            }
             
         } catch {
-            print("❌ Delete error: \(error)")
+            print("❌ NavUnitDetailsViewModel: Enhanced deletion failed: \(error.localizedDescription)")
+            
             await MainActor.run {
-                self.errorMessage = "Error deleting photo: \(error.localizedDescription)"
+                // Even if enhanced deletion failed, try to reload photos to see current state
+                isDeletingPhoto = false
+                deletionStatusMessage = ""
+                errorMessage = "Failed to delete photo: \(error.localizedDescription)"
             }
+            
+            // Reload photos to reflect any partial changes
+            await loadLocalPhotos()
         }
     }
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
     
     // MARK: - Photo Gallery Helper
     
@@ -909,7 +908,8 @@ class NavUnitDetailsViewModel: ObservableObject {
             photos: localPhotos,
             startingIndex: selectedPhotoIndex,
             fileStorageService: fileStorageService,
-            photoService: photoService
+            photoService: photoService,
+            iCloudSyncService: iCloudSyncService // NEW: Pass iCloud service for enhanced deletion
         )
     }
     
@@ -970,6 +970,32 @@ class NavUnitDetailsViewModel: ObservableObject {
             title: unit.navUnitName,
             subtitle: unit.facilityType ?? "Navigation Unit"
         )
+    }
+    
+    // MARK: - Status Helper Methods
+    
+    // NEW: Get user-friendly deletion status for UI
+    var deletionStatusForUI: String {
+        if isDeletingPhoto && !deletionStatusMessage.isEmpty {
+            return deletionStatusMessage
+        }
+        return ""
+    }
+    
+    // NEW: Check if any deletion operation is in progress
+    var isDeletionInProgress: Bool {
+        return isDeletingPhoto
+    }
+    
+    // NEW: Get appropriate delete button text based on sync status
+    func deleteButtonText(for photo: NavUnitPhoto?) -> String {
+        guard let photo = photo else { return "Delete Photo" }
+        
+        if photo.isSyncedToiCloud {
+            return "Delete from iCloud & Device"
+        } else {
+            return "Delete Photo"
+        }
     }
     
     // MARK: - Private Methods
@@ -1038,6 +1064,3 @@ class NavUnitDetailsViewModel: ObservableObject {
         favoriteIcon = unit?.isFavorite == true ? "favoritesixseven" : "favoriteoutlinesixseven"
     }
 }
-
-
-

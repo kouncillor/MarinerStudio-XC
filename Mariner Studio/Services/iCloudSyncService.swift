@@ -12,6 +12,7 @@ protocol iCloudSyncService {
     func uploadPhoto(_ photo: NavUnitPhoto, imageData: Data) async throws -> String
     func downloadPhotos(for navUnitId: String) async throws -> [CloudPhoto]
     func deletePhoto(recordID: String) async throws
+    func deletePhotoByLocalID(_ photoId: Int) async throws // NEW: Delete by local photo ID
     func syncAllLocalPhotos() async
     func syncPhotosForNavUnit(_ navUnitId: String) async
     func setPhotoService(_ photoService: PhotoDatabaseService)
@@ -171,6 +172,21 @@ class iCloudSyncServiceImpl: ObservableObject, iCloudSyncService {
             
             print("🎉 iCloudSyncService: Upload successful for photo \(photo.id)! Record ID: \(recordID)")
             
+            // NEW: Update local database with CloudKit record ID
+            if let photoService = photoService {
+                do {
+                    let success = try await photoService.updateCloudRecordIDAsync(photoId: photo.id, cloudRecordID: recordID)
+                    if success {
+                        print("✅ iCloudSyncService: Updated local database with CloudKit record ID: \(recordID)")
+                    } else {
+                        print("⚠️ iCloudSyncService: Failed to update local database with CloudKit record ID")
+                    }
+                } catch {
+                    print("❌ iCloudSyncService: Error updating local database with CloudKit record ID: \(error.localizedDescription)")
+                    // Continue anyway - upload was successful
+                }
+            }
+            
             await MainActor.run {
                 photoSyncStatus[photo.id] = .synced
             }
@@ -227,7 +243,9 @@ class iCloudSyncServiceImpl: ObservableObject, iCloudSyncService {
         }
     }
     
-    // MARK: - Delete Operations
+    // MARK: - Enhanced Delete Operations
+    
+    // Delete photo by CloudKit record ID
     func deletePhoto(recordID: String) async throws {
         guard isEnabled else {
             throw iCloudSyncError.syncDisabled
@@ -246,6 +264,96 @@ class iCloudSyncServiceImpl: ObservableObject, iCloudSyncService {
         } catch {
             print("❌ iCloudSyncService: Failed to delete photo: \(error.localizedDescription)")
             throw iCloudSyncError.deleteFailed(error)
+        }
+    }
+    
+    // NEW: Enhanced delete method that handles both iCloud and local deletion
+    func deletePhotoByLocalID(_ photoId: Int) async throws {
+        print("🗑️ iCloudSyncService: Starting enhanced deletion for photo ID: \(photoId)")
+        
+        guard let photoService = photoService else {
+            print("❌ iCloudSyncService: PhotoDatabaseService not available")
+            throw iCloudSyncError.deleteFailed(NSError(domain: "iCloudSync", code: 1, userInfo: [NSLocalizedDescriptionKey: "Photo service not available"]))
+        }
+        
+        // Step 1: Get the photo from local database to get CloudKit record ID
+        let localPhotos = try await photoService.getAllNavUnitPhotosAsync()
+        guard let photoToDelete = localPhotos.first(where: { $0.id == photoId }) else {
+            print("❌ iCloudSyncService: Photo \(photoId) not found in local database")
+            throw iCloudSyncError.deleteFailed(NSError(domain: "iCloudSync", code: 2, userInfo: [NSLocalizedDescriptionKey: "Photo not found in local database"]))
+        }
+        
+        print("📋 iCloudSyncService: Found photo to delete - File: \(photoToDelete.fileName), CloudRecordID: \(photoToDelete.cloudRecordID ?? "nil")")
+        
+        var iCloudDeletionSucceeded = false
+        var iCloudDeletionError: Error?
+        
+        // Step 2: Try to delete from iCloud first (if it exists in iCloud)
+        if let cloudRecordID = photoToDelete.cloudRecordID, !cloudRecordID.isEmpty, isEnabled && accountStatus == .available {
+            print("☁️ iCloudSyncService: Attempting to delete from iCloud with record ID: \(cloudRecordID)")
+            
+            do {
+                try await deletePhoto(recordID: cloudRecordID)
+                iCloudDeletionSucceeded = true
+                print("✅ iCloudSyncService: Successfully deleted from iCloud")
+            } catch {
+                iCloudDeletionError = error
+                print("❌ iCloudSyncService: Failed to delete from iCloud: \(error.localizedDescription)")
+                
+                // Check if it's a "record not found" error - this is okay, means it was already deleted
+                if let ckError = error as? CKError, ckError.code == .unknownItem {
+                    print("ℹ️ iCloudSyncService: Record not found in iCloud (already deleted), continuing with local deletion")
+                    iCloudDeletionSucceeded = true
+                    iCloudDeletionError = nil
+                }
+            }
+        } else {
+            print("ℹ️ iCloudSyncService: No CloudKit record ID or sync disabled, skipping iCloud deletion")
+            iCloudDeletionSucceeded = true // Consider this successful since there's nothing to delete
+        }
+        
+        // Step 3: Delete from local storage (always proceed, even if iCloud deletion failed)
+        print("💾 iCloudSyncService: Proceeding with local deletion...")
+        
+        do {
+            // Delete from file system
+            try await fileStorageService.deletePhoto(at: photoToDelete.filePath)
+            print("✅ iCloudSyncService: Deleted photo file from local storage")
+            
+            // Delete from database
+            let success = try await photoService.deleteNavUnitPhotoAsync(photoId: photoId)
+            if success {
+                print("✅ iCloudSyncService: Deleted photo from local database")
+            } else {
+                print("⚠️ iCloudSyncService: Photo may not have been found in database")
+            }
+            
+            // Update sync status
+            await MainActor.run {
+                photoSyncStatus.removeValue(forKey: photoId)
+            }
+            
+            print("🎉 iCloudSyncService: Local deletion completed successfully")
+            
+        } catch {
+            print("❌ iCloudSyncService: Failed to delete from local storage: \(error.localizedDescription)")
+            
+            // If both iCloud and local deletion failed, throw the local error
+            if !iCloudDeletionSucceeded {
+                print("💥 iCloudSyncService: Both iCloud and local deletion failed")
+                throw iCloudSyncError.deleteFailed(error)
+            } else {
+                // iCloud succeeded but local failed - still throw error
+                throw iCloudSyncError.deleteFailed(error)
+            }
+        }
+        
+        // Step 4: Report final status
+        if iCloudDeletionSucceeded {
+            print("🎉 iCloudSyncService: Enhanced deletion completed successfully for photo \(photoId)")
+        } else {
+            print("⚠️ iCloudSyncService: Photo \(photoId) deleted locally but iCloud deletion failed: \(iCloudDeletionError?.localizedDescription ?? "unknown error")")
+            // We still consider this a success since local deletion worked and that's more important
         }
     }
     
@@ -417,8 +525,8 @@ class iCloudSyncServiceImpl: ObservableObject, iCloudSyncService {
                         // Save image to file system
                         let (filePath, fileName) = try await saveCloudPhotoToFile(cloudPhoto, navUnitId: navUnitId)
                         
-                        // Create NavUnitPhoto and attempt to save to database
-                        let navUnitPhoto = cloudPhoto.toNavUnitPhoto(filePath: filePath)
+                        // Create NavUnitPhoto with CloudKit record ID and attempt to save to database
+                        let navUnitPhoto = cloudPhoto.toNavUnitPhoto(filePath: filePath, recordID: cloudPhoto.recordID?.recordName)
                         
                         // Use the improved addNavUnitPhotoAsync which handles duplicates
                         let photoId = try await photoService.addNavUnitPhotoAsync(photo: navUnitPhoto)
@@ -540,6 +648,19 @@ class iCloudSyncServiceImpl: ObservableObject, iCloudSyncService {
     
     // Improved method to check if local photo already exists in iCloud
     private func isPhotoAlreadyInCloud(_ localPhoto: NavUnitPhoto, cloudPhotos: [CloudPhoto]) -> Bool {
+        // First check if we have a CloudKit record ID stored locally
+        if let localRecordID = localPhoto.cloudRecordID, !localRecordID.isEmpty {
+            let existsByRecordID = cloudPhotos.contains { cloudPhoto in
+                cloudPhoto.recordID?.recordName == localRecordID
+            }
+            
+            if existsByRecordID {
+                print("🔍 iCloudSyncService: Local photo \(localPhoto.id) matched by stored CloudKit record ID: \(localRecordID)")
+                return true
+            }
+        }
+        
+        // Fallback to content-based matching
         let exists = cloudPhotos.contains { cloudPhoto in
             // Primary matching criteria
             let navUnitMatches = cloudPhoto.navUnitId == localPhoto.navUnitId
@@ -566,7 +687,14 @@ class iCloudSyncServiceImpl: ObservableObject, iCloudSyncService {
     // Improved method to check if cloud photo already exists locally
     private func isCloudPhotoAlreadyLocal(_ cloudPhoto: CloudPhoto, localPhotos: [NavUnitPhoto]) -> Bool {
         let exists = localPhotos.contains { localPhoto in
-            // Primary matching criteria
+            // Primary matching: check if local photo has this CloudKit record ID
+            if let localRecordID = localPhoto.cloudRecordID,
+               let cloudRecordID = cloudPhoto.recordID?.recordName,
+               localRecordID == cloudRecordID {
+                return true
+            }
+            
+            // Fallback to content-based matching
             let navUnitMatches = localPhoto.navUnitId == cloudPhoto.navUnitId
             let fileNameMatches = localPhoto.fileName == cloudPhoto.fileName
             
@@ -659,9 +787,3 @@ extension Array {
         }
     }
 }
-
-
-
-
-
-

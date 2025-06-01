@@ -18,6 +18,7 @@ class PhotoDatabaseService {
     private let colFilePath = Expression<String>("FilePath")
     private let colFileName = Expression<String>("FileName")
     private let colThumbPath = Expression<String?>("ThumbPath")
+    private let colCloudRecordID = Expression<String?>("CloudRecordID") // NEW: CloudKit record ID column
     // Note: Description column doesn't exist in the actual database schema
     
     // MARK: - Column Definitions - BargePhoto
@@ -33,7 +34,7 @@ class PhotoDatabaseService {
     
     // MARK: - Nav Unit Photos
     
-    // Initialize photos table
+    // Initialize photos table with CloudRecordID column
     func initializePhotosTableAsync() async throws {
         do {
             let db = try databaseCore.ensureConnection()
@@ -45,14 +46,34 @@ class PhotoDatabaseService {
                 table.column(colFileName)
                 table.column(colThumbPath)
                 table.column(colCreatedAt)
+                table.column(colCloudRecordID) // NEW: CloudKit record ID column
             })
             
-            print("📊 PhotoDatabaseService: NavUnitPhoto table initialized")
+            print("📊 PhotoDatabaseService: NavUnitPhoto table initialized with CloudRecordID support")
+            
+            // Check if CloudRecordID column exists (for migration of existing databases)
+            let tableInfo = try db.prepare("PRAGMA table_info(NavUnitPhoto)")
+            var hasCloudRecordIDColumn = false
+            
+            for row in tableInfo {
+                if let columnName = row[1] as? String, columnName == "CloudRecordID" {
+                    hasCloudRecordIDColumn = true
+                    break
+                }
+            }
+            
+            // Add CloudRecordID column if it doesn't exist (migration)
+            if !hasCloudRecordIDColumn {
+                print("📊 PhotoDatabaseService: Adding CloudRecordID column to existing table")
+                try db.run("ALTER TABLE NavUnitPhoto ADD COLUMN CloudRecordID TEXT")
+                print("✅ PhotoDatabaseService: CloudRecordID column added successfully")
+            }
             
             // Create indexes for better performance
             try db.run("CREATE INDEX IF NOT EXISTS idx_nav_unit_photos_nav_unit_id ON NavUnitPhoto(NavUnitId)")
             try db.run("CREATE INDEX IF NOT EXISTS idx_nav_unit_photos_created_at ON NavUnitPhoto(CreatedAt)")
             try db.run("CREATE INDEX IF NOT EXISTS idx_nav_unit_photos_filename ON NavUnitPhoto(FileName)")
+            try db.run("CREATE INDEX IF NOT EXISTS idx_nav_unit_photos_cloud_record_id ON NavUnitPhoto(CloudRecordID)")
             
         } catch {
             print("Error initializing photos table: \(error.localizedDescription)")
@@ -75,7 +96,8 @@ class PhotoDatabaseService {
                     filePath: row[colFilePath],
                     fileName: row[colFileName],
                     thumbPath: row[colThumbPath],
-                    createdAt: row[colCreatedAt]
+                    createdAt: row[colCreatedAt],
+                    cloudRecordID: row[colCloudRecordID] // NEW: Include CloudKit record ID
                 )
                 results.append(photo)
             }
@@ -104,7 +126,8 @@ class PhotoDatabaseService {
                     filePath: row[colFilePath],
                     fileName: row[colFileName],
                     thumbPath: row[colThumbPath],
-                    createdAt: row[colCreatedAt]
+                    createdAt: row[colCreatedAt],
+                    cloudRecordID: row[colCloudRecordID] // NEW: Include CloudKit record ID
                 )
                 results.append(photo)
             }
@@ -119,7 +142,7 @@ class PhotoDatabaseService {
     
     // Add a new photo for a navigation unit with duplicate checking
     func addNavUnitPhotoAsync(photo: NavUnitPhoto) async throws -> Int {
-        print("📸 PhotoDatabaseService: Adding photo - NavUnit: \(photo.navUnitId), File: \(photo.fileName)")
+        print("📸 PhotoDatabaseService: Adding photo - NavUnit: \(photo.navUnitId), File: \(photo.fileName), CloudRecordID: \(photo.cloudRecordID ?? "nil")")
         
         // First check if photo already exists to prevent duplicates
         if let existingPhoto = try await findExistingPhoto(photo) {
@@ -135,7 +158,8 @@ class PhotoDatabaseService {
                 colFilePath <- photo.filePath,
                 colFileName <- photo.fileName,
                 colThumbPath <- photo.thumbPath,
-                colCreatedAt <- photo.createdAt
+                colCreatedAt <- photo.createdAt,
+                colCloudRecordID <- photo.cloudRecordID // NEW: Store CloudKit record ID
             )
             
             let rowId = try db.run(insert)
@@ -160,6 +184,80 @@ class PhotoDatabaseService {
             } else {
                 throw PhotoDatabaseError.insertFailed(error)
             }
+        }
+    }
+    
+    // NEW: Update CloudKit record ID for an existing photo
+    func updateCloudRecordIDAsync(photoId: Int, cloudRecordID: String?) async throws -> Bool {
+        print("☁️ PhotoDatabaseService: Updating CloudRecordID for photo \(photoId) to: \(cloudRecordID ?? "nil")")
+        
+        do {
+            let db = try databaseCore.ensureConnection()
+            
+            let query = navUnitPhotos.filter(colId == photoId)
+            let rowsUpdated = try db.run(query.update(colCloudRecordID <- cloudRecordID))
+            
+            try await databaseCore.flushDatabaseAsync()
+            
+            if rowsUpdated > 0 {
+                print("✅ PhotoDatabaseService: Successfully updated CloudRecordID for photo \(photoId)")
+                return true
+            } else {
+                print("⚠️ PhotoDatabaseService: No rows updated for photo \(photoId) - photo may not exist")
+                return false
+            }
+            
+        } catch {
+            print("❌ PhotoDatabaseService: Error updating CloudRecordID: \(error.localizedDescription)")
+            throw PhotoDatabaseError.databaseError(error)
+        }
+    }
+    
+    // NEW: Get photo by CloudKit record ID
+    func getPhotoByCloudRecordIDAsync(cloudRecordID: String) async throws -> NavUnitPhoto? {
+        print("🔍 PhotoDatabaseService: Looking for photo with CloudRecordID: \(cloudRecordID)")
+        
+        do {
+            let db = try databaseCore.ensureConnection()
+            
+            let query = navUnitPhotos.filter(colCloudRecordID == cloudRecordID)
+            
+            if let row = try db.pluck(query) {
+                let photo = mapRowToNavUnitPhoto(row)
+                print("✅ PhotoDatabaseService: Found photo with ID \(photo.id) for CloudRecordID: \(cloudRecordID)")
+                return photo
+            } else {
+                print("⚠️ PhotoDatabaseService: No photo found for CloudRecordID: \(cloudRecordID)")
+                return nil
+            }
+            
+        } catch {
+            print("❌ PhotoDatabaseService: Error finding photo by CloudRecordID: \(error.localizedDescription)")
+            throw PhotoDatabaseError.databaseError(error)
+        }
+    }
+    
+    // NEW: Get all photos that have CloudKit record IDs (for bulk operations)
+    func getPhotosWithCloudRecordIDsAsync() async throws -> [NavUnitPhoto] {
+        print("☁️ PhotoDatabaseService: Getting all photos with CloudKit record IDs...")
+        
+        do {
+            let db = try databaseCore.ensureConnection()
+            
+            let query = navUnitPhotos.filter(colCloudRecordID != nil).order(colCreatedAt.desc)
+            var results: [NavUnitPhoto] = []
+            
+            for row in try db.prepare(query) {
+                let photo = mapRowToNavUnitPhoto(row)
+                results.append(photo)
+            }
+            
+            print("✅ PhotoDatabaseService: Found \(results.count) photos with CloudKit record IDs")
+            return results
+            
+        } catch {
+            print("❌ PhotoDatabaseService: Error getting photos with CloudKit record IDs: \(error.localizedDescription)")
+            throw PhotoDatabaseError.databaseError(error)
         }
     }
     
@@ -290,7 +388,8 @@ class PhotoDatabaseService {
             filePath: row[colFilePath],
             fileName: row[colFileName],
             thumbPath: row[colThumbPath],
-            createdAt: row[colCreatedAt]
+            createdAt: row[colCreatedAt],
+            cloudRecordID: row[colCloudRecordID] // NEW: Include CloudKit record ID
         )
     }
     
@@ -416,6 +515,3 @@ enum PhotoDatabaseError: Error, LocalizedError {
         }
     }
 }
-
-
-

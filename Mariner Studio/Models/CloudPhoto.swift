@@ -1,6 +1,7 @@
 
 import Foundation
 import CloudKit
+import SwiftUI
 
 // Model representing a photo stored in CloudKit
 struct CloudPhoto {
@@ -173,8 +174,67 @@ struct CloudPhoto {
             fileName: fileName,
             thumbPath: nil,
             description: description,
-            createdAt: createdAt
+            createdAt: createdAt,
+            cloudRecordID: recordID?.recordName // NEW: Include CloudKit record ID
         )
+    }
+    
+    // NEW: Enhanced version that explicitly sets the CloudKit record ID
+    func toNavUnitPhoto(filePath: String, recordID: String?) -> NavUnitPhoto {
+        return NavUnitPhoto(
+            id: 0, // Will be assigned by database
+            navUnitId: navUnitId,
+            filePath: filePath,
+            fileName: fileName,
+            thumbPath: nil,
+            description: description,
+            createdAt: createdAt,
+            cloudRecordID: recordID ?? self.recordID?.recordName // Use provided recordID or fall back to self.recordID
+        )
+    }
+    
+    // NEW: Convenience method to check if this CloudPhoto has a valid record ID
+    var hasValidRecordID: Bool {
+        return recordID != nil && !(recordID?.recordName.isEmpty ?? true)
+    }
+    
+    // NEW: Convenience method to get the record name safely
+    var recordName: String? {
+        return recordID?.recordName
+    }
+    
+    // NEW: Create a copy with a new record ID (useful for updating after upload)
+    func withRecordID(_ newRecordID: CKRecord.ID) -> CloudPhoto {
+        var mutableSelf = self
+        // Since this is a struct, we need to use a different approach
+        return CloudPhoto(
+            recordID: newRecordID,
+            navUnitId: navUnitId,
+            fileName: fileName,
+            imageData: imageData,
+            description: description,
+            createdAt: createdAt,
+            localPhotoId: localPhotoId
+        )
+    }
+    
+    // Private initializer for creating copies with new record IDs
+    private init(
+        recordID: CKRecord.ID?,
+        navUnitId: String,
+        fileName: String,
+        imageData: Data,
+        description: String?,
+        createdAt: Date,
+        localPhotoId: Int
+    ) {
+        self.recordID = recordID
+        self.navUnitId = navUnitId
+        self.fileName = fileName
+        self.imageData = imageData
+        self.description = description
+        self.createdAt = createdAt
+        self.localPhotoId = localPhotoId
     }
 }
 
@@ -202,6 +262,24 @@ enum PhotoSyncStatus {
         case .failed: return "icloud.slash"
         }
     }
+    
+    // NEW: Color for UI display
+    var color: Color {
+        switch self {
+        case .notSynced: return .gray
+        case .syncing: return .blue
+        case .synced: return .green
+        case .failed: return .red
+        }
+    }
+    
+    // NEW: Priority for sorting (higher number = higher priority)
+    var priority: Int {
+        switch self {
+        case .failed: return 4      // Show failed syncs first
+        case .syncing: return 3     // Then in-progress syncs
+        case .notSynced: return 2   // Then unsynced photos
+        case .synced: return 1      // Finally synced photos
+        }
+    }
 }
-
-
