@@ -820,17 +820,52 @@ class NavUnitDetailsViewModel: ObservableObject {
         print("🏁 NavUnitDetailsViewModel: Enhanced saveNewPhoto() completed")
     }
     
+//    func deletePhoto(_ photoId: Int) async {
+//        do {
+//            // Get the photo first to get the file path
+//            if let photoToDelete = localPhotos.first(where: { $0.id == photoId }) {
+//                // Delete from file system
+//                try await fileStorageService.deletePhoto(at: photoToDelete.filePath)
+//            }
+//            
+//            // Delete from database
+//            let deleteResult = try await photoService.deleteNavUnitPhotoAsync(photoId: photoId)
+//            print("🗑️ NavUnitDetailsViewModel: Delete result: \(deleteResult)")
+//            
+//            // Remove sync status
+//            await MainActor.run {
+//                photoSyncStatuses.removeValue(forKey: photoId)
+//            }
+//            
+//            // Reload local photos
+//            await loadLocalPhotos()
+//        } catch {
+//            await MainActor.run {
+//                self.errorMessage = "Error deleting photo: \(error.localizedDescription)"
+//            }
+//        }
+//    }
+//
+    
     func deletePhoto(_ photoId: Int) async {
+        print("🗑️ NavUnitDetailsViewModel: Starting delete for photo ID: \(photoId)")
+        
         do {
             // Get the photo first to get the file path
             if let photoToDelete = localPhotos.first(where: { $0.id == photoId }) {
+                print("🗑️ Found photo to delete: \(photoToDelete.fileName)")
+                print("🗑️ File path: \(photoToDelete.filePath)")
+                
                 // Delete from file system
                 try await fileStorageService.deletePhoto(at: photoToDelete.filePath)
+                print("✅ File deleted successfully")
+            } else {
+                print("❌ Photo not found in localPhotos array")
             }
             
             // Delete from database
             let deleteResult = try await photoService.deleteNavUnitPhotoAsync(photoId: photoId)
-            print("🗑️ NavUnitDetailsViewModel: Delete result: \(deleteResult)")
+            print("✅ Database delete result: \(deleteResult)")
             
             // Remove sync status
             await MainActor.run {
@@ -839,12 +874,33 @@ class NavUnitDetailsViewModel: ObservableObject {
             
             // Reload local photos
             await loadLocalPhotos()
+            print("✅ Photos reloaded")
+            
         } catch {
+            print("❌ Delete error: \(error)")
             await MainActor.run {
                 self.errorMessage = "Error deleting photo: \(error.localizedDescription)"
             }
         }
     }
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
     // MARK: - Photo Gallery Helper
     
@@ -982,3 +1038,6 @@ class NavUnitDetailsViewModel: ObservableObject {
         favoriteIcon = unit?.isFavorite == true ? "favoritesixseven" : "favoriteoutlinesixseven"
     }
 }
+
+
+
