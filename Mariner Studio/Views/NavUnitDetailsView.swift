@@ -6,10 +6,15 @@ import CoreLocation
 struct NavUnitDetailsView: View {
     // Use ObservedObject instead of StateObject since we'll initialize it from outside
     @ObservedObject var viewModel: NavUnitDetailsViewModel
+    @EnvironmentObject var serviceProvider: ServiceProvider
     
     // State for photo picker and gallery
     @State private var showingPhotoPicker = false
     @State private var showingSyncSettings = false
+    
+    // State for recommendations
+    @State private var showingRecommendationForm = false
+    @State private var showingUserRecommendations = false
     
     // Simple initializer that takes a view model
     init(viewModel: NavUnitDetailsViewModel) {
@@ -38,8 +43,9 @@ struct NavUnitDetailsView: View {
                 // Photos Section
                 localPhotosSection
                 
-                // FTP Photos Section
-                remotePhotosSection
+                // FTP Photos Section - COMMENTED OUT FOR INITIAL RELEASE
+                // TODO: Re-enable remote photos feature in future version
+                // remotePhotosSection
                 
                 // Primary Location
                 locationDetailsSection
@@ -103,6 +109,17 @@ struct NavUnitDetailsView: View {
                             }
                         }
                     }
+            }
+        }
+        .sheet(isPresented: $showingRecommendationForm) {
+            if let navUnit = viewModel.unit {
+                RecommendationFormView(
+                    viewModel: RecommendationFormViewModel(
+                        navUnit: navUnit,
+                        recommendationService: serviceProvider.recommendationService
+                    ),
+                    isPresented: $showingRecommendationForm
+                )
             }
         }
         .fullScreenCover(isPresented: $viewModel.showingPhotoGallery) {
@@ -202,7 +219,14 @@ struct NavUnitDetailsView: View {
             
             actionButton(
                 icon: "commentsixseven",
-                action: { /* Show notes view */ },
+                action: { showingUserRecommendations = true },
+                isEnabled: true
+            )
+            
+            // NEW: Suggest Update button
+            actionButton(
+                icon: "lightbulb.fill",
+                action: { showingRecommendationForm = true },
                 isEnabled: true
             )
             
@@ -213,14 +237,36 @@ struct NavUnitDetailsView: View {
             )
         }
         .padding(.horizontal)
+        .sheet(isPresented: $showingUserRecommendations) {
+            NavigationView {
+                UserRecommendationsView()
+                    .environmentObject(serviceProvider)
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarTrailing) {
+                            Button("Done") {
+                                showingUserRecommendations = false
+                            }
+                        }
+                    }
+            }
+        }
     }
     
     private func actionButton(icon: String, action: @escaping () -> Void, isEnabled: Bool) -> some View {
         Button(action: action) {
-            Image(icon)
-                .resizable()
-                .frame(width: 44, height: 44)
-                .opacity(isEnabled ? 1.0 : 0.5)
+            if icon == "lightbulb.fill" {
+                // Use system icon for the new suggestion button
+                Image(systemName: icon)
+                    .resizable()
+                    .frame(width: 44, height: 44)
+                    .foregroundColor(isEnabled ? .orange : .gray.opacity(0.5))
+            } else {
+                // Use custom icons for existing buttons
+                Image(icon)
+                    .resizable()
+                    .frame(width: 44, height: 44)
+                    .opacity(isEnabled ? 1.0 : 0.5)
+            }
         }
         .disabled(!isEnabled)
     }

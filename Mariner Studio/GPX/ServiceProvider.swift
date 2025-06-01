@@ -41,6 +41,9 @@ class ServiceProvider: ObservableObject {
     let gpxService: ExtendedGpxServiceProtocol
     let routeCalculationService: RouteCalculationService
     
+    // MARK: - NEW: Recommendation Services
+    let recommendationService: RecommendationCloudService
+    
     // MARK: - Initialization
     init(locationService: LocationService? = nil) {
         // Initialize DatabaseCore
@@ -104,6 +107,10 @@ class ServiceProvider: ObservableObject {
         self.gpxService = GpxServiceFactory.shared.getDefaultGpxService()
         self.routeCalculationService = RouteCalculationServiceImpl()
         print("📦 ServiceProvider: Initialized GPX and route services.")
+        
+        // NEW: Initialize Recommendation Service
+        self.recommendationService = RecommendationCloudServiceImpl()
+        print("📦 ServiceProvider: Initialized recommendation cloud service.")
         
         print("📦 ServiceProvider initialization complete (sync portion).")
         self.setupAsyncTasks()
@@ -175,6 +182,33 @@ class ServiceProvider: ObservableObject {
             if self.iCloudSyncService.isEnabled {
                 print("🚀 ServiceProvider: Auto-starting iCloud sync (app launch)")
                 await self.iCloudSyncService.syncAllLocalPhotos()
+            }
+        }
+        
+        // NEW: Task 4: Initialize recommendation service and setup notifications
+        Task(priority: .utility) {
+            do {
+                // Wait for other services to initialize first
+                try await Task.sleep(for: .seconds(1))
+                
+                print("🚀 ServiceProvider: Setting up recommendation service...")
+                
+                // Check account status and setup notifications
+                let accountStatus = await self.recommendationService.checkAccountStatus()
+                
+                if accountStatus == .available {
+                    print("✅ ServiceProvider: iCloud account available for recommendations")
+                    
+                    // Setup push notifications for new recommendations
+                    try await self.recommendationService.setupNotificationSubscription()
+                    print("🔔 ServiceProvider: Recommendation notifications configured")
+                } else {
+                    print("⚠️ ServiceProvider: iCloud account not available for recommendations: \(accountStatus)")
+                }
+                
+            } catch {
+                print("❌ ServiceProvider: Error setting up recommendation service: \(error.localizedDescription)")
+                // Don't fail app startup for recommendation service issues
             }
         }
         
