@@ -3,6 +3,104 @@ import SwiftUI
 import MapKit
 import CoreLocation
 
+// MARK: - NavUnit Chart Map View (NEW)
+struct NavUnitChartMapView: UIViewRepresentable {
+    let mapRegion: MapRegion
+    let annotation: NavUnitMapAnnotation
+    let chartOverlay: NOAAChartTileOverlay?
+    
+    func makeUIView(context: Context) -> MKMapView {
+        let mapView = MKMapView()
+        mapView.delegate = context.coordinator
+        
+        // Set the region
+        let region = MKCoordinateRegion(
+            center: mapRegion.center,
+            span: mapRegion.span
+        )
+        mapView.setRegion(region, animated: false)
+        
+        // Add the navigation unit annotation
+        let mapAnnotation = MKPointAnnotation()
+        mapAnnotation.coordinate = annotation.coordinate
+        mapAnnotation.title = annotation.title
+        mapAnnotation.subtitle = annotation.subtitle
+        mapView.addAnnotation(mapAnnotation)
+        
+        // Add chart overlay if available
+        if let overlay = chartOverlay {
+            mapView.addOverlay(overlay, level: .aboveLabels)
+            print("🗺️ NavUnitChartMapView: Added chart overlay with \(overlay.currentChartLayerCount) layers")
+        }
+        
+        return mapView
+    }
+    
+    func updateUIView(_ mapView: MKMapView, context: Context) {
+        // Update region if needed
+        let region = MKCoordinateRegion(
+            center: mapRegion.center,
+            span: mapRegion.span
+        )
+        
+        if mapView.region.center.latitude != region.center.latitude ||
+           mapView.region.center.longitude != region.center.longitude {
+            mapView.setRegion(region, animated: true)
+        }
+        
+        // Handle chart overlay updates
+        context.coordinator.updateChartOverlay(in: mapView, newOverlay: chartOverlay)
+    }
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+    
+    class Coordinator: NSObject, MKMapViewDelegate {
+        private var currentChartOverlay: NOAAChartTileOverlay?
+        
+        func updateChartOverlay(in mapView: MKMapView, newOverlay: NOAAChartTileOverlay?) {
+            // Remove existing chart overlay if it exists
+            if let existingOverlay = currentChartOverlay {
+                mapView.removeOverlay(existingOverlay)
+                currentChartOverlay = nil
+                print("🗺️ NavUnitChartMapView: Removed existing chart overlay")
+            }
+            
+            // Add new chart overlay if provided
+            if let overlay = newOverlay {
+                mapView.addOverlay(overlay, level: .aboveLabels)
+                currentChartOverlay = overlay
+                print("🗺️ NavUnitChartMapView: Added new chart overlay with \(overlay.currentChartLayerCount) layers")
+            }
+        }
+        
+        func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
+            // Handle NOAA Chart tile overlays
+            if let chartOverlay = overlay as? NOAAChartTileOverlay {
+                let renderer = MKTileOverlayRenderer(tileOverlay: chartOverlay)
+                renderer.alpha = 0.7 // Slightly transparent to keep annotations visible
+                print("🎨 NavUnitChartMapView: Created chart overlay renderer with alpha 0.7")
+                return renderer
+            }
+            
+            // Handle generic tile overlays
+            if let tileOverlay = overlay as? MKTileOverlay {
+                let renderer = MKTileOverlayRenderer(tileOverlay: tileOverlay)
+                renderer.alpha = 0.7
+                return renderer
+            }
+            
+            return MKOverlayRenderer(overlay: overlay)
+        }
+        
+        func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
+            // Use default annotation view for the navigation unit pin
+            return nil
+        }
+    }
+}
+
 struct NavUnitDetailsView: View {
     // Use ObservedObject instead of StateObject since we'll initialize it from outside
     @ObservedObject var viewModel: NavUnitDetailsViewModel
@@ -34,7 +132,7 @@ struct NavUnitDetailsView: View {
                 // Unit Header Card
                 headerCard
                 
-                // Map Frame
+                // Map Frame with Chart Overlay
                 mapView
                 
                 // Action Buttons
@@ -168,14 +266,15 @@ struct NavUnitDetailsView: View {
                 .stroke(Color.gray.opacity(0.3), lineWidth: 1)
                 .background(RoundedRectangle(cornerRadius: 10).fill(Color.white))
             
-            if viewModel.hasCoordinates, let mapRegion = viewModel.mapRegion, let _ = viewModel.mapAnnotation {
-                // Modern iOS 17 Map implementation
-                Map {
-                    if let annotation = viewModel.mapAnnotation {
-                        Marker(annotation.title, coordinate: annotation.coordinate)
-                            .tint(.blue)
-                    }
-                }
+            if viewModel.hasCoordinates,
+               let mapRegion = viewModel.mapRegion,
+               let mapAnnotation = viewModel.mapAnnotation {
+                // NEW: Use custom map view with chart overlay support
+                NavUnitChartMapView(
+                    mapRegion: mapRegion,
+                    annotation: mapAnnotation,
+                    chartOverlay: viewModel.chartOverlay
+                )
                 .frame(height: 300)
                 .clipShape(RoundedRectangle(cornerRadius: 10))
                 .padding()

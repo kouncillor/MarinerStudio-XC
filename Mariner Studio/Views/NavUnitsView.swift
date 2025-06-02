@@ -90,17 +90,45 @@ struct NavUnitsView: View {
             ForEach(viewModel.filteredNavUnits) { navUnitWithDistance in
                 NavigationLink {
                     // Create the destination view directly to avoid closures
+//                    let detailsViewModel = NavUnitDetailsViewModel(
+//                        navUnit: navUnitWithDistance.station,
+//                        databaseService: viewModel.navUnitService,
+//                        photoService: serviceProvider.photoService,
+//                        navUnitFtpService: serviceProvider.navUnitFtpService,
+//                        imageCacheService: serviceProvider.imageCacheService,
+//                        favoritesService: serviceProvider.favoritesService,
+//                        photoCaptureService: serviceProvider.photoCaptureService,
+//                        fileStorageService: serviceProvider.fileStorageService,
+//                        iCloudSyncService: serviceProvider.iCloudSyncService
+//                    )
+                    
+                    
+                    
+                    
+                    
+                    
+                    // Replace the current NavUnitDetailsViewModel initialization with this:
+
                     let detailsViewModel = NavUnitDetailsViewModel(
-                        navUnit: navUnitWithDistance.station,
-                        databaseService: viewModel.navUnitService,
+                        navUnit: navUnitWithDistance.station, // FIXED: Use navUnitWithDistance.station instead of navUnit
+                        databaseService: serviceProvider.navUnitService,
                         photoService: serviceProvider.photoService,
                         navUnitFtpService: serviceProvider.navUnitFtpService,
                         imageCacheService: serviceProvider.imageCacheService,
                         favoritesService: serviceProvider.favoritesService,
                         photoCaptureService: serviceProvider.photoCaptureService,
                         fileStorageService: serviceProvider.fileStorageService,
-                        iCloudSyncService: serviceProvider.iCloudSyncService
+                        iCloudSyncService: serviceProvider.iCloudSyncService,
+                        noaaChartService: serviceProvider.noaaChartService // ADDED: Chart service parameter
                     )
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
                     NavUnitDetailsView(viewModel: detailsViewModel)
                 } label: {
                     NavUnitRow(
@@ -116,6 +144,15 @@ struct NavUnitsView: View {
              await viewModel.refreshNavUnits()
         }
     }
+    
+    
+    
+    
+    
+    
+    
+    
+    
 }
 
 struct NavUnitRow: View {

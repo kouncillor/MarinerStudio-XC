@@ -312,7 +312,7 @@ struct MapClusteringView: View {
        }
        .background(
            Group {
-               // NavUnit navigation link
+               // NavUnit navigation link (UPDATED to include NOAAChartService)
                NavigationLink(
                    isActive: $showNavUnitDetails,
                    destination: {
@@ -327,8 +327,8 @@ struct MapClusteringView: View {
                                favoritesService: serviceProvider.favoritesService,
                                photoCaptureService: serviceProvider.photoCaptureService,
                                fileStorageService: serviceProvider.fileStorageService,
-                               iCloudSyncService: serviceProvider.iCloudSyncService
-                               
+                               iCloudSyncService: serviceProvider.iCloudSyncService,
+                               noaaChartService: serviceProvider.noaaChartService // NEW: Add chart service
                            )
                            NavUnitDetailsView(viewModel: detailsViewModel)
                        } else {

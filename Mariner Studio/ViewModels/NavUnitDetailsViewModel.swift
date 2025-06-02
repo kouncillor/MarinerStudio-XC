@@ -56,6 +56,10 @@ class NavUnitDetailsViewModel: ObservableObject {
     @Published var isDeletingPhoto: Bool = false
     @Published var deletionStatusMessage: String = ""
     
+    // MARK: - Chart Overlay Properties (NEW)
+    @Published var chartOverlay: NOAAChartTileOverlay?
+    private let defaultChartLayers: Set<Int> = [0, 1, 2, 6] // Same as MapClusteringView defaults
+    
     // MARK: - Sync Throttling
     private var lastSyncTime: [String: Date] = [:] // Track last sync time per navUnitId
     private let syncThrottleInterval: TimeInterval = 10 // Minimum 10 seconds between syncs
@@ -74,6 +78,7 @@ class NavUnitDetailsViewModel: ObservableObject {
     private let photoCaptureService: PhotoCaptureService
     private let fileStorageService: FileStorageService
     let iCloudSyncService: iCloudSyncService // Made public for PhotoSyncSettingsView access
+    private let noaaChartService: NOAAChartService // NEW: Chart service
     
     // Used to manage and cancel any ongoing tasks
     private var cancellables = Set<AnyCancellable>()
@@ -127,7 +132,8 @@ class NavUnitDetailsViewModel: ObservableObject {
         favoritesService: FavoritesService,
         photoCaptureService: PhotoCaptureService,
         fileStorageService: FileStorageService,
-        iCloudSyncService: iCloudSyncService
+        iCloudSyncService: iCloudSyncService,
+        noaaChartService: NOAAChartService // NEW: Chart service parameter
     ) {
         self.databaseService = databaseService
         self.photoService = photoService
@@ -137,8 +143,10 @@ class NavUnitDetailsViewModel: ObservableObject {
         self.photoCaptureService = photoCaptureService
         self.fileStorageService = fileStorageService
         self.iCloudSyncService = iCloudSyncService
+        self.noaaChartService = noaaChartService // NEW: Store chart service
         
         setupiCloudStatusMonitoring()
+        createDefaultChartOverlay() // NEW: Create chart overlay
     }
     
     // New initializer that takes a NavUnit
@@ -151,7 +159,8 @@ class NavUnitDetailsViewModel: ObservableObject {
         favoritesService: FavoritesService,
         photoCaptureService: PhotoCaptureService,
         fileStorageService: FileStorageService,
-        iCloudSyncService: iCloudSyncService
+        iCloudSyncService: iCloudSyncService,
+        noaaChartService: NOAAChartService // NEW: Chart service parameter
     ) {
         self.databaseService = databaseService
         self.photoService = photoService
@@ -161,8 +170,10 @@ class NavUnitDetailsViewModel: ObservableObject {
         self.photoCaptureService = photoCaptureService
         self.fileStorageService = fileStorageService
         self.iCloudSyncService = iCloudSyncService
+        self.noaaChartService = noaaChartService // NEW: Store chart service
         
         setupiCloudStatusMonitoring()
+        createDefaultChartOverlay() // NEW: Create chart overlay
         
         // Set the nav unit and update display properties
         self.unit = navUnit
@@ -180,6 +191,15 @@ class NavUnitDetailsViewModel: ObservableObject {
                 errorMessage = "Failed to load photos: \(error.localizedDescription)"
             }
         }
+    }
+    
+    // MARK: - Chart Overlay Methods (NEW)
+    
+    private func createDefaultChartOverlay() {
+        chartOverlay = noaaChartService.createChartTileOverlay(
+            selectedLayers: defaultChartLayers
+        )
+        print("📊 NavUnitDetailsViewModel: Created default chart overlay with layers: \(defaultChartLayers)")
     }
     
     // MARK: - Enhanced Photo Management

@@ -70,7 +70,8 @@ struct NavUnitFavoritesView: View {
                                 favoritesService: serviceProvider.favoritesService,
                                 photoCaptureService: serviceProvider.photoCaptureService,
                                 fileStorageService: serviceProvider.fileStorageService,
-                                iCloudSyncService: serviceProvider.iCloudSyncService
+                                iCloudSyncService: serviceProvider.iCloudSyncService,
+                                noaaChartService: serviceProvider.noaaChartService // ADDED: Chart service parameter
                             )
                             NavUnitDetailsView(viewModel: detailsViewModel)
                         } label: {
