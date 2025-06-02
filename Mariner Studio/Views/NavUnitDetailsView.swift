@@ -367,44 +367,24 @@ struct NavUnitDetailsView: View {
     }
     
     private func photoItem(photo: NavUnitPhoto) -> some View {
-        ZStack(alignment: .topTrailing) {
-            ZStack(alignment: .topLeading) {
-                // Async image loading with thumbnail
-                AsyncPhotoThumbnail(photo: photo, viewModel: viewModel)
-                    .frame(width: 180, height: 180)
-                    .cornerRadius(8)
-                    .onTapGesture {
-                        viewModel.viewPhoto(photo)
-                    }
-                
-                // Sync status indicator in top-left
-                VStack {
-                    HStack {
-                        syncStatusIndicator(for: photo)
-                        Spacer()
-                    }
+        ZStack(alignment: .topLeading) {
+            // Async image loading with thumbnail
+            AsyncPhotoThumbnail(photo: photo, viewModel: viewModel)
+                .frame(width: 180, height: 180)
+                .cornerRadius(8)
+                .onTapGesture {
+                    viewModel.viewPhoto(photo)
+                }
+            
+            // Sync status indicator in top-left
+            VStack {
+                HStack {
+                    syncStatusIndicator(for: photo)
                     Spacer()
                 }
-                .padding(8)
+                Spacer()
             }
-            
-            // Delete button in top-right
-            Button(action: {
-                Task {
-                    await viewModel.deletePhoto(photo.id)
-                }
-            }) {
-                ZStack {
-                    Circle()
-                        .fill(Color.black.opacity(0.5))
-                        .frame(width: 30, height: 30)
-                    
-                    Text("×")
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(.white)
-                }
-            }
-            .padding(5)
+            .padding(8)
         }
         .frame(width: 180, height: 180)
     }
