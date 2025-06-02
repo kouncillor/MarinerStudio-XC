@@ -238,12 +238,16 @@ struct CloudPhoto {
     }
 }
 
-// Sync status for photos
+// Enhanced sync status for photos with upload progress
 enum PhotoSyncStatus {
     case notSynced      // Photo exists only locally
     case syncing        // Currently uploading/downloading
     case synced         // Successfully synced with iCloud
     case failed         // Sync failed
+    // NEW: Additional processing states
+    case processing     // Photo is being processed (saving, preparing for upload)
+    case uploading      // Specifically uploading to iCloud
+    case downloading    // Specifically downloading from iCloud
     
     var displayText: String {
         switch self {
@@ -251,6 +255,9 @@ enum PhotoSyncStatus {
         case .syncing: return "Syncing..."
         case .synced: return "Synced"
         case .failed: return "Sync failed"
+        case .processing: return "Processing..."
+        case .uploading: return "Uploading..."
+        case .downloading: return "Downloading..."
         }
     }
     
@@ -260,26 +267,88 @@ enum PhotoSyncStatus {
         case .syncing: return "icloud.and.arrow.up"
         case .synced: return "icloud.fill"
         case .failed: return "icloud.slash"
+        case .processing: return "gearshape"
+        case .uploading: return "icloud.and.arrow.up"
+        case .downloading: return "icloud.and.arrow.down"
         }
     }
     
-    // NEW: Color for UI display
+    // Enhanced color for UI display
     var color: Color {
         switch self {
         case .notSynced: return .gray
-        case .syncing: return .blue
+        case .syncing, .uploading, .downloading: return .blue
         case .synced: return .green
         case .failed: return .red
+        case .processing: return .orange
+        }
+    }
+    
+    // NEW: Check if status represents an active operation
+    var isInProgress: Bool {
+        switch self {
+        case .syncing, .processing, .uploading, .downloading:
+            return true
+        case .notSynced, .synced, .failed:
+            return false
         }
     }
     
     // NEW: Priority for sorting (higher number = higher priority)
     var priority: Int {
         switch self {
-        case .failed: return 4      // Show failed syncs first
-        case .syncing: return 3     // Then in-progress syncs
-        case .notSynced: return 2   // Then unsynced photos
-        case .synced: return 1      // Finally synced photos
+        case .failed: return 6          // Show failed syncs first
+        case .processing: return 5      // Then processing photos
+        case .uploading: return 4       // Then uploading photos
+        case .downloading: return 3     // Then downloading photos
+        case .syncing: return 2         // Then general syncing
+        case .notSynced: return 1       // Then unsynced photos
+        case .synced: return 0          // Finally synced photos
+        }
+    }
+    
+    // NEW: Get appropriate animation for status
+    var shouldAnimate: Bool {
+        return isInProgress
+    }
+    
+    // NEW: Get user-friendly message for status
+    var userMessage: String {
+        switch self {
+        case .notSynced:
+            return "Tap to sync to iCloud"
+        case .processing:
+            return "Preparing photo for upload..."
+        case .uploading:
+            return "Uploading to iCloud..."
+        case .downloading:
+            return "Downloading from iCloud..."
+        case .syncing:
+            return "Syncing with iCloud..."
+        case .synced:
+            return "Synced to iCloud"
+        case .failed:
+            return "Sync failed - tap to retry"
+        }
+    }
+    
+    // NEW: Get appropriate accessibility label
+    var accessibilityLabel: String {
+        switch self {
+        case .notSynced:
+            return "Photo not synced to iCloud"
+        case .processing:
+            return "Photo being processed"
+        case .uploading:
+            return "Photo uploading to iCloud"
+        case .downloading:
+            return "Photo downloading from iCloud"
+        case .syncing:
+            return "Photo syncing with iCloud"
+        case .synced:
+            return "Photo synced to iCloud"
+        case .failed:
+            return "Photo sync failed"
         }
     }
 }

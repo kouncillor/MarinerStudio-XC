@@ -52,7 +52,7 @@ class NavUnitDetailsViewModel: ObservableObject {
     // Auto-sync state
     @Published var isAutoSyncing: Bool = false
     
-    // NEW: Enhanced deletion state
+    // Enhanced deletion state
     @Published var isDeletingPhoto: Bool = false
     @Published var deletionStatusMessage: String = ""
     
@@ -180,6 +180,148 @@ class NavUnitDetailsViewModel: ObservableObject {
                 errorMessage = "Failed to load photos: \(error.localizedDescription)"
             }
         }
+    }
+    
+    // MARK: - Enhanced Photo Management
+    
+    // Clean and simple saveNewPhoto method
+    func saveNewPhoto(_ image: UIImage) async {
+        print("🚀 NavUnitDetailsViewModel: saveNewPhoto() started")
+        
+        guard let unit = unit else {
+            print("❌ NavUnitDetailsViewModel: No navigation unit selected")
+            await MainActor.run {
+                errorMessage = "No navigation unit selected"
+            }
+            return
+        }
+        
+        print("✅ NavUnitDetailsViewModel: Unit found: \(unit.navUnitId)")
+        
+        await MainActor.run {
+            errorMessage = ""
+        }
+        
+        do {
+            print("💾 NavUnitDetailsViewModel: Starting file save...")
+            
+            // Save image to file system
+            let (filePath, fileName) = try await fileStorageService.savePhoto(image, for: unit.navUnitId)
+            print("✅ NavUnitDetailsViewModel: File saved - Path: \(filePath), Name: \(fileName)")
+            
+            // Create NavUnitPhoto object
+            let navUnitPhoto = NavUnitPhoto(
+                navUnitId: unit.navUnitId,
+                filePath: filePath,
+                fileName: fileName,
+                description: "Photo taken on \(Date().formatted())"
+            )
+            print("✅ NavUnitDetailsViewModel: NavUnitPhoto object created")
+            
+            print("💾 NavUnitDetailsViewModel: Starting database save...")
+            // Save to database - this now handles duplicates automatically
+            let photoId = try await photoService.addNavUnitPhotoAsync(photo: navUnitPhoto)
+            print("✅ NavUnitDetailsViewModel: Saved to database with ID: \(photoId)")
+            
+            // Initialize sync status as not synced
+            await MainActor.run {
+                setSyncStatus(for: photoId, status: .notSynced)
+            }
+            print("✅ NavUnitDetailsViewModel: Sync status initialized as .notSynced")
+            
+            // Reload photos immediately to show the new photo
+            await loadLocalPhotos()
+            
+            // Check if iCloud sync is enabled
+            print("☁️ NavUnitDetailsViewModel: Checking iCloud sync status...")
+            print("☁️ NavUnitDetailsViewModel: iCloudSyncService.isEnabled = \(iCloudSyncService.isEnabled)")
+            
+            if iCloudSyncService.isEnabled {
+                print("🚀 NavUnitDetailsViewModel: iCloud sync is ENABLED - starting upload process")
+                
+                await MainActor.run {
+                    setSyncStatus(for: photoId, status: .syncing)
+                }
+                print("✅ NavUnitDetailsViewModel: Set sync status to .syncing")
+                
+                do {
+                    print("🔄 NavUnitDetailsViewModel: Creating updated photo object for iCloud...")
+                    let updatedPhoto = NavUnitPhoto(
+                        id: photoId,
+                        navUnitId: navUnitPhoto.navUnitId,
+                        filePath: navUnitPhoto.filePath,
+                        fileName: navUnitPhoto.fileName,
+                        thumbPath: navUnitPhoto.thumbPath,
+                        description: navUnitPhoto.description,
+                        createdAt: navUnitPhoto.createdAt
+                    )
+                    print("✅ NavUnitDetailsViewModel: Updated photo object created")
+                    
+                    print("🖼️ NavUnitDetailsViewModel: Converting image to data...")
+                    // Convert image to data for iCloud upload
+                    let imageData = image.jpegData(compressionQuality: 0.8) ?? Data()
+                    print("✅ NavUnitDetailsViewModel: Image converted to data - Size: \(imageData.count) bytes")
+                    
+                    if imageData.isEmpty {
+                        print("❌ NavUnitDetailsViewModel: Image data is empty!")
+                        throw NSError(domain: "PhotoSync", code: 2, userInfo: [NSLocalizedDescriptionKey: "Image data is empty"])
+                    }
+                    
+                    print("☁️ NavUnitDetailsViewModel: Calling iCloudSyncService.uploadPhoto()...")
+                    let recordID = try await iCloudSyncService.uploadPhoto(updatedPhoto, imageData: imageData)
+                    print("🎉 NavUnitDetailsViewModel: iCloud upload SUCCESS! Record ID: \(recordID)")
+                    
+                    await MainActor.run {
+                        setSyncStatus(for: photoId, status: .synced)
+                    }
+                    print("✅ NavUnitDetailsViewModel: Set sync status to .synced")
+                    
+                } catch {
+                    print("💥 NavUnitDetailsViewModel: iCloud upload FAILED with error: \(error)")
+                    print("💥 NavUnitDetailsViewModel: Error description: \(error.localizedDescription)")
+                    
+                    if let nsError = error as? NSError {
+                        print("💥 NavUnitDetailsViewModel: NSError domain: \(nsError.domain)")
+                        print("💥 NavUnitDetailsViewModel: NSError code: \(nsError.code)")
+                    }
+                    
+                    await MainActor.run {
+                        setSyncStatus(for: photoId, status: .failed)
+                    }
+                    print("✅ NavUnitDetailsViewModel: Set sync status to .failed")
+                }
+            } else {
+                print("⚠️ NavUnitDetailsViewModel: iCloud sync is DISABLED - skipping upload")
+            }
+            
+            print("🔄 NavUnitDetailsViewModel: Reloading local photos...")
+            // Reload photos to show the new one with updated sync status
+            await loadLocalPhotos()
+            print("✅ NavUnitDetailsViewModel: Local photos reloaded")
+            
+            // Clean up any potential duplicates that might have been created
+            await cleanupDuplicatePhotos()
+            
+        } catch PhotoDatabaseError.duplicatePhoto {
+            print("⚠️ NavUnitDetailsViewModel: Duplicate photo detected and handled")
+            // Just reload photos - the duplicate was handled
+            await loadLocalPhotos()
+            
+        } catch {
+            print("💥 NavUnitDetailsViewModel: saveNewPhoto() FAILED with error: \(error)")
+            print("💥 NavUnitDetailsViewModel: Error description: \(error.localizedDescription)")
+            
+            if let nsError = error as? NSError {
+                print("💥 NavUnitDetailsViewModel: NSError domain: \(nsError.domain)")
+                print("💥 NavUnitDetailsViewModel: NSError code: \(nsError.code)")
+            }
+            
+            await MainActor.run {
+                errorMessage = "Failed to save photo: \(error.localizedDescription)"
+            }
+        }
+        
+        print("🏁 NavUnitDetailsViewModel: saveNewPhoto() completed")
     }
     
     // MARK: - Enhanced Photo Management with Duplicate Prevention
@@ -693,139 +835,6 @@ class NavUnitDetailsViewModel: ObservableObject {
     func takePhoto() {
         // This will be handled by the view presenting the PhotoPickerView
         print("📸 NavUnitDetailsViewModel: takePhoto() called - should be handled by view")
-    }
-    
-    // Enhanced saveNewPhoto method with better duplicate prevention
-    func saveNewPhoto(_ image: UIImage) async {
-        print("🚀 NavUnitDetailsViewModel: Enhanced saveNewPhoto() started")
-        
-        guard let unit = unit else {
-            print("❌ NavUnitDetailsViewModel: No navigation unit selected")
-            await MainActor.run {
-                errorMessage = "No navigation unit selected"
-            }
-            return
-        }
-        
-        print("✅ NavUnitDetailsViewModel: Unit found: \(unit.navUnitId)")
-        
-        do {
-            print("💾 NavUnitDetailsViewModel: Starting file save...")
-            // Save image to file system
-            let (filePath, fileName) = try await fileStorageService.savePhoto(image, for: unit.navUnitId)
-            print("✅ NavUnitDetailsViewModel: File saved - Path: \(filePath), Name: \(fileName)")
-            
-            // Create NavUnitPhoto object
-            let navUnitPhoto = NavUnitPhoto(
-                navUnitId: unit.navUnitId,
-                filePath: filePath,
-                fileName: fileName,
-                description: "Photo taken on \(Date().formatted())"
-            )
-            print("✅ NavUnitDetailsViewModel: NavUnitPhoto object created")
-            
-            print("💾 NavUnitDetailsViewModel: Starting database save...")
-            // Save to database - this now handles duplicates automatically
-            let photoId = try await photoService.addNavUnitPhotoAsync(photo: navUnitPhoto)
-            print("✅ NavUnitDetailsViewModel: Saved to database with ID: \(photoId)")
-            
-            // Initialize sync status as not synced
-            await MainActor.run {
-                setSyncStatus(for: photoId, status: .notSynced)
-            }
-            print("✅ NavUnitDetailsViewModel: Sync status initialized as .notSynced")
-            
-            // Check if iCloud sync is enabled
-            print("☁️ NavUnitDetailsViewModel: Checking iCloud sync status...")
-            print("☁️ NavUnitDetailsViewModel: iCloudSyncService.isEnabled = \(iCloudSyncService.isEnabled)")
-            
-            if iCloudSyncService.isEnabled {
-                print("🚀 NavUnitDetailsViewModel: iCloud sync is ENABLED - starting upload process")
-                
-                await MainActor.run {
-                    setSyncStatus(for: photoId, status: .syncing)
-                }
-                print("✅ NavUnitDetailsViewModel: Set sync status to .syncing")
-                
-                do {
-                    print("🔄 NavUnitDetailsViewModel: Creating updated photo object for iCloud...")
-                    let updatedPhoto = NavUnitPhoto(
-                        id: photoId,
-                        navUnitId: navUnitPhoto.navUnitId,
-                        filePath: navUnitPhoto.filePath,
-                        fileName: navUnitPhoto.fileName,
-                        thumbPath: navUnitPhoto.thumbPath,
-                        description: navUnitPhoto.description,
-                        createdAt: navUnitPhoto.createdAt
-                    )
-                    print("✅ NavUnitDetailsViewModel: Updated photo object created")
-                    
-                    print("🖼️ NavUnitDetailsViewModel: Converting image to data...")
-                    // Convert image to data for iCloud upload
-                    let imageData = image.jpegData(compressionQuality: 0.8) ?? Data()
-                    print("✅ NavUnitDetailsViewModel: Image converted to data - Size: \(imageData.count) bytes")
-                    
-                    if imageData.isEmpty {
-                        print("❌ NavUnitDetailsViewModel: Image data is empty!")
-                        throw NSError(domain: "PhotoSync", code: 2, userInfo: [NSLocalizedDescriptionKey: "Image data is empty"])
-                    }
-                    
-                    print("☁️ NavUnitDetailsViewModel: Calling iCloudSyncService.uploadPhoto()...")
-                    let recordID = try await iCloudSyncService.uploadPhoto(updatedPhoto, imageData: imageData)
-                    print("🎉 NavUnitDetailsViewModel: iCloud upload SUCCESS! Record ID: \(recordID)")
-                    
-                    await MainActor.run {
-                        setSyncStatus(for: photoId, status: .synced)
-                    }
-                    print("✅ NavUnitDetailsViewModel: Set sync status to .synced")
-                    
-                } catch {
-                    print("💥 NavUnitDetailsViewModel: iCloud upload FAILED with error: \(error)")
-                    print("💥 NavUnitDetailsViewModel: Error description: \(error.localizedDescription)")
-                    
-                    if let nsError = error as? NSError {
-                        print("💥 NavUnitDetailsViewModel: NSError domain: \(nsError.domain)")
-                        print("💥 NavUnitDetailsViewModel: NSError code: \(nsError.code)")
-                    }
-                    
-                    await MainActor.run {
-                        setSyncStatus(for: photoId, status: .failed)
-                    }
-                    print("✅ NavUnitDetailsViewModel: Set sync status to .failed")
-                    // Continue anyway - photo is saved locally
-                }
-            } else {
-                print("⚠️ NavUnitDetailsViewModel: iCloud sync is DISABLED - skipping upload")
-            }
-            
-            print("🔄 NavUnitDetailsViewModel: Reloading local photos...")
-            // Reload photos to show the new one
-            await loadLocalPhotos()
-            print("✅ NavUnitDetailsViewModel: Local photos reloaded")
-            
-            // Clean up any potential duplicates that might have been created
-            await cleanupDuplicatePhotos()
-            
-        } catch PhotoDatabaseError.duplicatePhoto {
-            print("⚠️ NavUnitDetailsViewModel: Duplicate photo detected and handled")
-            // Just reload photos - the duplicate was handled
-            await loadLocalPhotos()
-            
-        } catch {
-            print("💥 NavUnitDetailsViewModel: saveNewPhoto() FAILED with error: \(error)")
-            print("💥 NavUnitDetailsViewModel: Error description: \(error.localizedDescription)")
-            
-            if let nsError = error as? NSError {
-                print("💥 NavUnitDetailsViewModel: NSError domain: \(nsError.domain)")
-                print("💥 NavUnitDetailsViewModel: NSError code: \(nsError.code)")
-            }
-            
-            await MainActor.run {
-                errorMessage = "Failed to save photo: \(error.localizedDescription)"
-            }
-        }
-        
-        print("🏁 NavUnitDetailsViewModel: Enhanced saveNewPhoto() completed")
     }
     
     // MARK: - Enhanced Photo Deletion with iCloud Support

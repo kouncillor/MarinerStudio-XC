@@ -366,10 +366,6 @@ struct NavUnitDetailsView: View {
         }
     }
     
-    
-    
-    
-    
     private func photoItem(photo: NavUnitPhoto) -> some View {
         ZStack(alignment: .topTrailing) {
             ZStack(alignment: .topLeading) {
@@ -438,9 +434,10 @@ struct NavUnitDetailsView: View {
     private func syncStatusColor(for status: PhotoSyncStatus) -> Color {
         switch status {
         case .notSynced: return .gray
-        case .syncing: return .blue
+        case .syncing, .uploading, .downloading: return .blue
         case .synced: return .green
         case .failed: return .red
+        case .processing: return .orange
         }
     }
     

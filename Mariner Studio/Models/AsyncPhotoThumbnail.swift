@@ -17,8 +17,13 @@ struct AsyncPhotoThumbnail: View {
                 Rectangle()
                     .fill(Color.gray.opacity(0.3))
                     .overlay(
-                        ProgressView()
-                            .scaleEffect(0.8)
+                        VStack {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                            Text("Loading...")
+                                .font(.caption2)
+                                .foregroundColor(.gray)
+                        }
                     )
             } else if let thumbnail = thumbnail {
                 Image(uiImage: thumbnail)
@@ -39,11 +44,11 @@ struct AsyncPhotoThumbnail: View {
                     )
             }
             
-            // Sync status overlay
+            // Enhanced sync status overlay with progress indication
             if !isLoading && thumbnail != nil {
                 VStack {
                     HStack {
-                        syncStatusOverlay
+                        enhancedSyncStatusOverlay
                         Spacer()
                     }
                     Spacer()
@@ -66,23 +71,37 @@ struct AsyncPhotoThumbnail: View {
         }
     }
     
-    private var syncStatusOverlay: some View {
+    // NEW: Enhanced sync status overlay with better visual feedback
+    private var enhancedSyncStatusOverlay: some View {
         let status = viewModel.getSyncStatus(for: photo.id)
         
         return ZStack {
             Circle()
                 .fill(Color.black.opacity(0.7))
-                .frame(width: 20, height: 20)
+                .frame(width: 24, height: 24)
             
             Group {
                 if status == .syncing {
-                    ProgressView()
-                        .scaleEffect(0.5)
-                        .tint(.white)
+                    ZStack {
+                        // Animated progress ring
+                        Circle()
+                            .stroke(Color.white.opacity(0.3), lineWidth: 2)
+                            .frame(width: 16, height: 16)
+                        
+                        Circle()
+                            .trim(from: 0, to: 0.7)
+                            .stroke(Color.blue, lineWidth: 2)
+                            .frame(width: 16, height: 16)
+                            .rotationEffect(.degrees(-90))
+                            .animation(
+                                Animation.linear(duration: 1.0).repeatForever(autoreverses: false),
+                                value: status == .syncing
+                            )
+                    }
                 } else {
                     Image(systemName: status.iconName)
                         .foregroundColor(syncStatusColor(for: status))
-                        .font(.system(size: 10, weight: .medium))
+                        .font(.system(size: 12, weight: .medium))
                 }
             }
         }
@@ -90,14 +109,18 @@ struct AsyncPhotoThumbnail: View {
             // Handle sync status tap (could show detailed info or retry)
             handleSyncStatusTap(status: status)
         }
+        // NEW: Add subtle pulsing animation for syncing status
+        .scaleEffect(status == .syncing ? 1.1 : 1.0)
+        .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: status == .syncing)
     }
     
     private func syncStatusColor(for status: PhotoSyncStatus) -> Color {
         switch status {
         case .notSynced: return .gray
-        case .syncing: return .blue
+        case .syncing, .uploading, .downloading: return .blue
         case .synced: return .green
         case .failed: return .red
+        case .processing: return .orange
         }
     }
     
