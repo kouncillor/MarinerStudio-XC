@@ -53,21 +53,12 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
            buoyStationCallback: onBuoyStationSelected // Added buoy station callback
        )
        
-       // Handle chart overlay updates
-      // context.coordinator.updateChartOverlay(in: mapView, newOverlay: chartOverlay)
-       
        // Handle chart overlay updates - now respects the toggle state
        if viewModel.isChartOverlayEnabled {
            context.coordinator.updateChartOverlay(in: mapView, newOverlay: chartOverlay)
        } else {
            context.coordinator.updateChartOverlay(in: mapView, newOverlay: nil)
        }
-       
-       
-       
-       
-       
-       
        
        // Use efficient annotation updates - only update what changed
        context.coordinator.updateAnnotations(in: mapView, newAnnotations: annotations)
@@ -127,9 +118,9 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
            
            // Add new chart overlay if provided
            if let overlay = newOverlay {
-               mapView.addOverlay(overlay, level: .aboveLabels)
+               mapView.addOverlay(overlay, level: .aboveRoads) // CHANGED: from .aboveLabels to .aboveRoads
                currentChartOverlay = overlay
-               print("🗺️ TandmMapViewRepresentable: Added new chart overlay with \(overlay.currentChartLayerCount) layers")
+               print("🗺️ TandmMapViewRepresentable: Added new chart overlay with \(overlay.currentChartLayerCount) layers at .aboveRoads level")
            }
        }
        
@@ -266,15 +257,15 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
            // Handle NOAA Chart tile overlays
            if let chartOverlay = overlay as? NOAAChartTileOverlay {
                let renderer = MKTileOverlayRenderer(tileOverlay: chartOverlay)
-               renderer.alpha = 0.7 // Slightly transparent to keep annotations visible
-               print("🎨 TandmMapViewRepresentable: Created chart overlay renderer with alpha 0.7")
+               renderer.alpha = 1.0 // CHANGED: from 0.7 to 1.0 (remove transparency)
+               print("🎨 TandmMapViewRepresentable: Created chart overlay renderer with alpha 1.0")
                return renderer
            }
            
            // Handle generic tile overlays
            if let tileOverlay = overlay as? MKTileOverlay {
                let renderer = MKTileOverlayRenderer(tileOverlay: tileOverlay)
-               renderer.alpha = 0.7
+               renderer.alpha = 1.0 // CHANGED: from 0.7 to 1.0 (remove transparency)
                return renderer
            }
            

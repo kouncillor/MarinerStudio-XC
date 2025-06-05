@@ -85,7 +85,7 @@ class NOAAChartTileOverlay: MKTileOverlay {
         let bounds = tileToGeographicBounds(for: path)
         let baseUrl = "https://gis.charttools.noaa.gov/arcgis/rest/services/MCS/ENCOnline/MapServer/exts/MaritimeChartService/MapServer/export"
         
-        // Format bounds as geographic coordinates (longitude, latitude)
+        // Format bounds as geographic coordinates (longitude, latitude) - EPSG:4326 format
         let bboxString = String(format: "%.6f,%.6f,%.6f,%.6f",
                                bounds.minLon, bounds.minLat, bounds.maxLon, bounds.maxLat)
         
@@ -102,8 +102,8 @@ class NOAAChartTileOverlay: MKTileOverlay {
             URLQueryItem(name: "transparent", value: "true"),
             URLQueryItem(name: "size", value: "256,256"),
             URLQueryItem(name: "bbox", value: bboxString),
-            URLQueryItem(name: "bboxSR", value: "4326"),
-            URLQueryItem(name: "imageSR", value: "4326"),
+            URLQueryItem(name: "bboxSR", value: "4326"),        // INPUT is EPSG:4326 (WGS84)
+            URLQueryItem(name: "imageSR", value: "3857"),        // OUTPUT should be EPSG:3857 (Web Mercator)
             URLQueryItem(name: "layers", value: layerString),
             URLQueryItem(name: "dpi", value: "96")
         ]
@@ -124,16 +124,18 @@ class NOAAChartTileOverlay: MKTileOverlay {
         
         let n = pow(2.0, z)
         
-        // Calculate longitude bounds
+        // Calculate longitude bounds (unchanged - this should be correct)
         let minLon = (x / n) * 360.0 - 180.0
         let maxLon = ((x + 1.0) / n) * 360.0 - 180.0
         
-        // Calculate latitude bounds using Web Mercator to Geographic conversion
+        // Calculate latitude bounds using STANDARD Web Mercator (no Y-flip)
         let maxLatRad = atan(sinh(.pi * (1.0 - 2.0 * y / n)))
         let minLatRad = atan(sinh(.pi * (1.0 - 2.0 * (y + 1.0) / n)))
         
         let maxLat = maxLatRad * 180.0 / .pi
         let minLat = minLatRad * 180.0 / .pi
+        
+        print("🗺️ Tile \(path.x),\(path.y),\(path.z) -> bounds: \(minLat),\(minLon) to \(maxLat),\(maxLon)")
         
         return (minLat: minLat, maxLat: maxLat, minLon: minLon, maxLon: maxLon)
     }

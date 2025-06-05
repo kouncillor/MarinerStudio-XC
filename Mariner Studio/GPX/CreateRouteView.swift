@@ -1,3 +1,4 @@
+
 //
 //  CreateRouteView.swift
 //  Mariner Studio
@@ -26,7 +27,7 @@ struct CreateRouteView: View {
                     .font(.largeTitle)
                     .fontWeight(.bold)
                 
-                Text("Plan your navigation route by selecting waypoints on an interactive map.")
+                Text("Plan your navigation route by selecting waypoints on an interactive nautical chart.")
                     .font(.body)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -64,11 +65,16 @@ struct CreateRouteView: View {
             
             // Instructions
             VStack(spacing: 12) {
-                Text("Next Steps:")
+                Text("Features:")
                     .font(.headline)
                     .foregroundColor(.primary)
                 
                 VStack(alignment: .leading, spacing: 8) {
+                    InstructionRow(
+                        icon: "map.fill",
+                        text: "Official NOAA nautical charts with depths & hazards"
+                    )
+                    
                     InstructionRow(
                         icon: "hand.tap.fill",
                         text: "Tap anywhere on the map to add waypoints"
@@ -76,12 +82,7 @@ struct CreateRouteView: View {
                     
                     InstructionRow(
                         icon: "pencil.circle.fill",
-                        text: "Name each waypoint as you create it"
-                    )
-                    
-                    InstructionRow(
-                        icon: "arrow.triangle.2.circlepath",
-                        text: "Reorder or delete waypoints as needed"
+                        text: "Name and reorder waypoints as needed"
                     )
                     
                     InstructionRow(

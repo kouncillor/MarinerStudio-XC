@@ -23,9 +23,15 @@ class CreateRouteViewModel: ObservableObject {
         span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1)
     )
     
+    // MARK: - Chart Overlay Properties (NEW)
+    @Published var isChartOverlayEnabled = true // Default to ON
+    @Published var chartOverlay: NOAAChartTileOverlay?
+    private let defaultChartLayers: Set<Int> = [0, 1, 2, 6] // Same as other maps
+    
     // MARK: - Services
     private let gpxService: ExtendedGpxServiceProtocol
     private let locationService: LocationService
+    private let noaaChartService: NOAAChartService // NEW: Chart service
     
     // MARK: - Computed Properties
     var canSaveRoute: Bool {
@@ -49,13 +55,43 @@ class CreateRouteViewModel: ObservableObject {
     }
     
     // MARK: - Initialization
-    init(gpxService: ExtendedGpxServiceProtocol, locationService: LocationService) {
+    init(gpxService: ExtendedGpxServiceProtocol, locationService: LocationService, noaaChartService: NOAAChartService) {
         self.gpxService = gpxService
         self.locationService = locationService
-        print("📍 CreateRouteViewModel: Initialized")
+        self.noaaChartService = noaaChartService
+        print("📍 CreateRouteViewModel: Initialized with chart overlay support")
         
         // Set initial map region to user's location
         setupInitialMapRegion()
+        
+        // Create chart overlay (enabled by default)
+        createChartOverlay()
+    }
+    
+    // MARK: - Chart Overlay Methods (NEW)
+    
+    func toggleChartOverlay() {
+        isChartOverlayEnabled.toggle()
+        
+        if isChartOverlayEnabled {
+            createChartOverlay()
+            print("🗺️ CreateRouteViewModel: Chart overlay enabled")
+        } else {
+            chartOverlay = nil
+            print("📴 CreateRouteViewModel: Chart overlay disabled")
+        }
+    }
+    
+    private func createChartOverlay() {
+        guard isChartOverlayEnabled else {
+            chartOverlay = nil
+            return
+        }
+        
+        chartOverlay = noaaChartService.createChartTileOverlay(
+            selectedLayers: defaultChartLayers
+        )
+        print("📊 CreateRouteViewModel: Created chart overlay with layers: \(defaultChartLayers)")
     }
     
     // MARK: - Location Setup
