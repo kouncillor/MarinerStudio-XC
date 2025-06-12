@@ -27,7 +27,7 @@ struct CreateRouteView: View {
                     .font(.largeTitle)
                     .fontWeight(.bold)
                 
-                Text("Plan your navigation route by selecting waypoints on an interactive nautical chart.")
+                Text("Plan your navigation route by selecting waypoints on an interactive nautical chart with heading and distance calculations.")
                     .font(.body)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -46,10 +46,23 @@ struct CreateRouteView: View {
                     TextField("Enter route name (e.g., 'Baltimore to Annapolis')", text: $routeName)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
                         .font(.body)
+                        .onChange(of: routeName) { oldValue, newValue in
+                            print("📝 CreateRouteView: Route name changed from '\(oldValue)' to '\(newValue)'")
+                            print("📝 CreateRouteView: Trimmed route name: '\(newValue.trimmingCharacters(in: .whitespacesAndNewlines))'")
+                        }
                 }
                 
                 Button("Start Creating Route") {
-                    showingMapView = true
+                    let trimmedName = routeName.trimmingCharacters(in: .whitespacesAndNewlines)
+                    print("🚀 CreateRouteView: Start Creating Route button tapped")
+                    print("🚀 CreateRouteView: Route name validation - original: '\(routeName)', trimmed: '\(trimmedName)', isEmpty: \(trimmedName.isEmpty)")
+                    
+                    if !trimmedName.isEmpty {
+                        print("✅ CreateRouteView: Route name validation passed - proceeding to map view")
+                        showingMapView = true
+                    } else {
+                        print("❌ CreateRouteView: Route name validation failed - empty route name")
+                    }
                 }
                 .disabled(routeName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 .padding()
@@ -58,12 +71,15 @@ struct CreateRouteView: View {
                 .foregroundColor(.white)
                 .cornerRadius(12)
                 .font(.headline)
+                .onChange(of: routeName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) { oldValue, newValue in
+                    print("🎛️ CreateRouteView: Button enabled state changed - disabled: \(newValue)")
+                }
             }
             .padding(.horizontal, 24)
             
             Spacer()
             
-            // Instructions
+            // Enhanced Instructions with Leg Information
             VStack(spacing: 12) {
                 Text("Features:")
                     .font(.headline)
@@ -78,6 +94,11 @@ struct CreateRouteView: View {
                     InstructionRow(
                         icon: "hand.tap.fill",
                         text: "Tap anywhere on the map to add waypoints"
+                    )
+                    
+                    InstructionRow(
+                        icon: "ruler.fill",
+                        text: "View true headings and distances between waypoints"
                     )
                     
                     InstructionRow(
@@ -105,6 +126,14 @@ struct CreateRouteView: View {
         .navigationDestination(isPresented: $showingMapView) {
             RouteCreationMapView(routeName: routeName, serviceProvider: serviceProvider)
         }
+        .onAppear {
+            print("📍 CreateRouteView: View appeared")
+            print("📍 CreateRouteView: Current route name: '\(routeName)'")
+            print("📍 CreateRouteView: Service provider available: \(serviceProvider != nil)")
+        }
+        .onDisappear {
+            print("📍 CreateRouteView: View disappeared")
+        }
     }
 }
 
@@ -124,6 +153,9 @@ struct InstructionRow: View {
                 .foregroundColor(.primary)
             
             Spacer()
+        }
+        .onAppear {
+            print("📋 InstructionRow: Displayed instruction - icon: '\(icon)', text: '\(text)'")
         }
     }
 }
