@@ -44,7 +44,7 @@ struct RouteMenuView: View {
                     )
                 }
                 
-                // Open GPX File - Now directly opens file picker
+                // Voyage Plan - Now directly opens file picker for voyage planning
                 Button(action: {
                     Task {
                         await openGpxFile()
@@ -52,8 +52,8 @@ struct RouteMenuView: View {
                 }) {
                     RouteMenuButtonContent(
                         icon: "doc.fill",
-                        title: "OPEN GPX FILE",
-                        subtitle: "Legacy & Modern GPX Support",
+                        title: "VOYAGE PLAN",
+                        subtitle: "Load GPX and Calculate Voyage",
                         isSystemIcon: true,
                         iconColor: .blue
                     )
