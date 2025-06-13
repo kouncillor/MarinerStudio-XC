@@ -85,7 +85,7 @@ struct RouteDetailsView: View {
                         LazyVStack(spacing: 15) {
                             ForEach(Array(viewModel.waypoints.enumerated()), id: \.element.id) { index, waypoint in
                                 WaypointView(waypoint: waypoint)
-                                    .id(index) // Use index as the identifier for scrolling
+                                    .border(Color.orange.opacity(0.3), width: 1)                                    .id(index) // Use index as the identifier for scrolling
                             }
                         }
                         .padding(.horizontal)
@@ -460,3 +460,8 @@ struct RelativeWaveDirectionView: View {
         else { return "wavefromzero" } // Default
     }
 }
+
+
+
+
+
