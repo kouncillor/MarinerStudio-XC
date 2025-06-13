@@ -376,11 +376,11 @@ struct WaypointView: View {
                                 }
                                 
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text("Relative")
+                                    Text("Wave Hitting From")
                                         .font(.caption)
                                         .fontWeight(.medium)
                                         .foregroundColor(.secondary)
-                                    Text("\(getRelativeWaveAngle(course: waypoint.bearingToNext, waveFrom: waypoint.waveDirection))")
+                                    Text("\(String(format: "%.0f", waypoint.relativeWaveDirection))°")
                                         .font(.subheadline)
                                         .fontWeight(.bold)
                                         .foregroundColor(.orange)
@@ -422,17 +422,6 @@ struct WaypointView: View {
         formatter.dateStyle = .none
         formatter.timeStyle = .short
         return formatter.string(from: date)
-    }
-    
-    private func getRelativeWaveAngle(course: Double, waveFrom: Double) -> String {
-        let relativeDegrees = abs(waveFrom - course)
-        let normalizedAngle = relativeDegrees > 180 ? 360 - relativeDegrees : relativeDegrees
-        
-        // Determine port or starboard
-        let crossProduct = sin((waveFrom - course) * .pi / 180)
-        let side = crossProduct >= 0 ? "Stbd" : "Port"
-        
-        return "\(String(format: "%.0f", normalizedAngle))° \(side)"
     }
 }
 
@@ -592,41 +581,67 @@ struct MarineDataCard: View {
     }
 }
 
+// MARK: - NEW Programmatic Compass
+
 struct WaveDirectionCompass: View {
     @ObservedObject var waypoint: WaypointItem
     
     var body: some View {
         ZStack {
-            // Compass background
-            Image("compasscard")
-                .resizable()
-                .aspectRatio(contentMode: .fit)
+            // Compass background circle
+            Circle()
+                .stroke(Color.gray.opacity(0.3), lineWidth: 2)
+                .background(
+                    Circle()
+                        .fill(Color.blue.opacity(0.05))
+                )
             
-            // Wave direction arrow
-            Image(getWaveDirectionImage())
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .scaleEffect(0.6)
+            // Cardinal direction markers
+            ForEach(0..<4) { index in
+                VStack {
+                    Rectangle()
+                        .fill(Color.gray.opacity(0.6))
+                        .frame(width: 2, height: 12)
+                    Spacer()
+                }
+                .rotationEffect(.degrees(Double(index) * 90))
+            }
+            
+            // Code-generated wave arrow, rotated to the correct direction
+            WaveArrow(relativeDirection: waypoint.relativeWaveDirection)
         }
+        .frame(width: 80, height: 80)
     }
+}
+
+struct WaveArrow: View {
+    let relativeDirection: Double
     
-    private func getWaveDirectionImage() -> String {
-        if waypoint.displayImageOne { return "wavefromzero" }
-        else if waypoint.displayImageTwo { return "wavefromtwentytwofive" }
-        else if waypoint.displayImageThree { return "wavefromfortyfive" }
-        else if waypoint.displayImageFour { return "wavefromsixtysevenfive" }
-        else if waypoint.displayImageFive { return "wavefromninety" }
-        else if waypoint.displayImageSix { return "wavefromonetwelvepointfive" }
-        else if waypoint.displayImageSeven { return "wavefromonethirtyfive" }
-        else if waypoint.displayImageEight { return "wavefromonefiftysevenfive" }
-        else if waypoint.displayImageNine { return "wavefromoneeighty" }
-        else if waypoint.displayImageTen { return "wavefromtwohundredtwofive" }
-        else if waypoint.displayImageEleven { return "wavefromtwotwentyfive" }
-        else if waypoint.displayImageTwelve { return "wavefromtwofortysevenfive" }
-        else if waypoint.displayImageThirteen { return "wavefromtwoseventy" }
-        else if waypoint.displayImageFourteen { return "wavefromtwoninetytwofive" }
-        else if waypoint.displayImageFifteen { return "wavefromthreefifteen" }
-        else if waypoint.displayImageSixteen { return "wavefromthreethirtysevenfive" }
-        else { return "wavefromzero" } // Default
+    var body: some View {
+        ZStack {
+            // Arrow shaft
+            // The rectangle is drawn centered at (0,0) and then offset.
+            // A height of 30 offset by -15 places it from y=0 to y=-30.
+            Rectangle()
+                .fill(Color.red)
+                .frame(width: 3, height: 30)
+                .offset(y: -15)
+            
+            // Arrowhead, positioned at the top of the shaft
+            Path { path in
+                path.move(to: CGPoint(x: 0, y: -30))   // Tip
+                path.addLine(to: CGPoint(x: -6, y: -20))  // Left wing
+                path.addLine(to: CGPoint(x: 0, y: -23))   // Notch
+                path.addLine(to: CGPoint(x: 6, y: -20))   // Right wing
+                path.closeSubpath()
+            }
+            .fill(Color.red)
+            
+            // Small circle at the base to indicate the rotation center
+            Circle()
+                .fill(Color.red)
+                .frame(width: 4, height: 4)
+        }
+        .rotationEffect(.degrees(relativeDirection))
     }
 }
