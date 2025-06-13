@@ -4,6 +4,7 @@ import SwiftUI
 struct RouteDetailsView: View {
     @ObservedObject var viewModel: RouteDetailsViewModel
     @State private var scrollToWaypointIndex: Int?
+    @State private var emphasizedWaypointIndex: Int?
     @EnvironmentObject var serviceProvider: ServiceProvider
     
     var body: some View {
@@ -32,76 +33,83 @@ struct RouteDetailsView: View {
                                 }
                             }
                             .padding()
-                            .background(Color(UIColor.secondarySystemBackground))
+                            .background(Color(UIColor.systemBackground))
                             .cornerRadius(10)
-                            .shadow(radius: 1)
-                            .padding(.horizontal)
+                            .shadow(radius: 2)
                             
-                            // Route Conditions Summary Frame
-                            VStack(alignment: .center, spacing: 5) {
-                                Text("Route Conditions Summary")
-                                    .font(.title2)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.orange)
-                                    .multilineTextAlignment(.center)
-                                    .padding(.bottom, 5)
+                            // Condition Summary
+                            VStack(spacing: 8) {
+                                ConditionSummaryRow(
+                                    text: "Max Wind Speed: \(viewModel.maxWindSpeed) at \(viewModel.maxWindWaypoint?.name ?? "Unknown")",
+                                    action: { scrollToWaypoint(viewModel.maxWindWaypoint) }
+                                )
                                 
-                                // Conditions list
-                                VStack(spacing: 12) {
-                                    ConditionSummaryRow(text: viewModel.maxWindSpeed) {
-                                        scrollToWaypoint(viewModel.maxWindWaypoint)
-                                    }
-                                    
-                                    Divider()
-                                    
-                                    ConditionSummaryRow(text: viewModel.maxWaveHeight) {
-                                        scrollToWaypoint(viewModel.maxWaveWaypoint)
-                                    }
-                                    
-                                    Divider()
-                                    
-                                    ConditionSummaryRow(text: viewModel.maxHumidity) {
-                                        scrollToWaypoint(viewModel.maxHumidityWaypoint)
-                                    }
-                                    
-                                    Divider()
-                                    
-                                    ConditionSummaryRow(text: viewModel.lowestVisibility) {
-                                        scrollToWaypoint(viewModel.minVisibilityWaypoint)
-                                    }
-                                }
+                                ConditionSummaryRow(
+                                    text: "Max Wave Height: \(viewModel.maxWaveHeight) at \(viewModel.maxWaveWaypoint?.name ?? "Unknown")",
+                                    action: { scrollToWaypoint(viewModel.maxWaveWaypoint) }
+                                )
+                                
+                                ConditionSummaryRow(
+                                    text: "Max Humidity: \(viewModel.maxHumidity) at \(viewModel.maxHumidityWaypoint?.name ?? "Unknown")",
+                                    action: { scrollToWaypoint(viewModel.maxHumidityWaypoint) }
+                                )
+                                
+                                ConditionSummaryRow(
+                                    text: "Lowest Visibility: \(viewModel.lowestVisibility) at \(viewModel.minVisibilityWaypoint?.name ?? "Unknown")",
+                                    action: { scrollToWaypoint(viewModel.minVisibilityWaypoint) }
+                                )
                             }
                             .padding()
-                            .background(Color(UIColor.secondarySystemBackground))
+                            .background(Color(UIColor.systemBackground))
                             .cornerRadius(10)
-                            .shadow(radius: 1)
-                            .padding(.horizontal)
-                        }
-                        .padding(.vertical, 10)
-                    }
-                    
-                    // Waypoints Collection
-                    ScrollView {
-                        LazyVStack(spacing: 15) {
-                            ForEach(Array(viewModel.waypoints.enumerated()), id: \.element.id) { index, waypoint in
-                                WaypointView(waypoint: waypoint)
-                                    .border(Color.orange.opacity(0.3), width: 1)                                    .id(index) // Use index as the identifier for scrolling
-                            }
+                            .shadow(radius: 2)
                         }
                         .padding(.horizontal)
                         .padding(.bottom, 20)
                     }
-                    .background(Color(UIColor.systemGroupedBackground))
-                    .onChange(of: scrollToWaypointIndex) { _, index in
-                        if let index = index {
-                            withAnimation {
-                                scrollToIndex(index)
+                    
+                    // Waypoints List with ScrollViewReader
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            LazyVStack(spacing: 10) {
+                                ForEach(viewModel.waypoints, id: \.index) { waypoint in
+                                    WaypointView(waypoint: waypoint)
+                                        .id(waypoint.index) // Set ID for scrolling
+                                        .modifier(WaypointEmphasisModifier(
+                                            isEmphasized: emphasizedWaypointIndex == waypoint.index
+                                        ))
+                                }
                             }
-                            // Reset after scrolling
-                            scrollToWaypointIndex = nil
+                            .padding(.horizontal)
+                        }
+                        .onChange(of: scrollToWaypointIndex) { _, newIndex in
+                            if let index = newIndex {
+                                // Animate scroll to center the waypoint
+                                withAnimation(.easeInOut(duration: 0.8)) {
+                                    proxy.scrollTo(index, anchor: .center)
+                                }
+                                
+                                // Add emphasis after scroll completes
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
+                                    withAnimation(.easeInOut(duration: 0.3)) {
+                                        emphasizedWaypointIndex = index
+                                    }
+                                    
+                                    // Remove emphasis after 2.5 seconds
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                                        withAnimation(.easeInOut(duration: 0.3)) {
+                                            emphasizedWaypointIndex = nil
+                                        }
+                                    }
+                                }
+                                
+                                // Reset scroll index
+                                scrollToWaypointIndex = nil
+                            }
                         }
                     }
                 }
+                .background(Color(UIColor.systemGroupedBackground))
                 
                 // Loading and Error overlays
                 if viewModel.isLoading {
@@ -134,24 +142,37 @@ struct RouteDetailsView: View {
     
     private func scrollToWaypoint(_ waypoint: WaypointItem?) {
         guard let waypoint = waypoint else { return }
-        // Convert to 0-based index
-        scrollToWaypointIndex = waypoint.index - 1
+        
+        // Set the target waypoint index for scrolling
+        scrollToWaypointIndex = waypoint.index
         
         // If summary is visible, hide it to make more room for the waypoint details
         if viewModel.isSummaryVisible {
             viewModel.toggleSummary()
         }
     }
+}
+
+// MARK: - Waypoint Emphasis Modifier
+struct WaypointEmphasisModifier: ViewModifier {
+    let isEmphasized: Bool
     
-    // Helper function to scroll to a specific index
-    private func scrollToIndex(_ index: Int) {
-        // This relies on having set the id of each item in the list
-        // The actual scrolling is triggered by the onChange handler
+    func body(content: Content) -> some View {
+        content
+            .scaleEffect(isEmphasized ? 1.02 : 1.0)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(isEmphasized ? Color.orange.opacity(0.1) : Color.clear)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isEmphasized ? Color.orange : Color.clear, lineWidth: 2)
+            )
+            .animation(.easeInOut(duration: 0.3), value: isEmphasized)
     }
 }
 
-// Helper Views
-
+// MARK: - Helper Views
 struct RouteDetailRow: View {
     let label: String
     let value: String
@@ -216,8 +237,6 @@ struct WaypointView: View {
                     .foregroundColor(.blue)
             }
             
-
-            
             // Weather condition
             if waypoint.weatherDataAvailable {
                 HStack {
@@ -275,101 +294,55 @@ struct WaypointView: View {
             
             // Marine data
             if waypoint.marineDataAvailable {
-                VStack(spacing: 10) {
-                    HStack {
-                        // Swell - Now placed side by side with Wind Wave
-                        MarineDataBox(
-                            title: "Swell",
-                            value1: waypoint.swellHeightDisplay,
-                            value2: "From: \(waypoint.swellDirectionCardinal)",
-                            value3: "\(Int(waypoint.swellPeriod))s period"
-                        
-                        )
-                        
-                        // Wind Wave - Now placed side by side with Swell
-                        MarineDataBox(
-                            title: "Wind Wave",
-                            value1: waypoint.windWaveHeightDisplay,
-                            value2: "From: \(waypoint.windWaveDirectionCardinal)",
-                            value3: "."
-                        )
-                    }
+                VStack(spacing: 12) {
+                    // Total Wave Card - Most prominent at top
+                    TotalWaveCard(
+                        height: waypoint.waveHeightDisplay,
+                        direction: waypoint.waveDirectionCardinal,
+                        period: "\(Int(waypoint.wavePeriod))s period"
+                    )
                     
-                    // Total Wave - Now placed below Swell and Wind Wave
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text("Total Wave")
-                            .font(.headline)
-                        
+                    // Swell Card
+                    MarineDataCard(
+                        title: "Swell",
+                        icon: "water.waves",
+                        height: waypoint.swellHeightDisplay,
+                        direction: waypoint.swellDirectionCardinal,
+                        period: "\(Int(waypoint.swellPeriod))s period",
+                        cardColor: Color.cyan.opacity(0.1),
+                        accentColor: Color.cyan
+                    )
+                    
+                    // Wind Wave Card
+                    MarineDataCard(
+                        title: "Wind Wave",
+                        icon: "wind",
+                        height: waypoint.windWaveHeightDisplay,
+                        direction: waypoint.windWaveDirectionCardinal,
+                        period: nil,
+                        cardColor: Color.blue.opacity(0.1),
+                        accentColor: Color.blue
+                    )
+                    
+                    // Wave Direction Compass - Integrated better
+                    VStack(spacing: 8) {
                         HStack {
-                            VStack(alignment: .leading) {
-                                Text("Height")
-                                    .font(.caption)
-                                Text(waypoint.waveHeightDisplay)
-                                    .font(.subheadline)
-                            }
-                            
+                            Image(systemName: "location.north.circle")
+                                .foregroundColor(.orange)
+                                .font(.caption)
+                            Text("Wave Direction")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundColor(.primary)
                             Spacer()
-                            
-                            VStack(alignment: .leading) {
-                                Text("Direction")
-                                    .font(.caption)
-                                Text(waypoint.waveDirectionCardinal)
-                                    .font(.subheadline)
-                            }
-                            
-                            Spacer()
-                            
-                            VStack(alignment: .leading) {
-                                Text("Period")
-                                    .font(.caption)
-                                Text("\(Int(waypoint.wavePeriod))s")
-                                    .font(.subheadline)
-                            }
                         }
+                        
+                        WaveDirectionCompass(waypoint: waypoint)
+                            .frame(width: 100, height: 100)
                     }
                     .padding()
-                    .background(Color.blue.opacity(0.1))
-                    .cornerRadius(8)
-                    
-                    // Modified HStack to use all available space
-                    HStack(spacing: 10) {
-                        // Course and wave directions with compass background
-                        ZStack {
-                            // Compass background
-                            Image("compasscard")
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                            
-                            // Text overlay
-                            VStack(alignment: .center, spacing: 5) {
-                                Text("Course True: \(waypoint.courseDisplay)")
-                                    .font(.caption)
-                                    .fontWeight(.semibold)
-                                Text("Wave True: \(waypoint.waveDisplay)")
-                                    .font(.caption)
-                                    .fontWeight(.semibold)
-                                Text("Wave Relative: \(waypoint.relativeWaveDisplay)")
-                                    .font(.caption)
-                                    .fontWeight(.semibold)
-                            }
-                            .foregroundColor(.black)
-                            .padding(8)
-                            .background(Color.white.opacity(0.8))
-                            .cornerRadius(6)
-                        }
-                        .background(Color.white)
-                        .cornerRadius(8)
-                        .frame(minWidth: 0, maxWidth: .infinity)  // Take up available width
-                        .aspectRatio(1, contentMode: .fit)  // Make height proportional to width
-                        
-                        // Wave direction arrow
-                        RelativeWaveDirectionView(waypoint: waypoint)
-                            .background(Color.white)
-                            .cornerRadius(8)
-                            .frame(minWidth: 0, maxWidth: .infinity)  // Take up available width
-                            .aspectRatio(1, contentMode: .fit)  // Make height proportional to width
-                    }
-                    .frame(maxWidth: .infinity)  // Make the HStack use all available width
+                    .background(Color.orange.opacity(0.05))
+                    .cornerRadius(12)
                 }
             } else {
                 Text("Marine data not available")
@@ -380,49 +353,177 @@ struct WaypointView: View {
             }
         }
         .padding()
-        .background(Color(UIColor.secondarySystemBackground))
-        .cornerRadius(10)
+        .background(Color(UIColor.systemBackground))
+        .cornerRadius(12)
+        .shadow(radius: 2)
     }
     
-    private func formatDate(_ date: Date) -> String {
+    private func formatDate(_ date: Date?) -> String {
+        guard let date = date else { return "Unknown" }
         let formatter = DateFormatter()
-        formatter.dateFormat = "MM/dd HH:mm"
+        formatter.dateStyle = .none
+        formatter.timeStyle = .short
         return formatter.string(from: date)
     }
 }
 
-struct MarineDataBox: View {
-    let title: String
-    let value1: String
-    let value2: String
-    let value3: String
+// MARK: - Marine Data Cards
+struct TotalWaveCard: View {
+    let height: String
+    let direction: String
+    let period: String
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text(title)
-                .font(.headline)
-            
-            Text(value1)
-                .font(.subheadline)
-            
-            Text(value2)
-                .font(.caption)
-                .foregroundColor(.secondary)
-            
-            if !value3.isEmpty {
-                Text(value3)
+        VStack(spacing: 12) {
+            // Header with title and icon
+            HStack {
+                Image(systemName: "waveform.path")
+                    .font(.title2)
+                    .foregroundColor(.white)
+                
+                Text("Total Wave Height")
+                    .font(.headline)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                
+                Spacer()
+                
+                Image(systemName: "chart.line.uptrend.xyaxis")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.white.opacity(0.8))
+            }
+            
+            // Main content
+            HStack(spacing: 16) {
+                // Height - Primary value
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Height")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(.white.opacity(0.8))
+                    
+                    Text(height)
+                        .font(.largeTitle)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                }
+                
+                Spacer()
+                
+                // Direction and Period
+                VStack(alignment: .trailing, spacing: 8) {
+                    VStack(alignment: .trailing, spacing: 2) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "location.north")
+                                .font(.caption)
+                                .foregroundColor(.white.opacity(0.8))
+                            Text("From \(direction)")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundColor(.white)
+                        }
+                    }
+                    
+                    VStack(alignment: .trailing, spacing: 2) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "clock")
+                                .font(.caption)
+                                .foregroundColor(.white.opacity(0.8))
+                            Text(period)
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundColor(.white)
+                        }
+                    }
+                }
             }
         }
         .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.blue.opacity(0.1))
-        .cornerRadius(8)
+        .background(
+            LinearGradient(
+                gradient: Gradient(colors: [Color.blue.opacity(0.8), Color.blue.opacity(0.6)]),
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.blue.opacity(0.5), lineWidth: 2)
+        )
+        .shadow(color: Color.blue.opacity(0.3), radius: 8, x: 0, y: 4)
     }
 }
 
-struct RelativeWaveDirectionView: View {
+struct MarineDataCard: View {
+    let title: String
+    let icon: String
+    let height: String
+    let direction: String
+    let period: String?
+    let cardColor: Color
+    let accentColor: Color
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            // Icon section
+            VStack {
+                Image(systemName: icon)
+                    .font(.title2)
+                    .foregroundColor(accentColor)
+                    .frame(width: 30, height: 30)
+            }
+            
+            // Content section
+            VStack(alignment: .leading, spacing: 4) {
+                // Title
+                Text(title)
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+                
+                // Height (main value)
+                Text(height)
+                    .font(.title3)
+                    .fontWeight(.bold)
+                    .foregroundColor(accentColor)
+                
+                // Direction
+                HStack(spacing: 4) {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Text("From \(direction)")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+                
+                // Period (if available)
+                if let period = period {
+                    HStack(spacing: 4) {
+                        Image(systemName: "timer")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Text(period)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            
+            Spacer()
+        }
+        .padding()
+        .background(cardColor)
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(accentColor.opacity(0.3), lineWidth: 1)
+        )
+    }
+}
+
+struct WaveDirectionCompass: View {
     @ObservedObject var waypoint: WaypointItem
     
     var body: some View {
@@ -460,8 +561,3 @@ struct RelativeWaveDirectionView: View {
         else { return "wavefromzero" } // Default
     }
 }
-
-
-
-
-
