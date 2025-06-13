@@ -35,7 +35,7 @@ struct RouteDetailsView: View {
                             .padding()
                             .background(Color(UIColor.systemBackground))
                             .cornerRadius(10)
-                            .shadow(radius: 2)
+                            .shadow(color: Color.blue.opacity(0.3), radius: 4, x: 0, y: 2)
                             
                             // Condition Summary
                             VStack(spacing: 8) {
@@ -259,31 +259,43 @@ struct WaypointView: View {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 5) {
                         Text(waypoint.temperatureDisplay)
-                            .font(.headline)
+                            .font(.title)
+                            .foregroundColor(.white)
                         Text(waypoint.dewPointDisplay + " DP")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                            .font(.title2)
+                            .foregroundColor(.white)
                         Text(waypoint.humidityDisplay + " RH")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                            .font(.title3)
+                            .foregroundColor(.white)
                     }
                     
                     Spacer()
                     
                     VStack(alignment: .trailing, spacing: 5) {
                         Text("Wind: " + waypoint.windSpeedDisplay)
-                            .font(.subheadline)
+                            .font(.title)
+                            .foregroundColor(.white)
                         Text("from " + waypoint.windDirection)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                            .font(.title2)
+                            .foregroundColor(.white)
                         Text("Gusts: " + waypoint.windGustsDisplay)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                            .font(.title3)
+                            .foregroundColor(.white)
                     }
                 }
                 .padding()
-                .background(Color.green.opacity(0.1))
-                .cornerRadius(8)
+                .background(
+                    LinearGradient(
+                        gradient: Gradient(colors: [Color.green.opacity(0.9), Color.mint.opacity(0.9)]),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .cornerRadius(12)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.green.opacity(0.4), lineWidth: 1)
+                )
             } else {
                 Text("Weather data not available")
                     .font(.caption)
@@ -309,8 +321,8 @@ struct WaypointView: View {
                         height: waypoint.swellHeightDisplay,
                         direction: waypoint.swellDirectionCardinal,
                         period: "\(Int(waypoint.swellPeriod))s period",
-                        cardColor: Color.cyan.opacity(0.1),
-                        accentColor: Color.cyan
+                        cardColor: Color.blue.opacity(0.5),
+                        accentColor: Color.blue
                     )
                     
                     // Wind Wave Card
@@ -320,29 +332,75 @@ struct WaypointView: View {
                         height: waypoint.windWaveHeightDisplay,
                         direction: waypoint.windWaveDirectionCardinal,
                         period: nil,
-                        cardColor: Color.blue.opacity(0.1),
-                        accentColor: Color.blue
+                        cardColor: Color.cyan.opacity(0.5),
+                        accentColor: Color.cyan
                     )
                     
-                    // Wave Direction Compass - Integrated better
-                    VStack(spacing: 8) {
+                    // Wave Direction Compass with Navigation Data
+                    VStack(spacing: 12) {
+                        // Header
                         HStack {
                             Image(systemName: "location.north.circle")
                                 .foregroundColor(.orange)
                                 .font(.caption)
-                            Text("Wave Direction")
+                            Text("Wave Direction & Navigation")
                                 .font(.caption)
                                 .fontWeight(.medium)
                                 .foregroundColor(.primary)
                             Spacer()
                         }
                         
-                        WaveDirectionCompass(waypoint: waypoint)
-                            .frame(width: 100, height: 100)
+                        HStack(spacing: 16) {
+                            // Navigation Data Labels
+                            VStack(alignment: .leading, spacing: 8) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Course")
+                                        .font(.caption)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(.secondary)
+                                    Text("\(String(format: "%.0f", waypoint.bearingToNext))° T")
+                                        .font(.subheadline)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.primary)
+                                }
+                                
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Wave From")
+                                        .font(.caption)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(.secondary)
+                                    Text("\(String(format: "%.0f", waypoint.waveDirection))° T")
+                                        .font(.subheadline)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.primary)
+                                }
+                                
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Relative")
+                                        .font(.caption)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(.secondary)
+                                    Text("\(getRelativeWaveAngle(course: waypoint.bearingToNext, waveFrom: waypoint.waveDirection))")
+                                        .font(.subheadline)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.orange)
+                                }
+                            }
+                            
+                            Spacer()
+                            
+                            // Compass
+                            WaveDirectionCompass(waypoint: waypoint)
+                                .frame(width: 80, height: 80)
+                        }
                     }
                     .padding()
                     .background(Color.orange.opacity(0.05))
                     .cornerRadius(12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.orange.opacity(0.3), lineWidth: 1)
+                    )
                 }
             } else {
                 Text("Marine data not available")
@@ -364,6 +422,17 @@ struct WaypointView: View {
         formatter.dateStyle = .none
         formatter.timeStyle = .short
         return formatter.string(from: date)
+    }
+    
+    private func getRelativeWaveAngle(course: Double, waveFrom: Double) -> String {
+        let relativeDegrees = abs(waveFrom - course)
+        let normalizedAngle = relativeDegrees > 180 ? 360 - relativeDegrees : relativeDegrees
+        
+        // Determine port or starboard
+        let crossProduct = sin((waveFrom - course) * .pi / 180)
+        let side = crossProduct >= 0 ? "Stbd" : "Port"
+        
+        return "\(String(format: "%.0f", normalizedAngle))° \(side)"
     }
 }
 
