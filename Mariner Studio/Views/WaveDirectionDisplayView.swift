@@ -1,10 +1,15 @@
-//import SwiftUI
 
 import SwiftUI
 
 struct WaveDirectionDisplayView: View {
     @State private var vesselCourse: String = ""
     @State private var directionWavesFrom: String = ""
+    @FocusState private var isInputFocused: Bool
+    
+    // Computed property to get vessel course as Double for rotation
+    private var vesselCourseValue: Double {
+        return Double(vesselCourse) ?? 0.0
+    }
     
     var body: some View {
         VStack(spacing: 30) {
@@ -14,10 +19,11 @@ struct WaveDirectionDisplayView: View {
             ZStack {
                 // Compass markers
                 ForEach(Marker.markers(), id: \.self) { marker in
-                    CompassMarkerView(marker: marker, compassDegrees: 0)
+                    CompassMarkerView(marker: marker, compassDegrees: vesselCourseValue)
                 }
             }
             .frame(width: 300, height: 300)
+            .rotationEffect(Angle(degrees: -vesselCourseValue)) // Rotate compass ring counterclockwise
             
             // Labels and input boxes
             VStack(spacing: 20) {
@@ -30,7 +36,17 @@ struct WaveDirectionDisplayView: View {
                     TextField("Enter course", text: $vesselCourse)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
                         .frame(width: 100)
-                        .keyboardType(.numberPad)
+                        .keyboardType(.decimalPad)
+                        .focused($isInputFocused)
+                        .toolbar {
+                            ToolbarItemGroup(placement: .keyboard) {
+                                Spacer()
+                                Button("Done") {
+                                    isInputFocused = false
+                                    // Compass will automatically update due to vesselCourseValue computed property
+                                }
+                            }
+                        }
                 }
                 
                 // Direction Waves From
@@ -42,7 +58,16 @@ struct WaveDirectionDisplayView: View {
                     TextField("Enter direction", text: $directionWavesFrom)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
                         .frame(width: 100)
-                        .keyboardType(.numberPad)
+                        .keyboardType(.decimalPad)
+                        .focused($isInputFocused)
+                        .toolbar {
+                            ToolbarItemGroup(placement: .keyboard) {
+                                Spacer()
+                                Button("Done") {
+                                    isInputFocused = false
+                                }
+                            }
+                        }
                 }
             }
             .padding(.horizontal)
@@ -51,6 +76,11 @@ struct WaveDirectionDisplayView: View {
         }
         .navigationTitle("Wave Direction")
         .navigationBarTitleDisplayMode(.inline)
+        .onTapGesture {
+            // Dismiss keyboard when tapping outside text fields
+            // Compass will automatically update due to vesselCourseValue computed property
+            isInputFocused = false
+        }
     }
 }
 
@@ -129,3 +159,4 @@ struct CompassMarkerView: View {
 #Preview {
     WaveDirectionDisplayView()
 }
+
