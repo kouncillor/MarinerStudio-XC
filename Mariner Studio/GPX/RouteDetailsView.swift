@@ -1,4 +1,11 @@
 
+//
+//  RouteDetailsView.swift
+//  Mariner Studio
+//
+//  Updated with wave direction compass integration
+//
+
 import SwiftUI
 
 struct RouteDetailsView: View {
@@ -80,62 +87,57 @@ struct RouteDetailsView: View {
                                         ))
                                 }
                             }
-                            .padding(.horizontal)
+                            .padding()
                         }
-                        .onChange(of: scrollToWaypointIndex) { _, newIndex in
-                            if let index = newIndex {
-                                // Animate scroll to center the waypoint
-                                withAnimation(.easeInOut(duration: 0.8)) {
+                        .onChange(of: scrollToWaypointIndex) { targetIndex in
+                            if let index = targetIndex {
+                                withAnimation(.easeInOut(duration: 0.5)) {
                                     proxy.scrollTo(index, anchor: .center)
                                 }
                                 
-                                // Add emphasis after scroll completes
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
-                                    withAnimation(.easeInOut(duration: 0.3)) {
-                                        emphasizedWaypointIndex = index
-                                    }
-                                    
-                                    // Remove emphasis after 2.5 seconds
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-                                        withAnimation(.easeInOut(duration: 0.3)) {
-                                            emphasizedWaypointIndex = nil
-                                        }
-                                    }
+                                // Emphasize the waypoint
+                                emphasizedWaypointIndex = index
+                                
+                                // Remove emphasis after 2 seconds
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                                    emphasizedWaypointIndex = nil
                                 }
                                 
-                                // Reset scroll index
+                                // Reset scroll target
                                 scrollToWaypointIndex = nil
                             }
                         }
                     }
                 }
-                .background(Color(UIColor.systemGroupedBackground))
                 
-                // Loading and Error overlays
+                // Loading overlay
                 if viewModel.isLoading {
-                    ProgressView()
-                        .scaleEffect(1.5)
-                        .frame(width: 100, height: 100)
-                        .background(Color(UIColor.systemBackground).opacity(0.8))
-                        .cornerRadius(10)
-                }
-                
-                if !viewModel.errorMessage.isEmpty {
-                    Text(viewModel.errorMessage)
-                        .foregroundColor(.white)
-                        .padding()
-                        .background(Color.red)
-                        .cornerRadius(10)
+                    Color.black.opacity(0.3)
+                        .ignoresSafeArea()
+                    
+                    VStack {
+                        ProgressView()
+                            .scaleEffect(1.5)
+                        Text("Loading route data...")
+                            .padding(.top)
+                    }
+                    .padding()
+                    .background(Color(UIColor.systemBackground))
+                    .cornerRadius(10)
                 }
             }
         }
         .navigationTitle("Route Details")
-        .withHomeButton()
-        .navigationBarItems(trailing:
-            Button(action: {
-                viewModel.toggleSummary()
-            }) {
-                Image(systemName: viewModel.isSummaryVisible ? "chevron.up" : "chevron.down")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(
+            content: {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
+                        viewModel.toggleSummary()
+                    }) {
+                        Image(systemName: viewModel.isSummaryVisible ? "chevron.up" : "chevron.down")
+                    }
+                }
             }
         )
     }
@@ -336,8 +338,8 @@ struct WaypointView: View {
                         accentColor: Color.cyan
                     )
                     
-                    // Navigation Data (without wave direction visualization)
-                    VStack(spacing: 8) {
+                    // ENHANCED Navigation Data with Wave Direction Compass
+                    VStack(spacing: 12) {
                         // Header
                         HStack {
                             Image(systemName: "location.north.circle")
@@ -350,37 +352,57 @@ struct WaypointView: View {
                             Spacer()
                         }
                         
-                        // Navigation Data Labels
-                        VStack(alignment: .leading, spacing: 8) {
+                        // Wave Direction Compass
+                        WaveDirectionCompass(
+                            vesselCourse: waypoint.bearingToNext,
+                            waveDirection: waypoint.waveDirection,
+                            compassSize: 300
+                        )
+                        
+                        // Navigation Labels (color-coded to match arrows)
+                        VStack(alignment: .leading, spacing: 6) {
+                            // Course - ALL GREEN (matches vessel heading arrow)
                             HStack {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("Course")
-                                        .font(.caption)
-                                        .fontWeight(.medium)
-                                        .foregroundColor(.secondary)
-                                    Text("\(String(format: "%.0f", waypoint.bearingToNext))° T")
-                                        .font(.subheadline)
-                                        .fontWeight(.bold)
-                                        .foregroundColor(.primary)
-                                }
-                                
+                                Text("Course:")
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.green)
                                 Spacer()
-                                
-                                VStack(alignment: .trailing, spacing: 2) {
-                                    Text("Wave From")
-                                        .font(.caption)
-                                        .fontWeight(.medium)
-                                        .foregroundColor(.secondary)
-                                    Text("\(String(format: "%.0f", waypoint.waveDirection))° T")
-                                        .font(.subheadline)
-                                        .fontWeight(.bold)
-                                        .foregroundColor(.primary)
-                                }
+                                Text("\(String(format: "%03.0f", waypoint.bearingToNext))° T")
+                                    .font(.caption)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.green)
+                            }
+                            
+                            // Wave From - ALL BLUE (matches wave arrow)
+                            HStack {
+                                Text("Wave From:")
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.blue)
+                                Spacer()
+                                Text("\(String(format: "%03.0f", waypoint.waveDirection))° T")
+                                    .font(.caption)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.blue)
+                            }
+                            
+                            // Relative Wave - ALL ORANGE
+                            HStack {
+                                Text("Relative Wave:")
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.orange)
+                                Spacer()
+                                Text("\(String(format: "%03.0f", waypoint.relativeWaveDirection))°")
+                                    .font(.caption)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.orange)
                             }
                         }
                     }
                     .padding()
-                    .background(Color.orange.opacity(0.05))
+                    .background(Color.white)
                     .cornerRadius(12)
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
@@ -388,11 +410,40 @@ struct WaypointView: View {
                     )
                 }
             } else {
-                Text("Marine data not available")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.vertical, 5)
+                // For inland waypoints - show course only
+                VStack(spacing: 8) {
+                    // Header
+                    HStack {
+                        Image(systemName: "location.north.circle")
+                            .foregroundColor(.orange)
+                            .font(.caption)
+                        Text("Navigation Data")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundColor(.primary)
+                        Spacer()
+                    }
+                    
+                    // Course only (no wave data)
+                    HStack {
+                        Text("Course:")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundColor(.green)
+                        Spacer()
+                        Text("\(String(format: "%03.0f", waypoint.bearingToNext))° T")
+                            .font(.caption)
+                            .fontWeight(.bold)
+                            .foregroundColor(.green)
+                    }
+                }
+                .padding()
+                .background(Color.white)
+                .cornerRadius(12)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.orange.opacity(0.3), lineWidth: 1)
+                )
             }
         }
         .padding()

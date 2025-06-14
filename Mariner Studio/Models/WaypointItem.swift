@@ -1,10 +1,10 @@
+
 //
 //  WaypointItem.swift
 //  Mariner Studio
 //
 //  Created by Timothy Russell on 5/10/25.
 //
-
 
 import Foundation
 import Combine
@@ -48,7 +48,7 @@ class WaypointItem: ObservableObject, Identifiable {
     @Published var windWaveDirection: Double = 0.0
     @Published var relativeWaveDirection: Double = 0.0
     
-    // Display formatted properties
+    // MARK: - Display Formatted Properties
     var courseDisplay: String { return "\(String(format: "%.0f", bearingToNext))°" }
     var waveDisplay: String { return "\(String(format: "%.0f", waveDirection))°" }
     var relativeWaveDisplay: String { return "\(String(format: "%.0f", relativeWaveDirection))°" }
@@ -62,27 +62,10 @@ class WaypointItem: ObservableObject, Identifiable {
     var windWaveHeightDisplay: String { return "\(String(format: "%.1f", windWaveHeight)) ft" }
     var visibilityDisplay: String { return VisibilityHelper.formatVisibilityWithUnits(visibility) }
     
+    // Cardinal direction properties (PRESERVE - mariners need these)
     var waveDirectionCardinal: String { return getCardinalDirection(waveDirection) }
     var swellDirectionCardinal: String { return getCardinalDirection(swellDirection) }
     var windWaveDirectionCardinal: String { return getCardinalDirection(windWaveDirection) }
-    
-    // Display image properties for wave direction
-    @Published var displayImageOne: Bool = false
-    @Published var displayImageTwo: Bool = false
-    @Published var displayImageThree: Bool = false
-    @Published var displayImageFour: Bool = false
-    @Published var displayImageFive: Bool = false
-    @Published var displayImageSix: Bool = false
-    @Published var displayImageSeven: Bool = false
-    @Published var displayImageEight: Bool = false
-    @Published var displayImageNine: Bool = false
-    @Published var displayImageTen: Bool = false
-    @Published var displayImageEleven: Bool = false
-    @Published var displayImageTwelve: Bool = false
-    @Published var displayImageThirteen: Bool = false
-    @Published var displayImageFourteen: Bool = false
-    @Published var displayImageFifteen: Bool = false
-    @Published var displayImageSixteen: Bool = false
     
     // MARK: - Methods
     
@@ -107,74 +90,9 @@ class WaypointItem: ObservableObject, Identifiable {
         
         // Calculate relative wave direction
         relativeWaveDirection = normalizeAngle(waveDirection - courseToUse)
-        
-        // Update the wave direction arrow display
-        updateRelativeWaveArrowImage()
     }
     
-    func updateRelativeWaveArrowImage() {
-        // Reset all flags
-        displayImageOne = false
-        displayImageTwo = false
-        displayImageThree = false
-        displayImageFour = false
-        displayImageFive = false
-        displayImageSix = false
-        displayImageSeven = false
-        displayImageEight = false
-        displayImageNine = false
-        displayImageTen = false
-        displayImageEleven = false
-        displayImageTwelve = false
-        displayImageThirteen = false
-        displayImageFourteen = false
-        displayImageFifteen = false
-        displayImageSixteen = false
-        
-        // First ensure angle is in 0-360 range
-        let normalizedDirection = ((relativeWaveDirection.truncatingRemainder(dividingBy: 360)) + 360).truncatingRemainder(dividingBy: 360)
-        
-        // Round to nearest 22.5 degrees since we have 16 possible directions (360/16 = 22.5)
-        let sector = Int(round(normalizedDirection / 22.5))
-        
-        // Set only the appropriate flag
-        switch sector {
-        case 0, 16:
-            displayImageOne = true
-        case 1:
-            displayImageTwo = true
-        case 2:
-            displayImageThree = true
-        case 3:
-            displayImageFour = true
-        case 4:
-            displayImageFive = true
-        case 5:
-            displayImageSix = true
-        case 6:
-            displayImageSeven = true
-        case 7:
-            displayImageEight = true
-        case 8:
-            displayImageNine = true
-        case 9:
-            displayImageTen = true
-        case 10:
-            displayImageEleven = true
-        case 11:
-            displayImageTwelve = true
-        case 12:
-            displayImageThirteen = true
-        case 13:
-            displayImageFourteen = true
-        case 14:
-            displayImageFifteen = true
-        case 15:
-            displayImageSixteen = true
-        default:
-            displayImageOne = true
-        }
-    }
+    // MARK: - Private Helper Methods
     
     private func normalizeAngle(_ angle: Double) -> Double {
         var normalizedAngle = angle.truncatingRemainder(dividingBy: 360)
