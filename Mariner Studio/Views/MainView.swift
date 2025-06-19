@@ -1,13 +1,16 @@
 
 import SwiftUI
-import RevenueCat // Ensure RevenueCat is imported
+import RevenueCat
 import RevenueCatUI
 
 struct MainView: View {
+    // 1. ACCESS THE VIEWMODEL
+    // We get the authViewModel from the environment to call signOut()
+    @EnvironmentObject var authViewModel: AuthenticationViewModel
+    
     @EnvironmentObject var serviceProvider: ServiceProvider
     @State private var navigationPath = NavigationPath()
     
-    // Parameter to indicate if navigation should be cleared
     let shouldClearNavigation: Bool
     
     init(shouldClearNavigation: Bool = false) {
@@ -23,6 +26,8 @@ struct MainView: View {
         NavigationStack(path: $navigationPath) {
             ScrollView {
                 LazyVGrid(columns: columns, spacing: 12) {
+                    // All of your NavigationLinks (MAP, WEATHER, etc.) go here
+                    // ...
                     NavigationLink(destination: MapClusteringView()) {
                         NavigationButtonContent(
                             icon: "earthsixfour",
@@ -37,35 +42,32 @@ struct MainView: View {
                         )
                     }
 
-                    // TIDES - Icon "water.waves", Color Green
                     NavigationLink(destination: TideMenuView()) {
                         NavigationButtonContent(
                             icon: "water.waves",
                             title: "TIDES",
                             isSystemIcon: true,
-                            iconColor: .green // Set Tides icon to Green
+                            iconColor: .green
                         )
                     }
                     
-                    // CURRENTS - Icon "arrow.right.arrow.left", Color Red
                     NavigationLink(destination: CurrentMenuView()) {
                         NavigationButtonContent(
-                            icon: "arrow.right.arrow.left", // New SF Symbol for Currents
+                            icon: "arrow.right.arrow.left",
                             title: "CURRENTS",
                             isSystemIcon: true,
-                            iconColor: .red // Set Currents icon to Red
+                            iconColor: .red
                         )
                     }
-
-                    // WAVE DIRECTION DISPLAY - New navigation item
-//                    NavigationLink(destination: WaveDirectionDisplayView()) {
-//                        NavigationButtonContent(
-//                            icon: "arrow.up.down.circle.fill",
-//                            title: "WAVE DIRECTION",
-//                            isSystemIcon: true,
-//                            iconColor: .blue
-//                        )
-//                    }
+                    
+                    NavigationLink(destination: WaveDirectionDisplayView()) {
+                        NavigationButtonContent(
+                            icon: "arrow.up.down.circle.fill",
+                            title: "WAVE DIRECTION",
+                            isSystemIcon: true,
+                            iconColor: .blue
+                        )
+                    }
 
                     NavigationLink(destination: NavUnitMenuView()) {
                         NavigationButtonContent(
@@ -99,68 +101,29 @@ struct MainView: View {
                         )
                     }
 
-                    // ROUTES button - now navigates to RouteMenuView
                     NavigationLink(destination: RouteMenuView()) {
                         NavigationButtonContent(
                             icon: "greencompasssixseven",
                             title: "ROUTES"
                         )
                     }
-                    
-                    // HIDDEN: CREW, NAVIGATION FLOW, and NAUTICAL MAP buttons
-                    // These have been removed as requested
-                    
-                    /*
-                    // CREW button - HIDDEN
-                    NavigationLink(destination: CrewManagementView()) {
-                        NavigationButtonContent(
-                            icon: "person.3.fill",
-                            title: "CREW",
-                            isSystemIcon: true,
-                            iconColor: .orange
-                        )
-                    }
-                    
-                    // Navigation Flow - HIDDEN
-                    NavigationLink(destination: NavigationFlowView()) {
-                        VStack(alignment: .center, spacing: 8) {
-                            Image(systemName: "arrow.triangle.branch")
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .frame(width: 60, height: 60)
-                                .foregroundColor(.blue)
-
-                            VStack(alignment: .center) {
-                                Text("Navigation Flow")
-                                    .font(.headline)
-                                    .multilineTextAlignment(.center)
-                            }
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(10)
-                        .background(
-                            RoundedRectangle(cornerRadius: 10)
-                                .strokeBorder(Color(UIColor.lightGray), lineWidth: 1)
-                                .background(RoundedRectangle(cornerRadius: 10).fill(Color.white))
-                        )
-                        .frame(minHeight: 120)
-                    }
-                    
-                    // NAUTICAL MAP button - HIDDEN
-                    NavigationLink(destination: NauticalMapView()) {
-                        NavigationButtonContent(
-                            icon: "map.fill",
-                            title: "NAUTICAL MAP",
-                            isSystemIcon: true,
-                            iconColor: .blue
-                        )
-                    }
-                    */
                 }
                 .padding()
             }
             .navigationTitle("Mariner Studio")
             .toolbar {
+                // 2. ADD THE SIGN OUT BUTTON
+                // This button will appear in the top-left for development builds.
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Sign Out (Dev)") {
+                        Task {
+                            await authViewModel.signOut()
+                        }
+                    }
+                    .tint(.red)
+                }
+
+                // This is your existing home button
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(action: navigateToHome) {
                         Image(systemName: "house.fill")
@@ -168,12 +131,9 @@ struct MainView: View {
                     }
                 }
             }
-            .presentPaywallIfNeeded(
-                requiredEntitlementIdentifier: "Pro",
-                presentationMode: .fullScreen
-            )
+            // 3. REMOVE THE PAYWALL
+            // The .presentPaywallIfNeeded modifier has been deleted from here.
             .onAppear {
-                // Clear navigation if we arrived here via home button
                 if shouldClearNavigation {
                     clearNavigationStack()
                 }
@@ -181,53 +141,49 @@ struct MainView: View {
         }
     }
     
-    // MARK: - Navigation Actions
-    
-    private func clearNavigationStack() {
-        // Small delay to ensure view is fully loaded
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            // Reset the navigation path
-            navigationPath = NavigationPath()
-            
-            // Try to clear the broader navigation context
-            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-               let window = windowScene.windows.first,
-               let rootViewController = window.rootViewController {
-                
-                clearNavigationHierarchy(from: rootViewController)
-            }
-        }
-    }
-    
-    private func clearNavigationHierarchy(from viewController: UIViewController) {
-        // If it's a navigation controller, pop to root
-        if let navController = viewController as? UINavigationController {
-            navController.popToRootViewController(animated: false)
-        }
-        
-        // Check for tab bar controllers
-        if let tabBarController = viewController as? UITabBarController,
-           let selectedNavController = tabBarController.selectedViewController as? UINavigationController {
-            selectedNavController.popToRootViewController(animated: false)
-        }
-        
-        // Recursively check child view controllers
-        for child in viewController.children {
-            clearNavigationHierarchy(from: child)
-        }
-    }
-    
     private func navigateToHome() {
-        // Provide haptic feedback
-        let impactGenerator = UIImpactFeedbackGenerator(style: .medium)
-        impactGenerator.prepare()
-        impactGenerator.impactOccurred()
-        
-        // Reset the navigation path to go back to root
         navigationPath = NavigationPath()
     }
+    
+    // The rest of your functions (clearNavigationStack, etc.) and helper structs
+    // (NavigationButton, NavigationButtonContent) remain unchanged below.
+    
+    private func clearNavigationStack() {
+         // Small delay to ensure view is fully loaded
+         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+             // Reset the navigation path
+             navigationPath = NavigationPath()
+            
+             // Try to clear the broader navigation context
+             if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                let window = windowScene.windows.first,
+                let rootViewController = window.rootViewController {
+                
+                 clearNavigationHierarchy(from: rootViewController)
+             }
+         }
+     }
+    
+     private func clearNavigationHierarchy(from viewController: UIViewController) {
+         // If it's a navigation controller, pop to root
+         if let navController = viewController as? UINavigationController {
+             navController.popToRootViewController(animated: false)
+         }
+        
+         // Check for tab bar controllers
+         if let tabBarController = viewController as? UITabBarController,
+            let selectedNavController = tabBarController.selectedViewController as? UINavigationController {
+             selectedNavController.popToRootViewController(animated: false)
+         }
+        
+         // Recursively check child view controllers
+         for child in viewController.children {
+             clearNavigationHierarchy(from: child)
+         }
+     }
 }
 
+// These helper structs remain the same
 struct NavigationButton: View {
     let icon: String
     let title: String
@@ -295,3 +251,10 @@ struct NavigationButtonContent: View {
         .frame(minHeight: 120)
     }
 }
+
+
+
+
+
+
+

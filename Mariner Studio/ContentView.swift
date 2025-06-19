@@ -1,24 +1,24 @@
-//
-//  ContentView.swift
-//  Mariner Studio
-//
-//  Created by Timothy Russell on 4/25/25.
-//
-
 import SwiftUI
+import RevenueCat
 
 struct ContentView: View {
+    @StateObject private var authViewModel = AuthenticationViewModel()
+
     var body: some View {
         VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+            if authViewModel.isAuthenticated {
+                // User is authenticated, show the MainView with the paywall modifier.
+                MainView()
+                    .presentPaywallIfNeeded(
+                        requiredEntitlementIdentifier: "Pro"
+                    ) { customerInfo in
+                        print("Purchase successful! User now has Pro access.")
+                    }
+            } else {
+                // User is not authenticated, show the AuthenticationView.
+                AuthenticationView()
+            }
         }
-        .padding()
+        .environmentObject(authViewModel) // Make ViewModel available to child views
     }
-}
-
-#Preview {
-    ContentView()
 }
