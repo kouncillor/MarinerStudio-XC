@@ -1,3 +1,4 @@
+
 import SwiftUI
 
 @main
@@ -9,6 +10,12 @@ struct Mariner_StudioApp: App {
     // Create a shared service provider at app startup
     @StateObject private var serviceProvider = ServiceProvider()
     
+    init() {
+        // Initialize Supabase manager early
+        _ = SupabaseManager.shared
+        SupabaseManager.shared.enableVerboseLogging()
+    }
+    
     var body: some Scene {
         WindowGroup {
             ContentView()
@@ -18,5 +25,3 @@ struct Mariner_StudioApp: App {
         }
     }
 }
-
-
