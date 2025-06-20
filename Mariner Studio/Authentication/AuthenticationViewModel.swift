@@ -5,10 +5,19 @@ import RevenueCat
 import Combine
 
 // This should be defined globally where it's accessible, like in your App struct.
-let supabase = SupabaseClient(
-  supabaseURL: URL(string: "https://lgdsvefqqorvnvkiobth.supabase.co")!,
-  supabaseKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxnZHN2ZWZxcW9ydm52a2lvYnRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAwOTQ1MjQsImV4cCI6MjA2NTY3MDUyNH0.rNc5QTtV4IQK5n-HvCEpOZDpVCwPpmKkjYVBEHOqnVI"
-)
+//let supabase = SupabaseClient(
+//  supabaseURL: URL(string: "https://lgdsvefqqorvnvkiobth.supabase.co")!,
+//  supabaseKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxnZHN2ZWZxcW9ydm52a2lvYnRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAwOTQ1MjQsImV4cCI6MjA2NTY3MDUyNH0.rNc5QTtV4IQK5n-HvCEpOZDpVCwPpmKkjYVBEHOqnVI"
+//)
+
+
+
+
+let GLOBAL_SUPABASE_CLIENT = SupabaseClient( supabaseURL: URL(string: "https://lgdsvefqqorvnvkiobth.supabase.co")!,
+                                             supabaseKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxnZHN2ZWZxcW9ydm52a2lvYnRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAwOTQ1MjQsImV4cCI6MjA2NTY3MDUyNH0.rNc5QTtV4IQK5n-HvCEpOZDpVCwPpmKkjYVBEHOqnVI")
+
+
+
 
 @MainActor
 class AuthenticationViewModel: ObservableObject {
@@ -24,7 +33,7 @@ class AuthenticationViewModel: ObservableObject {
 
     func checkSession() async {
         do {
-            let session = try await supabase.auth.session
+            let session = try await GLOBAL_SUPABASE_CLIENT.auth.session
             self.isAuthenticated = true
             print("User is already authenticated.")
             await logInToRevenueCat(userId: session.user.id.uuidString)
@@ -38,7 +47,7 @@ class AuthenticationViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
         do {
-            let authResponse = try await supabase.auth.signUp(email: email, password: password)
+            let authResponse = try await GLOBAL_SUPABASE_CLIENT.auth.signUp(email: email, password: password)
             await logInToRevenueCat(userId: authResponse.user.id.uuidString)
             self.isAuthenticated = true
         } catch {
@@ -51,7 +60,7 @@ class AuthenticationViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
         do {
-            let authResponse = try await supabase.auth.signIn(email: email, password: password)
+            let authResponse = try await GLOBAL_SUPABASE_CLIENT.auth.signIn(email: email, password: password)
             await logInToRevenueCat(userId: authResponse.user.id.uuidString)
             self.isAuthenticated = true
         } catch {
@@ -62,7 +71,7 @@ class AuthenticationViewModel: ObservableObject {
 
     func signOut() async {
         do {
-            try await supabase.auth.signOut()
+            try await GLOBAL_SUPABASE_CLIENT.auth.signOut()
             try await Purchases.shared.logOut()
             self.isAuthenticated = false
         } catch {

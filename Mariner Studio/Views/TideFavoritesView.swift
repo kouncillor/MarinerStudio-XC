@@ -1,10 +1,10 @@
-
 import SwiftUI
 
 struct TideFavoritesView: View {
     @StateObject private var viewModel = TideFavoritesViewModel()
     @EnvironmentObject var serviceProvider: ServiceProvider
     @Environment(\.colorScheme) var colorScheme
+    @State private var isSyncing = false
     
     var body: some View {
         Group {
@@ -60,7 +60,6 @@ struct TideFavoritesView: View {
             } else {
                 List {
                     ForEach(viewModel.favorites) { station in
-                        // New NavigationLink style that doesn't use isActive or destination
                         NavigationLink {
                             TidalHeightPredictionView(
                                 stationId: station.id,
@@ -81,10 +80,20 @@ struct TideFavoritesView: View {
         }
         .navigationTitle("Favorite Tides")
         .withHomeButton()
-        
-        
-        
-        
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: {
+                    syncFavorites()
+                }) {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.blue)
+                        .rotationEffect(.degrees(isSyncing ? 360 : 0))
+                        .animation(isSyncing ? Animation.linear(duration: 1).repeatForever(autoreverses: false) : .default, value: isSyncing)
+                }
+                .disabled(isSyncing)
+            }
+        }
         .onAppear {
             viewModel.initialize(
                 tideStationService: serviceProvider.tideStationService,
@@ -95,6 +104,26 @@ struct TideFavoritesView: View {
         }
         .onDisappear {
             viewModel.cleanup()
+        }
+    }
+    
+    private func syncFavorites() {
+        guard !isSyncing else { return }
+        
+        withAnimation {
+            isSyncing = true
+        }
+        
+        // Call the ViewModel's sync method
+        Task {
+            await viewModel.syncWithSupabase()
+            
+            // Stop the animation after sync completes
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                withAnimation {
+                    isSyncing = false
+                }
+            }
         }
     }
 }
