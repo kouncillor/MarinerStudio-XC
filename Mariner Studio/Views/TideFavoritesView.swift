@@ -110,21 +110,7 @@ struct TideFavoritesView: View {
     private func syncFavorites() {
         guard !isSyncing else { return }
         
-        withAnimation {
-            isSyncing = true
-        }
-        
-        // Call the ViewModel's sync method
-        Task {
-            await viewModel.syncWithSupabase()
-            
-            // Stop the animation after sync completes
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                withAnimation {
-                    isSyncing = false
-                }
-            }
-        }
+    
     }
 }
 
