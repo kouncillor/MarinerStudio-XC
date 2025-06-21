@@ -1,3 +1,4 @@
+
 import Foundation
 import CoreLocation
 import SwiftUI
@@ -50,82 +51,71 @@ class TidalHeightStationsViewModel: ObservableObject {
             isLoading = true
             errorMessage = ""
             print("⏰ ViewModel: Checking location in loadStations (MainActor block) at \(Date()). Current value: \(locationService.currentLocation?.description ?? "nil")")
-            if let location = locationService.currentLocation {
-                 self.userLatitude = String(format: "%.6f", location.coordinate.latitude)
-                 self.userLongitude = String(format: "%.6f", location.coordinate.longitude)
-             } else {
-                 self.userLatitude = "Unknown"
-                 self.userLongitude = "Unknown"
-             }
         }
 
         do {
-            print("⏰ ViewModel: Starting API call for stations at \(Date())")
             let response = try await tidalHeightService.getTidalHeightStations()
-            print("⏰ ViewModel: Finished API call for stations at \(Date())")
+            print("🌐 ViewModel: API returned \(response.stations.count) stations at \(Date())")
 
-            var stations = response.stations
+            let stationsWithDistance = await processStationsWithDistance(response.stations)
+            print("📍 ViewModel: Processed stations with distance and favorites at \(Date())")
 
-            print("⏰ ViewModel: Starting favorite checks at \(Date())")
-            await withTaskGroup(of: (String, Bool).self) { group in
-                for station in stations {
-                    group.addTask {
-                        let isFav = await self.tideStationService.isTideStationFavorite(id: station.id)
-                        return (station.id, isFav)
-                    }
-                }
-                var favoriteStatuses: [String: Bool] = [:]
-                for await (id, isFav) in group {
-                    favoriteStatuses[id] = isFav
-                }
-                for i in 0..<stations.count {
-                    stations[i].isFavorite = favoriteStatuses[stations[i].id] ?? false
-                }
-            }
-             print("⏰ ViewModel: Finished favorite checks at \(Date())")
-
-            print("⏰ ViewModel: Checking location for distance calculation at \(Date()). Current value: \(locationService.currentLocation?.description ?? "nil")")
-            let currentLocationForDistance = locationService.currentLocation
-            let stationsWithDistance = stations.map { station in
-                return StationWithDistance<TidalHeightStation>.create(
-                    station: station,
-                    userLocation: currentLocationForDistance
-                )
-            }
-
-            print("⏰ ViewModel: Updating UI state (allStations, filterStations, isLoading) at \(Date())")
             await MainActor.run {
-                allStations = stationsWithDistance
-                filterStations()
-                isLoading = false
-                 print("⏰ ViewModel: UI state update complete at \(Date())")
+                self.allStations = stationsWithDistance
+                self.isLoading = false
+                print("🏁 ViewModel: Updated allStations and set isLoading=false on main thread at \(Date())")
             }
+
+            filterStations()
         } catch {
-             print("❌ ViewModel: Error in loadStations at \(Date()): \(error.localizedDescription)")
+            print("❌ ViewModel: Error loading stations at \(Date()): \(error)")
             await MainActor.run {
-                errorMessage = "Failed to load stations: \(error.localizedDescription)"
-                allStations = []
-                self.stations = []
-                totalStations = 0
-                isLoading = false
+                self.errorMessage = "Failed to load stations: \(error.localizedDescription)"
+                self.isLoading = false
             }
         }
-        print("⏰ ViewModel: loadStations() finished at \(Date())")
     }
 
-    func refreshStations() async {
-         await MainActor.run {
-              self.stations = []
-              self.allStations = []
-              self.totalStations = 0
-         }
-         await loadStations()
-     }
+    // MARK: - Private Helper Methods
+    private func processStationsWithDistance(_ stations: [TidalHeightStation]) async -> [StationWithDistance<TidalHeightStation>] {
+        let userLocation = locationService.currentLocation
+
+        await MainActor.run {
+            if let location = userLocation {
+                self.userLatitude = String(format: "%.6f", location.coordinate.latitude)
+                self.userLongitude = String(format: "%.6f", location.coordinate.longitude)
+            }
+        }
+
+        var stationsWithDistance: [StationWithDistance<TidalHeightStation>] = []
+
+        for station in stations {
+            let distance: Double
+            if let userLoc = userLocation,
+               let stationLat = station.latitude,
+               let stationLon = station.longitude {
+                let stationLocation = CLLocation(latitude: stationLat, longitude: stationLon)
+                distance = userLoc.distance(from: stationLocation)
+            } else {
+                distance = Double.greatestFiniteMagnitude
+            }
+
+            let isFavorite = await tideStationService.isTideStationFavorite(id: station.id)
+            var updatedStation = station
+            updatedStation.isFavorite = isFavorite
+
+            stationsWithDistance.append(StationWithDistance(
+                station: updatedStation,
+                distanceFromUser: distance
+            ))
+        }
+
+        return stationsWithDistance
+    }
 
      func filterStations() {
-          print("🔄 ViewModel: filterStations() called at \(Date())")
           let filtered = allStations.filter { station in
-              let matchesFavorite = !showOnlyFavorites || station.station.isFavorite
+              let matchesFavorite = !showOnlyFavorites || (station.station.isFavorite ?? false)
               let matchesSearch = searchText.isEmpty ||
                   station.station.name.localizedCaseInsensitiveContains(searchText) ||
                   (station.station.state?.localizedCaseInsensitiveContains(searchText) ?? false) ||
@@ -167,7 +157,11 @@ class TidalHeightStationsViewModel: ObservableObject {
      }
 
      func toggleStationFavorite(stationId: String) async {
+         print("⭐ ViewModel: Starting toggle for station \(stationId)")
+         
          let newFavoriteStatus = await tideStationService.toggleTideStationFavorite(id: stationId)
+         
+         print("⭐ ViewModel: Toggle completed for station \(stationId), new status: \(newFavoriteStatus)")
 
          if let index = allStations.firstIndex(where: { $0.station.id == stationId }) {
              var updatedStation = allStations[index].station
@@ -176,7 +170,45 @@ class TidalHeightStationsViewModel: ObservableObject {
                  station: updatedStation,
                  distanceFromUser: allStations[index].distanceFromUser
              )
-             filterStations()
+             
+             await MainActor.run {
+                 filterStations()
+             }
+             
+             print("⭐ ViewModel: Updated station \(stationId) in allStations array")
+         }
+         
+         // NEW: Auto-sync after favorite toggle
+         Task {
+             await performAutoSyncAfterFavoriteToggle()
          }
      }
+}
+
+// MARK: - Sync Integration Extension
+extension TidalHeightStationsViewModel {
+    
+    // MARK: - Sync Integration Methods
+    
+    /// Auto-sync after user toggles a favorite
+    func performAutoSyncAfterFavoriteToggle() async {
+        // Wait a short delay to avoid multiple rapid syncs
+        try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+        
+        print("🔄 STATIONS VIEWMODEL: Performing auto-sync after favorite toggle")
+        
+        let result = await TideStationSyncService.shared.syncTideStationFavorites()
+        
+        switch result {
+        case .success(let stats):
+            print("✅ STATIONS VIEWMODEL: Auto-sync completed successfully")
+            print("✅ AUTO-SYNC STATS: \(stats.totalOperations) operations in \(String(format: "%.3f", stats.duration))s")
+            
+        case .failure(let error):
+            print("❌ STATIONS VIEWMODEL: Auto-sync failed - \(error.localizedDescription)")
+            
+        case .partialSuccess(let stats, let errors):
+            print("⚠️ STATIONS VIEWMODEL: Auto-sync partial success - \(stats.totalOperations) operations, \(errors.count) errors")
+        }
+    }
 }

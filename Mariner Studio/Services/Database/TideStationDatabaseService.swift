@@ -1,3 +1,4 @@
+
 import Foundation
 #if canImport(SQLite)
 import SQLite
@@ -145,6 +146,72 @@ class TideStationDatabaseService {
         } catch {
        //     print("❌ TOGGLE ERROR: \(error.localizedDescription)")
        //     print("❌ TOGGLE ERROR DETAILS: \(error)")
+            return false
+        }
+    }
+    
+    // MARK: - Sync Support Methods (Step 3)
+    
+    /// Get all station IDs that are marked as favorites (for sync operations)
+    func getAllFavoriteStationIds() async -> Set<String> {
+        do {
+            let db = try databaseCore.ensureConnection()
+            
+            var favoriteIds = Set<String>()
+            
+            for favorite in try db.prepare(tideStationFavorites.filter(colIsFavorite == true)) {
+                favoriteIds.insert(favorite[colStationId])
+            }
+            
+            print("🌊 SYNC SUPPORT: Found \(favoriteIds.count) local favorites")
+            return favoriteIds
+            
+        } catch {
+            print("❌ SYNC SUPPORT ERROR: \(error.localizedDescription)")
+            return Set<String>()
+        }
+    }
+    
+    /// Get all favorite stations with their status (for detailed sync operations)
+    func getAllFavoriteStations() async -> [(stationId: String, isFavorite: Bool)] {
+        do {
+            let db = try databaseCore.ensureConnection()
+            
+            var stations: [(String, Bool)] = []
+            
+            for favorite in try db.prepare(tideStationFavorites) {
+                stations.append((favorite[colStationId], favorite[colIsFavorite]))
+            }
+            
+            print("🌊 SYNC SUPPORT: Found \(stations.count) total station records")
+            return stations
+            
+        } catch {
+            print("❌ SYNC SUPPORT ERROR: \(error.localizedDescription)")
+            return []
+        }
+    }
+    
+    /// Set favorite status without toggling (for sync operations)
+    func setTideStationFavorite(id: String, isFavorite: Bool) async -> Bool {
+        do {
+            let db = try databaseCore.ensureConnection()
+            
+            print("🌊 SYNC SET: Setting station \(id) to favorite=\(isFavorite)")
+            
+            try db.run(tideStationFavorites.insert(or: .replace,
+                colStationId <- id,
+                colIsFavorite <- isFavorite
+            ))
+            
+            // Force a disk flush after sync operations
+            try await databaseCore.flushDatabaseAsync()
+            
+            print("🌊 SYNC SET: Successfully set station \(id)")
+            return true
+            
+        } catch {
+            print("❌ SYNC SET ERROR: \(error.localizedDescription)")
             return false
         }
     }

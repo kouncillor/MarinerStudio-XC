@@ -107,7 +107,7 @@ struct TidalHeightStationsView: View {
         }
         .listStyle(PlainListStyle())
         .refreshable {
-            await viewModel.refreshStations()
+            await viewModel.loadStations()
         }
     }
 }

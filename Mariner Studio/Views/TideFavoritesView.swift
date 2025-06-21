@@ -1,10 +1,10 @@
+
 import SwiftUI
 
 struct TideFavoritesView: View {
     @StateObject private var viewModel = TideFavoritesViewModel()
     @EnvironmentObject var serviceProvider: ServiceProvider
     @Environment(\.colorScheme) var colorScheme
-    @State private var isSyncing = false
     
     var body: some View {
         Group {
@@ -58,23 +58,30 @@ struct TideFavoritesView: View {
                 .padding()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                List {
-                    ForEach(viewModel.favorites) { station in
-                        NavigationLink {
-                            TidalHeightPredictionView(
-                                stationId: station.id,
-                                stationName: station.name,
-                                tideStationService: serviceProvider.tideStationService
-                            )
-                        } label: {
-                            FavoriteStationRow(station: station)
+                VStack(spacing: 0) {
+                    // NEW: Sync Status Bar
+                    SyncStatusBar(viewModel: viewModel)
+                    
+                    List {
+                        ForEach(viewModel.favorites) { station in
+                            NavigationLink {
+                                TidalHeightPredictionView(
+                                    stationId: station.id,
+                                    stationName: station.name,
+                                    tideStationService: serviceProvider.tideStationService
+                                )
+                            } label: {
+                                FavoriteStationRow(station: station)
+                            }
                         }
+                        .onDelete(perform: viewModel.removeFavorite)
                     }
-                    .onDelete(perform: viewModel.removeFavorite)
-                }
-                .listStyle(InsetGroupedListStyle())
-                .refreshable {
-                    viewModel.loadFavorites()
+                    .listStyle(InsetGroupedListStyle())
+                    .refreshable {
+                        viewModel.loadFavorites()
+                        // Also trigger sync on pull-to-refresh
+                        await viewModel.syncWithCloud()
+                    }
                 }
             }
         }
@@ -83,15 +90,22 @@ struct TideFavoritesView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button(action: {
-                    syncFavorites()
+                    Task {
+                        await viewModel.syncWithCloud()
+                    }
                 }) {
-                    Image(systemName: "arrow.clockwise")
+                    Image(systemName: viewModel.syncStatusIcon)
                         .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.blue)
-                        .rotationEffect(.degrees(isSyncing ? 360 : 0))
-                        .animation(isSyncing ? Animation.linear(duration: 1).repeatForever(autoreverses: false) : .default, value: isSyncing)
+                        .foregroundColor(viewModel.syncStatusColor)
+                        .rotationEffect(.degrees(viewModel.isSyncing ? 360 : 0))
+                        .animation(
+                            viewModel.isSyncing ?
+                            Animation.linear(duration: 1).repeatForever(autoreverses: false) :
+                            .default,
+                            value: viewModel.isSyncing
+                        )
                 }
-                .disabled(isSyncing)
+                .disabled(viewModel.isSyncing)
             }
         }
         .onAppear {
@@ -101,16 +115,110 @@ struct TideFavoritesView: View {
                 locationService: serviceProvider.locationService
             )
             viewModel.loadFavorites()
+            
+            // Perform auto-sync when view appears
+            Task {
+                await viewModel.performAutoSyncIfNeeded()
+            }
         }
         .onDisappear {
             viewModel.cleanup()
         }
     }
+}
+
+// MARK: - NEW: Sync Status Bar Component
+struct SyncStatusBar: View {
+    @ObservedObject var viewModel: TideFavoritesViewModel
     
-    private func syncFavorites() {
-        guard !isSyncing else { return }
-        
-    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Sync status row
+            HStack(spacing: 12) {
+                Image(systemName: viewModel.syncStatusIcon)
+                    .foregroundColor(viewModel.syncStatusColor)
+                    .font(.caption)
+                    .frame(width: 16)
+                
+                Text(viewModel.syncStatusText)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                
+                Spacer()
+                
+                if viewModel.isSyncing {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                } else {
+                    Button(action: {
+                        Task {
+                            await viewModel.syncWithCloud()
+                        }
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.clockwise")
+                                .font(.caption)
+                            Text("Sync")
+                                .font(.caption)
+                        }
+                        .foregroundColor(.blue)
+                    }
+                    .disabled(viewModel.isSyncing)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(Color(.systemGray6))
+            
+            // Success message
+            if let successMessage = viewModel.syncSuccessMessage {
+                HStack {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                        .font(.caption)
+                    
+                    Text(successMessage)
+                        .font(.caption)
+                        .foregroundColor(.green)
+                    
+                    Spacer()
+                    
+                    Button("Dismiss") {
+                        viewModel.syncSuccessMessage = nil
+                    }
+                    .font(.caption)
+                    .foregroundColor(.blue)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color.green.opacity(0.1))
+            }
+            
+            // Error message
+            if let errorMessage = viewModel.syncErrorMessage {
+                HStack {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(.orange)
+                        .font(.caption)
+                    
+                    Text(errorMessage)
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                        .multilineTextAlignment(.leading)
+                    
+                    Spacer()
+                    
+                    Button("Dismiss") {
+                        viewModel.syncErrorMessage = nil
+                    }
+                    .font(.caption)
+                    .foregroundColor(.blue)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color.orange.opacity(0.1))
+            }
+        }
     }
 }
 
@@ -151,7 +259,6 @@ struct FavoriteStationRow: View {
             }
             
             Spacer()
-            
         }
         .padding(.vertical, 8)
     }
