@@ -156,33 +156,54 @@ class TidalHeightStationsViewModel: ObservableObject {
          filterStations()
      }
 
-     func toggleStationFavorite(stationId: String) async {
-         print("⭐ ViewModel: Starting toggle for station \(stationId)")
-         
-         let newFavoriteStatus = await tideStationService.toggleTideStationFavorite(id: stationId)
-         
-         print("⭐ ViewModel: Toggle completed for station \(stationId), new status: \(newFavoriteStatus)")
+    func toggleStationFavorite(stationId: String) async {
+        print("⭐ ViewModel: Starting toggle for station \(stationId)")
+        
+        // Find the station object first to get the name and coordinates
+        guard let stationWithDistance = allStations.first(where: { $0.station.id == stationId }) else {
+            print("❌ ViewModel: Could not find station \(stationId) in allStations")
+            return
+        }
+        
+        let currentStation = stationWithDistance.station
+        
+        let newFavoriteStatus = await tideStationService.toggleTideStationFavorite(
+            id: stationId,
+            name: currentStation.name,
+            latitude: currentStation.latitude,
+            longitude: currentStation.longitude
+        )
+        
+        print("⭐ ViewModel: Toggle completed for station \(stationId), new status: \(newFavoriteStatus)")
 
-         if let index = allStations.firstIndex(where: { $0.station.id == stationId }) {
-             var updatedStation = allStations[index].station
-             updatedStation.isFavorite = newFavoriteStatus
-             allStations[index] = StationWithDistance(
-                 station: updatedStation,
-                 distanceFromUser: allStations[index].distanceFromUser
-             )
-             
-             await MainActor.run {
-                 filterStations()
-             }
-             
-             print("⭐ ViewModel: Updated station \(stationId) in allStations array")
-         }
-         
-         // Sync after favorite toggle (no delay, no throttling)
-         Task {
-             await performSyncAfterFavoriteToggle()
-         }
-     }
+        if let index = allStations.firstIndex(where: { $0.station.id == stationId }) {
+            var updatedStation = allStations[index].station
+            updatedStation.isFavorite = newFavoriteStatus
+            allStations[index] = StationWithDistance(
+                station: updatedStation,
+                distanceFromUser: allStations[index].distanceFromUser
+            )
+            
+            await MainActor.run {
+                filterStations()
+            }
+            
+            print("⭐ ViewModel: Updated station \(stationId) in allStations array")
+        }
+        
+        // Sync after favorite toggle
+        Task {
+            await performSyncAfterFavoriteToggle()
+        }
+    }
+    
+    
+    
+    
+    
+    
+    
+    
 }
 
 // MARK: - Sync Integration Extension

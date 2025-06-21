@@ -83,13 +83,25 @@ class TidalHeightPredictionViewModel: ObservableObject {
     }
     
     func toggleFavorite() async {
-        // Since toggleTideStationFavorite doesn't throw, we don't need a do-catch block
-        let newValue = await tideStationService.toggleTideStationFavorite(id: stationId)
+        let newValue = await tideStationService.toggleTideStationFavorite(
+            id: stationId,
+            name: stationName,
+            latitude: nil,
+            longitude: nil
+        )
         
         await MainActor.run {
             self.isFavorite = newValue
         }
     }
+    
+    
+    
+    
+    
+    
+    
+   
     
     func nextDay() async {
         await MainActor.run {
