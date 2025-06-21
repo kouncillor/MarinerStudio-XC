@@ -1,40 +1,47 @@
+
 import Foundation
 import SwiftUI
 
+@MainActor
 class TidalHeightPredictionViewModel: ObservableObject {
     // MARK: - Published Properties
     @Published var predictions: [TidalHeightPrediction] = []
-    @Published var selectedDate = Date()
-    @Published var errorMessage = ""
     @Published var isLoading = false
+    @Published var errorMessage = ""
+    @Published var selectedDate = Date()
+    @Published var formattedSelectedDate = ""
     @Published var isFavorite = false
-    @Published var formattedSelectedDate: String = ""
     
     // MARK: - Properties
     let stationId: String
     let stationName: String
-    
-    // MARK: - Private Properties
+    let latitude: Double?
+    let longitude: Double?
     private let predictionService: TidalHeightPredictionService
     private let tideStationService: TideStationDatabaseService
-    private let dateFormatter: DateFormatter
+    
+    // MARK: - Private Properties
+    private let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEEE, MMMM d, yyyy"
+        return formatter
+    }()
     
     // MARK: - Initialization
     init(
         stationId: String,
         stationName: String,
+        latitude: Double?,
+        longitude: Double?,
         predictionService: TidalHeightPredictionService,
         tideStationService: TideStationDatabaseService
     ) {
-        print("🌊 Initializing view model for station: \(stationId) - \(stationName)")
         self.stationId = stationId
         self.stationName = stationName
+        self.latitude = latitude
+        self.longitude = longitude
         self.predictionService = predictionService
         self.tideStationService = tideStationService
-        
-        dateFormatter = DateFormatter()
-        dateFormatter.dateStyle = .medium
-        dateFormatter.timeStyle = .none
         
         updateFormattedDate()
         
@@ -43,10 +50,8 @@ class TidalHeightPredictionViewModel: ObservableObject {
         }
     }
     
-    // MARK: - Public Methods
+    // MARK: - Methods
     func loadPredictions() async {
-        print("🌊 Loading predictions for station \(stationId) on \(dateFormatter.string(from: selectedDate))")
-        
         await MainActor.run {
             isLoading = true
             errorMessage = ""
@@ -58,15 +63,13 @@ class TidalHeightPredictionViewModel: ObservableObject {
                 date: selectedDate
             )
             
+            let predictions = response.predictions
+            
             await MainActor.run {
-                if response.predictions.isEmpty {
-                    errorMessage = "No predictions available for this date"
-                } else {
-                    predictions = response.predictions.sorted(by: { $0.timestamp < $1.timestamp })
-                    print("🌊 Loaded \(predictions.count) predictions")
-                }
-                isLoading = false
+                self.predictions = predictions
+                print("🌊 Loaded \(predictions.count) predictions")
             }
+            isLoading = false
         } catch let error as ApiError {
             await MainActor.run {
                 errorMessage = error.message
@@ -86,22 +89,14 @@ class TidalHeightPredictionViewModel: ObservableObject {
         let newValue = await tideStationService.toggleTideStationFavorite(
             id: stationId,
             name: stationName,
-            latitude: nil,
-            longitude: nil
+            latitude: latitude,
+            longitude: longitude
         )
         
         await MainActor.run {
             self.isFavorite = newValue
         }
     }
-    
-    
-    
-    
-    
-    
-    
-   
     
     func nextDay() async {
         await MainActor.run {

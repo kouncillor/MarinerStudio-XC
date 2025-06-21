@@ -285,13 +285,18 @@ struct TideFavoritesView: View {
             .padding(.horizontal)
             .padding(.vertical, 4)
             .background(Color(.systemGray6))
+        
             
+            // This shows the updated NavigationLink section in TideFavoritesView.swift
+
             List {
                 ForEach(viewModel.favorites) { station in
                     NavigationLink {
                         TidalHeightPredictionView(
                             stationId: station.id,
                             stationName: station.name,
+                            latitude: station.latitude,
+                            longitude: station.longitude,
                             tideStationService: serviceProvider.tideStationService
                         )
                     } label: {
@@ -306,6 +311,15 @@ struct TideFavoritesView: View {
                     viewModel.removeFavorite(at: offsets)
                 })
             }
+            
+            
+            
+            
+            
+            
+            
+            
+            
             .listStyle(InsetGroupedListStyle())
             .refreshable {
                 print("🔄 VIEW: Pull-to-refresh triggered")

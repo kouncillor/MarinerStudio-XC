@@ -1,3 +1,4 @@
+
 import SwiftUI
 
 struct TidalHeightPredictionView: View {
@@ -8,12 +9,16 @@ struct TidalHeightPredictionView: View {
     init(
         stationId: String,
         stationName: String,
+        latitude: Double?,
+        longitude: Double?,
         predictionService: TidalHeightPredictionService = TidalHeightPredictionServiceImpl(),
         tideStationService: TideStationDatabaseService
     ) {
         _viewModel = StateObject(wrappedValue: TidalHeightPredictionViewModel(
             stationId: stationId,
             stationName: stationName,
+            latitude: latitude,
+            longitude: longitude,
             predictionService: predictionService,
             tideStationService: tideStationService
         ))
@@ -114,69 +119,70 @@ struct TidalHeightPredictionView: View {
                         .foregroundColor(viewModel.isFavorite ? .yellow : .gray)
                 }
             }
-            .padding(.bottom, 5)
+            
+            if !viewModel.predictions.isEmpty {
+                Text("Station ID: \(viewModel.stationId)")
+                    .font(.caption)
+                    .foregroundColor(.gray)
+            }
         }
         .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color(UIColor.systemBackground))
-                .shadow(color: Color.gray.opacity(0.3), radius: 5, x: 0, y: 2)
-        )
+        .background(Color(.systemGray6))
+        .cornerRadius(8)
     }
     
     private var predictionsListView: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            if viewModel.predictions.isEmpty && !viewModel.isLoading {
+        VStack(spacing: 0) {
+            if viewModel.predictions.isEmpty {
                 Text("No predictions available for this date")
+                    .font(.body)
                     .foregroundColor(.gray)
                     .padding()
-                    .frame(maxWidth: .infinity, alignment: .center)
             } else {
                 ForEach(viewModel.predictions) { prediction in
                     HStack {
                         Text(prediction.formattedTime)
-                            .font(.body)
+                            .font(.headline)
                             .frame(width: 80, alignment: .leading)
                         
-                        Spacer()
-                        
                         Text(prediction.tideType)
-                            .font(.body)
+                            .font(.subheadline)
+                            .foregroundColor(prediction.type == "H" ? .blue : .red)
+                            .frame(width: 60, alignment: .center)
                         
                         Spacer()
                         
-                        Text(String(format: "%.2f ft", prediction.height))
-                            .font(.body)
-                            .frame(width: 70, alignment: .trailing)
+                        Text("\(prediction.formattedHeight) ft")
+                            .font(.headline)
+                            .foregroundColor(.primary)
                     }
-                    .padding(.vertical, 8)
                     .padding(.horizontal)
-                    .background(
-                        RoundedRectangle(cornerRadius: 5)
-                            .fill(Color(UIColor.secondarySystemBackground))
-                    )
+                    .padding(.vertical, 8)
+                    .background(Color(.systemBackground))
+                    
+                    if prediction.id != viewModel.predictions.last?.id {
+                        Divider()
+                    }
                 }
             }
         }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color(UIColor.systemBackground))
-                .shadow(color: Color.gray.opacity(0.3), radius: 5, x: 0, y: 2)
-        )
+        .background(Color(.systemGray6))
+        .cornerRadius(8)
     }
     
     private var viewStationWebsiteButton: some View {
         Button(action: {
             viewModel.viewStationWebsite()
         }) {
-            Text("View Station Website")
-                .font(.headline)
-                .foregroundColor(.white)
-                .padding()
-                .frame(maxWidth: .infinity)
-                .background(Color.blue)
-                .cornerRadius(10)
+            HStack {
+                Image(systemName: "globe")
+                Text("View Station on NOAA Website")
+            }
+            .font(.headline)
+            .foregroundColor(.white)
+            .padding()
+            .background(Color.blue)
+            .cornerRadius(8)
         }
     }
 }

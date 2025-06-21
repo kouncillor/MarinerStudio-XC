@@ -85,13 +85,18 @@ struct TidalHeightStationsView: View {
         }
         .padding([.horizontal, .top])
     }
-    
+
+    // This shows only the updated NavigationLink section that needs to change
+    // in TidalHeightStationsView.swift
+
     private var stationsList: some View {
         List {
             ForEach(viewModel.stations) { stationWithDistance in
                 NavigationLink(destination: TidalHeightPredictionView(
                     stationId: stationWithDistance.station.id,
                     stationName: stationWithDistance.station.name,
+                    latitude: stationWithDistance.station.latitude,
+                    longitude: stationWithDistance.station.longitude,
                     tideStationService: viewModel.tideStationService
                 )) {
                     StationRow(
@@ -110,6 +115,11 @@ struct TidalHeightStationsView: View {
             await viewModel.loadStations()
         }
     }
+    
+    
+    
+    
+    
 }
 
 struct StationRow: View {

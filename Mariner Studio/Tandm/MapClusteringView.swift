@@ -140,6 +140,16 @@ struct MapClusteringView: View {
                    selectedNavUnitId = navUnitId
                    showNavUnitDetails = true
                },
+               
+               
+               
+               
+               
+               
+               
+               
+               
+               
                onTidalHeightStationSelected: { stationId, stationName in
                    print("Tidal Height Station selected: \(stationId), \(stationName)")
                    resetAllNavigationState()
@@ -147,6 +157,16 @@ struct MapClusteringView: View {
                    selectedTidalHeightStationName = stationName
                    showTidalHeightDetails = true
                },
+               
+               
+               
+               
+               
+               
+               
+               
+               
+               
                onTidalCurrentStationSelected: { stationId, bin, stationName in
                    print("Tidal Current Station selected: \(stationId), \(bin), \(stationName)")
                    resetAllNavigationState()
@@ -344,11 +364,38 @@ struct MapClusteringView: View {
                    destination: {
                        if let stationId = selectedTidalHeightStationId,
                           let stationName = selectedTidalHeightStationName {
+                           
+                           
+                           
+                           
+                           
+                           
+                           
+                           
+                           
+                           
+                           
+                           
                            TidalHeightPredictionView(
                                stationId: stationId,
                                stationName: stationName,
+                               latitude: nil,        // Added this line
+                               longitude: nil, 
                                tideStationService: serviceProvider.tideStationService
                            )
+                           
+                           
+                           
+                           
+                           
+                           
+                           
+                           
+                           
+                           
+                           
+                           
+                           
                        } else {
                            Text("Tidal Height Station not found")
                        }
