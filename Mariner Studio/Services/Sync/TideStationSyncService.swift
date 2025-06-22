@@ -231,18 +231,11 @@ final class TideStationSyncService {
             }
             
             let downloadStartTime = Date()
-//            let (downloaded, downloadErrors) = await downloadRemoteChanges(
-//                remoteOnlyFavorites: remoteOnlyFavorites,
-//                databaseService: databaseService
-//            )
-            
             let (downloaded, downloadErrors) = await downloadRemoteChanges(
                 remoteOnlyFavorites: remoteOnlyFavorites,
-                remoteFavorites: remoteFavorites,  // ADD THIS PARAMETER
+                remoteFavorites: remoteFavorites,
                 databaseService: databaseService
             )
-            
-            
             let downloadDuration = Date().timeIntervalSince(downloadStartTime)
             
             downloadCount = downloaded
@@ -348,7 +341,7 @@ final class TideStationSyncService {
     private func uploadLocalChanges(
         localOnlyFavorites: Set<String>,
         userId: UUID,
-        databaseService: TideStationDatabaseService  // ADD: Need database service to get station details
+        databaseService: TideStationDatabaseService
     ) async -> (uploaded: Int, errors: [TideSyncError]) {
         
         logQueue.async {
@@ -453,63 +446,9 @@ final class TideStationSyncService {
         return (uploaded, errors)
     }
     
-    
-    
-    
-    
-    
-    
-    
-//    private func downloadRemoteChanges(
-//        remoteOnlyFavorites: Set<String>,
-//        databaseService: TideStationDatabaseService
-//    ) async -> (downloaded: Int, errors: [TideSyncError]) {
-//        
-//        logQueue.async {
-//            print("\n📥🌊 DOWNLOAD IMPLEMENTATION: Starting detailed download process...")
-//            print("📥🌊 DOWNLOAD: Remote-only favorites = \(remoteOnlyFavorites)")
-//            print("📥🌊 DOWNLOAD: Count to process = \(remoteOnlyFavorites.count)")
-//        }
-//        
-//        var downloaded = 0
-//        var errors: [TideSyncError] = []
-//        
-//        for (index, stationId) in remoteOnlyFavorites.enumerated() {
-//            logQueue.async {
-//                print("\n📥🌊 DOWNLOAD ITEM [\(index + 1)/\(remoteOnlyFavorites.count)]: Processing station \(stationId)")
-//                print("📥🌊 DOWNLOAD ITEM: Calling setTideStationFavorite(id: \(stationId), isFavorite: true)")
-//            }
-//            
-//            let setStartTime = Date()
-//            let success = await databaseService.setTideStationFavorite(id: stationId, isFavorite: true)
-//            let setDuration = Date().timeIntervalSince(setStartTime)
-//            
-//            if success {
-//                downloaded += 1
-//                logQueue.async {
-//                    print("✅📥🌊 DOWNLOAD SUCCESS: Station \(stationId)")
-//                    print("✅📥🌊 DOWNLOAD SUCCESS: Duration = \(String(format: "%.3f", setDuration))s")
-//                    print("✅📥🌊 DOWNLOAD SUCCESS: Total downloaded so far = \(downloaded)")
-//                }
-//            } else {
-//                let error = TideSyncError.databaseError("Failed to save station \(stationId)")
-//                errors.append(error)
-//                logQueue.async {
-//                    print("❌📥🌊 DOWNLOAD FAILED: Station \(stationId)")
-//                    print("❌📥🌊 DOWNLOAD FAILED: Database operation returned false")
-//                    print("❌📥🌊 DOWNLOAD FAILED: Duration = \(String(format: "%.3f", setDuration))s")
-//                    print("❌📥🌊 DOWNLOAD FAILED: Total errors so far = \(errors.count)")
-//                }
-//            }
-//        }
-    
-    
-    
-    
-    
     private func downloadRemoteChanges(
         remoteOnlyFavorites: Set<String>,
-        remoteFavorites: [RemoteTideFavorite],  // NEW: Added parameter for complete remote data
+        remoteFavorites: [RemoteTideFavorite],
         databaseService: TideStationDatabaseService
     ) async -> (downloaded: Int, errors: [TideSyncError]) {
         
@@ -519,7 +458,6 @@ final class TideStationSyncService {
             print("📥🌊 DOWNLOAD: Count to process = \(remoteOnlyFavorites.count)")
         }
         
-        // NEW: Create lookup dictionary for remote favorites with complete data
         let remoteFavoritesDict = Dictionary(uniqueKeysWithValues: remoteFavorites.map { ($0.stationId, $0) })
         
         logQueue.async {
@@ -535,7 +473,6 @@ final class TideStationSyncService {
                 print("\n📥🌊 DOWNLOAD ITEM [\(index + 1)/\(remoteOnlyFavorites.count)]: Processing station \(stationId)")
             }
             
-            // NEW: Get the complete remote favorite data
             guard let remoteFavorite = remoteFavoritesDict[stationId] else {
                 logQueue.async {
                     print("⚠️📥🌊 DOWNLOAD WARNING: No remote data found for station \(stationId)")
@@ -567,14 +504,14 @@ final class TideStationSyncService {
                 continue
             }
             
-            // NEW: Use the enhanced method with complete station details
+            // Use the enhanced method with complete station details
             let stationName = remoteFavorite.stationName ?? "Station \(remoteFavorite.stationId)"
             
             logQueue.async {
                 print("📥🌊 DOWNLOAD ITEM: Found complete remote data for station \(stationId)")
                 print("📥🌊 DOWNLOAD ITEM: - Station Name: \(stationName)")
                 print("📥🌊 DOWNLOAD ITEM: - Latitude: \(remoteFavorite.latitude?.description ?? "nil")")
-                print("📥🌊 DOWNLOAD ITEM: - Longitude: \(remoteFavorite.longitude?.description ?? "nil")")
+                print("📥🌊 DOWNLOAD ITEM: - Longitude: \(remoteFavorite.longitude?.description ?? "nil")") // Corrected this line
                 print("📥🌊 DOWNLOAD ITEM: - Is Favorite: \(remoteFavorite.isFavorite)")
                 print("📥🌊 DOWNLOAD ITEM: - Last Modified: \(remoteFavorite.lastModified)")
                 print("📥🌊 DOWNLOAD ITEM: - Device ID: \(remoteFavorite.deviceId)")
@@ -587,8 +524,7 @@ final class TideStationSyncService {
                 isFavorite: remoteFavorite.isFavorite,
                 name: stationName,
                 latitude: remoteFavorite.latitude,
-                longitude: remoteFavorite.longitude,
-               
+                longitude: remoteFavorite.longitude // Corrected this line
             )
             let setDuration = Date().timeIntervalSince(setStartTime)
             
@@ -612,8 +548,9 @@ final class TideStationSyncService {
                     print("❌📥🌊 DOWNLOAD FAILED: Total errors so far = \(errors.count)")
                 }
             }
+        } // End of for loop
         
-        
+        // Ensure these summary logs and return are ONLY AFTER the for loop
         logQueue.async {
             print("\n📥🌊 DOWNLOAD SUMMARY:")
             print("📥🌊 DOWNLOAD: Processed \(remoteOnlyFavorites.count) stations")
@@ -630,33 +567,6 @@ final class TideStationSyncService {
             print("✅📥🌊 DOWNLOAD: Successfully downloaded = \(downloaded)")
             print("✅📥🌊 DOWNLOAD: Errors encountered = \(errors.count)")
             print("✅📥🌊 DOWNLOAD: Duration = \(String(format: "%.3f", Date().timeIntervalSince(Date())))s")
-        }
-        
-        return (downloaded, errors)
-    }
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-        
-        logQueue.async {
-            print("\n📥🌊 DOWNLOAD SUMMARY:")
-            print("📥🌊 DOWNLOAD: Processed \(remoteOnlyFavorites.count) stations")
-            print("📥🌊 DOWNLOAD: Successfully downloaded = \(downloaded)")
-            print("📥🌊 DOWNLOAD: Failed downloads = \(errors.count)")
-            if !remoteOnlyFavorites.isEmpty {
-                print("📥🌊 DOWNLOAD: Success rate = \(String(format: "%.1f", Double(downloaded) / Double(remoteOnlyFavorites.count) * 100))%")
-            }
         }
         
         return (downloaded, errors)
@@ -702,7 +612,14 @@ final class TideStationSyncService {
             }
             
             let resolveStartTime = Date()
-            let success = await databaseService.setTideStationFavorite(id: stationId, isFavorite: remoteFavorite.isFavorite)
+            // FIX 2: Use enhanced setTideStationFavorite to preserve name and coordinates during conflict resolution
+            let success = await databaseService.setTideStationFavorite(
+                id: stationId,
+                isFavorite: remoteFavorite.isFavorite,
+                name: remoteFavorite.stationName, // Pass the name
+                latitude: remoteFavorite.latitude, // Pass the latitude
+                longitude: remoteFavorite.longitude // Pass the longitude
+            )
             let resolveDuration = Date().timeIntervalSince(resolveStartTime)
             
             if success {
@@ -1046,105 +963,3 @@ private struct TideSyncOperationStats {
     var minDuration: TimeInterval
     var maxDuration: TimeInterval
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
