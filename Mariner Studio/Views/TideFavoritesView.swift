@@ -52,6 +52,18 @@ struct TideFavoritesView: View {
                 }
             }
         }
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
         .onAppear {
             print("🌊 VIEW: TideFavoritesView appeared")
             print("🌊 VIEW: Current thread = \(Thread.current)")
@@ -72,12 +84,25 @@ struct TideFavoritesView: View {
             print("📱 VIEW: Starting loadFavorites()")
             viewModel.loadFavorites()
             
-            // Perform app launch sync
-            print("☁️ VIEW: Starting app launch sync")
-            Task {
-                await viewModel.performAppLaunchSync()
-            }
         }
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
         .onDisappear {
             print("🌊 VIEW: TideFavoritesView disappeared")
             viewModel.cleanup()
@@ -695,11 +720,3 @@ extension DateFormatter {
     }()
 }
 
-// MARK: - Preview
-
-#Preview {
-    NavigationView {
-        TideFavoritesView()
-            .environmentObject(ServiceProvider())
-    }
-}

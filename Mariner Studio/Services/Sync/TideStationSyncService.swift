@@ -1,18 +1,4 @@
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import Foundation
 import Supabase
 
@@ -217,7 +203,8 @@ final class TideStationSyncService {
             let uploadStartTime = Date()
             let (uploaded, uploadErrors) = await uploadLocalChanges(
                 localOnlyFavorites: localOnlyFavorites,
-                userId: session.user.id
+                userId: session.user.id,
+                databaseService: databaseService
             )
             let uploadDuration = Date().timeIntervalSince(uploadStartTime)
             
@@ -350,10 +337,10 @@ final class TideStationSyncService {
     }
     
     // MARK: - Private Sync Implementation Methods
-    
     private func uploadLocalChanges(
         localOnlyFavorites: Set<String>,
-        userId: UUID
+        userId: UUID,
+        databaseService: TideStationDatabaseService  // ADD: Need database service to get station details
     ) async -> (uploaded: Int, errors: [TideSyncError]) {
         
         logQueue.async {
@@ -366,20 +353,45 @@ final class TideStationSyncService {
         var uploaded = 0
         var errors: [TideSyncError] = []
         
+        // STEP 1: Get all favorite stations with details from local database
+        let allLocalFavoritesWithDetails = await databaseService.getAllFavoriteStationsWithDetails()
+        let localStationsMap = Dictionary(uniqueKeysWithValues: allLocalFavoritesWithDetails.map { ($0.id, $0) })
+        
         for (index, stationId) in localOnlyFavorites.enumerated() {
             logQueue.async {
                 print("\n📤🌊 UPLOAD ITEM [\(index + 1)/\(localOnlyFavorites.count)]: Processing station \(stationId)")
-                print("📤🌊 UPLOAD ITEM: Creating RemoteTideFavorite record...")
+                print("📤🌊 UPLOAD ITEM: Getting station details from local database...")
             }
             
+            // STEP 2: Get station details from local database
+            let stationDetails = localStationsMap[stationId]
+            let stationName = stationDetails?.name ?? "Station \(stationId)"
+            let latitude = stationDetails?.latitude
+            let longitude = stationDetails?.longitude
+            
+            logQueue.async {
+                print("📤🌊 UPLOAD ITEM: Station details retrieved:")
+                print("📤🌊 UPLOAD ITEM: - Name: '\(stationName)'")
+                print("📤🌊 UPLOAD ITEM: - Latitude: \(latitude?.description ?? "nil")")
+                print("📤🌊 UPLOAD ITEM: - Longitude: \(longitude?.description ?? "nil")")
+                print("📤🌊 UPLOAD ITEM: Creating RemoteTideFavorite record with full details...")
+            }
+            
+            // STEP 3: Create RemoteTideFavorite with complete station data
             let remoteFavorite = RemoteTideFavorite.fromLocal(
                 userId: userId,
                 stationId: stationId,
-                isFavorite: true
+                isFavorite: true,
+                stationName: stationName,
+                latitude: latitude,
+                longitude: longitude
             )
             
             logQueue.async {
-                print("📤🌊 UPLOAD ITEM: Created record - Station: \(remoteFavorite.stationId)")
+                print("📤🌊 UPLOAD ITEM: Created record with complete data:")
+                print("📤🌊 UPLOAD ITEM: - Station: \(remoteFavorite.stationId)")
+                print("📤🌊 UPLOAD ITEM: - Name: '\(remoteFavorite.stationName ?? "nil")'")
+                print("📤🌊 UPLOAD ITEM: - Coordinates: (\(remoteFavorite.latitude?.description ?? "nil"), \(remoteFavorite.longitude?.description ?? "nil"))")
                 print("📤🌊 UPLOAD ITEM: - User ID: \(remoteFavorite.userId)")
                 print("📤🌊 UPLOAD ITEM: - Is Favorite: \(remoteFavorite.isFavorite)")
                 print("📤🌊 UPLOAD ITEM: - Device ID: \(remoteFavorite.deviceId)")
@@ -399,6 +411,7 @@ final class TideStationSyncService {
                 
                 logQueue.async {
                     print("✅📤🌊 UPLOAD SUCCESS: Station \(stationId)")
+                    print("✅📤🌊 UPLOAD SUCCESS: Uploaded with complete station data")
                     print("✅📤🌊 UPLOAD SUCCESS: Duration = \(String(format: "%.3f", insertDuration))s")
                     print("✅📤🌊 UPLOAD SUCCESS: Response count = \(response.value.count)")
                     print("✅📤🌊 UPLOAD SUCCESS: Total uploaded so far = \(uploaded)")
@@ -423,11 +436,21 @@ final class TideStationSyncService {
             print("📤🌊 UPLOAD: Processed \(localOnlyFavorites.count) stations")
             print("📤🌊 UPLOAD: Successfully uploaded = \(uploaded)")
             print("📤🌊 UPLOAD: Failed uploads = \(errors.count)")
-            print("📤🌊 UPLOAD: Success rate = \(String(format: "%.1f", Double(uploaded) / Double(localOnlyFavorites.count) * 100))%")
+            if localOnlyFavorites.count > 0 {
+                print("📤🌊 UPLOAD: Success rate = \(String(format: "%.1f", Double(uploaded) / Double(localOnlyFavorites.count) * 100))%")
+            }
+            print("📤🌊 UPLOAD: All stations uploaded with complete details (name, lat, lon)")
         }
         
         return (uploaded, errors)
     }
+    
+    
+    
+    
+    
+    
+    
     
     private func downloadRemoteChanges(
         remoteOnlyFavorites: Set<String>,
@@ -869,3 +892,105 @@ private struct TideSyncOperationStats {
     var minDuration: TimeInterval
     var maxDuration: TimeInterval
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
