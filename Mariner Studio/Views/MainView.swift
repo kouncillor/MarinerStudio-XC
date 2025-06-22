@@ -60,14 +60,14 @@ struct MainView: View {
                         )
                     }
                     
-                    NavigationLink(destination: WaveDirectionDisplayView()) {
-                        NavigationButtonContent(
-                            icon: "arrow.up.down.circle.fill",
-                            title: "WAVE DIRECTION",
-                            isSystemIcon: true,
-                            iconColor: .blue
-                        )
-                    }
+//                    NavigationLink(destination: WaveDirectionDisplayView()) {
+//                        NavigationButtonContent(
+//                            icon: "arrow.up.down.circle.fill",
+//                            title: "WAVE DIRECTION",
+//                            isSystemIcon: true,
+//                            iconColor: .blue
+//                        )
+//                    }
 
                     NavigationLink(destination: NavUnitMenuView()) {
                         NavigationButtonContent(
