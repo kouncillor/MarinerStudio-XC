@@ -53,17 +53,6 @@ struct TideFavoritesView: View {
             }
         }
         
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
         .onAppear {
             print("🌊 VIEW: TideFavoritesView appeared")
             print("🌊 VIEW: Current thread = \(Thread.current)")
@@ -85,23 +74,6 @@ struct TideFavoritesView: View {
             viewModel.loadFavorites()
             
         }
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
         
         .onDisappear {
             print("🌊 VIEW: TideFavoritesView disappeared")

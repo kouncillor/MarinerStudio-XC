@@ -97,25 +97,21 @@ class TideFavoritesViewModel: ObservableObject {
         }
     }
 
+
     @MainActor
     private func performLoadFavorites() async {
         logDebug("📱 PERFORM_LOAD: Starting main load operation on MainActor")
         logDebug("📱 PERFORM_LOAD: Current favorites count = \(favorites.count)")
         
-        // Reset state
-        isLoading = true
-        errorMessage = ""
-        loadingPhase = "Initializing"
-        debugInfo.removeAll()
-        performanceMetrics.removeAll()
-        databaseStats.removeAll()
+        startTime = Date()
         
-        updateDebugInfo("Load operation started")
-        updatePerformanceMetric("Load started at \(Date())")
-        
-        // Check services
         guard let tideStationService = tideStationService else {
-            await handleLoadError("TideStationDatabaseService not available", phase: "Service Check")
+            await handleLoadError("TideStationService not available", phase: "Service Check")
+            return
+        }
+        
+        guard let tidalHeightService = tidalHeightService else {
+            await handleLoadError("TidalHeightService not available", phase: "Service Check")
             return
         }
         
@@ -123,27 +119,91 @@ class TideFavoritesViewModel: ObservableObject {
         updateDebugInfo("Services verified ✅")
         
         do {
-            await updateLoadingPhase("Loading favorites from database...")
+            // PHASE 1: Get favorite stations WITH DETAILS from local database
+            await updateLoadingPhase("Loading from local database")
             
             let phaseStart = Date()
-            logDebug("📊 LOAD: Calling getAllFavoriteStationsWithDetails()")
+            logDebug("📊 PHASE_1: Starting local database query...")
+            logDebug("📊 PHASE_1: Calling getAllFavoriteStationsWithDetails()")
             
             let favoriteStations = await tideStationService.getAllFavoriteStationsWithDetails()
-            let loadDuration = Date().timeIntervalSince(phaseStart)
+            let phase1Duration = Date().timeIntervalSince(phaseStart)
             
-            logDebug("📊 LOAD: Retrieved \(favoriteStations.count) favorite stations with complete details")
-            logDebug("📊 LOAD: Load duration = \(String(format: "%.3f", loadDuration))s")
+            logDebug("📊 PHASE_1: Database query completed")
+            logDebug("📊 PHASE_1: Duration = \(String(format: "%.3f", phase1Duration))s")
+            logDebug("📊 PHASE_1: Favorite stations count = \(favoriteStations.count)")
             
-            favorites = favoriteStations
+            updateDebugInfo("Local DB query: \(favoriteStations.count) favorites in \(String(format: "%.3f", phase1Duration))s")
+            updatePerformanceMetric("DB Query: \(String(format: "%.3f", phase1Duration))s for \(favoriteStations.count) records")
+            updateDatabaseStat("Favorite stations: \(favoriteStations.count)")
+            
+            for (index, station) in favoriteStations.prefix(5).enumerated() {
+                logDebug("📊 PHASE_1: [\(index)] Station: \(station.id) - \(station.name)")
+            }
+            
+            if favoriteStations.isEmpty {
+                logDebug("📊 PHASE_1: No favorites found - setting empty state")
+                await updateLoadingPhase("No favorites found")
+                
+                favorites = []
+                isLoading = false
+                updateDebugInfo("No favorites in local database")
+                updatePerformanceMetric("Total load time: \(String(format: "%.3f", Date().timeIntervalSince(startTime!)))s")
+                
+                logDebug("✅ PHASE_1: Load completed with empty result")
+                return
+            }
+            
+            // PHASE 2: Sort and finalize results
+            await updateLoadingPhase("Finalizing results")
+            
+            let phase2Start = Date()
+            logDebug("🔄 PHASE_2: Sorting stations with actual names...")
+            logDebug("🔄 PHASE_2: Will sort \(favoriteStations.count) stations")
+            
+            let sortedStations = favoriteStations.sorted { $0.name < $1.name }
+            let phase2Duration = Date().timeIntervalSince(phase2Start)
+            
+            logDebug("🔄 PHASE_2: Sorting completed")
+            logDebug("🔄 PHASE_2: Duration = \(String(format: "%.3f", phase2Duration))s")
+            logDebug("🔄 PHASE_2: Final count = \(sortedStations.count)")
+            
+            updateDebugInfo("Sorted \(sortedStations.count) stations in \(String(format: "%.3f", phase2Duration))s")
+            updatePerformanceMetric("Station Sorting: \(String(format: "%.3f", phase2Duration))s for \(sortedStations.count) objects")
+            updateDatabaseStat("Successfully sorted: \(sortedStations.count)")
+            
+            // PHASE 3: Update UI with real station names
+            await updateLoadingPhase("Updating UI")
+            
+            let phase3Start = Date()
+            logDebug("🎨 PHASE_3: Updating UI with final results...")
+            logDebug("🎨 PHASE_3: Setting favorites array with \(sortedStations.count) stations")
+            
+            for (index, station) in sortedStations.prefix(3).enumerated() {
+                logDebug("🎨 PHASE_3: [\(index)] Final station: \(station.id) - '\(station.name)'")
+            }
+            
+            favorites = sortedStations
             isLoading = false
-            updateDebugInfo("Loaded \(favoriteStations.count) favorites with complete station details")
-            updatePerformanceMetric("Total load time: \(String(format: "%.3f", Date().timeIntervalSince(startTime!)))s")
+            loadingPhase = "Complete"
             
-            logDebug("✅ LOAD_COMPLETE: Favorites loaded successfully in \(String(format: "%.3f", Date().timeIntervalSince(startTime!)))s")
+            let phase3Duration = Date().timeIntervalSince(phase3Start)
+            let totalDuration = Date().timeIntervalSince(startTime!)
+            
+            logDebug("🎨 PHASE_3: UI update completed")
+            logDebug("🎨 PHASE_3: Duration = \(String(format: "%.3f", phase3Duration))s")
+            logDebug("🎨 PHASE_3: Total operation duration = \(String(format: "%.3f", totalDuration))s")
+            
+            updateDebugInfo("✅ Load completed successfully with REAL station names")
+            updatePerformanceMetric("UI Update: \(String(format: "%.3f", phase3Duration))s")
+            updatePerformanceMetric("🏁 TOTAL TIME: \(String(format: "%.3f", totalDuration))s")
+            
+            logDebug("✅ LOAD_FAVORITES: Operation completed successfully")
+            logDebug("✅ LOAD_FAVORITES: Final favorites count = \(favorites.count)")
+            logDebug("✅ LOAD_FAVORITES: All stations now have REAL NAMES from database!")
             
         } catch {
-            logDebug("❌ LOAD_ERROR: Failed to load favorites - \(error.localizedDescription)")
-            await handleLoadError("Failed to load favorites: \(error.localizedDescription)", phase: "Database Load")
+            await handleLoadError("Unexpected error during load: \(error.localizedDescription)", phase: "Load Operation")
         }
     }
     
