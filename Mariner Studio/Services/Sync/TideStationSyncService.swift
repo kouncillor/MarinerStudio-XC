@@ -402,10 +402,14 @@ final class TideStationSyncService {
             
             do {
                 let insertStartTime = Date()
+                
                 let response: PostgrestResponse<[RemoteTideFavorite]> = try await SupabaseManager.shared
                     .from("user_tide_favorites")
                     .insert(remoteFavorite)
+                    .select()
                     .execute()
+                
+                
                 let insertDuration = Date().timeIntervalSince(insertStartTime)
                 
                 uploaded += 1

@@ -5,33 +5,16 @@ struct TideFavoritesView: View {
     @EnvironmentObject var serviceProvider: ServiceProvider
     @Environment(\.colorScheme) var colorScheme
     
-    // Debug UI state
-    @State private var showDebugPanel = false
-    @State private var debugSelectedTab = 0
-    
     var body: some View {
         ZStack {
             // Main content
             mainContentView
-            
-            // Debug overlay
-            if showDebugPanel {
-                debugOverlay
-            }
         }
         .navigationTitle("Favorite Tides")
         .withHomeButton()
         .toolbar {
             ToolbarItemGroup(placement: .navigationBarTrailing) {
-                // Debug toggle button
-                Button(action: {
-                    print("🐛 DEBUG: Toggling debug panel (currently \(showDebugPanel))")
-                    showDebugPanel.toggle()
-                }) {
-                    Image(systemName: "ant.circle")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(showDebugPanel ? .orange : .gray)
-                }
+
                 
                 // Sync button
                 Button(action: {
@@ -263,7 +246,7 @@ struct TideFavoritesView: View {
     private var favoritesListView: some View {
         VStack(spacing: 0) {
             // Sync Status Bar
-            SyncStatusBar(viewModel: viewModel)
+        //    SyncStatusBar(viewModel: viewModel)
             
             // Quick stats header
             HStack {
@@ -309,14 +292,6 @@ struct TideFavoritesView: View {
                 })
             }
             
-            
-            
-            
-            
-            
-            
-            
-            
             .listStyle(InsetGroupedListStyle())
             .refreshable {
                 print("🔄 VIEW: Pull-to-refresh triggered")
@@ -327,318 +302,78 @@ struct TideFavoritesView: View {
             print("🎨 VIEW: Favorites list view appeared with \(viewModel.favorites.count) stations")
         }
     }
-    
-    // MARK: - Debug Overlay
-    
-    private var debugOverlay: some View {
-        VStack {
-            Spacer()
-            
-            VStack(spacing: 0) {
-                // Debug header
-                HStack {
-                    Text("Debug Panel")
-                        .font(.headline)
-                        .fontWeight(.bold)
-                    
-                    Spacer()
-                    
-                    Button("✕") {
-                        showDebugPanel = false
-                    }
-                    .foregroundColor(.red)
-                    .font(.title2)
-                }
-                .padding()
-                .background(Color(.systemGray5))
-                
-                // Tab selection
-                Picker("Debug Tab", selection: $debugSelectedTab) {
-                    Text("Performance").tag(0)
-                    Text("Debug Log").tag(1)
-                    Text("Database").tag(2)
-                    Text("State").tag(3)
-                }
-                .pickerStyle(SegmentedPickerStyle())
-                .padding(.horizontal)
-                .padding(.vertical, 8)
-                .background(Color(.systemGray6))
-                
-                // Tab content
-                ScrollView {
-                    debugTabContent
-                        .padding()
-                }
-                .frame(maxHeight: 300)
-                .background(Color(.systemBackground))
-            }
-            .background(Color(.systemGray6))
-            .cornerRadius(12)
-            .shadow(radius: 10)
-            .padding()
-        }
-        .background(Color.black.opacity(0.3))
-        .onTapGesture {
-            showDebugPanel = false
-        }
-        .onAppear {
-            print("🐛 DEBUG: Debug panel opened")
-        }
-        .onDisappear {
-            print("🐛 DEBUG: Debug panel closed")
-        }
-    }
-    
-    @ViewBuilder
-    private var debugTabContent: some View {
-        switch debugSelectedTab {
-        case 0:
-            performanceTab
-        case 1:
-            debugLogTab
-        case 2:
-            databaseTab
-        case 3:
-            stateTab
-        default:
-            Text("Unknown tab")
-        }
-    }
-    
-    // MARK: - Debug Tab Views
-    
-    private var performanceTab: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Performance Metrics")
-                .font(.subheadline)
-                .fontWeight(.semibold)
-            
-            if viewModel.performanceMetrics.isEmpty {
-                Text("No performance data available")
-                    .foregroundColor(.secondary)
-                    .italic()
-            } else {
-                ForEach(viewModel.performanceMetrics, id: \.self) { metric in
-                    HStack {
-                        Text("•")
-                            .foregroundColor(.blue)
-                        Text(metric)
-                            .font(.caption)
-                            .foregroundColor(.primary)
-                        Spacer()
-                    }
-                }
-            }
-            
-            Divider()
-            
-            // Current state metrics
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Current State:")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                
-                Text("Loading: \(viewModel.isLoading ? "YES" : "NO")")
-                    .font(.caption2)
-                Text("Phase: \(viewModel.loadingPhase)")
-                    .font(.caption2)
-                Text("Favorites Count: \(viewModel.favorites.count)")
-                    .font(.caption2)
-                Text("Error: \(viewModel.errorMessage.isEmpty ? "NONE" : viewModel.errorMessage)")
-                    .font(.caption2)
-                    .foregroundColor(viewModel.errorMessage.isEmpty ? .green : .red)
-            }
-        }
-    }
-    
-    private var debugLogTab: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Debug Log")
-                .font(.subheadline)
-                .fontWeight(.semibold)
-            
-            if viewModel.debugInfo.isEmpty {
-                Text("No debug information available")
-                    .foregroundColor(.secondary)
-                    .italic()
-            } else {
-                ForEach(viewModel.debugInfo, id: \.self) { info in
-                    HStack(alignment: .top) {
-                        Text("•")
-                            .foregroundColor(.orange)
-                        Text(info)
-                            .font(.caption2)
-                            .foregroundColor(.primary)
-                            .fixedSize(horizontal: false, vertical: true)
-                        Spacer()
-                    }
-                }
-            }
-        }
-    }
-    
-    private var databaseTab: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Database Statistics")
-                .font(.subheadline)
-                .fontWeight(.semibold)
-            
-            if viewModel.databaseStats.isEmpty {
-                Text("No database statistics available")
-                    .foregroundColor(.secondary)
-                    .italic()
-            } else {
-                ForEach(viewModel.databaseStats, id: \.self) { stat in
-                    HStack {
-                        Text("•")
-                            .foregroundColor(.green)
-                        Text(stat)
-                            .font(.caption)
-                            .foregroundColor(.primary)
-                        Spacer()
-                    }
-                }
-            }
-            
-            Divider()
-            
-            // Manual database operations
-            VStack(spacing: 8) {
-                Text("Manual Operations:")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                
-                Button("Reload Favorites") {
-                    print("🐛 DEBUG: Manual reload triggered")
-                    viewModel.loadFavorites()
-                }
-                .font(.caption)
-                .padding(8)
-                .background(Color.blue)
-                .foregroundColor(.white)
-                .cornerRadius(6)
-                
-                Button("Force Sync") {
-                    print("🐛 DEBUG: Manual sync triggered")
-                    Task {
-                        await viewModel.syncWithCloud()
-                    }
-                }
-                .font(.caption)
-                .padding(8)
-                .background(Color.green)
-                .foregroundColor(.white)
-                .cornerRadius(6)
-            }
-        }
-    }
-    
-    private var stateTab: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("ViewModel State")
-                .font(.subheadline)
-                .fontWeight(.semibold)
-            
-            Group {
-                Text("Services Initialized:")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                
-                Text("• TideStationService: \(viewModel.tideStationService != nil ? "✅" : "❌")")
-                    .font(.caption2)
-                Text("• TidalHeightService: \(viewModel.tidalHeightService != nil ? "✅" : "❌")")
-                    .font(.caption2)
-                Text("• LocationService: \(viewModel.locationService != nil ? "✅" : "❌")")
-                    .font(.caption2)
-                
-                Divider()
-                
-                Text("Sync State:")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                
-                Text("• Is Syncing: \(viewModel.isSyncing ? "YES" : "NO")")
-                    .font(.caption2)
-                    .foregroundColor(viewModel.isSyncing ? .blue : .primary)
-                
-                if let lastSync = viewModel.lastSyncTime {
-                    Text("• Last Sync: \(DateFormatter.shortTime.string(from: lastSync))")
-                        .font(.caption2)
-                } else {
-                    Text("• Last Sync: Never")
-                        .font(.caption2)
-                }
-                
-                if let syncError = viewModel.syncErrorMessage {
-                    Text("• Sync Error: \(syncError)")
-                        .font(.caption2)
-                        .foregroundColor(.red)
-                }
-                
-                if let syncSuccess = viewModel.syncSuccessMessage {
-                    Text("• Sync Success: \(syncSuccess)")
-                        .font(.caption2)
-                        .foregroundColor(.green)
-                }
-            }
-        }
-    }
+
 }
 
 // MARK: - Supporting Views
+//
+//struct SyncStatusBar: View {
+//    @ObservedObject var viewModel: TideFavoritesViewModel
+//    
+//    var body: some View {
+//        HStack {
+//            if viewModel.isSyncing {
+//                HStack(spacing: 8) {
+//                    ProgressView()
+//                        .scaleEffect(0.7)
+//                    Text("Syncing...")
+//                        .font(.caption)
+//                }
+//                .foregroundColor(.blue)
+//            } else if let errorMessage = viewModel.syncErrorMessage {
+//                HStack(spacing: 8) {
+//                    Image(systemName: "exclamationmark.triangle.fill")
+//                        .foregroundColor(.red)
+//                    Text(errorMessage)
+//                        .font(.caption)
+//                        .foregroundColor(.red)
+//                }
+//            } else if let successMessage = viewModel.syncSuccessMessage {
+//                HStack(spacing: 8) {
+//                    Image(systemName: "checkmark.circle.fill")
+//                        .foregroundColor(.green)
+//                    Text(successMessage)
+//                        .font(.caption)
+//                        .foregroundColor(.green)
+//                }
+//            } else {
+//                HStack(spacing: 8) {
+//                    Image(systemName: "cloud")
+//                        .foregroundColor(.gray)
+//                    Text("Ready to sync")
+//                        .font(.caption)
+//                        .foregroundColor(.gray)
+//                }
+//            }
+//            
+//            Spacer()
+//            
+//            if let lastSync = viewModel.lastSyncTime {
+//                Text("Last: \(DateFormatter.shortTime.string(from: lastSync))")
+//                    .font(.caption2)
+//                    .foregroundColor(.secondary)
+//            }
+//        }
+//        .padding(.horizontal)
+//        .padding(.vertical, 6)
+//        .background(Color(.systemGray6))
+//    }
+//}
 
-struct SyncStatusBar: View {
-    @ObservedObject var viewModel: TideFavoritesViewModel
-    
-    var body: some View {
-        HStack {
-            if viewModel.isSyncing {
-                HStack(spacing: 8) {
-                    ProgressView()
-                        .scaleEffect(0.7)
-                    Text("Syncing...")
-                        .font(.caption)
-                }
-                .foregroundColor(.blue)
-            } else if let errorMessage = viewModel.syncErrorMessage {
-                HStack(spacing: 8) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(.red)
-                    Text(errorMessage)
-                        .font(.caption)
-                        .foregroundColor(.red)
-                }
-            } else if let successMessage = viewModel.syncSuccessMessage {
-                HStack(spacing: 8) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.green)
-                    Text(successMessage)
-                        .font(.caption)
-                        .foregroundColor(.green)
-                }
-            } else {
-                HStack(spacing: 8) {
-                    Image(systemName: "cloud")
-                        .foregroundColor(.gray)
-                    Text("Ready to sync")
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                }
-            }
-            
-            Spacer()
-            
-            if let lastSync = viewModel.lastSyncTime {
-                Text("Last: \(DateFormatter.shortTime.string(from: lastSync))")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-            }
-        }
-        .padding(.horizontal)
-        .padding(.vertical, 6)
-        .background(Color(.systemGray6))
-    }
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 struct FavoriteStationRow: View {
     let station: TidalHeightStation
@@ -652,8 +387,8 @@ struct FavoriteStationRow: View {
                 
                 Spacer()
                 
-                Image(systemName: "heart.fill")
-                    .foregroundColor(.red)
+                Image(systemName: "star.fill")
+                    .foregroundColor(.yellow)
                     .font(.caption)
             }
             
