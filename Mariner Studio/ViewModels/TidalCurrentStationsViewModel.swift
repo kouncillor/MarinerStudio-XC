@@ -1,5 +1,4 @@
 
-
 import Foundation
 import CoreLocation
 import SwiftUI
@@ -10,7 +9,6 @@ class TidalCurrentStationsViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage = ""
     @Published var searchText = ""
-    @Published var showOnlyFavorites = false
     @Published var totalStations = 0
     @Published var userLatitude: String = "Unknown"
     @Published var userLongitude: String = "Unknown"
@@ -18,6 +16,7 @@ class TidalCurrentStationsViewModel: ObservableObject {
     // MARK: - Computed Property for Location Status
     var isLocationEnabled: Bool {
         let status = locationService.permissionStatus
+        print("🔍 VIEWMODEL: Checking location permission status: \(status)")
         return status == .authorizedWhenInUse || status == .authorizedAlways
     }
 
@@ -36,79 +35,59 @@ class TidalCurrentStationsViewModel: ObservableObject {
         self.tidalCurrentService = tidalCurrentService
         self.locationService = locationService
         self.currentStationService = currentStationService
-        print("✅ TidalCurrentStationsViewModel initialized. Will rely on ServiceProvider for location permission/start.")
+        print("✅ VIEWMODEL: TidalCurrentStationsViewModel initialized successfully")
+        print("📊 VIEWMODEL: Database service injected: \(type(of: currentStationService))")
+        print("🌐 VIEWMODEL: Network service injected: \(type(of: tidalCurrentService))")
+        print("📍 VIEWMODEL: Location service injected: \(type(of: locationService))")
     }
 
     // MARK: - Public Methods
     func loadStations() async {
-        print("⏰ ViewModel (Currents): loadStations() started at \(Date())")
+        print("\n🚀 VIEWMODEL: ===== LOAD STATIONS START =====")
+        print("⏰ VIEWMODEL: loadStations() started at \(Date())")
+        print("🔄 VIEWMODEL: Current loading state: \(isLoading)")
 
         guard !isLoading else {
-             print("⏰ ViewModel (Currents): loadStations() exited early, already loading.")
-             return
+            print("⚠️ VIEWMODEL: loadStations() exited early - already loading")
+            return
         }
 
+        print("📱 VIEWMODEL: Setting loading state to true and clearing errors")
         await MainActor.run {
             isLoading = true
             errorMessage = ""
-            print("⏰ ViewModel (Currents): Checking location in loadStations (MainActor block) at \(Date()). Current value: \(locationService.currentLocation?.description ?? "nil")")
+            print("📍 VIEWMODEL: Checking location for UI update at \(Date())")
             if let location = locationService.currentLocation {
                  self.userLatitude = String(format: "%.6f", location.coordinate.latitude)
                  self.userLongitude = String(format: "%.6f", location.coordinate.longitude)
+                 print("📍 VIEWMODEL: User location updated - Lat: \(self.userLatitude), Lng: \(self.userLongitude)")
              } else {
                  self.userLatitude = "Unknown"
                  self.userLongitude = "Unknown"
+                 print("📍 VIEWMODEL: No user location available")
              }
         }
 
         do {
-            print("⏰ ViewModel (Currents): Starting API call for stations at \(Date())")
+            print("🌐 VIEWMODEL: Starting NOAA API call for tidal current stations")
+            print("⏰ VIEWMODEL: API call start time: \(Date())")
+            
             let response = try await tidalCurrentService.getTidalCurrentStations()
-            print("⏰ ViewModel (Currents): Finished API call for stations at \(Date()). Count: \(response.count)")
+            
+            print("✅ VIEWMODEL: API call completed successfully")
+            print("⏰ VIEWMODEL: API call end time: \(Date())")
+            print("📊 VIEWMODEL: Received \(response.stations.count) stations from NOAA API")
 
-            // Add debug code to check for stations with same ID but different bins
-            let stationsByID = Dictionary(grouping: response.stations) { $0.id }
-            for (id, stations) in stationsByID {
-                if stations.count > 1 {
-                    print("📊 Multiple stations found for ID \(id):")
-                    for station in stations {
-                        print("📊 - Bin: \(String(describing: station.currentBin)), Depth: \(String(describing: station.depth))")
-                    }
-                }
-            }
-
-            var stations = response.stations
-
-            print("⏰ ViewModel (Currents): Starting favorite checks at \(Date())")
-            await withTaskGroup(of: (String, Int?, Bool).self) { group in
-                 for station in stations {
-                     group.addTask {
-                         let isFav: Bool
-                         if let bin = station.currentBin {
-                             isFav = await self.currentStationService.isCurrentStationFavorite(id: station.id, bin: bin)
-                         } else {
-                             isFav = await self.currentStationService.isCurrentStationFavorite(id: station.id)
-                         }
-                         return (station.id, station.currentBin, isFav)
-                     }
-                 }
-                 
-                 // Create a dictionary using composite keys (id + bin)
-                 var favoriteStatuses: [String: Bool] = [:]
-                 for await (id, bin, isFav) in group {
-                     let key = self.getCompositeKey(id: id, bin: bin)
-                     favoriteStatuses[key] = isFav
-                 }
-                 
-                 // Update stations with favorite status
-                 for i in 0..<stations.count {
-                     let key = self.getCompositeKey(id: stations[i].id, bin: stations[i].currentBin)
-                     stations[i].isFavorite = favoriteStatuses[key] ?? false
-                 }
-            }
-            print("⏰ ViewModel (Currents): Finished favorite checks at \(Date())")
-
-            print("⏰ ViewModel (Currents): Checking location for distance calculation at \(Date()). Current value: \(locationService.currentLocation?.description ?? "nil")")
+            let stations = response.stations
+            
+            // ⭐ REMOVED: All favorite checking logic - NO DATABASE CALLS HERE! ⭐
+            print("🚫 VIEWMODEL: SKIPPING favorite status checks - no database calls will be made")
+            print("🚫 VIEWMODEL: No authentication calls will be made")
+            print("🚫 VIEWMODEL: Favorites will be handled elsewhere in the app")
+            
+            print("📏 VIEWMODEL: Starting distance calculation for \(stations.count) stations")
+            print("📍 VIEWMODEL: Using location for distance calc: \(locationService.currentLocation?.description ?? "nil")")
+            
             let currentLocationForDistance = locationService.currentLocation
             let stationsWithDistance = stations.map { station in
                 return StationWithDistance<TidalCurrentStation>.create(
@@ -116,125 +95,109 @@ class TidalCurrentStationsViewModel: ObservableObject {
                     userLocation: currentLocationForDistance
                 )
             }
+            
+            print("✅ VIEWMODEL: Distance calculation completed for \(stationsWithDistance.count) stations")
 
-            print("⏰ ViewModel (Currents): Updating UI state (allStations, filterStations, isLoading) at \(Date())")
+            print("📱 VIEWMODEL: Updating UI state on main thread")
             await MainActor.run {
+                print("📱 VIEWMODEL: Setting allStations array with \(stationsWithDistance.count) items")
                 allStations = stationsWithDistance
+                
+                print("🔍 VIEWMODEL: Calling filterStations() to apply search filters")
                 filterStations()
+                
+                print("📱 VIEWMODEL: Setting loading state to false")
                 isLoading = false
-                print("⏰ ViewModel (Currents): UI state update complete at \(Date())")
+                
+                print("✅ VIEWMODEL: UI state update complete - stations count: \(self.stations.count)")
             }
+            
         } catch {
-            print("❌ ViewModel (Currents): Error in loadStations at \(Date()): \(error.localizedDescription)")
+            print("❌ VIEWMODEL: Error in loadStations() at \(Date())")
+            print("❌ VIEWMODEL: Error details: \(error.localizedDescription)")
+            print("❌ VIEWMODEL: Error type: \(type(of: error))")
+            
             await MainActor.run {
                 errorMessage = "Failed to load stations: \(error.localizedDescription)"
                 allStations = []
                 self.stations = []
                 totalStations = 0
                 isLoading = false
+                print("❌ VIEWMODEL: Error state set - UI updated with empty data")
             }
         }
-         print("⏰ ViewModel (Currents): loadStations() finished at \(Date())")
+        
+        print("🏁 VIEWMODEL: loadStations() finished at \(Date())")
+        print("🚀 VIEWMODEL: ===== LOAD STATIONS END =====\n")
     }
 
     func refreshStations() async {
-         print("🔄 ViewModel (Currents): refreshStations() called at \(Date())")
-         await MainActor.run {
-              self.stations = []
-              self.allStations = []
-              self.totalStations = 0
-         }
-         await loadStations()
+        print("\n🔄 VIEWMODEL: ===== REFRESH STATIONS START =====")
+        print("🔄 VIEWMODEL: refreshStations() called at \(Date())")
+        
+        await MainActor.run {
+            print("🗑️ VIEWMODEL: Clearing existing station data")
+            self.stations = []
+            self.allStations = []
+            self.totalStations = 0
+        }
+        
+        print("🔄 VIEWMODEL: Calling loadStations() for refresh")
+        await loadStations()
+        print("🔄 VIEWMODEL: ===== REFRESH STATIONS END =====\n")
     }
 
     func filterStations() {
-        print("🔄 ViewModel (Currents): filterStations() called at \(Date())")
+        print("\n🔍 VIEWMODEL: ===== FILTER STATIONS START =====")
+        print("🔍 VIEWMODEL: filterStations() called at \(Date())")
+        print("🔍 VIEWMODEL: Search text: '\(searchText)'")
+        print("🔍 VIEWMODEL: Total stations to filter: \(allStations.count)")
+        
         let filtered = allStations.filter { station in
-            let matchesFavorite = !showOnlyFavorites || station.station.isFavorite
             let matchesSearch = searchText.isEmpty ||
                 station.station.name.localizedCaseInsensitiveContains(searchText) ||
                 (station.station.state?.localizedCaseInsensitiveContains(searchText) ?? false) ||
                 station.station.id.localizedCaseInsensitiveContains(searchText)
-
-            return matchesFavorite && matchesSearch
+            
+            return matchesSearch
         }
-
+        
+        print("✅ VIEWMODEL: Filtering complete")
+        print("📊 VIEWMODEL: Filtered results: \(filtered.count) stations")
+        
+        // Sort strictly by distance (closest first)
+        print("🔄 VIEWMODEL: Starting sort by distance (closest first)")
         let sorted = filtered.sorted { first, second in
-             if first.distanceFromUser != Double.greatestFiniteMagnitude && second.distanceFromUser == Double.greatestFiniteMagnitude {
-                 return true
-             } else if first.distanceFromUser == Double.greatestFiniteMagnitude && second.distanceFromUser != Double.greatestFiniteMagnitude {
-                 return false
-             } else if first.distanceFromUser != second.distanceFromUser {
-                 return first.distanceFromUser < second.distanceFromUser
-             } else if first.station.isFavorite != second.station.isFavorite {
-                 return first.station.isFavorite && !second.station.isFavorite
-             } else {
-                 return first.station.name.localizedCompare(second.station.name) == .orderedAscending
-             }
+            return first.distanceFromUser < second.distanceFromUser
         }
-
-         DispatchQueue.main.async {
-             self.stations = sorted
-             print("🔄 ViewModel (Currents): filterStations() updated self.stations on main thread at \(Date()). Count: \(sorted.count)")
-             self.totalStations = sorted.count
-         }
-    }
-
-    func toggleFavorites() {
-        showOnlyFavorites.toggle()
-        filterStations()
+        
+        print("✅ VIEWMODEL: Distance sorting complete")
+        print("📊 VIEWMODEL: Filter efficiency: \(sorted.count)/\(allStations.count) stations shown")
+        
+        // Log first few stations to verify distance sorting
+        print("🔍 VIEWMODEL: Top 5 closest stations:")
+        for (index, station) in sorted.prefix(5).enumerated() {
+            let distanceText = station.distanceFromUser == Double.greatestFiniteMagnitude ? "No location" : String(format: "%.1f mi", station.distanceFromUser * 0.621371)
+            print("🔍 VIEWMODEL: \(index + 1). \(station.station.name) - \(distanceText)")
+        }
+        
+        stations = sorted
+        totalStations = sorted.count
+        
+        print("📱 VIEWMODEL: Published properties updated")
+        print("🔍 VIEWMODEL: ===== FILTER STATIONS END =====\n")
     }
 
     func clearSearch() {
+        print("\n🗑️ VIEWMODEL: ===== CLEAR SEARCH START =====")
+        print("🗑️ VIEWMODEL: Clearing search text (was: '\(searchText)')")
         searchText = ""
+        print("🔍 VIEWMODEL: Calling filterStations() after clearing search")
         filterStations()
-    }
-
-    // Updated method to handle bin-specific favoriting
-    func toggleStationFavorite(stationId: String, bin: Int?) async {
-        // Find the station with matching ID AND bin
-        guard let stationToToggle = allStations.first(where: {
-            $0.station.id == stationId && $0.station.currentBin == bin
-        })?.station else {
-            print("❌ ViewModel (Currents): Could not find station \(stationId) with bin \(String(describing: bin)) to toggle favorite.")
-            return
-        }
-
-        let newFavoriteStatus: Bool
-        if let bin = stationToToggle.currentBin {
-            newFavoriteStatus = await currentStationService.toggleCurrentStationFavorite(id: stationId, bin: bin)
-            print("⭐ ViewModel (Currents): Toggled favorite for \(stationId) (bin: \(bin)) to \(newFavoriteStatus) at \(Date())")
-        } else {
-            newFavoriteStatus = await currentStationService.toggleCurrentStationFavorite(id: stationId)
-            print("⭐ ViewModel (Currents): Toggled favorite for \(stationId) (no bin) to \(newFavoriteStatus) at \(Date())")
-        }
-
-        await MainActor.run {
-            // Find and update the specific station with matching ID AND bin
-            if let index = allStations.firstIndex(where: {
-                $0.station.id == stationId && $0.station.currentBin == bin
-            }) {
-                var updatedStation = allStations[index].station
-                updatedStation.isFavorite = newFavoriteStatus
-                allStations[index] = StationWithDistance(
-                    station: updatedStation,
-                    distanceFromUser: allStations[index].distanceFromUser
-                )
-                print("⭐ ViewModel (Currents): Updated allStations array for \(stationId) with bin \(String(describing: bin)) at \(Date())")
-            } else {
-                print("❌ ViewModel (Currents): Station \(stationId) with bin \(String(describing: bin)) not found in allStations after toggle at \(Date())")
-            }
-
-            filterStations()
-        }
+        print("🗑️ VIEWMODEL: ===== CLEAR SEARCH END =====\n")
     }
     
-    // Helper method to create a composite key
-    private func getCompositeKey(id: String, bin: Int?) -> String {
-        if let bin = bin {
-            return "\(id)_\(bin)"
-        } else {
-            return id
-        }
-    }
+    // REMOVED: toggleStationFavorite() method entirely
+    // REMOVED: toggleFavorites() method entirely
+    // REMOVED: showOnlyFavorites property entirely
 }
