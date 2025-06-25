@@ -1,251 +1,3 @@
-//import Foundation
-//#if canImport(SQLite)
-//import SQLite
-//#endif
-//
-//class CurrentStationDatabaseService {
-//    // MARK: - Table Definitions
-//    private let tidalCurrentStationFavorites = Table("TidalCurrentStationFavorites")
-//    
-//    // MARK: - Column Definitions
-//    private let colStationId = Expression<String>("station_id")
-//    private let colCurrentBin = Expression<Int>("current_bin")
-//    private let colIsFavorite = Expression<Bool>("is_favorite")
-//    
-//    // MARK: - Properties
-//    private let databaseCore: DatabaseCore
-//    
-//    // MARK: - Initialization
-//    init(databaseCore: DatabaseCore) {
-//        self.databaseCore = databaseCore
-//    }
-//    
-//    // MARK: - Methods
-//    
-//   
-//    
-//    // Initialize current station favorites table with extensive error logging
-//    func initializeCurrentStationFavoritesTableAsync() async throws {
-//        do {
-//            let db = try databaseCore.ensureConnection()
-//            
-//            print("📊 Creating TidalCurrentStationFavorites table if it doesn't exist")
-//            
-//            // Get current tables first
-//            let tablesQuery = "SELECT name FROM sqlite_master WHERE type='table'"
-//            var tableNames: [String] = []
-//            for row in try db.prepare(tablesQuery) {
-//                if let tableName = row[0] as? String {
-//                    tableNames.append(tableName)
-//                }
-//            }
-//            print("📊 Current tables: \(tableNames.joined(separator: ", "))")
-//            
-//            // Create table
-//            try db.run(tidalCurrentStationFavorites.create(ifNotExists: true) { table in
-//                table.column(colStationId)
-//                table.column(colCurrentBin)
-//                table.column(colIsFavorite)
-//                table.primaryKey(colStationId, colCurrentBin)
-//            })
-//            
-//            // Verify table was created
-//            tableNames = []
-//            for row in try db.prepare(tablesQuery) {
-//                if let tableName = row[0] as? String {
-//                    tableNames.append(tableName)
-//                }
-//            }
-//            
-//            if tableNames.contains("TidalCurrentStationFavorites") {
-//                print("📊 TidalCurrentStationFavorites table created or already exists")
-//                
-//                // Check if we can write to the table
-//                try db.run(tidalCurrentStationFavorites.insert(or: .replace,
-//                    colStationId <- "TEST_INIT",
-//                    colCurrentBin <- 0,
-//                    colIsFavorite <- true
-//                ))
-//                
-//                // Verify write worked
-//                let testQuery = tidalCurrentStationFavorites.filter(colStationId == "TEST_INIT")
-//                if (try? db.pluck(testQuery)) != nil {
-//                    print("📊 Successfully wrote and read test record")
-//                } else {
-//                    print("❌ Could not verify test record")
-//                }
-//            } else {
-//                print("❌ Failed to create TidalCurrentStationFavorites table")
-//                throw NSError(domain: "DatabaseService", code: 4, userInfo: [NSLocalizedDescriptionKey: "Failed to create table"])
-//            }
-//        } catch {
-//            print("❌ Error creating TidalCurrentStationFavorites table: \(error.localizedDescription)")
-//            throw error
-//        }
-//    }
-//    
-//    
-//    
-//    
-//    
-//    
-//    
-//    
-//    
-//    
-//    
-//    
-//    
-//    // Check if a current station is marked as favorite
-//    func isCurrentStationFavorite(id: String, bin: Int) async -> Bool {
-//        do {
-//            let db = try databaseCore.ensureConnection()
-//            
-//       //     print("📊 CHECK: Checking favorite status for station \(id), bin \(bin)")
-//            let query = tidalCurrentStationFavorites.filter(colStationId == id && colCurrentBin == bin)
-//            
-//            if let favorite = try db.pluck(query) {
-//                let result = favorite[colIsFavorite]
-//       //         print("📊 CHECK: Found favorite status: \(result)")
-//                return result
-//            }
-//     //       print("📊 CHECK: No favorite record found")
-//            return false
-//        } catch {
-//     //       print("❌ CHECK ERROR: \(error.localizedDescription)")
-//            return false
-//        }
-//    }
-//    
-//    // Toggle favorite status for a current station with bin
-//    func toggleCurrentStationFavorite(id: String, bin: Int) async -> Bool {
-//        do {
-//            let db = try databaseCore.ensureConnection()
-//            
-//            print("📊 TOGGLE: Beginning toggle for station \(id), bin \(bin)")
-//            
-//            // Variable to store the result outside transaction
-//            var result = false
-//            
-//            try db.transaction {
-//                let query = tidalCurrentStationFavorites.filter(colStationId == id && colCurrentBin == bin)
-//                
-//                if let favorite = try db.pluck(query) {
-//                    let currentValue = favorite[colIsFavorite]
-//                    let newValue = !currentValue
-//                    
-//                    print("📊 TOGGLE: Found existing record with favorite status: \(currentValue), toggling to \(newValue)")
-//                    
-//                    let updatedRow = tidalCurrentStationFavorites.filter(colStationId == id && colCurrentBin == bin)
-//                    let count = try db.run(updatedRow.update(colIsFavorite <- newValue))
-//                    
-//                    print("📊 TOGGLE: Updated record with result: \(count) rows affected")
-//                    result = newValue
-//                } else {
-//                    print("📊 TOGGLE: No existing record found, creating new favorite")
-//                    
-//                    let insert = tidalCurrentStationFavorites.insert(
-//                        colStationId <- id,
-//                        colCurrentBin <- bin,
-//                        colIsFavorite <- true
-//                    )
-//                    
-//                    let rowId = try db.run(insert)
-//                    print("📊 TOGGLE: Inserted new favorite with rowId: \(rowId)")
-//                    result = true
-//                }
-//            }
-//            
-//            // Force a disk flush after toggling favorites
-//            try await databaseCore.flushDatabaseAsync()
-//            return result
-//        } catch {
-//            print("❌ TOGGLE ERROR: \(error.localizedDescription)")
-//            print("❌ TOGGLE ERROR DETAILS: \(error)")
-//            return false
-//        }
-//    }
-//    
-//    // Check if a current station is marked as favorite (without bin)
-//    func isCurrentStationFavorite(id: String) async -> Bool {
-//        do {
-//            let db = try databaseCore.ensureConnection()
-//            
-//          //  print("📊 CHECK: Checking any favorite status for station \(id)")
-//            let query = tidalCurrentStationFavorites.filter(colStationId == id)
-//            
-//            // Check if any record exists and is marked as favorite
-//            for row in try db.prepare(query) {
-//                if row[colIsFavorite] {
-//          //          print("📊 CHECK: Found favorite status true for bin \(row[colCurrentBin])")
-//                    return true
-//                }
-//            }
-//         //   print("📊 CHECK: No favorite record found for any bin")
-//            return false
-//        } catch {
-//        //    print("❌ CHECK ERROR: \(error.localizedDescription)")
-//            return false
-//        }
-//    }
-//    
-//    // Toggle favorite status for a current station (without bin) - applies to all bins
-//    func toggleCurrentStationFavorite(id: String) async -> Bool {
-//        do {
-//            let db = try databaseCore.ensureConnection()
-//            
-//            print("📊 TOGGLE: Beginning toggle for all bins of station \(id)")
-//            
-//            // Check if any records exist
-//            let query = tidalCurrentStationFavorites.filter(colStationId == id)
-//            let records = Array(try db.prepare(query))
-//            
-//            if records.isEmpty {
-//                // No records found, create a default one with bin 0
-//                print("📊 TOGGLE: No records found, creating default with bin 0")
-//                try db.run(tidalCurrentStationFavorites.insert(
-//                    colStationId <- id,
-//                    colCurrentBin <- 0,
-//                    colIsFavorite <- true
-//                ))
-//                try await databaseCore.flushDatabaseAsync()
-//                return true
-//            } else {
-//                // Get current state from first record (assuming all should be the same)
-//                let currentValue = records.first![colIsFavorite]
-//                let newValue = !currentValue
-//                print("📊 TOGGLE: Found \(records.count) records with favorite status: \(currentValue), toggling all to \(newValue)")
-//                
-//                // Update all records for this station
-//                let count = try db.run(tidalCurrentStationFavorites.filter(colStationId == id).update(colIsFavorite <- newValue))
-//                print("📊 TOGGLE: Updated \(count) records")
-//                
-//                try await databaseCore.flushDatabaseAsync()
-//                return newValue
-//            }
-//        } catch {
-//            print("❌ TOGGLE ERROR: \(error.localizedDescription)")
-//            return false
-//        }
-//    }
-//}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 import Foundation
 import UIKit
@@ -258,18 +10,18 @@ class CurrentStationDatabaseService {
     private let tidalCurrentStationFavorites = Table("TidalCurrentStationFavorites")
     
     // MARK: - Column Definitions (Updated to match Supabase schema)
-    private let colId = Expression<Int>("id")                                    // AUTO INCREMENT PRIMARY KEY
-    private let colUserId = Expression<String?>("user_id")                       // UUID from authentication
-    private let colStationId = Expression<String>("station_id")                 // NOAA station ID
-    private let colCurrentBin = Expression<Int>("current_bin")                  // Bin number
-    private let colIsFavorite = Expression<Bool>("is_favorite")                 // Favorite status
-    private let colLastModified = Expression<Date>("last_modified")             // For sync conflict resolution
-    private let colDeviceId = Expression<String>("device_id")                   // Device identifier
-    private let colStationName = Expression<String?>("station_name")            // Optional station name
-    private let colLatitude = Expression<Double?>("latitude")                   // Optional latitude
-    private let colLongitude = Expression<Double?>("longitude")                 // Optional longitude
-    private let colDepth = Expression<Double?>("depth")                         // Optional depth
-    private let colDepthType = Expression<String?>("depth_type")                // Optional depth type
+    private let colId = Expression<Int64>("id")
+    private let colUserId = Expression<String>("user_id")
+    private let colStationId = Expression<String>("station_id")
+    private let colCurrentBin = Expression<Int>("current_bin")
+    private let colIsFavorite = Expression<Bool>("is_favorite")
+    private let colLastModified = Expression<Date>("last_modified")
+    private let colDeviceId = Expression<String>("device_id")
+    private let colStationName = Expression<String?>("station_name")
+    private let colLatitude = Expression<Double?>("latitude")
+    private let colLongitude = Expression<Double?>("longitude")
+    private let colDepth = Expression<Double?>("depth")
+    private let colDepthType = Expression<String?>("depth_type")
     
     // MARK: - Properties
     private let databaseCore: DatabaseCore
@@ -277,16 +29,60 @@ class CurrentStationDatabaseService {
     // MARK: - Initialization
     init(databaseCore: DatabaseCore) {
         self.databaseCore = databaseCore
+        print("🏗️ CURRENT_DB_SERVICE: Initialized with databaseCore")
     }
     
-    // MARK: - Methods
+    // MARK: - Utility Methods
     
-    // Initialize current station favorites table with Supabase-aligned schema
+    private func getDeviceId() async -> String {
+        return await UIDevice.current.identifierForVendor?.uuidString ?? "unknown-device"
+    }
+    
+    private func getCurrentUserId() async -> String? {
+        do {
+            let session = try await SupabaseManager.shared.getSession()
+            let userId = session.user.id.uuidString
+            print("👤 CURRENT_DB_SERVICE: Retrieved user ID: \(userId)")
+            return userId
+        } catch {
+            print("❌ CURRENT_DB_SERVICE: Could not get current user ID: \(error.localizedDescription)")
+            return nil
+        }
+    }
+    
+    // MARK: - Database Schema Management
+    
+    private func addColumnIfNeeded(db: Connection, tableName: String, columnName: String, columnType: String) async throws {
+        print("🔧 CURRENT_DB_SERVICE: Checking if column '\(columnName)' exists in table '\(tableName)'")
+        
+        let pragmaQuery = "PRAGMA table_info(\(tableName))"
+        var columnExists = false
+        
+        for row in try db.prepare(pragmaQuery) {
+            if let name = row[1] as? String, name == columnName {
+                columnExists = true
+                print("✅ CURRENT_DB_SERVICE: Column '\(columnName)' already exists")
+                break
+            }
+        }
+        
+        if !columnExists {
+            let alterQuery = "ALTER TABLE \(tableName) ADD COLUMN \(columnName) \(columnType)"
+            print("🔧 CURRENT_DB_SERVICE: Adding column '\(columnName)' with query: \(alterQuery)")
+            try db.execute(alterQuery)
+            print("✅ CURRENT_DB_SERVICE: Successfully added column '\(columnName)'")
+        }
+    }
+    
+    // MARK: - Table Initialization
+    
     func initializeCurrentStationFavoritesTableAsync() async throws {
+        print("🚀 CURRENT_DB_SERVICE: Starting table initialization")
+        let startTime = Date()
+        
         do {
             let db = try databaseCore.ensureConnection()
-            
-            print("📊 Creating TidalCurrentStationFavorites table if it doesn't exist (Supabase-aligned schema)")
+            print("✅ CURRENT_DB_SERVICE: Database connection established")
             
             // Get current tables first
             let tablesQuery = "SELECT name FROM sqlite_master WHERE type='table'"
@@ -296,30 +92,28 @@ class CurrentStationDatabaseService {
                     tableNames.append(tableName)
                 }
             }
-            print("📊 Current tables: \(tableNames.joined(separator: ", "))")
+            print("📊 CURRENT_DB_SERVICE: Current tables: \(tableNames.joined(separator: ", "))")
             
-            // Create table with new schema
+            // Create table with Supabase-aligned schema
+            print("🔧 CURRENT_DB_SERVICE: Creating TidalCurrentStationFavorites table")
             try db.run(tidalCurrentStationFavorites.create(ifNotExists: true) { table in
-                table.column(colId, primaryKey: .autoincrement)                 // Primary key
-                table.column(colUserId)                                         // User ID from auth
-                table.column(colStationId)                                      // Station ID
-                table.column(colCurrentBin)                                     // Bin number
-                table.column(colIsFavorite)                                     // Favorite status
-                table.column(colLastModified)                                   // Last modified timestamp
-                table.column(colDeviceId)                                       // Device ID
-                table.column(colStationName)                                    // Optional station name
-                table.column(colLatitude)                                       // Optional latitude
-                table.column(colLongitude)                                      // Optional longitude
-                table.column(colDepth)                                          // Optional depth
-                table.column(colDepthType)                                      // Optional depth type
-                
-                // Create unique constraint to prevent duplicate favorites per user/station/bin
+                table.column(colId, primaryKey: .autoincrement)
+                table.column(colUserId)
+                table.column(colStationId)
+                table.column(colCurrentBin)
+                table.column(colIsFavorite)
+                table.column(colLastModified)
+                table.column(colDeviceId)
+                table.column(colStationName)
+                table.column(colLatitude)
+                table.column(colLongitude)
+                table.column(colDepth)
+                table.column(colDepthType)
+                // Unique constraint
                 table.unique(colUserId, colStationId, colCurrentBin)
             })
             
-            // Add columns if they don't exist (for migration from old schema)
-            try await addColumnIfNeeded(db: db, tableName: "TidalCurrentStationFavorites", columnName: "id", columnType: "INTEGER PRIMARY KEY AUTOINCREMENT")
-            try await addColumnIfNeeded(db: db, tableName: "TidalCurrentStationFavorites", columnName: "user_id", columnType: "TEXT")
+            // Add columns if they don't exist (for migration)
             try await addColumnIfNeeded(db: db, tableName: "TidalCurrentStationFavorites", columnName: "last_modified", columnType: "DATETIME")
             try await addColumnIfNeeded(db: db, tableName: "TidalCurrentStationFavorites", columnName: "device_id", columnType: "TEXT")
             try await addColumnIfNeeded(db: db, tableName: "TidalCurrentStationFavorites", columnName: "station_name", columnType: "TEXT")
@@ -328,7 +122,7 @@ class CurrentStationDatabaseService {
             try await addColumnIfNeeded(db: db, tableName: "TidalCurrentStationFavorites", columnName: "depth", columnType: "REAL")
             try await addColumnIfNeeded(db: db, tableName: "TidalCurrentStationFavorites", columnName: "depth_type", columnType: "TEXT")
             
-            // Verify table was created
+            // Verify table creation
             tableNames = []
             for row in try db.prepare(tablesQuery) {
                 if let tableName = row[0] as? String {
@@ -337,9 +131,9 @@ class CurrentStationDatabaseService {
             }
             
             if tableNames.contains("TidalCurrentStationFavorites") {
-                print("📊 TidalCurrentStationFavorites table created or already exists with Supabase-aligned schema")
+                print("✅ CURRENT_DB_SERVICE: TidalCurrentStationFavorites table created/verified with Supabase-aligned schema")
                 
-                // Test write capability with new schema
+                // Test write capability
                 let deviceId = await getDeviceId()
                 try db.run(tidalCurrentStationFavorites.insert(or: .replace,
                     colUserId <- "TEST_USER_ID",
@@ -353,70 +147,70 @@ class CurrentStationDatabaseService {
                     colLongitude <- 0.0
                 ))
                 
-                // Verify write worked
+                // Verify and clean up test record
                 let testQuery = tidalCurrentStationFavorites.filter(colStationId == "TEST_INIT")
-                if (try? db.pluck(testQuery)) != nil {
-                    print("📊 Successfully wrote and read test record with new schema")
-                    // Clean up test record
+                if let testRecord = try? db.pluck(testQuery) {
+                    print("✅ CURRENT_DB_SERVICE: Write test successful")
                     try db.run(testQuery.delete())
-                } else {
-                    print("❌ Could not verify test record with new schema")
+                    print("🧹 CURRENT_DB_SERVICE: Test record cleaned up")
                 }
+                
+                try await databaseCore.flushDatabaseAsync()
+                
+                let duration = Date().timeIntervalSince(startTime)
+                print("⏱️ CURRENT_DB_SERVICE: Table initialization completed in \(String(format: "%.3f", duration))s")
+                
             } else {
-                print("❌ Failed to create TidalCurrentStationFavorites table")
-                throw NSError(domain: "DatabaseService", code: 4, userInfo: [NSLocalizedDescriptionKey: "Failed to create table"])
+                throw NSError(domain: "DatabaseService", code: 500, userInfo: [NSLocalizedDescriptionKey: "Failed to create TidalCurrentStationFavorites table"])
             }
         } catch {
-            print("❌ Error creating TidalCurrentStationFavorites table: \(error.localizedDescription)")
+            print("❌ CURRENT_DB_SERVICE: Initialization failed: \(error.localizedDescription)")
             throw error
         }
     }
     
-    // Helper method to add columns for migration
-    private func addColumnIfNeeded(db: Connection, tableName: String, columnName: String, columnType: String) async throws {
-        let tableInfo = try db.prepare("PRAGMA table_info(\(tableName))")
-        var columnExists = false
-        for row in tableInfo {
-            if let name = row[1] as? String, name == columnName {
-                columnExists = true
-                break
-            }
-        }
+    // MARK: - Favorites Query Methods
+    
+    // Check if a current station is marked as favorite (without bin)
+    func isCurrentStationFavorite(id: String) async -> Bool {
+        print("🔍 CURRENT_DB_SERVICE: Checking favorite status for station \(id) (any bin)")
+        let startTime = Date()
         
-        if !columnExists {
-            print("📊 Adding missing column '\(columnName)' to table '\(tableName)'")
-            try db.execute("ALTER TABLE \(tableName) ADD COLUMN \(columnName) \(columnType)")
-        }
-    }
-    
-    // Get device ID for sync tracking
-    private func getDeviceId() async -> String {
-        // Use device identifier or generate a unique one
-        if let deviceId = await UIDevice.current.identifierForVendor?.uuidString {
-            return deviceId
-        } else {
-            // Fallback to a generated UUID if identifierForVendor is nil
-            return UUID().uuidString
-        }
-    }
-    
-    // Get current user ID from authentication
-    private func getCurrentUserId() async -> String? {
-        do {
-            let session = try await SupabaseManager.shared.getSession()
-            return session.user.id.uuidString
-        } catch {
-            print("❌ Could not get current user ID: \(error.localizedDescription)")
-            return nil
-        }
-    }
-    
-    // Check if a current station is marked as favorite
-    func isCurrentStationFavorite(id: String, bin: Int) async -> Bool {
         do {
             let db = try databaseCore.ensureConnection()
             guard let userId = await getCurrentUserId() else {
-                print("⚠️ No authenticated user, cannot check favorites")
+                print("⚠️ CURRENT_DB_SERVICE: No authenticated user, cannot check favorites")
+                return false
+            }
+            
+            let query = tidalCurrentStationFavorites.filter(
+                colUserId == userId &&
+                colStationId == id &&
+                colIsFavorite == true
+            )
+            
+            let records = Array(try db.prepare(query))
+            let hasFavorites = !records.isEmpty
+            
+            let duration = Date().timeIntervalSince(startTime)
+            print("✅ CURRENT_DB_SERVICE: Station \(id) favorite check completed in \(String(format: "%.3f", duration))s - Result: \(hasFavorites) (\(records.count) records)")
+            
+            return hasFavorites
+        } catch {
+            print("❌ CURRENT_DB_SERVICE: Check error for station \(id): \(error.localizedDescription)")
+            return false
+        }
+    }
+    
+    // Check if a current station is marked as favorite (with specific bin)
+    func isCurrentStationFavorite(id: String, bin: Int) async -> Bool {
+        print("🔍 CURRENT_DB_SERVICE: Checking favorite status for station \(id), bin \(bin)")
+        let startTime = Date()
+        
+        do {
+            let db = try databaseCore.ensureConnection()
+            guard let userId = await getCurrentUserId() else {
+                print("⚠️ CURRENT_DB_SERVICE: No authenticated user, cannot check favorites")
                 return false
             }
             
@@ -429,174 +223,164 @@ class CurrentStationDatabaseService {
             
             if let favorite = try db.pluck(query) {
                 let result = favorite[colIsFavorite]
+                let duration = Date().timeIntervalSince(startTime)
+                print("✅ CURRENT_DB_SERVICE: Station \(id) bin \(bin) favorite check completed in \(String(format: "%.3f", duration))s - Result: \(result)")
                 return result
             }
+            
+            let duration = Date().timeIntervalSince(startTime)
+            print("✅ CURRENT_DB_SERVICE: Station \(id) bin \(bin) favorite check completed in \(String(format: "%.3f", duration))s - Result: false (no record)")
             return false
         } catch {
-            print("❌ CHECK ERROR: \(error.localizedDescription)")
+            print("❌ CURRENT_DB_SERVICE: Check error for station \(id) bin \(bin): \(error.localizedDescription)")
             return false
         }
     }
     
-    // Toggle favorite status for a current station with bin
-    func toggleCurrentStationFavorite(id: String, bin: Int) async -> Bool {
+    // MARK: - Toggle Methods
+    /// Toggle favorite status with full station metadata - preferred method for rich data storage
+    func toggleCurrentStationFavoriteWithMetadata(
+        id: String,
+        bin: Int,
+        stationName: String?,
+        latitude: Double?,
+        longitude: Double?,
+        depth: Double?,
+        depthType: String?
+    ) async -> Bool {
+        print("🔄 CURRENT_DB_SERVICE: Beginning toggle with metadata for station \(id), bin \(bin)")
+        print("📊 CURRENT_DB_SERVICE: Metadata - Name: \(stationName ?? "nil"), Lat: \(latitude?.description ?? "nil"), Lon: \(longitude?.description ?? "nil")")
+        let startTime = Date()
+        
         do {
             let db = try databaseCore.ensureConnection()
             guard let userId = await getCurrentUserId() else {
-                print("❌ No authenticated user, cannot toggle favorites")
+                print("❌ CURRENT_DB_SERVICE: No authenticated user, cannot toggle favorites")
                 return false
             }
-            
-            print("📊 TOGGLE: Beginning toggle for station \(id), bin \(bin), user \(userId)")
             
             let deviceId = await getDeviceId()
-            var result = false
             
-            try db.transaction {
-                let query = tidalCurrentStationFavorites.filter(
-                    colUserId == userId &&
-                    colStationId == id &&
-                    colCurrentBin == bin
-                )
-                
-                if let favorite = try db.pluck(query) {
-                    let currentValue = favorite[colIsFavorite]
-                    let newValue = !currentValue
-                    
-                    print("📊 TOGGLE: Found existing record with favorite status: \(currentValue), toggling to \(newValue)")
-                    
-                    let updatedRow = tidalCurrentStationFavorites.filter(
-                        colUserId == userId &&
-                        colStationId == id &&
-                        colCurrentBin == bin
-                    )
-                    let count = try db.run(updatedRow.update(
-                        colIsFavorite <- newValue,
-                        colLastModified <- Date(),
-                        colDeviceId <- deviceId
-                    ))
-                    
-                    print("📊 TOGGLE: Updated record with result: \(count) rows affected")
-                    result = newValue
-                } else {
-                    print("📊 TOGGLE: No existing record found, creating new favorite")
-                    
-                    let insert = tidalCurrentStationFavorites.insert(
-                        colUserId <- userId,
-                        colStationId <- id,
-                        colCurrentBin <- bin,
-                        colIsFavorite <- true,
-                        colLastModified <- Date(),
-                        colDeviceId <- deviceId
-                    )
-                    
-                    let rowId = try db.run(insert)
-                    print("📊 TOGGLE: Inserted new favorite with rowId: \(rowId)")
-                    result = true
-                }
-            }
-            
-            // Force a disk flush after toggling favorites
-            try await databaseCore.flushDatabaseAsync()
-            return result
-        } catch {
-            print("❌ TOGGLE ERROR: \(error.localizedDescription)")
-            print("❌ TOGGLE ERROR DETAILS: \(error)")
-            return false
-        }
-    }
-    
-    // Check if a current station is marked as favorite (without bin - checks any bin)
-    func isCurrentStationFavorite(id: String) async -> Bool {
-        do {
-            let db = try databaseCore.ensureConnection()
-            guard let userId = await getCurrentUserId() else {
-                print("⚠️ No authenticated user, cannot check favorites")
-                return false
-            }
-            
+            // Check if record exists for this specific user, station, and bin
             let query = tidalCurrentStationFavorites.filter(
                 colUserId == userId &&
                 colStationId == id &&
-                colIsFavorite == true
+                colCurrentBin == bin
             )
             
-            // Check if any record exists and is marked as favorite
-            for row in try db.prepare(query) {
-                if row[colIsFavorite] {
-                    return true
-                }
-            }
-            return false
-        } catch {
-            print("❌ CHECK ERROR: \(error.localizedDescription)")
-            return false
-        }
-    }
-    
-    // Toggle favorite status for a current station (without bin) - applies to all bins
-    func toggleCurrentStationFavorite(id: String) async -> Bool {
-        do {
-            let db = try databaseCore.ensureConnection()
-            guard let userId = await getCurrentUserId() else {
-                print("❌ No authenticated user, cannot toggle favorites")
-                return false
-            }
-            
-            print("📊 TOGGLE: Beginning toggle for all bins of station \(id), user \(userId)")
-            
-            let deviceId = await getDeviceId()
-            
-            // Check if any records exist for this user and station
-            let query = tidalCurrentStationFavorites.filter(
-                colUserId == userId &&
-                colStationId == id
-            )
-            let records = Array(try db.prepare(query))
-            
-            if records.isEmpty {
-                // No records found, create a default one with bin 0
-                print("📊 TOGGLE: No records found, creating default with bin 0")
+            if let existing = try db.pluck(query) {
+                // Record exists, toggle its value and update metadata
+                let currentValue = existing[colIsFavorite]
+                let newValue = !currentValue
+                print("🔄 CURRENT_DB_SERVICE: Found existing record with status: \(currentValue), toggling to \(newValue) and updating metadata")
+                
+                let count = try db.run(query.update(
+                    colIsFavorite <- newValue,
+                    colLastModified <- Date(),
+                    colDeviceId <- deviceId,
+                    colStationName <- stationName,
+                    colLatitude <- latitude,
+                    colLongitude <- longitude,
+                    colDepth <- depth,
+                    colDepthType <- depthType
+                ))
+                
+                try await databaseCore.flushDatabaseAsync()
+                let duration = Date().timeIntervalSince(startTime)
+                print("✅ CURRENT_DB_SERVICE: Station \(id) bin \(bin) toggle with metadata completed in \(String(format: "%.3f", duration))s - Updated \(count) records to \(newValue)")
+                return newValue
+            } else {
+                // No record exists, create new one as favorite with full metadata
+                print("📝 CURRENT_DB_SERVICE: No record found for station \(id) bin \(bin), creating new favorite with metadata")
                 try db.run(tidalCurrentStationFavorites.insert(
                     colUserId <- userId,
                     colStationId <- id,
-                    colCurrentBin <- 0,
+                    colCurrentBin <- bin,
                     colIsFavorite <- true,
                     colLastModified <- Date(),
-                    colDeviceId <- deviceId
+                    colDeviceId <- deviceId,
+                    colStationName <- stationName,
+                    colLatitude <- latitude,
+                    colLongitude <- longitude,
+                    colDepth <- depth,
+                    colDepthType <- depthType
                 ))
+                
                 try await databaseCore.flushDatabaseAsync()
+                let duration = Date().timeIntervalSince(startTime)
+                print("✅ CURRENT_DB_SERVICE: Station \(id) bin \(bin) toggle with metadata completed in \(String(format: "%.3f", duration))s - Created new favorite")
                 return true
-            } else {
-                // Get current state from first record (assuming all should be the same)
-                let currentValue = records.first![colIsFavorite]
-                let newValue = !currentValue
-                print("📊 TOGGLE: Found \(records.count) records with favorite status: \(currentValue), toggling all to \(newValue)")
-                
-                // Update all records for this user and station
-                let count = try db.run(tidalCurrentStationFavorites.filter(
-                    colUserId == userId &&
-                    colStationId == id
-                ).update(
-                    colIsFavorite <- newValue,
-                    colLastModified <- Date(),
-                    colDeviceId <- deviceId
-                ))
-                print("📊 TOGGLE: Updated \(count) records")
-                
-                try await databaseCore.flushDatabaseAsync()
-                return newValue
             }
         } catch {
-            print("❌ TOGGLE ERROR: \(error.localizedDescription)")
+            print("❌ CURRENT_DB_SERVICE: Toggle with metadata error for station \(id) bin \(bin): \(error.localizedDescription)")
             return false
         }
     }
     
-    // MARK: - New Methods for Sync Support
+    // MARK: - NEW: Efficient Favorites Retrieval
+    
+    /// Get all current station favorites for the authenticated user with full metadata
+    /// This is the most efficient way to load favorites for the UI
+    func getCurrentStationFavoritesWithMetadata() async throws -> [TidalCurrentFavoriteRecord] {
+        print("📋 CURRENT_DB_SERVICE: Starting efficient favorites retrieval")
+        let startTime = Date()
+        
+        let db = try databaseCore.ensureConnection()
+        guard let userId = await getCurrentUserId() else {
+            throw NSError(domain: "DatabaseService", code: 401, userInfo: [NSLocalizedDescriptionKey: "No authenticated user"])
+        }
+        
+        print("👤 CURRENT_DB_SERVICE: Querying favorites for user: \(userId)")
+        
+        // Query only favorite records for this user
+        let query = tidalCurrentStationFavorites.filter(
+            colUserId == userId &&
+            colIsFavorite == true
+        ).order(colStationName.asc, colCurrentBin.asc)
+        
+        var results: [TidalCurrentFavoriteRecord] = []
+        let queryStartTime = Date()
+        
+        for row in try db.prepare(query) {
+            let record = TidalCurrentFavoriteRecord(
+                id: row[colId],
+                userId: row[colUserId],
+                stationId: row[colStationId],
+                currentBin: row[colCurrentBin],
+                isFavorite: row[colIsFavorite],
+                lastModified: row[colLastModified],
+                deviceId: row[colDeviceId],
+                stationName: row[colStationName],
+                latitude: row[colLatitude],
+                longitude: row[colLongitude],
+                depth: row[colDepth],
+                depthType: row[colDepthType]
+            )
+            results.append(record)
+        }
+        
+        let queryDuration = Date().timeIntervalSince(queryStartTime)
+        let totalDuration = Date().timeIntervalSince(startTime)
+        
+        print("✅ CURRENT_DB_SERVICE: Retrieved \(results.count) favorite records")
+        print("⏱️ CURRENT_DB_SERVICE: Query took \(String(format: "%.3f", queryDuration))s, total \(String(format: "%.3f", totalDuration))s")
+        
+        // Log sample of results for debugging
+        if !results.isEmpty {
+            let first = results.first!
+            print("📄 CURRENT_DB_SERVICE: Sample record - Station: \(first.stationName ?? "Unknown"), ID: \(first.stationId), Bin: \(first.currentBin)")
+        }
+        
+        return results
+    }
+    
+    // MARK: - Sync Support Methods
     
     // Get all favorites for the current user (for sync operations)
     func getAllCurrentStationFavoritesForUser() async throws -> [TidalCurrentFavoriteRecord] {
+        print("🔄 CURRENT_DB_SERVICE: Getting all favorites for sync operations")
+        let startTime = Date()
+        
         let db = try databaseCore.ensureConnection()
         guard let userId = await getCurrentUserId() else {
             throw NSError(domain: "DatabaseService", code: 401, userInfo: [NSLocalizedDescriptionKey: "No authenticated user"])
@@ -623,6 +407,9 @@ class CurrentStationDatabaseService {
             results.append(record)
         }
         
+        let duration = Date().timeIntervalSince(startTime)
+        print("✅ CURRENT_DB_SERVICE: Retrieved \(results.count) total records for sync in \(String(format: "%.3f", duration))s")
+        
         return results
     }
     
@@ -637,6 +424,9 @@ class CurrentStationDatabaseService {
         depth: Double? = nil,
         depthType: String? = nil
     ) async throws {
+        print("💾 CURRENT_DB_SERVICE: Setting favorite status for station \(stationId) bin \(currentBin) to \(isFavorite)")
+        let startTime = Date()
+        
         let db = try databaseCore.ensureConnection()
         guard let userId = await getCurrentUserId() else {
             throw NSError(domain: "DatabaseService", code: 401, userInfo: [NSLocalizedDescriptionKey: "No authenticated user"])
@@ -644,29 +434,55 @@ class CurrentStationDatabaseService {
         
         let deviceId = await getDeviceId()
         
-        try db.run(tidalCurrentStationFavorites.insert(or: .replace,
-            colUserId <- userId,
-            colStationId <- stationId,
-            colCurrentBin <- currentBin,
-            colIsFavorite <- isFavorite,
-            colLastModified <- Date(),
-            colDeviceId <- deviceId,
-            colStationName <- stationName,
-            colLatitude <- latitude,
-            colLongitude <- longitude,
-            colDepth <- depth,
-            colDepthType <- depthType
-        ))
+        let query = tidalCurrentStationFavorites.filter(
+            colUserId == userId &&
+            colStationId == stationId &&
+            colCurrentBin == currentBin
+        )
+        
+        if try db.pluck(query) != nil {
+            // Update existing record
+            let count = try db.run(query.update(
+                colIsFavorite <- isFavorite,
+                colLastModified <- Date(),
+                colDeviceId <- deviceId,
+                colStationName <- stationName,
+                colLatitude <- latitude,
+                colLongitude <- longitude,
+                colDepth <- depth,
+                colDepthType <- depthType
+            ))
+            print("📝 CURRENT_DB_SERVICE: Updated \(count) existing records")
+        } else {
+            // Insert new record
+            try db.run(tidalCurrentStationFavorites.insert(
+                colUserId <- userId,
+                colStationId <- stationId,
+                colCurrentBin <- currentBin,
+                colIsFavorite <- isFavorite,
+                colLastModified <- Date(),
+                colDeviceId <- deviceId,
+                colStationName <- stationName,
+                colLatitude <- latitude,
+                colLongitude <- longitude,
+                colDepth <- depth,
+                colDepthType <- depthType
+            ))
+            print("📝 CURRENT_DB_SERVICE: Inserted new record")
+        }
         
         try await databaseCore.flushDatabaseAsync()
+        
+        let duration = Date().timeIntervalSince(startTime)
+        print("✅ CURRENT_DB_SERVICE: Set favorite operation completed in \(String(format: "%.3f", duration))s")
     }
 }
 
 // MARK: - Supporting Data Models
 
 struct TidalCurrentFavoriteRecord {
-    let id: Int
-    let userId: String?
+    let id: Int64
+    let userId: String
     let stationId: String
     let currentBin: Int
     let isFavorite: Bool
@@ -677,4 +493,25 @@ struct TidalCurrentFavoriteRecord {
     let longitude: Double?
     let depth: Double?
     let depthType: String?
+    
+    /// Convert database record to TidalCurrentStation model
+    func toTidalCurrentStation() -> TidalCurrentStation {
+        return TidalCurrentStation(
+            id: stationId,
+            name: stationName ?? "Unknown Station",
+            latitude: latitude,
+            longitude: longitude,
+            state: nil, // Not stored in favorites table
+            type: "Current Station",
+            depth: depth,
+            depthType: depthType,
+            currentBin: currentBin,
+            timezoneOffset: nil,
+            currentPredictionOffsets: nil,
+            harmonicConstituents: nil,
+            selfUrl: nil,
+            expand: nil,
+            isFavorite: isFavorite
+        )
+    }
 }

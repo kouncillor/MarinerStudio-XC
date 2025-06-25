@@ -22,35 +22,46 @@ class TidalCurrentPredictionViewModel: ObservableObject {
     private var bin: Int = 0
     private var currentPredictionIndex: Int = 0
     private var dateFormatter: DateFormatter
+    private let stationLatitude: Double?
+    private let stationLongitude: Double?
+    private let stationDepth: Double?
+    private let stationDepthType: String?
     
     // MARK: - Computed Properties
-    var formattedSelectedDate: String {
-        dateFormatter.string(from: selectedDate)
-    }
+    var formattedSelectedDate: String {dateFormatter.string(from: selectedDate)}
     
     // MARK: - Initialization
-    init(
-        stationId: String,
-        bin: Int,
-        stationName: String,
-        predictionService: TidalCurrentPredictionService,
-        currentStationService: CurrentStationDatabaseService
-    ) {
-        self.stationId = stationId
-        self.bin = bin
-        self.stationName = stationName
-        self.predictionService = predictionService
-        self.currentStationService = currentStationService
-        
-        dateFormatter = DateFormatter()
-        dateFormatter.dateStyle = .medium
-        dateFormatter.timeStyle = .none
-        
-        Task {
-            await updateFavoriteStatus()
-            await loadPredictions()
+    
+        init(
+            stationId: String,
+            bin: Int,
+            stationName: String,
+            stationLatitude: Double? = nil,
+            stationLongitude: Double? = nil,
+            stationDepth: Double? = nil,
+            stationDepthType: String? = nil,
+            predictionService: TidalCurrentPredictionService,
+            currentStationService: CurrentStationDatabaseService
+        ) {
+            self.stationId = stationId
+            self.bin = bin
+            self.stationName = stationName
+            self.stationLatitude = stationLatitude
+            self.stationLongitude = stationLongitude
+            self.stationDepth = stationDepth
+            self.stationDepthType = stationDepthType        
+            self.predictionService = predictionService
+            self.currentStationService = currentStationService
+            
+            dateFormatter = DateFormatter()
+            dateFormatter.dateStyle = .medium
+            dateFormatter.timeStyle = .none
+            
+            Task {
+                await updateFavoriteStatus()
+                await loadPredictions()
+            }
         }
-    }
     
     // MARK: - Public Methods
     func loadPredictions() async {
@@ -144,14 +155,29 @@ class TidalCurrentPredictionViewModel: ObservableObject {
         }
         await loadPredictions()
     }
-    
-    func toggleFavorite() async {
-        let newValue = await currentStationService.toggleCurrentStationFavorite(id: stationId, bin: bin)
-        
-        await MainActor.run {
-            self.isFavorite = newValue
-        }
-    }
+
+    // Updated toggle method to use stored metadata
+       func toggleFavorite() async {
+           print("⭐ PREDICTION_VM: Starting toggle for station \(stationId), bin \(bin)")
+           print("📊 PREDICTION_VM: Using metadata - Name: \(stationName), Lat: \(stationLatitude?.description ?? "nil"), Lon: \(stationLongitude?.description ?? "nil")")
+           
+           let newValue = await currentStationService.toggleCurrentStationFavoriteWithMetadata(
+               id: stationId,
+               bin: bin,
+               stationName: stationName.isEmpty ? nil : stationName,
+               latitude: stationLatitude,
+               longitude: stationLongitude,
+               depth: stationDepth,
+               depthType: stationDepthType
+           )
+           
+           await MainActor.run {
+               self.isFavorite = newValue
+           }
+           
+           print("⭐ PREDICTION_VM: Toggle completed for station \(stationId), new status: \(newValue)")
+       }
+   
     
     func viewStationWebsite() {
         let urlString = "https://tidesandcurrents.noaa.gov/noaacurrents/predictions.html?id=\(stationId)_\(bin)"

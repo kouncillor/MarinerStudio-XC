@@ -103,7 +103,7 @@ struct TidalCurrentStationsView: View {
                     ProgressView("Loading stations...")
                         .padding()
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             )
         } else if !viewModel.errorMessage.isEmpty {
             print("❌ VIEW: Showing error state: \(viewModel.errorMessage)")
@@ -129,15 +129,13 @@ struct TidalCurrentStationsView: View {
                     .foregroundColor(.white)
                     .cornerRadius(10)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             )
         } else {
             print("📋 VIEW: Showing stations list with \(viewModel.stations.count) stations")
             return AnyView(stationsList)
         }
     }
-    
-    // REMOVED: statusBar entirely - no more station count or lat/long display
     
     private var stationsList: some View {
         print("📋 VIEW: Building stations list")
@@ -150,6 +148,10 @@ struct TidalCurrentStationsView: View {
                     stationId: stationWithDistance.station.id,
                     bin: stationWithDistance.station.currentBin ?? 0,
                     stationName: stationWithDistance.station.name,
+                    stationLatitude: stationWithDistance.station.latitude,      // ← ADD
+                    stationLongitude: stationWithDistance.station.longitude,    // ← ADD
+                    stationDepth: stationWithDistance.station.depth,            // ← ADD
+                    stationDepthType: stationWithDistance.station.depthType,    // ← ADD
                     currentStationService: viewModel.currentStationService
                 )) {
                     TidalCurrentStationRow(stationWithDistance: stationWithDistance)
@@ -169,60 +171,60 @@ struct TidalCurrentStationsView: View {
             await viewModel.refreshStations()
         }
     }
-}
-
-struct TidalCurrentStationRow: View {
-    let stationWithDistance: StationWithDistance<TidalCurrentStation>
-    // REMOVED: onToggleFavorite parameter entirely
     
-    var body: some View {
-        // Log only for first few stations to avoid spam
-        if stationWithDistance.station.id.hasSuffix("01") {
-            print("🏗️ VIEW: Building row for station \(stationWithDistance.station.id)")
-        }
+    struct TidalCurrentStationRow: View {
+        let stationWithDistance: StationWithDistance<TidalCurrentStation>
+        // REMOVED: onToggleFavorite parameter entirely
         
-        return VStack(alignment: .leading, spacing: 5) {
-            HStack {
-                Text(stationWithDistance.station.name)
-                    .font(.headline)
-                Spacer()
-                
-                // REMOVED: Star button entirely - no more favorite toggle
-                // This completely eliminates any database interaction from the list
+        var body: some View {
+            // Log only for first few stations to avoid spam
+            if stationWithDistance.station.id.hasSuffix("01") {
+                print("🏗️ VIEW: Building row for station \(stationWithDistance.station.id)")
             }
             
-            if let state = stationWithDistance.station.state, !state.isEmpty {
-                Text(state)
-                    .font(.subheadline)
-                    .foregroundColor(.gray)
-            }
-            
-            HStack {
-                Text("ID: \(stationWithDistance.station.id)")
-                    .font(.caption)
-                    .foregroundColor(.gray)
-                
-                if let bin = stationWithDistance.station.currentBin {
-                    Text("• Bin: \(bin)")
-                        .font(.caption)
-                        .foregroundColor(.gray)
+            return VStack(alignment: .leading, spacing: 5) {
+                HStack {
+                    Text(stationWithDistance.station.name)
+                        .font(.headline)
+                    Spacer()
+                    
+                    // REMOVED: Star button entirely - no more favorite toggle
+                    // This completely eliminates any database interaction from the list
                 }
-            }
-            
-            HStack {
-                if let depth = stationWithDistance.station.depth {
-                    Text("Depth: \(String(format: "%.1f", depth)) ft")
-                        .font(.caption)
+                
+                if let state = stationWithDistance.station.state, !state.isEmpty {
+                    Text(state)
+                        .font(.subheadline)
                         .foregroundColor(.gray)
                 }
                 
-                if !stationWithDistance.distanceDisplay.isEmpty {
-                    Text("• \(stationWithDistance.distanceDisplay)")
+                HStack {
+                    Text("ID: \(stationWithDistance.station.id)")
                         .font(.caption)
                         .foregroundColor(.gray)
+                    
+                    if let bin = stationWithDistance.station.currentBin {
+                        Text("• Bin: \(bin)")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
+                }
+                
+                HStack {
+                    if let depth = stationWithDistance.station.depth {
+                        Text("Depth: \(String(format: "%.1f", depth)) ft")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
+                    
+                    if !stationWithDistance.distanceDisplay.isEmpty {
+                        Text("• \(stationWithDistance.distanceDisplay)")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
                 }
             }
+            .padding(.vertical, 5)
         }
-        .padding(.vertical, 5)
     }
 }

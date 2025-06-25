@@ -6,20 +6,27 @@ struct TidalCurrentPredictionView: View {
     
     // MARK: - Initialization
     init(
-        stationId: String,
-        bin: Int,
-        stationName: String,
-        predictionService: TidalCurrentPredictionService = TidalCurrentPredictionServiceImpl(),
-        currentStationService: CurrentStationDatabaseService
-    ) {
-        _viewModel = StateObject(wrappedValue: TidalCurrentPredictionViewModel(
-            stationId: stationId,
-            bin: bin,
-            stationName: stationName,
-            predictionService: predictionService,
-            currentStationService: currentStationService
-        ))
-    }
+            stationId: String,
+            bin: Int,
+            stationName: String,
+            stationLatitude: Double? = nil,     // ← NEW: Optional latitude
+            stationLongitude: Double? = nil,    // ← NEW: Optional longitude
+            stationDepth: Double? = nil,        // ← NEW: Optional depth
+            stationDepthType: String? = nil,    // ← NEW: Optional depth type
+            currentStationService: CurrentStationDatabaseService
+        ) {
+            _viewModel = StateObject(wrappedValue: TidalCurrentPredictionViewModel(
+                stationId: stationId,
+                bin: bin,
+                stationName: stationName,
+                stationLatitude: stationLatitude,        // ← Pass to ViewModel
+                stationLongitude: stationLongitude,      // ← Pass to ViewModel
+                stationDepth: stationDepth,              // ← Pass to ViewModel
+                stationDepthType: stationDepthType,      // ← Pass to ViewModel
+                predictionService: TidalCurrentPredictionServiceImpl(),
+                currentStationService: currentStationService
+            ))
+        }
     
     // MARK: - Body
     var body: some View {
