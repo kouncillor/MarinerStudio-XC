@@ -44,6 +44,8 @@ class ServiceProvider: ObservableObject {
     // MARK: - NEW: Recommendation Services
     let recommendationService: RecommendationCloudService
     
+    let currentStationSyncService: CurrentStationSyncService
+    
     // MARK: - Initialization
     init(locationService: LocationService? = nil) {
         // Initialize DatabaseCore
@@ -62,6 +64,7 @@ class ServiceProvider: ObservableObject {
         // Initialize Database Services
         self.tideStationService = TideStationDatabaseService(databaseCore: databaseCore)
         self.currentStationService = CurrentStationDatabaseService(databaseCore: databaseCore)
+        self.currentStationSyncService = CurrentStationSyncService(databaseService: self.currentStationService)
         self.navUnitService = NavUnitDatabaseService(databaseCore: databaseCore)
         self.vesselService = VesselDatabaseService(databaseCore: databaseCore)
         self.photoService = PhotoDatabaseService(databaseCore: databaseCore)

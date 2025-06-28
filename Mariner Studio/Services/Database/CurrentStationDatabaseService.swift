@@ -515,3 +515,4 @@ struct TidalCurrentFavoriteRecord {
         )
     }
 }
+
