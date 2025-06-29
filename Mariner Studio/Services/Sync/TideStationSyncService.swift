@@ -958,12 +958,3 @@ final class TideStationSyncService {
     }
 }
 
-// MARK: - Supporting Types for Statistics
-private struct TideSyncOperationStats {
-    var totalCalls: Int
-    var successCount: Int
-    var failureCount: Int
-    var totalDuration: TimeInterval
-    var minDuration: TimeInterval
-    var maxDuration: TimeInterval
-}

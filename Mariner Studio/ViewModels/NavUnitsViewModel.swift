@@ -1,3 +1,11 @@
+
+//
+//  NavUnitsViewModel.swift
+//  Mariner Studio
+//
+//  Complete implementation with NavUnitSyncService integration built in
+//
+
 import Foundation
 import SwiftUI
 import CoreLocation
@@ -159,59 +167,7 @@ class NavUnitsViewModel: ObservableObject {
           filterNavUnits()
     }
 
-    func toggleNavUnitFavorite(navUnitId: String) async {
-        do {
-            print("⭐ ViewModel (NavUnits): Toggling favorite for \(navUnitId) at \(Date())")
-            let newFavoriteStatus = try await navUnitService.toggleFavoriteNavUnitAsync(navUnitId: navUnitId)
-            print("⭐ ViewModel (NavUnits): Database returned new status \(newFavoriteStatus) for \(navUnitId) at \(Date())")
-
-            await MainActor.run {
-                 if let index = allNavUnits.firstIndex(where: { $0.station.navUnitId == navUnitId }) {
-                      var updatedUnit = allNavUnits[index].station
-                      updatedUnit.isFavorite = newFavoriteStatus
-                      // We also need to update the distance from the existing object
-                      let currentDistance = allNavUnits[index].distanceFromUser
-                      allNavUnits[index] = StationWithDistance(
-                          station: updatedUnit,
-                          distanceFromUser: currentDistance // Preserve existing distance
-                      )
-                      print("⭐ ViewModel (NavUnits): Updated allNavUnits array for \(navUnitId) at \(Date())")
-                      filterNavUnits() // Re-apply filter/sort
-                 } else {
-                     print("❌ ViewModel (NavUnits): Station \(navUnitId) not found in allNavUnits after toggle at \(Date())")
-                 }
-            }
-        } catch {
-             print("❌ ViewModel (NavUnits): Failed to update favorite status for \(navUnitId) at \(Date()): \(error.localizedDescription)")
-            await MainActor.run {
-                errorMessage = "Failed to update favorite status: \(error.localizedDescription)"
-            }
-        }
-    }
-
-    // MARK: - Private Methods
-    private func updateUserCoordinates() {
-         if let location = locationService.currentLocation {
-              self.userLatitude = String(format: "%.6f", location.coordinate.latitude)
-              self.userLongitude = String(format: "%.6f", location.coordinate.longitude)
-          } else {
-              self.userLatitude = "Unknown"
-              self.userLongitude = "Unknown"
-          }
-    }
-
-    deinit {
-        print("🗑️ NavUnitsViewModel deinitialized.")
-    }
-}
-
-
-
-
-// MARK: - Sync Integration Extension for NavUnitsViewModel
-// Add this extension to the existing NavUnitsViewModel.swift file
-
-extension NavUnitsViewModel {
+    // MARK: - Favorite Toggle Methods (WITH SYNC INTEGRATION)
     
     /// Enhanced toggle method with automatic sync integration
     func toggleNavUnitFavoriteWithSync(navUnitId: String) async {
@@ -271,14 +227,25 @@ extension NavUnitsViewModel {
             }
         }
     }
-}
 
-// MARK: - Update to existing toggleNavUnitFavorite method
-// Replace the existing toggleNavUnitFavorite method in NavUnitsViewModel with this:
+    /// Main toggle method - now uses sync-enabled version
+    func toggleNavUnitFavorite(navUnitId: String) async {
+        // Use the new sync-enabled version
+        await toggleNavUnitFavoriteWithSync(navUnitId: navUnitId)
+    }
 
-/*
-func toggleNavUnitFavorite(navUnitId: String) async {
-    // Use the new sync-enabled version
-    await toggleNavUnitFavoriteWithSync(navUnitId: navUnitId)
+    // MARK: - Private Methods
+    private func updateUserCoordinates() {
+         if let location = locationService.currentLocation {
+              self.userLatitude = String(format: "%.6f", location.coordinate.latitude)
+              self.userLongitude = String(format: "%.6f", location.coordinate.longitude)
+          } else {
+              self.userLatitude = "Unknown"
+              self.userLongitude = "Unknown"
+          }
+    }
+
+    deinit {
+        print("🗑️ NavUnitsViewModel deinitialized.")
+    }
 }
-*/

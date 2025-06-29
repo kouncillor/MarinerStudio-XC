@@ -3,7 +3,7 @@
 //  NavUnitFavoritesViewModel.swift
 //  Mariner Studio
 //
-//  Simplified to only work with NavUnitFavorites table
+//  Complete implementation with real NavUnitSyncService integration
 //
 
 import Foundation
@@ -122,36 +122,106 @@ class NavUnitFavoritesViewModel: ObservableObject {
         }
     }
     
-    // MARK: - Sync Methods (Simplified)
+    // MARK: - Sync Methods (REAL IMPLEMENTATION)
     
+    /// Manual sync triggered by user tapping sync button
     func manualSync() async {
+        guard !isSyncing else {
+            print("🔄 NAV_UNIT_FAVORITES_VM: Manual sync already in progress, skipping")
+            return
+        }
+        
         print("🔄 NAV_UNIT_FAVORITES_VM: Manual sync triggered")
+        
         await MainActor.run {
             isSyncing = true
             syncErrorMessage = nil
             syncSuccessMessage = nil
         }
         
-        // Just reload the favorites - sync logic can be added later if needed
-        loadFavorites()
+        let result = await NavUnitSyncService.shared.syncNavUnitFavorites()
         
         await MainActor.run {
             isSyncing = false
-            lastSyncTime = Date()
-            syncSuccessMessage = "Favorites refreshed"
+            
+            switch result {
+            case .success(let stats):
+                lastSyncTime = Date()
+                syncSuccessMessage = "Sync completed! \(stats.uploaded) uploaded, \(stats.downloaded) downloaded"
+                syncErrorMessage = nil
+                
+                print("✅ NAV_UNIT_FAVORITES_VM: Sync completed successfully")
+                print("✅ NAV_UNIT_SYNC_STATS: \(stats.totalOperations) operations in \(String(format: "%.3f", stats.duration))s")
+                print("✅ NAV_UNIT_SYNC_STATS: Uploaded: \(stats.uploaded), Downloaded: \(stats.downloaded), Conflicts: \(stats.conflictsResolved)")
+                
+            case .failure(let error):
+                syncErrorMessage = "Sync failed: \(error.localizedDescription)"
+                syncSuccessMessage = nil
+                
+                print("❌ NAV_UNIT_FAVORITES_VM: Sync failed - \(error.localizedDescription)")
+                
+            case .partialSuccess(let stats, let errors):
+                lastSyncTime = Date()
+                syncSuccessMessage = "Partial sync - \(stats.totalOperations) operations"
+                syncErrorMessage = "Some operations failed (\(errors.count) errors)"
+                
+                print("⚠️ NAV_UNIT_FAVORITES_VM: Partial sync - \(stats.totalOperations) operations, \(errors.count) errors")
+                for (index, error) in errors.enumerated() {
+                    print("⚠️ NAV_UNIT_FAVORITES_VM: Sync error [\(index)]: \(error.localizedDescription)")
+                }
+            }
+            
+            // Reload favorites after sync to show any changes
+            loadFavorites()
         }
     }
     
+    /// Perform sync on app launch
     func performAppLaunchSync() async {
-        print("🚀 NAV_UNIT_FAVORITES_VM: App launch sync")
-        // Just load favorites on app launch
-        loadFavorites()
+        guard !isSyncing else {
+            print("🔄 NAV_UNIT_FAVORITES_VM: App launch sync skipped - sync already in progress")
+            return
+        }
+        
+        print("🚀 NAV_UNIT_FAVORITES_VM: App launch sync started")
+        
+        let result = await NavUnitSyncService.shared.syncNavUnitFavorites()
+        
+        switch result {
+        case .success(let stats):
+            await MainActor.run {
+                lastSyncTime = Date()
+                print("✅ NAV_UNIT_FAVORITES_VM: App launch sync completed - \(stats.totalOperations) operations")
+                loadFavorites() // Reload to show synced data
+            }
+            
+        case .failure(let error):
+            print("❌ NAV_UNIT_FAVORITES_VM: App launch sync failed - \(error.localizedDescription)")
+            
+        case .partialSuccess(let stats, let errors):
+            await MainActor.run {
+                lastSyncTime = Date()
+                print("⚠️ NAV_UNIT_FAVORITES_VM: App launch sync partial - \(stats.totalOperations) operations, \(errors.count) errors")
+                loadFavorites() // Reload to show synced data
+            }
+        }
     }
     
+    /// Cloud sync (same as manual sync)
     func syncWithCloud() async {
-        print("☁️ NAV_UNIT_FAVORITES_VM: Cloud sync")
-        // For now, just reload favorites
-        loadFavorites()
+        print("☁️ NAV_UNIT_FAVORITES_VM: Cloud sync triggered")
+        await manualSync()
+    }
+    
+    /// Check if sync is available
+    func canSyncWithCloud() async -> Bool {
+        return await NavUnitSyncService.shared.canSync()
+    }
+    
+    /// Clear sync status messages
+    func clearSyncMessages() {
+        syncErrorMessage = nil
+        syncSuccessMessage = nil
     }
     
     func cleanup() {
@@ -159,20 +229,17 @@ class NavUnitFavoritesViewModel: ObservableObject {
         loadTask?.cancel()
     }
     
-    func clearSyncMessages() {
-        syncErrorMessage = nil
-        syncSuccessMessage = nil
-    }
-    
-    // MARK: - Computed Properties for UI
+    // MARK: - Computed Properties for UI (matches TideFavoritesViewModel)
     
     var syncStatusIcon: String {
         if isSyncing {
             return "arrow.triangle.2.circlepath"
         } else if syncErrorMessage != nil {
             return "exclamationmark.triangle"
-        } else {
+        } else if lastSyncTime != nil {
             return "checkmark.circle"
+        } else {
+            return "cloud"
         }
     }
     
@@ -181,12 +248,39 @@ class NavUnitFavoritesViewModel: ObservableObject {
             return .blue
         } else if syncErrorMessage != nil {
             return .red
-        } else {
+        } else if lastSyncTime != nil {
             return .green
+        } else {
+            return .gray
         }
     }
     
     var canSync: Bool {
         return !isSyncing
+    }
+    
+    /// Format last sync time for display
+    var lastSyncTimeFormatted: String {
+        guard let lastSyncTime = lastSyncTime else {
+            return "Never synced"
+        }
+        
+        let formatter = DateFormatter()
+        let now = Date()
+        let timeSince = now.timeIntervalSince(lastSyncTime)
+        
+        if timeSince < 60 {
+            return "Just now"
+        } else if timeSince < 3600 {
+            let minutes = Int(timeSince / 60)
+            return "\(minutes) minute\(minutes == 1 ? "" : "s") ago"
+        } else if timeSince < 86400 {
+            let hours = Int(timeSince / 3600)
+            return "\(hours) hour\(hours == 1 ? "" : "s") ago"
+        } else {
+            formatter.dateStyle = .short
+            formatter.timeStyle = .short
+            return formatter.string(from: lastSyncTime)
+        }
     }
 }

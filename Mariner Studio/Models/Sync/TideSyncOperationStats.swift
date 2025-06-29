@@ -1,3 +1,4 @@
+
 //
 //  TideSyncOperationStats.swift
 //  Mariner Studio
@@ -17,6 +18,7 @@ struct TideSyncOperationStats {
     var totalDuration: TimeInterval
     var minDuration: TimeInterval
     var maxDuration: TimeInterval
+    var lastExecution: Date
     
     /// Computed property for average duration
     var averageDuration: TimeInterval {
@@ -38,10 +40,11 @@ struct TideSyncOperationStats {
         self.totalDuration = 0
         self.minDuration = 0
         self.maxDuration = 0
+        self.lastExecution = Date()
     }
     
     /// Initialize with specific values
-    init(totalCalls: Int, successCount: Int, failureCount: Int, 
+    init(totalCalls: Int, successCount: Int, failureCount: Int,
          totalDuration: TimeInterval, minDuration: TimeInterval, maxDuration: TimeInterval) {
         self.totalCalls = totalCalls
         self.successCount = successCount
@@ -49,5 +52,19 @@ struct TideSyncOperationStats {
         self.totalDuration = totalDuration
         self.minDuration = minDuration
         self.maxDuration = maxDuration
+        self.lastExecution = Date()
+    }
+    
+    /// Initialize with specific values including lastExecution
+    init(totalCalls: Int, successCount: Int, failureCount: Int,
+         totalDuration: TimeInterval, minDuration: TimeInterval, maxDuration: TimeInterval,
+         lastExecution: Date) {
+        self.totalCalls = totalCalls
+        self.successCount = successCount
+        self.failureCount = failureCount
+        self.totalDuration = totalDuration
+        self.minDuration = minDuration
+        self.maxDuration = maxDuration
+        self.lastExecution = lastExecution
     }
 }

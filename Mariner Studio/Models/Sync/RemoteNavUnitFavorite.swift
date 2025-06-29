@@ -1,6 +1,11 @@
 
-// MARK: - Remote Navigation Unit Favorite Model
-// File: Models/Sync/RemoteNavUnitFavorite.swift
+//
+//  RemoteNavUnitFavorite.swift
+//  Mariner Studio
+//
+//  Remote navigation unit favorite model matching Supabase user_nav_unit_favorites table structure
+//  FIXED: userId as UUID to match Supabase schema
+//
 
 import Foundation
 import UIKit
@@ -8,10 +13,10 @@ import UIKit
 /// Remote navigation unit favorite model matching Supabase user_nav_unit_favorites table structure
 struct RemoteNavUnitFavorite: Codable, Identifiable {
     let id: UUID?
-    let userId: String
+    let userId: UUID           // FIXED: UUID not String to match Supabase schema
     let navUnitId: String
     let isFavorite: Bool
-    let lastModified: Date
+    let lastModified: Date     // CRITICAL: For last-write-wins conflict resolution
     let deviceId: String
     let navUnitName: String?
     let latitude: Double?
@@ -37,11 +42,11 @@ struct RemoteNavUnitFavorite: Codable, Identifiable {
     
     // MARK: - Initializers
     
-    init(userId: String, navUnitId: String, isFavorite: Bool, deviceId: String,
+    init(userId: UUID, navUnitId: String, isFavorite: Bool, deviceId: String,
          navUnitName: String? = nil, latitude: Double? = nil, longitude: Double? = nil,
          facilityType: String? = nil) {
         self.id = nil  // Let Supabase generate the ID
-        self.userId = userId
+        self.userId = userId  // FIXED: Now UUID
         self.navUnitId = navUnitId
         self.isFavorite = isFavorite
         self.lastModified = Date()
@@ -66,101 +71,16 @@ struct RemoteNavUnitFavorite: Codable, Identifiable {
         longitude: Double? = nil,
         facilityType: String? = nil
     ) -> RemoteNavUnitFavorite {
-        let deviceId = UIDevice.current.identifierForVendor?.uuidString ?? "unknown-device"
+        let deviceId = UIDevice.current.identifierForVendor?.uuidString ?? "unknown_device"
         return RemoteNavUnitFavorite(
-            userId: userId.uuidString,
-            navUnitId: navUnitId,
-            isFavorite: isFavorite,
-            deviceId: deviceId,
-            navUnitName: navUnitName,
-            latitude: latitude,
-            longitude: longitude,
-            facilityType: facilityType
-        )
-    }
-    
-    /// Create from NavUnitFavoriteRecord
-    static func fromLocalRecord(_ record: NavUnitFavoriteRecord, userId: UUID) -> RemoteNavUnitFavorite {
-        return RemoteNavUnitFavorite(
-            userId: userId.uuidString,
-            navUnitId: record.navUnitId,
-            isFavorite: record.isFavorite,
-            deviceId: record.deviceId,
-            navUnitName: record.navUnitName,
-            latitude: record.latitude,
-            longitude: record.longitude,
-            facilityType: record.facilityType
-        )
-    }
-    
-    // MARK: - Conversion Methods
-    
-    /// Convert to local NavUnitFavoriteRecord
-    func toLocalRecord() -> NavUnitFavoriteRecord {
-        return NavUnitFavoriteRecord(
             userId: userId,
             navUnitId: navUnitId,
             isFavorite: isFavorite,
-            lastModified: lastModified,
             deviceId: deviceId,
             navUnitName: navUnitName,
             latitude: latitude,
             longitude: longitude,
             facilityType: facilityType
         )
-    }
-    
-    /// Convert to display NavUnit
-    func toNavUnit() -> NavUnit {
-        return NavUnit(
-            navUnitId: navUnitId,
-            unloCode: nil,
-            navUnitName: navUnitName ?? "Unknown Navigation Unit",
-            locationDescription: nil,
-            facilityType: facilityType,
-            streetAddress: nil,
-            cityOrTown: nil,
-            statePostalCode: nil,
-            zipCode: nil,
-            countyName: nil,
-            countyFipsCode: nil,
-            congress: nil,
-            congressFips: nil,
-            waterwayName: nil,
-            portName: nil,
-            mile: nil,
-            bank: nil,
-            latitude: latitude ?? 0.0,
-            longitude: longitude ?? 0.0,
-            operators: nil,
-            owners: nil,
-            purpose: nil,
-            highwayNote: nil,
-            railwayNote: nil,
-            location: nil,
-            dock: nil,
-            commodities: nil,
-            construction: nil,
-            mechanicalHandling: nil,
-            remarks: nil,
-            verticalDatum: nil,
-            depthMin: nil,
-            depthMax: nil,
-            berthingLargest: nil,
-            berthingTotal: nil,
-            deckHeightMin: nil,
-            deckHeightMax: nil,
-            serviceInitiationDate: nil,
-            serviceTerminationDate: nil,
-            isFavorite: isFavorite
-        )
-    }
-}
-
-// MARK: - Extensions for Debugging
-
-extension RemoteNavUnitFavorite: CustomStringConvertible {
-    var description: String {
-        return "RemoteNavUnitFavorite(id: \(id?.uuidString ?? "nil"), navUnitId: \(navUnitId), isFavorite: \(isFavorite), name: \(navUnitName ?? "nil"))"
     }
 }

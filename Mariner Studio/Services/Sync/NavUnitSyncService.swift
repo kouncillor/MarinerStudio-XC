@@ -2,8 +2,9 @@
 //  NavUnitSyncService.swift
 //  Mariner Studio
 //
-//  Navigation Unit Favorites Synchronization Service
+//  Navigation Unit Favorites Synchronization Service - Complete Rewrite
 //  Singleton service for syncing nav unit favorites between local SQLite and Supabase
+//  Follows exact TideStationSyncService pattern with last-write-wins conflict resolution
 //
 
 import Foundation
@@ -116,202 +117,300 @@ final class NavUnitSyncService {
                 print("✅📱🌊⚖️ LOCAL DATA: Count = \(localFavorites.count)")
                 print("✅📱🌊⚖️ LOCAL DATA: Duration = \(String(format: "%.3f", localDuration))s")
                 print("✅📱🌊⚖️ LOCAL DATA: Nav Unit IDs = \(Array(localFavorites).sorted())")
+                
+                if localFavorites.isEmpty {
+                    print("⚠️📱🌊⚖️ LOCAL DATA WARNING: No local favorites found")
+                } else {
+                    print("📱🌊⚖️ LOCAL DATA: First 5 nav units = \(Array(localFavorites.prefix(5)))")
+                }
             }
             
             // STEP 4: Get Remote Favorites with heavy logging
             logQueue.async {
                 print("\n☁️🌊⚖️ REMOTE DATA: Starting remote nav unit favorites retrieval...")
-                print("☁️🌊⚖️ REMOTE DATA: Calling fetchRemoteNavUnitFavorites()")
-                print("☁️🌊⚖️ REMOTE DATA: User ID = \(session.user.id)")
+                print("☁️🌊⚖️ REMOTE DATA: Querying user_nav_unit_favorites table")
+                print("☁️🌊⚖️ REMOTE DATA: User ID filter = \(session.user.id)")
+                print("☁️🌊⚖️ REMOTE DATA: Using SupabaseManager.shared")
                 print("☁️🌊⚖️ REMOTE DATA: Timestamp = \(Date())")
             }
             
             let remoteStartTime = Date()
-            let remoteFavorites = try await fetchRemoteNavUnitFavorites(for: session.user.id)
+            let remoteFavorites = await getRemoteNavUnitFavorites(userId: session.user.id)
             let remoteDuration = Date().timeIntervalSince(remoteStartTime)
             
             logQueue.async {
                 print("\n✅☁️🌊⚖️ REMOTE DATA SUCCESS: Retrieved remote nav unit favorites")
                 print("✅☁️🌊⚖️ REMOTE DATA: Count = \(remoteFavorites.count)")
                 print("✅☁️🌊⚖️ REMOTE DATA: Duration = \(String(format: "%.3f", remoteDuration))s")
-                let remoteIds = remoteFavorites.map { $0.navUnitId }
-                print("✅☁️🌊⚖️ REMOTE DATA: Nav Unit IDs = \(remoteIds.sorted())")
+                
+                if remoteFavorites.isEmpty {
+                    print("⚠️☁️🌊⚖️ REMOTE DATA WARNING: No remote favorites found")
+                } else {
+                    print("☁️🌊⚖️ REMOTE DATA: Remote nav units breakdown:")
+                    let favoriteRemotes = remoteFavorites.filter { $0.isFavorite }
+                    let unfavoriteRemotes = remoteFavorites.filter { !$0.isFavorite }
+                    print("☁️🌊⚖️ REMOTE DATA: - Favorites (true): \(favoriteRemotes.count)")
+                    print("☁️🌊⚖️ REMOTE DATA: - Unfavorites (false): \(unfavoriteRemotes.count)")
+                    
+                    for (index, remote) in remoteFavorites.prefix(5).enumerated() {
+                        print("☁️🌊⚖️ REMOTE DATA: [\(index)] Nav Unit: \(remote.navUnitId), Favorite: \(remote.isFavorite), Modified: \(remote.lastModified), Device: \(remote.deviceId)")
+                    }
+                }
             }
             
-            // STEP 5: Analyze Differences with heavy logging
-            let remoteNavUnitIds = Set(remoteFavorites.map { $0.navUnitId })
-            let localOnlyFavorites = localFavorites.subtracting(remoteNavUnitIds)
-            let remoteOnlyFavorites = remoteNavUnitIds.subtracting(localFavorites)
-            let commonFavorites = localFavorites.intersection(remoteNavUnitIds)
+            // STEP 5: Data Analysis and Comparison
+            logQueue.async {
+                print("\n🔍🌊⚖️ ANALYSIS: Starting data comparison...")
+                print("🔍🌊⚖️ ANALYSIS: Local favorites count = \(localFavorites.count)")
+                print("🔍🌊⚖️ ANALYSIS: Remote records count = \(remoteFavorites.count)")
+            }
+            
+            let analysisStartTime = Date()
+            let (localOnlyNavUnits, remoteOnlyNavUnits, conflictingNavUnits) = analyzeNavUnitData(
+                localFavorites: localFavorites,
+                remoteFavorites: remoteFavorites
+            )
+            let analysisDuration = Date().timeIntervalSince(analysisStartTime)
             
             logQueue.async {
-                print("\n🔍🌊⚖️ ANALYSIS: Analyzing sync differences...")
-                print("🔍🌊⚖️ ANALYSIS: Local-only favorites = \(localOnlyFavorites.count) items")
-                print("🔍🌊⚖️ ANALYSIS: Remote-only favorites = \(remoteOnlyFavorites.count) items")
-                print("🔍🌊⚖️ ANALYSIS: Common favorites = \(commonFavorites.count) items")
+                print("\n✅🔍🌊⚖️ ANALYSIS SUCCESS: Data comparison completed")
+                print("✅🔍🌊⚖️ ANALYSIS: Duration = \(String(format: "%.3f", analysisDuration))s")
+                print("✅🔍🌊⚖️ ANALYSIS: Local-only nav units = \(localOnlyNavUnits.count)")
+                print("✅🔍🌊⚖️ ANALYSIS: Remote-only nav units = \(remoteOnlyNavUnits.count)")
+                print("✅🔍🌊⚖️ ANALYSIS: Conflicting nav units = \(conflictingNavUnits.count)")
                 
-                if !localOnlyFavorites.isEmpty {
-                    print("🔍🌊⚖️ ANALYSIS: Local-only IDs = \(Array(localOnlyFavorites).sorted())")
+                if !localOnlyNavUnits.isEmpty {
+                    print("🔍🌊⚖️ ANALYSIS: Local-only IDs = \(Array(localOnlyNavUnits).sorted())")
                 }
-                if !remoteOnlyFavorites.isEmpty {
-                    print("🔍🌊⚖️ ANALYSIS: Remote-only IDs = \(Array(remoteOnlyFavorites).sorted())")
+                if !remoteOnlyNavUnits.isEmpty {
+                    print("🔍🌊⚖️ ANALYSIS: Remote-only IDs = \(remoteOnlyNavUnits.map { $0.navUnitId }.sorted())")
+                }
+                if !conflictingNavUnits.isEmpty {
+                    print("🔍🌊⚖️ ANALYSIS: Conflicting IDs = \(Array(conflictingNavUnits).sorted())")
                 }
             }
             
-            var errors: [TideSyncError] = []
-            var uploadCount = 0
-            var downloadCount = 0
-            var conflictCount = 0
-            
-            // STEP 6: Upload Local-Only Favorites
-            if !localOnlyFavorites.isEmpty {
+            // STEP 6: Upload Phase - Local-only nav units to Supabase
+            var uploadResults = (uploaded: 0, errors: [TideSyncError]())
+            if !localOnlyNavUnits.isEmpty {
                 logQueue.async {
-                    print("\n📤🌊⚖️ UPLOAD PHASE: Starting upload of local-only nav unit favorites...")
+                    print("\n📤🌊⚖️ UPLOAD PHASE: Starting upload of local-only nav units...")
+                    print("📤🌊⚖️ UPLOAD PHASE: Nav units to upload = \(localOnlyNavUnits.count)")
                 }
                 
                 let uploadStartTime = Date()
-                let uploadResult = await uploadLocalChanges(
-                    localOnlyFavorites: localOnlyFavorites,
+                uploadResults = await uploadLocalNavUnits(
+                    localOnlyNavUnits: localOnlyNavUnits,
                     userId: session.user.id,
                     databaseService: databaseService
                 )
                 let uploadDuration = Date().timeIntervalSince(uploadStartTime)
                 
-                uploadCount = uploadResult.uploaded
-                errors.append(contentsOf: uploadResult.errors)
-                
                 logQueue.async {
-                    print("\n✅📤🌊⚖️ UPLOAD COMPLETE: Uploaded \(uploadResult.uploaded) nav unit favorites")
+                    print("\n✅📤🌊⚖️ UPLOAD PHASE COMPLETE:")
                     print("✅📤🌊⚖️ UPLOAD: Duration = \(String(format: "%.3f", uploadDuration))s")
-                    print("✅📤🌊⚖️ UPLOAD: Errors = \(uploadResult.errors.count)")
-                    if !uploadResult.errors.isEmpty {
-                        for (index, error) in uploadResult.errors.enumerated() {
-                            print("❌📤🌊⚖️ UPLOAD ERROR [\(index)]: \(error.localizedDescription)")
-                        }
+                    print("✅📤🌊⚖️ UPLOAD: Successfully uploaded = \(uploadResults.uploaded)")
+                    print("✅📤🌊⚖️ UPLOAD: Upload errors = \(uploadResults.errors.count)")
+                    if uploadResults.uploaded > 0 {
+                        print("✅📤🌊⚖️ UPLOAD: Success rate = \(String(format: "%.1f", Double(uploadResults.uploaded) / Double(localOnlyNavUnits.count) * 100))%")
                     }
+                }
+            } else {
+                logQueue.async {
+                    print("\n⏭️📤🌊⚖️ UPLOAD PHASE: Skipped - No local-only nav units to upload")
                 }
             }
             
-            // STEP 7: Download Remote-Only Favorites
-            if !remoteOnlyFavorites.isEmpty {
+            // STEP 7: Download Phase - Remote-only nav units to local
+            var downloadResults = (downloaded: 0, errors: [TideSyncError]())
+            if !remoteOnlyNavUnits.isEmpty {
                 logQueue.async {
-                    print("\n📥🌊⚖️ DOWNLOAD PHASE: Starting download of remote-only nav unit favorites...")
+                    print("\n📥🌊⚖️ DOWNLOAD PHASE: Starting download of remote-only nav units...")
+                    print("📥🌊⚖️ DOWNLOAD PHASE: Nav units to download = \(remoteOnlyNavUnits.count)")
                 }
                 
                 let downloadStartTime = Date()
-                let remoteOnlyRecords = remoteFavorites.filter { remoteOnlyFavorites.contains($0.navUnitId) }
-                let downloadResult = await downloadRemoteChanges(
-                    remoteOnlyFavorites: remoteOnlyRecords,
+                downloadResults = await downloadRemoteNavUnits(
+                    remoteOnlyNavUnits: remoteOnlyNavUnits,
                     databaseService: databaseService
                 )
                 let downloadDuration = Date().timeIntervalSince(downloadStartTime)
                 
-                downloadCount = downloadResult.downloaded
-                errors.append(contentsOf: downloadResult.errors)
-                
                 logQueue.async {
-                    print("\n✅📥🌊⚖️ DOWNLOAD COMPLETE: Downloaded \(downloadResult.downloaded) nav unit favorites")
+                    print("\n✅📥🌊⚖️ DOWNLOAD PHASE COMPLETE:")
                     print("✅📥🌊⚖️ DOWNLOAD: Duration = \(String(format: "%.3f", downloadDuration))s")
-                    print("✅📥🌊⚖️ DOWNLOAD: Errors = \(downloadResult.errors.count)")
-                    if !downloadResult.errors.isEmpty {
-                        for (index, error) in downloadResult.errors.enumerated() {
-                            print("❌📥🌊⚖️ DOWNLOAD ERROR [\(index)]: \(error.localizedDescription)")
-                        }
+                    print("✅📥🌊⚖️ DOWNLOAD: Successfully downloaded = \(downloadResults.downloaded)")
+                    print("✅📥🌊⚖️ DOWNLOAD: Download errors = \(downloadResults.errors.count)")
+                    if downloadResults.downloaded > 0 {
+                        print("✅📥🌊⚖️ DOWNLOAD: Success rate = \(String(format: "%.1f", Double(downloadResults.downloaded) / Double(remoteOnlyNavUnits.count) * 100))%")
                     }
+                }
+            } else {
+                logQueue.async {
+                    print("\n⏭️📥🌊⚖️ DOWNLOAD PHASE: Skipped - No remote-only nav units to download")
                 }
             }
             
-            // STEP 8: Handle Conflicts (Future Enhancement - For now, log that no conflicts need resolution)
-            logQueue.async {
-                print("\n🔧🌊⚖️ CONFLICT RESOLUTION: Checking for conflicts in common nav unit favorites...")
-                print("🔧🌊⚖️ CONFLICT: Common favorites count = \(commonFavorites.count)")
-                print("🔧🌊⚖️ CONFLICT: Using 'last write wins' strategy (future implementation)")
-                print("🔧🌊⚖️ CONFLICT: No conflict resolution needed for boolean favorites")
+            // STEP 8: Conflict Resolution Phase - Last-Write-Wins
+            var conflictResults = (resolved: 0, errors: [TideSyncError]())
+            if !conflictingNavUnits.isEmpty {
+                logQueue.async {
+                    print("\n🔧🌊⚖️ CONFLICT PHASE: Starting last-write-wins conflict resolution...")
+                    print("🔧🌊⚖️ CONFLICT PHASE: Conflicting nav units = \(conflictingNavUnits.count)")
+                    print("🔧🌊⚖️ CONFLICT PHASE: Strategy = Last-Write-Wins (based on last_modified timestamp)")
+                }
+                
+                let conflictStartTime = Date()
+                conflictResults = await resolveNavUnitConflicts(
+                    conflictingNavUnits: conflictingNavUnits,
+                    localFavorites: localFavorites,
+                    remoteFavorites: remoteFavorites,
+                    databaseService: databaseService
+                )
+                let conflictDuration = Date().timeIntervalSince(conflictStartTime)
+                
+                logQueue.async {
+                    print("\n✅🔧🌊⚖️ CONFLICT PHASE COMPLETE:")
+                    print("✅🔧🌊⚖️ CONFLICT: Duration = \(String(format: "%.3f", conflictDuration))s")
+                    print("✅🔧🌊⚖️ CONFLICT: Successfully resolved = \(conflictResults.resolved)")
+                    print("✅🔧🌊⚖️ CONFLICT: Resolution errors = \(conflictResults.errors.count)")
+                    if conflictResults.resolved > 0 {
+                        print("✅🔧🌊⚖️ CONFLICT: Success rate = \(String(format: "%.1f", Double(conflictResults.resolved) / Double(conflictingNavUnits.count) * 100))%")
+                    }
+                }
+            } else {
+                logQueue.async {
+                    print("\n⏭️🔧🌊⚖️ CONFLICT PHASE: Skipped - No conflicting nav units to resolve")
+                }
             }
             
-            // STEP 9: Create Final Result with heavy logging
+            // STEP 9: Final Results and Statistics
             let endTime = Date()
+            let totalDuration = endTime.timeIntervalSince(startTime)
+            let allErrors = uploadResults.errors + downloadResults.errors + conflictResults.errors
+            
             let stats = TideSyncStats(
                 operationId: operationId,
                 startTime: startTime,
                 endTime: endTime,
                 localFavoritesFound: localFavorites.count,
                 remoteFavoritesFound: remoteFavorites.count,
-                uploaded: uploadCount,
-                downloaded: downloadCount,
-                conflictsResolved: conflictCount,
-                errors: errors.count
+                uploaded: uploadResults.uploaded,
+                downloaded: downloadResults.downloaded,
+                conflictsResolved: conflictResults.resolved,
+                errors: allErrors.count
             )
             
-            endSyncOperation(operationId, success: errors.isEmpty)
+            updateOperationStats("fullNavUnitSync", success: allErrors.isEmpty, duration: totalDuration)
+            endSyncOperation(operationId, success: allErrors.isEmpty)
             
             logQueue.async {
                 print("\n🏁🌊⚖️ NAV UNIT SYNC COMPLETE: =========================================")
-                print("🏁🌊⚖️ SYNC RESULT: Operation ID = \(operationId)")
-                print("🏁🌊⚖️ SYNC RESULT: Total duration = \(String(format: "%.3f", stats.duration))s")
-                print("🏁🌊⚖️ SYNC RESULT: Total operations = \(stats.totalOperations)")
-                print("🏁🌊⚖️ SYNC RESULT: Uploaded = \(uploadCount)")
-                print("🏁🌊⚖️ SYNC RESULT: Downloaded = \(downloadCount)")
-                print("🏁🌊⚖️ SYNC RESULT: Conflicts resolved = \(conflictCount)")
-                print("🏁🌊⚖️ SYNC RESULT: Errors = \(errors.count)")
-                print("🏁🌊⚖️ SYNC RESULT: Success = \(errors.isEmpty)")
-                print("🏁🌊⚖️ SYNC RESULT: End timestamp = \(endTime)")
+                print("🏁🌊⚖️ FINAL RESULTS:")
+                print("🏁🌊⚖️ - Operation ID: \(operationId)")
+                print("🏁🌊⚖️ - Total Duration: \(String(format: "%.3f", totalDuration))s")
+                print("🏁🌊⚖️ - Local Favorites Found: \(localFavorites.count)")
+                print("🏁🌊⚖️ - Remote Favorites Found: \(remoteFavorites.count)")
+                print("🏁🌊⚖️ - Nav Units Uploaded: \(uploadResults.uploaded)")
+                print("🏁🌊⚖️ - Nav Units Downloaded: \(downloadResults.downloaded)")
+                print("🏁🌊⚖️ - Conflicts Resolved: \(conflictResults.resolved)")
+                print("🏁🌊⚖️ - Total Operations: \(stats.totalOperations)")
+                print("🏁🌊⚖️ - Total Errors: \(allErrors.count)")
+                
+                if allErrors.isEmpty {
+                    print("🏁🌊⚖️ SYNC STATUS: ✅ COMPLETE SUCCESS")
+                } else if stats.totalOperations > 0 {
+                    print("🏁🌊⚖️ SYNC STATUS: ⚠️ PARTIAL SUCCESS (\(allErrors.count) errors)")
+                } else {
+                    print("🏁🌊⚖️ SYNC STATUS: ❌ FAILED")
+                }
                 print("🏁🌊⚖️ NAV UNIT SYNC COMPLETE: =========================================\n")
             }
             
-            if errors.isEmpty {
+            // Return appropriate result
+            if allErrors.isEmpty {
                 return .success(stats)
+            } else if stats.totalOperations > 0 {
+                return .partialSuccess(stats, allErrors)
             } else {
-                return .partialSuccess(stats, errors)
+                return .failure(allErrors.first ?? TideSyncError.unknownError("Sync failed with no operations completed"))
             }
             
         } catch {
+            let syncError = TideSyncError.unknownError(error.localizedDescription)
+            endSyncOperation(operationId, success: false, error: syncError)
+            
             logQueue.async {
-                print("\n💥🌊⚖️ NAV UNIT SYNC CATASTROPHIC ERROR: =============================")
-                print("💥🌊⚖️ UNEXPECTED ERROR: \(error)")
-                print("💥🌊⚖️ ERROR TYPE: \(type(of: error))")
-                print("💥🌊⚖️ ERROR DESCRIPTION: \(error.localizedDescription)")
+                print("\n💥🌊⚖️ SYNC CATASTROPHIC ERROR: =============================")
+                print("💥🌊⚖️ SYNC ERROR: \(error)")
+                print("💥🌊⚖️ SYNC ERROR TYPE: \(type(of: error))")
+                print("💥🌊⚖️ SYNC ERROR DESCRIPTION: \(error.localizedDescription)")
                 print("💥🌊⚖️ OPERATION ID: \(operationId)")
                 print("💥🌊⚖️ TIMESTAMP: \(Date())")
                 print("💥🌊⚖️ NAV UNIT SYNC CATASTROPHIC ERROR: =============================\n")
             }
             
-            let syncError = TideSyncError.unknownError(error.localizedDescription)
-            endSyncOperation(operationId, success: false, error: syncError)
             return .failure(syncError)
         }
     }
     
     // MARK: - Private Sync Implementation Methods
     
-    private func uploadLocalChanges(
-        localOnlyFavorites: Set<String>,
+    /// Analyze nav unit data to determine what needs syncing
+    private func analyzeNavUnitData(
+        localFavorites: Set<String>,
+        remoteFavorites: [RemoteNavUnitFavorite]
+    ) -> (localOnly: Set<String>, remoteOnly: [RemoteNavUnitFavorite], conflicting: Set<String>) {
+        
+        let remoteFavoriteIds = Set(remoteFavorites.filter { $0.isFavorite }.map { $0.navUnitId })
+        let remoteUnfavoriteIds = Set(remoteFavorites.filter { !$0.isFavorite }.map { $0.navUnitId })
+        let allRemoteIds = Set(remoteFavorites.map { $0.navUnitId })
+        
+        // Local-only: in local but not in remote at all
+        let localOnlyNavUnits = localFavorites.subtracting(allRemoteIds)
+        
+        // Remote-only: in remote favorites but not in local favorites
+        let remoteOnlyNavUnits = remoteFavorites.filter { remote in
+            remote.isFavorite && !localFavorites.contains(remote.navUnitId)
+        }
+        
+        // Conflicting: exist in both but with different states
+        // Local favorite but remote unfavorite, OR local unfavorite but remote favorite
+        let conflictingNavUnits = localFavorites.intersection(remoteUnfavoriteIds)
+            .union(remoteFavoriteIds.subtracting(localFavorites))
+        
+        return (localOnlyNavUnits, remoteOnlyNavUnits, conflictingNavUnits)
+    }
+    
+    /// Upload local-only nav units to Supabase
+    private func uploadLocalNavUnits(
+        localOnlyNavUnits: Set<String>,
         userId: UUID,
         databaseService: NavUnitDatabaseService
     ) async -> (uploaded: Int, errors: [TideSyncError]) {
         
         logQueue.async {
             print("\n📤🌊⚖️ UPLOAD IMPLEMENTATION: Starting detailed upload process...")
-            print("📤🌊⚖️ UPLOAD: Local-only nav unit favorites = \(localOnlyFavorites)")
+            print("📤🌊⚖️ UPLOAD: Local-only nav unit favorites = \(localOnlyNavUnits)")
             print("📤🌊⚖️ UPLOAD: User ID = \(userId)")
-            print("📤🌊⚖️ UPLOAD: Count to process = \(localOnlyFavorites.count)")
+            print("📤🌊⚖️ UPLOAD: Count to process = \(localOnlyNavUnits.count)")
         }
         
         var uploaded = 0
         var errors: [TideSyncError] = []
         
-        // STEP 1: Get all favorite nav units with details from local database
+        // Get all local nav unit favorites with metadata
         do {
             let allLocalFavoritesWithDetails = try await databaseService.getAllNavUnitFavoritesForUser()
             let localNavUnitsMap = Dictionary(uniqueKeysWithValues: allLocalFavoritesWithDetails.map { ($0.navUnitId, $0) })
             
-            for (index, navUnitId) in localOnlyFavorites.enumerated() {
+            for (index, navUnitId) in localOnlyNavUnits.enumerated() {
                 logQueue.async {
-                    print("\n📤🌊⚖️ UPLOAD ITEM [\(index + 1)/\(localOnlyFavorites.count)]: Processing nav unit \(navUnitId)")
+                    print("\n📤🌊⚖️ UPLOAD ITEM [\(index + 1)/\(localOnlyNavUnits.count)]: Processing nav unit \(navUnitId)")
                     print("📤🌊⚖️ UPLOAD ITEM: Getting nav unit details from local database...")
                 }
                 
-                // STEP 2: Get nav unit details from local database
+                // Get nav unit details from local database
                 let navUnitDetails = localNavUnitsMap[navUnitId]
                 let navUnitName = navUnitDetails?.navUnitName ?? "Nav Unit \(navUnitId)"
                 let latitude = navUnitDetails?.latitude
@@ -326,9 +425,9 @@ final class NavUnitSyncService {
                     print("📤🌊⚖️ UPLOAD ITEM: - Facility Type: '\(facilityType ?? "nil")'")
                 }
                 
-                // STEP 3: Create RemoteNavUnitFavorite record
+                // Create RemoteNavUnitFavorite record
                 let remoteRecord = RemoteNavUnitFavorite(
-                    userId: userId.uuidString,
+                    userId: userId,
                     navUnitId: navUnitId,
                     isFavorite: true,
                     deviceId: deviceId,
@@ -343,7 +442,7 @@ final class NavUnitSyncService {
                     print("📤🌊⚖️ UPLOAD ITEM: Attempting Supabase insert...")
                 }
                 
-                // STEP 4: Upload to Supabase
+                // Upload to Supabase
                 do {
                     let uploadItemStartTime = Date()
                     try await SupabaseManager.shared.from("user_nav_unit_favorites").insert(remoteRecord).execute()
@@ -374,41 +473,52 @@ final class NavUnitSyncService {
             errors.append(dbError)
             
             logQueue.async {
-                print("❌📤🌊⚖️ UPLOAD FAILED: Could not retrieve local nav unit favorites")
-                print("❌📤🌊⚖️ UPLOAD FAILED: Error = \(error.localizedDescription)")
+                print("❌📤🌊⚖️ UPLOAD PHASE ERROR: Could not retrieve local nav unit details")
+                print("❌📤🌊⚖️ UPLOAD ERROR: \(error.localizedDescription)")
             }
         }
         
-        return (uploaded: uploaded, errors: errors)
+        logQueue.async {
+            print("\n📤🌊⚖️ UPLOAD PHASE SUMMARY:")
+            print("📤🌊⚖️ UPLOAD: Total processed = \(localOnlyNavUnits.count)")
+            print("📤🌊⚖️ UPLOAD: Successfully uploaded = \(uploaded)")
+            print("📤🌊⚖️ UPLOAD: Failed uploads = \(errors.count)")
+            if !localOnlyNavUnits.isEmpty {
+                print("📤🌊⚖️ UPLOAD: Success rate = \(String(format: "%.1f", Double(uploaded) / Double(localOnlyNavUnits.count) * 100))%")
+            }
+        }
+        
+        return (uploaded, errors)
     }
     
-    private func downloadRemoteChanges(
-        remoteOnlyFavorites: [RemoteNavUnitFavorite],
+    /// Download remote-only nav units to local database
+    private func downloadRemoteNavUnits(
+        remoteOnlyNavUnits: [RemoteNavUnitFavorite],
         databaseService: NavUnitDatabaseService
     ) async -> (downloaded: Int, errors: [TideSyncError]) {
         
         logQueue.async {
             print("\n📥🌊⚖️ DOWNLOAD IMPLEMENTATION: Starting detailed download process...")
-            print("📥🌊⚖️ DOWNLOAD: Remote-only nav unit favorites = \(remoteOnlyFavorites.count)")
+            print("📥🌊⚖️ DOWNLOAD: Remote-only nav unit favorites = \(remoteOnlyNavUnits.count)")
         }
         
         var downloaded = 0
         var errors: [TideSyncError] = []
         
-        for (index, remoteFavorite) in remoteOnlyFavorites.enumerated() {
+        for (index, remoteFavorite) in remoteOnlyNavUnits.enumerated() {
             logQueue.async {
-                print("\n📥🌊⚖️ DOWNLOAD ITEM [\(index + 1)/\(remoteOnlyFavorites.count)]: Processing nav unit \(remoteFavorite.navUnitId)")
+                print("\n📥🌊⚖️ DOWNLOAD ITEM [\(index + 1)/\(remoteOnlyNavUnits.count)]: Processing nav unit \(remoteFavorite.navUnitId)")
                 print("📥🌊⚖️ DOWNLOAD ITEM: Remote details:")
-                print("📥🌊⚖️ DOWNLOAD ITEM: - Name: '\(remoteFavorite.navUnitName ?? "Unknown")'")
-                print("📥🌊⚖️ DOWNLOAD ITEM: - Is Favorite: \(remoteFavorite.isFavorite)")
+                print("📥🌊⚖️ DOWNLOAD ITEM: - Name: '\(remoteFavorite.navUnitName ?? "nil")'")
+                print("📥🌊⚖️ DOWNLOAD ITEM: - Favorite: \(remoteFavorite.isFavorite)")
                 print("📥🌊⚖️ DOWNLOAD ITEM: - Last Modified: \(remoteFavorite.lastModified)")
-                print("📥🌊⚖️ DOWNLOAD ITEM: - Device ID: \(remoteFavorite.deviceId)")
+                print("📥🌊⚖️ DOWNLOAD ITEM: - Device: \(remoteFavorite.deviceId)")
             }
             
             do {
                 let downloadItemStartTime = Date()
                 
-                // Set nav unit favorite status in local database
+                // Set nav unit as favorite in local database
                 let success = try await databaseService.setNavUnitFavorite(
                     navUnitId: remoteFavorite.navUnitId,
                     isFavorite: remoteFavorite.isFavorite,
@@ -450,134 +560,303 @@ final class NavUnitSyncService {
             }
         }
         
-        return (downloaded: downloaded, errors: errors)
+        logQueue.async {
+            print("\n📥🌊⚖️ DOWNLOAD PHASE SUMMARY:")
+            print("📥🌊⚖️ DOWNLOAD: Total processed = \(remoteOnlyNavUnits.count)")
+            print("📥🌊⚖️ DOWNLOAD: Successfully downloaded = \(downloaded)")
+            print("📥🌊⚖️ DOWNLOAD: Failed downloads = \(errors.count)")
+            if !remoteOnlyNavUnits.isEmpty {
+                print("📥🌊⚖️ DOWNLOAD: Success rate = \(String(format: "%.1f", Double(downloaded) / Double(remoteOnlyNavUnits.count) * 100))%")
+            }
+        }
+        
+        return (downloaded, errors)
     }
     
-    private func fetchRemoteNavUnitFavorites(for userId: UUID) async throws -> [RemoteNavUnitFavorite] {
+    /// Resolve conflicts using last-write-wins strategy
+    private func resolveNavUnitConflicts(
+        conflictingNavUnits: Set<String>,
+        localFavorites: Set<String>,
+        remoteFavorites: [RemoteNavUnitFavorite],
+        databaseService: NavUnitDatabaseService
+    ) async -> (resolved: Int, errors: [TideSyncError]) {
+        
+        logQueue.async {
+            print("\n🔧🌊⚖️ CONFLICT IMPLEMENTATION: Starting last-write-wins resolution...")
+            print("🔧🌊⚖️ CONFLICT: Conflicting nav units = \(conflictingNavUnits)")
+            print("🔧🌊⚖️ CONFLICT: Strategy = Last-Write-Wins (newest timestamp wins)")
+        }
+        
+        var resolved = 0
+        var errors: [TideSyncError] = []
+        
+        // Get local last modified timestamps for comparison
+        var localLastModifiedMap: [String: Date] = [:]
+        do {
+            let localFavoritesWithDetails = try await databaseService.getAllNavUnitFavoritesForUser()
+            localLastModifiedMap = Dictionary(uniqueKeysWithValues: localFavoritesWithDetails.map { ($0.navUnitId, $0.lastModified) })
+        } catch {
+            let conflictError = TideSyncError.conflictResolutionFailed("Failed to get local timestamps: \(error.localizedDescription)")
+            errors.append(conflictError)
+            return (0, [conflictError])
+        }
+        
+        for (index, navUnitId) in conflictingNavUnits.enumerated() {
+            logQueue.async {
+                print("\n🔧🌊⚖️ CONFLICT ITEM [\(index + 1)/\(conflictingNavUnits.count)]: Resolving \(navUnitId)")
+            }
+            
+            // Get remote record
+            guard let remoteRecord = remoteFavorites.first(where: { $0.navUnitId == navUnitId }) else {
+                let conflictError = TideSyncError.conflictResolutionFailed("No remote record found for conflicting nav unit \(navUnitId)")
+                errors.append(conflictError)
+                
+                logQueue.async {
+                    print("❌🔧🌊⚖️ CONFLICT ITEM FAILED: No remote record for \(navUnitId)")
+                }
+                continue
+            }
+            
+            // Get local last modified timestamp
+            let localLastModified = localLastModifiedMap[navUnitId]
+            let remoteLastModified = remoteRecord.lastModified
+            
+            logQueue.async {
+                print("🔧🌊⚖️ CONFLICT ITEM: Timestamp comparison for \(navUnitId):")
+                print("🔧🌊⚖️ CONFLICT ITEM: - Local last modified: \(localLastModified?.description ?? "nil")")
+                print("🔧🌊⚖️ CONFLICT ITEM: - Remote last modified: \(remoteLastModified)")
+                print("🔧🌊⚖️ CONFLICT ITEM: - Local is favorite: \(localFavorites.contains(navUnitId))")
+                print("🔧🌊⚖️ CONFLICT ITEM: - Remote is favorite: \(remoteRecord.isFavorite)")
+            }
+            
+            // Last-Write-Wins: Compare timestamps
+            let shouldUseRemote: Bool
+            if let localTime = localLastModified {
+                shouldUseRemote = remoteLastModified > localTime
+                
+                logQueue.async {
+                    if shouldUseRemote {
+                        print("🔧🌊⚖️ CONFLICT ITEM: Remote wins (newer timestamp)")
+                    } else {
+                        print("🔧🌊⚖️ CONFLICT ITEM: Local wins (newer or equal timestamp)")
+                    }
+                }
+            } else {
+                // No local timestamp, remote wins
+                shouldUseRemote = true
+                
+                logQueue.async {
+                    print("🔧🌊⚖️ CONFLICT ITEM: Remote wins (no local timestamp)")
+                }
+            }
+            
+            // Apply the winning state
+            if shouldUseRemote {
+                // Remote wins - update local to match remote
+                do {
+                    let conflictStartTime = Date()
+                    
+                    let success = try await databaseService.setNavUnitFavorite(
+                        navUnitId: remoteRecord.navUnitId,
+                        isFavorite: remoteRecord.isFavorite,
+                        navUnitName: remoteRecord.navUnitName,
+                        latitude: remoteRecord.latitude,
+                        longitude: remoteRecord.longitude,
+                        facilityType: remoteRecord.facilityType
+                    )
+                    
+                    let conflictDuration = Date().timeIntervalSince(conflictStartTime)
+                    
+                    if success {
+                        resolved += 1
+                        
+                        logQueue.async {
+                            print("✅🔧🌊⚖️ CONFLICT ITEM SUCCESS: \(navUnitId) resolved (remote wins)")
+                            print("✅🔧🌊⚖️ CONFLICT ITEM: Updated local to favorite=\(remoteRecord.isFavorite)")
+                            print("✅🔧🌊⚖️ CONFLICT ITEM: Duration = \(String(format: "%.3f", conflictDuration))s")
+                        }
+                    } else {
+                        let conflictError = TideSyncError.conflictResolutionFailed("Failed to update local nav unit \(navUnitId)")
+                        errors.append(conflictError)
+                        
+                        logQueue.async {
+                            print("❌🔧🌊⚖️ CONFLICT ITEM FAILED: \(navUnitId) (database update failed)")
+                        }
+                    }
+                    
+                } catch {
+                    let conflictError = TideSyncError.conflictResolutionFailed("Error updating nav unit \(navUnitId): \(error.localizedDescription)")
+                    errors.append(conflictError)
+                    
+                    logQueue.async {
+                        print("❌🔧🌊⚖️ CONFLICT ITEM FAILED: \(navUnitId)")
+                        print("❌🔧🌊⚖️ CONFLICT ITEM ERROR: \(error.localizedDescription)")
+                    }
+                }
+            } else {
+                // Local wins - no action needed locally, but we could update remote timestamp
+                resolved += 1
+                
+                logQueue.async {
+                    print("✅🔧🌊⚖️ CONFLICT ITEM SUCCESS: \(navUnitId) resolved (local wins, no action needed)")
+                }
+            }
+        }
+        
+        logQueue.async {
+            print("\n🔧🌊⚖️ CONFLICT PHASE SUMMARY:")
+            print("🔧🌊⚖️ CONFLICT: Total processed = \(conflictingNavUnits.count)")
+            print("🔧🌊⚖️ CONFLICT: Successfully resolved = \(resolved)")
+            print("🔧🌊⚖️ CONFLICT: Failed resolutions = \(errors.count)")
+            if !conflictingNavUnits.isEmpty {
+                print("🔧🌊⚖️ CONFLICT: Success rate = \(String(format: "%.1f", Double(resolved) / Double(conflictingNavUnits.count) * 100))%")
+            }
+        }
+        
+        return (resolved, errors)
+    }
+    
+    /// Get remote nav unit favorites from Supabase
+    private func getRemoteNavUnitFavorites(userId: UUID) async -> [RemoteNavUnitFavorite] {
         logQueue.async {
             print("\n☁️🌊⚖️ REMOTE FETCH: Starting Supabase query for nav unit favorites...")
             print("☁️🌊⚖️ REMOTE FETCH: User ID = \(userId)")
             print("☁️🌊⚖️ REMOTE FETCH: Table = user_nav_unit_favorites")
         }
         
-        let startTime = Date()
-        
         do {
+            let queryStartTime = Date()
             let response: [RemoteNavUnitFavorite] = try await SupabaseManager.shared
                 .from("user_nav_unit_favorites")
                 .select()
                 .eq("user_id", value: userId.uuidString)
                 .execute()
                 .value
-            
-            let duration = Date().timeIntervalSince(startTime)
+            let queryDuration = Date().timeIntervalSince(queryStartTime)
             
             logQueue.async {
                 print("\n✅☁️🌊⚖️ REMOTE FETCH SUCCESS: Retrieved \(response.count) nav unit favorites")
-                print("✅☁️🌊⚖️ REMOTE FETCH: Duration = \(String(format: "%.3f", duration))s")
+                print("✅☁️🌊⚖️ REMOTE FETCH: Duration = \(String(format: "%.3f", queryDuration))s")
                 
                 if !response.isEmpty {
                     print("✅☁️🌊⚖️ REMOTE FETCH: Sample records:")
                     for (index, record) in response.prefix(3).enumerated() {
-                        print("✅☁️🌊⚖️ REMOTE FETCH: [\(index)] ID=\(record.navUnitId), Name='\(record.navUnitName ?? "Unknown")', Favorite=\(record.isFavorite)")
-                    }
-                    if response.count > 3 {
-                        print("✅☁️🌊⚖️ REMOTE FETCH: ... and \(response.count - 3) more records")
+                        print("✅☁️🌊⚖️ REMOTE FETCH: [\(index)] ID=\(record.navUnitId), Name='\(record.navUnitName ?? "nil")', Favorite=\(record.isFavorite)")
                     }
                 }
             }
             
             return response
-            
         } catch {
             logQueue.async {
-                print("\n❌☁️🌊⚖️ REMOTE FETCH FAILED: Supabase query error")
-                print("❌☁️🌊⚖️ REMOTE FETCH: Error = \(error.localizedDescription)")
-                print("❌☁️🌊⚖️ REMOTE FETCH: Error type = \(type(of: error))")
+                print("\n❌☁️🌊⚖️ REMOTE FETCH ERROR: Query failed")
+                print("❌☁️🌊⚖️ REMOTE FETCH ERROR: \(error)")
+                print("❌☁️🌊⚖️ REMOTE FETCH ERROR: Type = \(type(of: error))")
+                print("❌☁️🌊⚖️ REMOTE FETCH ERROR: Description = \(error.localizedDescription)")
+                print("❌☁️🌊⚖️ REMOTE FETCH ERROR: Returning empty array")
             }
-            
-            throw TideSyncError.supabaseError("Failed to fetch remote nav unit favorites: \(error.localizedDescription)")
+            return []
         }
     }
     
-    // MARK: - Utility Methods
+    /// Get NavUnitDatabaseService from ServiceProvider (matches TideStationSyncService pattern)
+    private func getNavUnitDatabaseService() -> NavUnitDatabaseService? {
+        logQueue.async {
+            print("\n💾🌊⚖️ SERVICE PROVIDER: Attempting to get NavUnitDatabaseService...")
+            print("💾🌊⚖️ SERVICE PROVIDER: Creating ServiceProvider instance")
+        }
+        
+        let serviceProvider = ServiceProvider()
+        let service = serviceProvider.navUnitService
+        
+        logQueue.async {
+            if service != nil {
+                print("✅💾🌊⚖️ SERVICE PROVIDER: Successfully obtained NavUnitDatabaseService")
+            } else {
+                print("❌💾🌊⚖️ SERVICE PROVIDER: Failed to obtain NavUnitDatabaseService")
+                print("❌💾🌊⚖️ SERVICE PROVIDER: ServiceProvider may not be properly initialized")
+            }
+        }
+        
+        return service
+    }
     
-    /// Check if sync is available (user authenticated and services accessible)
+    // MARK: - Public Utility Methods
+    
+    /// Check if user is authenticated for sync operations
     func canSync() async -> Bool {
-        logQueue.async {
-            print("\n🔍🌊⚖️ CAN_SYNC_CHECK: Verifying sync availability...")
-        }
-        
-        // Check authentication
-        guard let _ = try? await SupabaseManager.shared.getSession() else {
-            logQueue.async {
-                print("❌🔍🌊⚖️ CAN_SYNC_CHECK: Authentication failed")
-            }
-            return false
-        }
-        
-        // Check database service
-        guard let _ = getNavUnitDatabaseService() else {
-            logQueue.async {
-                print("❌🔍🌊⚖️ CAN_SYNC_CHECK: Database service unavailable")
-            }
-            return false
-        }
+        let operationId = startSyncOperation("authCheck")
         
         logQueue.async {
-            print("✅🔍🌊⚖️ CAN_SYNC_CHECK: Sync is available")
+            print("\n🔐🌊⚖️ AUTH CHECK: Starting authentication verification...")
+            print("🔐🌊⚖️ AUTH CHECK: Operation ID = \(operationId)")
         }
         
-        return true
+        do {
+            let session = try await SupabaseManager.shared.getSession()
+            endSyncOperation(operationId, success: true)
+            
+            logQueue.async {
+                print("✅🔐🌊⚖️ AUTH CHECK SUCCESS: User is authenticated")
+                print("✅🔐🌊⚖️ AUTH CHECK: User ID = \(session.user.id)")
+                print("✅🔐🌊⚖️ AUTH CHECK: User email = \(session.user.email ?? "NO EMAIL")")
+            }
+            
+            return true
+        } catch {
+            endSyncOperation(operationId, success: false, error: TideSyncError.authenticationRequired)
+            
+            logQueue.async {
+                print("❌🔐🌊⚖️ AUTH CHECK FAILED: User not authenticated")
+                print("❌🔐🌊⚖️ AUTH CHECK FAILED: Error = \(error)")
+                print("❌🔐🌊⚖️ AUTH CHECK FAILED: Description = \(error.localizedDescription)")
+            }
+            
+            return false
+        }
     }
     
     /// Get current active sync operations (for debugging)
-    func getCurrentSyncOperations() -> [String: Date] {
+    func getCurrentSyncOperations() -> [String] {
         operationsLock.lock()
         defer { operationsLock.unlock() }
-        return activeSyncOperations
+        return Array(activeSyncOperations.keys)
     }
     
     /// Print sync performance statistics
     func printSyncStats() {
         statsLock.lock()
-        defer { statsLock.unlock() }
+        let stats = operationStats
+        statsLock.unlock()
         
         logQueue.async {
-            print("\n📊🌊⚖️ NAV UNIT SYNC STATS: ========================================")
-            print("📊🌊⚖️ Total operations tracked: \(self.operationStats.count)")
+            print("\n📊🌊⚖️ NAV UNIT SYNC SERVICE STATISTICS: ========================================")
+            print("📊🌊⚖️ STATISTICS TIMESTAMP: \(Date())")
             
-            if self.operationStats.isEmpty {
-                print("📊🌊⚖️ No sync operations recorded yet")
+            if stats.isEmpty {
+                print("📊🌊⚖️ No nav unit sync operations performed yet")
             } else {
-                for (operation, stats) in self.operationStats {
+                for (operation, stat) in stats.sorted(by: { $0.key < $1.key }) {
+                    let avgDuration = stat.totalDuration / Double(stat.totalCalls)
+                    let successRate = Double(stat.successCount) / Double(stat.totalCalls) * 100
+                    
                     print("📊🌊⚖️ Operation: \(operation)")
-                    print("📊🌊⚖️ - Count: \(stats.count)")
-                    print("📊🌊⚖️ - Total duration: \(String(format: "%.3f", stats.totalDuration))s")
-                    print("📊🌊⚖️ - Average duration: \(String(format: "%.3f", stats.averageDuration))s")
-                    print("📊🌊⚖️ - Last execution: \(stats.lastExecution)")
+                    print("📊🌊⚖️ - Total calls: \(stat.totalCalls)")
+                    print("📊🌊⚖️ - Successes: \(stat.successCount)")
+                    print("📊🌊⚖️ - Failures: \(stat.failureCount)")
+                    print("📊🌊⚖️ - Success rate: \(String(format: "%.1f", successRate))%")
+                    print("📊🌊⚖️ - Average duration: \(String(format: "%.3f", avgDuration))s")
+                    print("📊🌊⚖️ - Min duration: \(String(format: "%.3f", stat.minDuration))s")
+                    print("📊🌊⚖️ - Max duration: \(String(format: "%.3f", stat.maxDuration))s")
+                    print("📊🌊⚖️ - Last execution: \(stat.lastExecution)")
+                    print("📊🌊⚖️")
                 }
             }
-            print("📊🌊⚖️ NAV UNIT SYNC STATS: ========================================\n")
+            print("📊🌊⚖️ NAV UNIT SYNC SERVICE STATISTICS: ========================================\n")
         }
     }
     
-    // MARK: - Database Service Access
-    
-    private func getNavUnitDatabaseService() -> NavUnitDatabaseService? {
-        do {
-            let serviceProvider = ServiceProvider()
-            return serviceProvider.navUnitService
-        } catch {
-            logQueue.async {
-                print("❌💾🌊⚖️ DATABASE SERVICE: Failed to get NavUnitDatabaseService from ServiceProvider")
-                print("❌💾🌊⚖️ DATABASE SERVICE: Error = \(error.localizedDescription)")
-            }
-            return nil
-        }
-    }
-    
-    // MARK: - Operation Tracking (Matches TideStationSyncService Pattern)
+    // MARK: - Operation Tracking (Matches SupabaseManager Pattern)
     
     private func startSyncOperation(_ operation: String, details: String = "") -> String {
         operationsLock.lock()
@@ -589,7 +868,7 @@ final class NavUnitSyncService {
         activeSyncOperations[operationId] = startTime
         
         logQueue.async {
-            print("\n🟢🌊⚖️ OPERATION START: ==========================================")
+            print("\n🟢🌊⚖️ OPERATION START: ============================================")
             print("🟢🌊⚖️ OPERATION: \(operation)")
             print("🟢🌊⚖️ OPERATION ID: \(operationId)")
             if !details.isEmpty {
@@ -609,7 +888,7 @@ final class NavUnitSyncService {
                 }
             }
             
-            print("🟢🌊⚖️ OPERATION START: ==========================================")
+            print("🟢🌊⚖️ OPERATION START: ============================================")
         }
         
         return operationId
@@ -620,66 +899,60 @@ final class NavUnitSyncService {
         let startTime = activeSyncOperations.removeValue(forKey: operationId)
         operationsLock.unlock()
         
-        let duration = startTime.map { Date().timeIntervalSince($0) } ?? 0
-        
-        // Track performance statistics
-        statsLock.lock()
-        let operationType = String(operationId.prefix(while: { $0 != "_" }))
-        if operationStats[operationType] == nil {
-            operationStats[operationType] = TideSyncOperationStats()
-        }
-        operationStats[operationType]?.addExecution(duration: duration, success: success)
-        statsLock.unlock()
+        let duration = startTime.map { Date().timeIntervalSince($0) } ?? 0.0
         
         logQueue.async {
-            print("\n🔴🌊⚖️ OPERATION END: ============================================")
-            print("🔴🌊⚖️ OPERATION ID: \(operationId)")
-            print("🔴🌊⚖️ DURATION: \(String(format: "%.3f", duration))s")
-            print("🔴🌊⚖️ SUCCESS: \(success)")
-            print("🔴🌊⚖️ END TIME: \(Date())")
-            
-            if let error = error {
-                print("🔴🌊⚖️ ERROR: \(error.localizedDescription)")
-                print("🔴🌊⚖️ ERROR TYPE: \(type(of: error))")
-            }
-            
-            print("🔴🌊⚖️ REMAINING ACTIVE OPS: \(self.activeSyncOperations.count)")
-            if !self.activeSyncOperations.isEmpty {
-                for (opId, opStartTime) in self.activeSyncOperations {
-                    let opDuration = Date().timeIntervalSince(opStartTime)
-                    print("🔴🌊⚖️ STILL ACTIVE: \(opId) running for \(String(format: "%.3f", opDuration))s")
+            if success {
+                print("\n✅🌊⚖️ OPERATION SUCCESS: \(operationId)")
+                print("✅🌊⚖️ DURATION: \(String(format: "%.3f", duration))s")
+                print("✅🌊⚖️ REMAINING ACTIVE: \(self.activeSyncOperations.count)")
+                if !self.activeSyncOperations.isEmpty {
+                    print("⚠️🌊⚖️ STILL RUNNING: \(Array(self.activeSyncOperations.keys))")
                 }
+            } else {
+                print("\n❌🌊⚖️ OPERATION FAILED: \(operationId)")
+                print("❌🌊⚖️ DURATION: \(String(format: "%.3f", duration))s")
+                if let error = error {
+                    print("❌🌊⚖️ ERROR: \(error)")
+                    print("❌🌊⚖️ ERROR TYPE: \(type(of: error))")
+                    print("❌🌊⚖️ ERROR DESCRIPTION: \(error.localizedDescription)")
+                }
+                print("❌🌊⚖️ REMAINING ACTIVE: \(self.activeSyncOperations.count)")
             }
-            print("🔴🌊⚖️ OPERATION END: ============================================\n")
         }
     }
-}
-
-// MARK: - Supporting Types
-
-/// Performance statistics for sync operations
-private struct TideSyncOperationStats {
-    private(set) var count: Int = 0
-    private(set) var totalDuration: TimeInterval = 0
-    private(set) var successCount: Int = 0
-    private(set) var lastExecution: Date = Date()
     
-    var averageDuration: TimeInterval {
-        guard count > 0 else { return 0 }
-        return totalDuration / Double(count)
-    }
-    
-    var successRate: Double {
-        guard count > 0 else { return 0 }
-        return Double(successCount) / Double(count)
-    }
-    
-    mutating func addExecution(duration: TimeInterval, success: Bool) {
-        count += 1
-        totalDuration += duration
-        if success {
-            successCount += 1
+    private func updateOperationStats(_ operationType: String, success: Bool, duration: TimeInterval) {
+        statsLock.lock()
+        defer { statsLock.unlock() }
+        
+        if var existingStats = operationStats[operationType] {
+            existingStats.totalCalls += 1
+            existingStats.successCount += success ? 1 : 0
+            existingStats.failureCount += success ? 0 : 1
+            existingStats.totalDuration += duration
+            existingStats.minDuration = min(existingStats.minDuration, duration)
+            existingStats.maxDuration = max(existingStats.maxDuration, duration)
+            existingStats.lastExecution = Date()
+            operationStats[operationType] = existingStats
+        } else {
+            operationStats[operationType] = TideSyncOperationStats(
+                totalCalls: 1,
+                successCount: success ? 1 : 0,
+                failureCount: success ? 0 : 1,
+                totalDuration: duration,
+                minDuration: duration,
+                maxDuration: duration,
+                lastExecution: Date()
+            )
         }
-        lastExecution = Date()
+        
+        logQueue.async {
+            if let stats = self.operationStats[operationType] {
+                let avgDuration = stats.totalDuration / Double(stats.totalCalls)
+                let successRate = Double(stats.successCount) / Double(stats.totalCalls) * 100
+                print("📊🌊⚖️ STATS UPDATE: \(operationType) now has \(stats.totalCalls) calls, \(String(format: "%.1f", successRate))% success, \(String(format: "%.3f", avgDuration))s avg")
+            }
+        }
     }
 }
