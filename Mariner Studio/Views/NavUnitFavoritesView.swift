@@ -37,8 +37,6 @@ struct NavUnitFavoritesView: View {
         }
         .onAppear {
             print("🌊⚖️ NAV_UNIT_VIEW: NavUnitFavoritesView appeared")
-            print("🌊⚖️ NAV_UNIT_VIEW: Current thread = \(Thread.current)")
-            print("🌊⚖️ NAV_UNIT_VIEW: Is main thread = \(Thread.isMainThread)")
             
             // Initialize services
             viewModel.initialize(
@@ -46,7 +44,7 @@ struct NavUnitFavoritesView: View {
                 locationService: serviceProvider.locationService
             )
             
-            print("📱 NAV_UNIT_VIEW: Starting loadFavorites()")
+            print("📱 NAV_UNIT_VIEW: Starting simple loadFavorites()")
             viewModel.loadFavorites()
             
             // Perform app launch sync
@@ -61,155 +59,97 @@ struct NavUnitFavoritesView: View {
         }
     }
     
-    // MARK: - Main Content View
-    
     @ViewBuilder
     private var mainContentView: some View {
-        Group {
-            if viewModel.isLoading {
-                loadingView
-            } else if !viewModel.errorMessage.isEmpty {
-                errorView
-            } else if viewModel.favorites.isEmpty {
-                emptyStateView
-            } else {
-                favoritesListView
-            }
-        }
-    }
-    
-    // MARK: - Loading View
-    
-    private var loadingView: some View {
-        VStack(spacing: 16) {
-            ProgressView()
-                .scaleEffect(1.2)
-            
-            Text("Loading favorite nav units...")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-    
-    // MARK: - Error View
-    
-    private var errorView: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "exclamationmark.triangle")
-                .font(.system(size: 60))
-                .foregroundColor(.orange)
-            
-            Text("Error")
-                .font(.title2)
-                .fontWeight(.semibold)
-            
-            Text(viewModel.errorMessage)
-                .multilineTextAlignment(.center)
-                .foregroundColor(.secondary)
-                .padding(.horizontal)
-            
-            Button(action: {
-                print("🔄 NAV_UNIT_VIEW: Retry button tapped")
-                viewModel.loadFavorites()
-            }) {
-                HStack {
-                    Image(systemName: "arrow.clockwise")
-                    Text("Try Again")
-                }
-                .padding()
-                .background(Color.blue)
-                .foregroundColor(.white)
-                .cornerRadius(10)
-            }
-        }
-        .padding()
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-    
-    // MARK: - Empty State View
-    
-    private var emptyStateView: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "star.slash")
-                .font(.system(size: 60))
-                .foregroundColor(.gray)
-            
-            Text("No Favorite Nav Units")
-                .font(.title2)
-                .fontWeight(.semibold)
-            
-            Text("Pull down to refresh or browse all nav units to add favorites.")
-                .multilineTextAlignment(.center)
-                .foregroundColor(.secondary)
-            
-            Spacer().frame(height: 20)
-            
-            NavigationLink(destination: NavUnitsView(
-                navUnitService: serviceProvider.navUnitService,
-                locationService: serviceProvider.locationService
-            )) {
-                HStack {
-                    Image(systemName: "list.bullet")
-                    Text("Browse All Nav Units")
-                }
-                .padding()
-                .background(Color.blue)
-                .foregroundColor(.white)
-                .cornerRadius(10)
-            }
-        }
-        .padding()
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-    
-    // MARK: - Favorites List View
-    
-    private var favoritesListView: some View {
-        VStack(spacing: 0) {
-            // Sync Status Bar
-            NavUnitSyncStatusBar(viewModel: viewModel)
-            
-            List {
-                ForEach(viewModel.favorites, id: \.navUnitId) { navUnit in
-                    NavigationLink {
-                        // Create the destination view with proper NavUnitDetailsViewModel
-                        let detailsViewModel = NavUnitDetailsViewModel(
-                            navUnit: navUnit,
-                            databaseService: serviceProvider.navUnitService,
-                            photoService: serviceProvider.photoService,
-                            navUnitFtpService: serviceProvider.navUnitFtpService,
-                            imageCacheService: serviceProvider.imageCacheService,
-                            favoritesService: serviceProvider.favoritesService,
-                            photoCaptureService: serviceProvider.photoCaptureService,
-                            fileStorageService: serviceProvider.fileStorageService,
-                            iCloudSyncService: serviceProvider.iCloudSyncService,
-                            noaaChartService: serviceProvider.noaaChartService
-                        )
-                        
-                        NavUnitDetailsView(viewModel: detailsViewModel)
-                    } label: {
-                        FavoriteNavUnitRow(navUnit: navUnit)
-                    }
-                }
-                .onDelete(perform: { indexSet in
-                    print("🗑️ NAV_UNIT_VIEW: Delete gesture triggered")
-                    viewModel.removeFavorite(at: indexSet)
-                    
-                    // Haptic feedback
-                    let impactGenerator = UIImpactFeedbackGenerator(style: .medium)
-                    impactGenerator.prepare()
-                    impactGenerator.impactOccurred()
-                })
-            }
-            .listStyle(InsetGroupedListStyle())
-            .refreshable {
-                print("🔄 NAV_UNIT_VIEW: Pull-to-refresh triggered")
-                viewModel.loadFavorites()
+        if viewModel.isLoading {
+            // Loading state
+            VStack(spacing: 20) {
+                ProgressView()
+                    .scaleEffect(1.2)
                 
-                // Sync after refresh
-                await viewModel.syncWithCloud()
+                Text("Loading favorites...")
+                    .font(.headline)
+                    .foregroundColor(.secondary)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            
+        } else if !viewModel.errorMessage.isEmpty {
+            // Error state
+            VStack(spacing: 20) {
+                Image(systemName: "exclamationmark.triangle")
+                    .font(.system(size: 50))
+                    .foregroundColor(.red)
+                
+                Text("Error Loading Favorites")
+                    .font(.headline)
+                
+                Text(viewModel.errorMessage)
+                    .font(.body)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+                
+                Button("Try Again") {
+                    viewModel.loadFavorites()
+                }
+                .buttonStyle(.borderedProminent)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            
+        } else if viewModel.favorites.isEmpty {
+            // Empty state
+            VStack(spacing: 20) {
+                Image(systemName: "star")
+                    .font(.system(size: 50))
+                    .foregroundColor(.yellow)
+                
+                Text("No Favorite Nav Units")
+                    .font(.headline)
+                
+                Text("Add nav units to your favorites to see them here")
+                    .font(.body)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            
+        } else {
+            // Favorites list
+            favoritesList
+        }
+    }
+    
+    private var favoritesList: some View {
+        List {
+            ForEach(viewModel.favorites, id: \.navUnitId) { favoriteRecord in
+                NavigationLink {
+                    // Fetch full NavUnit model when user taps
+                    NavUnitDetailWrapper(
+                        navUnitId: favoriteRecord.navUnitId,
+                        serviceProvider: serviceProvider
+                    )
+                } label: {
+                    SimpleFavoriteNavUnitRow(favoriteRecord: favoriteRecord)
+                }
+            }
+            .onDelete(perform: { indexSet in
+                print("🗑️ NAV_UNIT_VIEW: Delete gesture triggered")
+                viewModel.removeFavorite(at: indexSet)
+                
+                // Haptic feedback
+                let impactGenerator = UIImpactFeedbackGenerator(style: .medium)
+                impactGenerator.prepare()
+                impactGenerator.impactOccurred()
+            })
+        }
+        .listStyle(InsetGroupedListStyle())
+        .refreshable {
+            print("🔄 NAV_UNIT_VIEW: Pull-to-refresh triggered")
+            viewModel.loadFavorites()
+            
+            // Sync after refresh
+            await viewModel.syncWithCloud()
         }
         .onAppear {
             print("🎨 NAV_UNIT_VIEW: Favorites list view appeared with \(viewModel.favorites.count) nav units")
@@ -217,136 +157,10 @@ struct NavUnitFavoritesView: View {
     }
 }
 
-// MARK: - Nav Unit Sync Status Bar
+// MARK: - Simple Favorite Nav Unit Row
 
-struct NavUnitSyncStatusBar: View {
-    @ObservedObject var viewModel: NavUnitFavoritesViewModel
-    @State private var showingSuccessMessage = false
-    
-    var body: some View {
-        VStack(spacing: 8) {
-            // Main status bar
-            HStack(spacing: 12) {
-                // Status icon and text
-                HStack(spacing: 8) {
-                    if viewModel.isSyncing {
-                        ProgressView()
-                            .scaleEffect(0.8)
-                            .foregroundColor(.blue)
-                    } else {
-                        Image(systemName: viewModel.syncStatusIcon)
-                            .foregroundColor(viewModel.syncStatusColor)
-                            .font(.system(size: 14, weight: .medium))
-                    }
-                    
-                    Text(viewModel.syncStatusText)
-                        .font(.caption)
-                        .foregroundColor(viewModel.syncStatusColor)
-                }
-                
-                Spacer()
-                
-                // Manual sync button
-                if !viewModel.isSyncing {
-                    Button(action: {
-                        print("☁️ NAV_UNIT_SYNC_BAR: Manual sync button tapped")
-                        Task {
-                            await viewModel.manualSync()
-                        }
-                    }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "icloud.and.arrow.up")
-                                .font(.system(size: 12, weight: .medium))
-                            Text("Sync")
-                                .font(.caption)
-                                .fontWeight(.medium)
-                        }
-                        .foregroundColor(.blue)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.blue.opacity(0.1))
-                        .cornerRadius(6)
-                    }
-                    .disabled(!viewModel.canSync)
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-            .background(Color(UIColor.secondarySystemBackground))
-            
-            // Success message (auto-dismissing)
-            if let successMessage = viewModel.formattedSyncSuccessMessage, showingSuccessMessage {
-                HStack(spacing: 8) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.green)
-                        .font(.system(size: 14))
-                    
-                    Text(successMessage)
-                        .font(.caption)
-                        .foregroundColor(.green)
-                    
-                    Spacer()
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 4)
-                .background(Color.green.opacity(0.1))
-                .transition(.opacity.combined(with: .move(edge: .top)))
-            }
-            
-            // Error message (persistent)
-            if let errorMessage = viewModel.syncErrorMessage {
-                HStack(spacing: 8) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(.red)
-                        .font(.system(size: 14))
-                    
-                    Text(errorMessage)
-                        .font(.caption)
-                        .foregroundColor(.red)
-                        .multilineTextAlignment(.leading)
-                    
-                    Spacer()
-                    
-                    // Dismiss button for error
-                    Button(action: {
-                        viewModel.clearSyncMessages()
-                    }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.red.opacity(0.6))
-                            .font(.system(size: 14))
-                    }
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(Color.red.opacity(0.1))
-            }
-        }
-        .onChange(of: viewModel.syncSuccessMessage) { message in
-            if message != nil {
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    showingSuccessMessage = true
-                }
-                
-                // Auto-dismiss success message after 3 seconds
-                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        showingSuccessMessage = false
-                    }
-                    
-                    // Clear the message after animation
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                        viewModel.clearSyncMessages()
-                    }
-                }
-            }
-        }
-    }
-}
-
-// MARK: - Favorite Nav Unit Row (Enhanced)
-
-struct FavoriteNavUnitRow: View {
-    let navUnit: NavUnit
+struct SimpleFavoriteNavUnitRow: View {
+    let favoriteRecord: NavUnitFavoriteRecord
     
     var body: some View {
         HStack(spacing: 16) {
@@ -361,25 +175,22 @@ struct FavoriteNavUnitRow: View {
             
             // Nav Unit info
             VStack(alignment: .leading, spacing: 4) {
-                Text(navUnit.navUnitName)
+                Text(favoriteRecord.navUnitName ?? "Unknown Nav Unit")
                     .font(.headline)
                     .lineLimit(2)
                 
-                if let facilityType = navUnit.facilityType, !facilityType.isEmpty {
+                if let facilityType = favoriteRecord.facilityType, !facilityType.isEmpty {
                     Text(facilityType)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                 }
                 
-                // Location info if available
-                if let latitude = navUnit.latitude, let longitude = navUnit.longitude,
-                   latitude != 0.0 && longitude != 0.0 {
-                    Text("\(String(format: "%.4f", latitude))°, \(String(format: "%.4f", longitude))°")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                }
+                // Show nav unit ID as small text
+                Text("ID: \(favoriteRecord.navUnitId)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
             }
             
             Spacer()
@@ -390,5 +201,141 @@ struct FavoriteNavUnitRow: View {
                 .font(.system(size: 16))
         }
         .padding(.vertical, 8)
+    }
+}
+
+// MARK: - NavUnit Detail Wrapper (Fetches Full Model)
+
+struct NavUnitDetailWrapper: View {
+    let navUnitId: String
+    let serviceProvider: ServiceProvider
+    
+    @State private var navUnit: NavUnit?
+    @State private var isLoading = true
+    @State private var errorMessage: String?
+    
+    var body: some View {
+        Group {
+            if isLoading {
+                VStack(spacing: 20) {
+                    ProgressView()
+                        .scaleEffect(1.2)
+                    
+                    Text("Loading nav unit details...")
+                        .font(.headline)
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                
+            } else if let errorMessage = errorMessage {
+                VStack(spacing: 20) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 50))
+                        .foregroundColor(.red)
+                    
+                    Text("Error Loading Details")
+                        .font(.headline)
+                    
+                    Text(errorMessage)
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                    
+                    Button("Try Again") {
+                        loadNavUnit()
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                
+            } else if let navUnit = navUnit {
+                // Create full NavUnitDetailsViewModel with the loaded model
+                let detailsViewModel = NavUnitDetailsViewModel(
+                    navUnit: navUnit,
+                    databaseService: serviceProvider.navUnitService,
+                    photoService: serviceProvider.photoService,
+                    navUnitFtpService: serviceProvider.navUnitFtpService,
+                    imageCacheService: serviceProvider.imageCacheService,
+                    favoritesService: serviceProvider.favoritesService,
+                    photoCaptureService: serviceProvider.photoCaptureService,
+                    fileStorageService: serviceProvider.fileStorageService,
+                    iCloudSyncService: serviceProvider.iCloudSyncService,
+                    noaaChartService: serviceProvider.noaaChartService
+                )
+                
+                NavUnitDetailsView(viewModel: detailsViewModel)
+                
+            } else {
+                VStack(spacing: 20) {
+                    Image(systemName: "questionmark.circle")
+                        .font(.system(size: 50))
+                        .foregroundColor(.orange)
+                    
+                    Text("Nav Unit Not Found")
+                        .font(.headline)
+                    
+                    Text("This nav unit may have been removed from the database.")
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .navigationTitle("Nav Unit Details")
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            loadNavUnit()
+        }
+    }
+    
+    private func loadNavUnit() {
+        print("🔍 NAV_UNIT_WRAPPER: Loading full NavUnit for ID: \(navUnitId)")
+        isLoading = true
+        errorMessage = nil
+        
+        Task {
+            do {
+                let fetchedNavUnit = try await serviceProvider.navUnitService.getNavUnitByIdAsync(navUnitId: navUnitId)
+                
+                await MainActor.run {
+                    self.navUnit = fetchedNavUnit
+                    self.isLoading = false
+                    
+                    if fetchedNavUnit != nil {
+                        print("✅ NAV_UNIT_WRAPPER: Successfully loaded NavUnit \(navUnitId)")
+                    } else {
+                        print("❌ NAV_UNIT_WRAPPER: NavUnit \(navUnitId) not found")
+                    }
+                }
+            } catch {
+                print("❌ NAV_UNIT_WRAPPER: Error loading NavUnit \(navUnitId): \(error.localizedDescription)")
+                await MainActor.run {
+                    self.errorMessage = "Failed to load nav unit: \(error.localizedDescription)"
+                    self.isLoading = false
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Simple Detail View (Placeholder) - REMOVED
+
+// Helper view for info rows
+struct InfoRow: View {
+    let label: String
+    let value: String
+    
+    var body: some View {
+        HStack {
+            Text(label)
+                .fontWeight(.medium)
+                .foregroundColor(.secondary)
+            Spacer()
+            Text(value)
+                .fontWeight(.regular)
+        }
     }
 }

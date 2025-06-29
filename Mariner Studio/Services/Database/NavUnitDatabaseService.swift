@@ -298,15 +298,17 @@ class NavUnitDatabaseService {
         }
     }
 
-    // Toggle favorite status with locally defined columns
+
+    // Replace the existing toggleFavoriteNavUnitAsync method in NavUnitDatabaseService.swift
+
     func toggleFavoriteNavUnitAsync(navUnitId: String) async throws -> Bool {
         do {
             let db = try databaseCore.ensureConnection()
 
-            // Find the specific NavUnit row
+            // Find the specific NavUnit row in the MAIN NavUnits table
             let query = navUnits.filter(colNavUnitId == navUnitId)
 
-            // Try to get the current unit's favorite status
+            // Get the current unit's favorite status
             guard let unit = try db.pluck(query) else {
                 print(" S NavUnitDatabaseService: Error toggling favorite - NavUnit \(navUnitId) not found.")
                 throw NSError(domain: "DatabaseService", code: 10, userInfo: [NSLocalizedDescriptionKey: "NavUnit not found for toggling favorite."])
@@ -317,20 +319,53 @@ class NavUnitDatabaseService {
 
             print(" S NavUnitDatabaseService: Toggling favorite for \(navUnitId) from \(currentValue) to \(newValue)")
 
-            // Prepare the update statement
+            // (1) Update the main NavUnits table
             let updatedRow = navUnits.filter(colNavUnitId == navUnitId)
-            // Execute the update
             try db.run(updatedRow.update(colIsFavorite <- newValue))
+
+            // (2) Update the NavUnitFavorites table
+            guard let userId = await getCurrentUserId() else {
+                throw NSError(domain: "DatabaseService", code: 401, userInfo: [NSLocalizedDescriptionKey: "No authenticated user"])
+            }
+            
+            if newValue {
+                // FAVORITED: Add to NavUnitFavorites table
+                let deviceId = await getDeviceId()
+                try db.run(navUnitFavorites.insert(or: .replace,
+                    colUserId <- userId,
+                    colNavUnitIdFav <- navUnitId,
+                    colIsFavoriteNav <- true,
+                    colLastModified <- Date(),
+                    colDeviceId <- deviceId,
+                    colNavUnitNameFav <- unit[colNavUnitName],
+                    colLatitudeFav <- unit[colLatitude],
+                    colLongitudeFav <- unit[colLongitude],
+                    colFacilityTypeFav <- unit[colFacilityType]
+                ))
+                print(" S NavUnitDatabaseService: Added \(navUnitId) to NavUnitFavorites table")
+            } else {
+                // UNFAVORITED: Remove from NavUnitFavorites table
+                let favoriteQuery = navUnitFavorites.filter(colUserId == userId && colNavUnitIdFav == navUnitId)
+                try db.run(favoriteQuery.delete())
+                print(" S NavUnitDatabaseService: Removed \(navUnitId) from NavUnitFavorites table")
+            }
 
             // Flush changes to disk
             try await databaseCore.flushDatabaseAsync()
             print(" S NavUnitDatabaseService: Favorite status updated successfully for \(navUnitId). New status: \(newValue)")
+            
             return newValue // Return the new status
         } catch {
             print(" S NavUnitDatabaseService: Error toggling favorite for NavUnit \(navUnitId): \(error.localizedDescription)")
             throw error
         }
     }
+    
+    
+    
+    
+    
+    
     
     // MARK: - Sync-Enabled Favorites Query Methods
     
@@ -712,6 +747,134 @@ class NavUnitDatabaseService {
             throw error
         }
     }
+    
+    
+    // Add these methods to NavUnitDatabaseService.swift
+    // These go inside the NavUnitDatabaseService class
+
+    // MARK: - Single NavUnit Query (For Detail View)
+
+    /// Get a single NavUnit by ID from the main NavUnits table
+    func getNavUnitByIdAsync(navUnitId: String) async throws -> NavUnit? {
+        print("📱 NAV_UNIT_DB_SERVICE: Getting single NavUnit by ID: \(navUnitId)")
+        let startTime = Date()
+        
+        do {
+            let db = try databaseCore.ensureConnection()
+            
+            // Query the main NavUnits table for this specific ID
+            let query = navUnits.filter(colNavUnitId == navUnitId)
+            
+            if let row = try db.pluck(query) {
+                let navUnit = NavUnit(
+                    navUnitId: row[colNavUnitId],
+                    unloCode: row[colUnloCode],
+                    navUnitName: row[colNavUnitName],
+                    locationDescription: row[colLocationDescription],
+                    facilityType: row[colFacilityType],
+                    streetAddress: row[colStreetAddress],
+                    cityOrTown: row[colCityOrTown],
+                    statePostalCode: row[colStatePostalCode],
+                    zipCode: row[colZipCode],
+                    countyName: row[colCountyName],
+                    countyFipsCode: row[colCountyFipsCode],
+                    congress: row[colCongress],
+                    congressFips: row[colCongressFips],
+                    waterwayName: row[colWaterwayName],
+                    portName: row[colPortName],
+                    mile: row[colMile],
+                    bank: row[colBank],
+                    latitude: row[colLatitude] ?? 0.0,
+                    longitude: row[colLongitude] ?? 0.0,
+                    operators: row[colOperators],
+                    owners: row[colOwners],
+                    purpose: row[colPurpose],
+                    highwayNote: row[colHighwayNote],
+                    railwayNote: row[colRailwayNote],
+                    location: row[colLocation],
+                    dock: row[colDock],
+                    commodities: row[colCommodities],
+                    construction: row[colConstruction],
+                    mechanicalHandling: row[colMechanicalHandling],
+                    remarks: row[colRemarks],
+                    verticalDatum: row[colVerticalDatum],
+                    depthMin: row[colDepthMin],
+                    depthMax: row[colDepthMax],
+                    berthingLargest: row[colBerthingLargest],
+                    berthingTotal: row[colBerthingTotal],
+                    deckHeightMin: row[colDeckHeightMin],
+                    deckHeightMax: row[colDeckHeightMax],
+                    serviceInitiationDate: row[colServiceInitiationDate],
+                    serviceTerminationDate: row[colServiceTerminationDate],
+                    isFavorite: row[colIsFavorite]
+                )
+                
+                let duration = Date().timeIntervalSince(startTime)
+                print("✅ NAV_UNIT_DB_SERVICE: Retrieved full NavUnit \(navUnitId) in \(String(format: "%.3f", duration))s")
+                
+                return navUnit
+            } else {
+                let duration = Date().timeIntervalSince(startTime)
+                print("❌ NAV_UNIT_DB_SERVICE: NavUnit \(navUnitId) not found in \(String(format: "%.3f", duration))s")
+                return nil
+            }
+        } catch {
+            print("❌ NAV_UNIT_DB_SERVICE: Error getting NavUnit \(navUnitId): \(error.localizedDescription)")
+            throw error
+        }
+    }
+
+    // MARK: - Simple Favorites Query (Display Only)
+
+    /// Get simple list of favorite nav units for display - queries ONLY NavUnitFavorites table
+    func getSimpleFavoritesForDisplay() async throws -> [NavUnitFavoriteRecord] {
+        print("📱 NAV_UNIT_DB_SERVICE: Getting simple favorites for display")
+        let startTime = Date()
+        
+        do {
+            let db = try databaseCore.ensureConnection()
+            guard let userId = await getCurrentUserId() else {
+                print("⚠️ NAV_UNIT_DB_SERVICE: No authenticated user, returning empty array")
+                return []
+            }
+            
+            // Query ONLY the NavUnitFavorites table where isFavorite is true
+            let query = navUnitFavorites.filter(
+                colUserId == userId &&
+                colIsFavoriteNav == true
+            ).order(colNavUnitNameFav.asc)
+            
+            var results: [NavUnitFavoriteRecord] = []
+            
+            for row in try db.prepare(query) {
+                let record = NavUnitFavoriteRecord(
+                    userId: row[colUserId],
+                    navUnitId: row[colNavUnitIdFav],
+                    isFavorite: row[colIsFavoriteNav],
+                    lastModified: row[colLastModified],
+                    deviceId: row[colDeviceId],
+                    navUnitName: row[colNavUnitNameFav],
+                    latitude: row[colLatitudeFav],
+                    longitude: row[colLongitudeFav],
+                    facilityType: row[colFacilityTypeFav]
+                )
+                results.append(record)
+            }
+            
+            let duration = Date().timeIntervalSince(startTime)
+            print("✅ NAV_UNIT_DB_SERVICE: Retrieved \(results.count) simple favorites in \(String(format: "%.3f", duration))s")
+            
+            return results
+        } catch {
+            print("❌ NAV_UNIT_DB_SERVICE: Error getting simple favorites: \(error.localizedDescription)")
+            throw error
+        }
+    }
+    
+    
+    
+    
+    
 }
 
 // MARK: - Supporting Data Structures
@@ -773,6 +936,13 @@ struct NavUnitFavoriteRecord {
         )
     }
 }
+
+
+
+
+
+
+
 
 
 
