@@ -204,3 +204,81 @@ class NavUnitsViewModel: ObservableObject {
         print("🗑️ NavUnitsViewModel deinitialized.")
     }
 }
+
+
+
+
+// MARK: - Sync Integration Extension for NavUnitsViewModel
+// Add this extension to the existing NavUnitsViewModel.swift file
+
+extension NavUnitsViewModel {
+    
+    /// Enhanced toggle method with automatic sync integration
+    func toggleNavUnitFavoriteWithSync(navUnitId: String) async {
+        do {
+            print("⭐ NAV_UNITS_VM: Toggling favorite for \(navUnitId) with sync at \(Date())")
+            let newFavoriteStatus = try await navUnitService.toggleFavoriteNavUnitAsync(navUnitId: navUnitId)
+            print("⭐ NAV_UNITS_VM: Database returned new status \(newFavoriteStatus) for \(navUnitId) at \(Date())")
+
+            await MainActor.run {
+                 if let index = allNavUnits.firstIndex(where: { $0.station.navUnitId == navUnitId }) {
+                      var updatedUnit = allNavUnits[index].station
+                      updatedUnit.isFavorite = newFavoriteStatus
+                      // We also need to update the distance from the existing object
+                      let currentDistance = allNavUnits[index].distanceFromUser
+                      allNavUnits[index] = StationWithDistance(
+                          station: updatedUnit,
+                          distanceFromUser: currentDistance // Preserve existing distance
+                      )
+                      print("⭐ NAV_UNITS_VM: Updated allNavUnits array for \(navUnitId) at \(Date())")
+                      filterNavUnits() // Re-apply filter/sort
+                 } else {
+                     print("❌ NAV_UNITS_VM: Station \(navUnitId) not found in allNavUnits after toggle at \(Date())")
+                 }
+            }
+            
+            // Trigger sync after favorite toggle
+            print("☁️ NAV_UNITS_VM: Triggering sync after favorite toggle for \(navUnitId)")
+            await performSyncAfterFavoriteToggle()
+            
+        } catch {
+             print("❌ NAV_UNITS_VM: Failed to update favorite status for \(navUnitId) at \(Date()): \(error.localizedDescription)")
+            await MainActor.run {
+                errorMessage = "Failed to update favorite status: \(error.localizedDescription)"
+            }
+        }
+    }
+    
+    /// Sync after user toggles a favorite - always runs immediately
+    func performSyncAfterFavoriteToggle() async {
+        print("🔄 NAV_UNITS_VM: Performing sync after favorite toggle")
+        
+        let result = await NavUnitSyncService.shared.syncNavUnitFavorites()
+        
+        switch result {
+        case .success(let stats):
+            print("✅ NAV_UNITS_VM: Sync completed successfully")
+            print("✅ NAV_UNITS_SYNC_STATS: \(stats.totalOperations) operations in \(String(format: "%.3f", stats.duration))s")
+            print("✅ NAV_UNITS_SYNC_STATS: Uploaded: \(stats.uploaded), Downloaded: \(stats.downloaded), Conflicts: \(stats.conflictsResolved)")
+            
+        case .failure(let error):
+            print("❌ NAV_UNITS_VM: Sync failed - \(error.localizedDescription)")
+            
+        case .partialSuccess(let stats, let errors):
+            print("⚠️ NAV_UNITS_VM: Partial sync - \(stats.totalOperations) operations, \(errors.count) errors")
+            for (index, error) in errors.enumerated() {
+                print("⚠️ NAV_UNITS_VM: Sync error [\(index)]: \(error.localizedDescription)")
+            }
+        }
+    }
+}
+
+// MARK: - Update to existing toggleNavUnitFavorite method
+// Replace the existing toggleNavUnitFavorite method in NavUnitsViewModel with this:
+
+/*
+func toggleNavUnitFavorite(navUnitId: String) async {
+    // Use the new sync-enabled version
+    await toggleNavUnitFavoriteWithSync(navUnitId: navUnitId)
+}
+*/
