@@ -725,3 +725,23 @@ class ServiceProvider: ObservableObject {
         // We'll assume the method exists or add it via extension if needed
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
