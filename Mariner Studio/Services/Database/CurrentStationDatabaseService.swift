@@ -76,6 +76,107 @@ class CurrentStationDatabaseService {
     
     // MARK: - Table Initialization
     
+//    func initializeCurrentStationFavoritesTableAsync() async throws {
+//        print("🚀 CURRENT_DB_SERVICE: Starting table initialization")
+//        let startTime = Date()
+//        
+//        do {
+//            let db = try databaseCore.ensureConnection()
+//            print("✅ CURRENT_DB_SERVICE: Database connection established")
+//            
+//            // Get current tables first
+//            let tablesQuery = "SELECT name FROM sqlite_master WHERE type='table'"
+//            var tableNames: [String] = []
+//            for row in try db.prepare(tablesQuery) {
+//                if let tableName = row[0] as? String {
+//                    tableNames.append(tableName)
+//                }
+//            }
+//            print("📊 CURRENT_DB_SERVICE: Current tables: \(tableNames.joined(separator: ", "))")
+//            
+//            // Create table with Supabase-aligned schema
+//            print("🔧 CURRENT_DB_SERVICE: Creating TidalCurrentStationFavorites table")
+//            try db.run(tidalCurrentStationFavorites.create(ifNotExists: true) { table in
+//                table.column(colId, primaryKey: .autoincrement)
+//                table.column(colUserId)
+//                table.column(colStationId)
+//                table.column(colCurrentBin)
+//                table.column(colIsFavorite)
+//                table.column(colLastModified)
+//                table.column(colDeviceId)
+//                table.column(colStationName)
+//                table.column(colLatitude)
+//                table.column(colLongitude)
+//                table.column(colDepth)
+//                table.column(colDepthType)
+//                // Unique constraint
+//                table.unique(colUserId, colStationId, colCurrentBin)
+//            })
+//            
+//            // Add columns if they don't exist (for migration)
+//            try await addColumnIfNeeded(db: db, tableName: "TidalCurrentStationFavorites", columnName: "last_modified", columnType: "DATETIME")
+//            try await addColumnIfNeeded(db: db, tableName: "TidalCurrentStationFavorites", columnName: "device_id", columnType: "TEXT")
+//            try await addColumnIfNeeded(db: db, tableName: "TidalCurrentStationFavorites", columnName: "station_name", columnType: "TEXT")
+//            try await addColumnIfNeeded(db: db, tableName: "TidalCurrentStationFavorites", columnName: "latitude", columnType: "REAL")
+//            try await addColumnIfNeeded(db: db, tableName: "TidalCurrentStationFavorites", columnName: "longitude", columnType: "REAL")
+//            try await addColumnIfNeeded(db: db, tableName: "TidalCurrentStationFavorites", columnName: "depth", columnType: "REAL")
+//            try await addColumnIfNeeded(db: db, tableName: "TidalCurrentStationFavorites", columnName: "depth_type", columnType: "TEXT")
+//            
+//            // Verify table creation
+//            tableNames = []
+//            for row in try db.prepare(tablesQuery) {
+//                if let tableName = row[0] as? String {
+//                    tableNames.append(tableName)
+//                }
+//            }
+//            
+//            if tableNames.contains("TidalCurrentStationFavorites") {
+//                print("✅ CURRENT_DB_SERVICE: TidalCurrentStationFavorites table created/verified with Supabase-aligned schema")
+//                
+//                // Test write capability
+//                let deviceId = await getDeviceId()
+//                try db.run(tidalCurrentStationFavorites.insert(or: .replace,
+//                    colUserId <- "TEST_USER_ID",
+//                    colStationId <- "TEST_INIT",
+//                    colCurrentBin <- 0,
+//                    colIsFavorite <- true,
+//                    colLastModified <- Date(),
+//                    colDeviceId <- deviceId,
+//                    colStationName <- "Test Station",
+//                    colLatitude <- 0.0,
+//                    colLongitude <- 0.0
+//                ))
+//                
+//                // Verify and clean up test record
+//                let testQuery = tidalCurrentStationFavorites.filter(colStationId == "TEST_INIT")
+//                if let testRecord = try? db.pluck(testQuery) {
+//                    print("✅ CURRENT_DB_SERVICE: Write test successful")
+//                    try db.run(testQuery.delete())
+//                    print("🧹 CURRENT_DB_SERVICE: Test record cleaned up")
+//                }
+//                
+//                try await databaseCore.flushDatabaseAsync()
+//                
+//                let duration = Date().timeIntervalSince(startTime)
+//                print("⏱️ CURRENT_DB_SERVICE: Table initialization completed in \(String(format: "%.3f", duration))s")
+//                
+//            } else {
+//                throw NSError(domain: "DatabaseService", code: 500, userInfo: [NSLocalizedDescriptionKey: "Failed to create TidalCurrentStationFavorites table"])
+//            }
+//        } catch {
+//            print("❌ CURRENT_DB_SERVICE: Initialization failed: \(error.localizedDescription)")
+//            throw error
+//        }
+//    }
+//
+    
+    
+    
+    
+    
+    
+    
+    
     func initializeCurrentStationFavoritesTableAsync() async throws {
         print("🚀 CURRENT_DB_SERVICE: Starting table initialization")
         let startTime = Date()
@@ -114,6 +215,7 @@ class CurrentStationDatabaseService {
             })
             
             // Add columns if they don't exist (for migration)
+            try await addColumnIfNeeded(db: db, tableName: "TidalCurrentStationFavorites", columnName: "user_id", columnType: "TEXT")
             try await addColumnIfNeeded(db: db, tableName: "TidalCurrentStationFavorites", columnName: "last_modified", columnType: "DATETIME")
             try await addColumnIfNeeded(db: db, tableName: "TidalCurrentStationFavorites", columnName: "device_id", columnType: "TEXT")
             try await addColumnIfNeeded(db: db, tableName: "TidalCurrentStationFavorites", columnName: "station_name", columnType: "TEXT")
@@ -168,6 +270,32 @@ class CurrentStationDatabaseService {
             throw error
         }
     }
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
     // MARK: - Favorites Query Methods
     
