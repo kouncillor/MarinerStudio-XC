@@ -314,6 +314,261 @@ final class SupabaseManager {
             print("🔍 Timestamp: \(Date())")
         }
     }
+    
+    
+    
+    // MARK: - Navigation Unit Favorites Methods
+        
+        /// Retrieve all navigation unit favorites for a specific user from Supabase
+        /// Used by NavUnitSyncService for sync operations
+        /// - Parameter userId: The authenticated user's unique identifier
+        /// - Returns: Array of RemoteNavUnitFavorite records for the user
+        /// - Throws: Database errors or network issues
+        func getNavUnitFavorites(userId: UUID) async throws -> [RemoteNavUnitFavorite] {
+            let operationId = startOperation("getNavUnitFavorites", details: "userId: \(userId)")
+            
+            do {
+                logQueue.async {
+                    print("☁️🧭 NAV_UNIT_FAVORITES_QUERY: Starting remote favorites retrieval")
+                    print("☁️🧭 NAV_UNIT_FAVORITES_QUERY: Table = user_nav_unit_favorites")
+                    print("☁️🧭 NAV_UNIT_FAVORITES_QUERY: User ID filter = \(userId)")
+                    print("☁️🧭 NAV_UNIT_FAVORITES_QUERY: Timestamp = \(Date())")
+                }
+                
+                // Query the user_nav_unit_favorites table for this specific user
+                let response: PostgrestResponse<[RemoteNavUnitFavorite]> = try await client
+                    .from("user_nav_unit_favorites")
+                    .select("*")
+                    .eq("user_id", value: userId.uuidString)
+                    .execute()
+                
+                let favorites = response.value
+                
+                logQueue.async {
+                    print("✅☁️🧭 NAV_UNIT_FAVORITES_SUCCESS: Retrieved \(favorites.count) nav unit favorites")
+                    print("☁️🧭 NAV_UNIT_FAVORITES_BREAKDOWN:")
+                    
+                    // Log breakdown of favorite vs unfavorite records
+                    let favoriteRecords = favorites.filter { $0.isFavorite }
+                    let unfavoriteRecords = favorites.filter { !$0.isFavorite }
+                    print("   - Favorites (true): \(favoriteRecords.count)")
+                    print("   - Unfavorites (false): \(unfavoriteRecords.count)")
+                    
+                    // Log first few records for debugging
+                    if !favorites.isEmpty {
+                        print("☁️🧭 NAV_UNIT_FAVORITES_SAMPLE:")
+                        for (index, favorite) in favorites.prefix(5).enumerated() {
+                            print("   [\(index)] NavUnit: \(favorite.navUnitId)")
+                            print("       Name: \(favorite.navUnitName ?? "unknown")")
+                            print("       Favorite: \(favorite.isFavorite)")
+                            print("       Modified: \(favorite.lastModified)")
+                            print("       Device: \(favorite.deviceId)")
+                            print("       Coords: \(favorite.latitude?.description ?? "nil"), \(favorite.longitude?.description ?? "nil")")
+                        }
+                        
+                        if favorites.count > 5 {
+                            print("   ... and \(favorites.count - 5) more records")
+                        }
+                    } else {
+                        print("⚠️☁️🧭 NAV_UNIT_FAVORITES_WARNING: No remote favorites found for user")
+                    }
+                }
+                
+                endOperation(operationId, success: true)
+                return favorites
+                
+            } catch {
+                logQueue.async {
+                    print("❌☁️🧭 NAV_UNIT_FAVORITES_ERROR: Failed to retrieve remote favorites")
+                    print("❌☁️🧭 NAV_UNIT_FAVORITES_ERROR_DETAILS: \(error.localizedDescription)")
+                    print("❌☁️🧭 NAV_UNIT_FAVORITES_ERROR_TYPE: \(type(of: error))")
+                    
+                    // Log additional error context for debugging
+                    if let postgrestError = error as? PostgrestError {
+                        print("❌☁️🧭 NAV_UNIT_FAVORITES_POSTGREST_ERROR: \(postgrestError)")
+                    }
+                }
+                
+                endOperation(operationId, success: false, error: error)
+                throw error
+            }
+        }
+        
+        /// Insert or update a single navigation unit favorite in Supabase
+        /// Uses upsert strategy to handle both new inserts and updates
+        /// - Parameter favorite: RemoteNavUnitFavorite record to insert/update
+        /// - Throws: Database errors or network issues
+        func upsertNavUnitFavorite(_ favorite: RemoteNavUnitFavorite) async throws {
+            let operationId = startOperation("upsertNavUnitFavorite",
+                                           details: "navUnitId: \(favorite.navUnitId), isFavorite: \(favorite.isFavorite)")
+            
+            do {
+                logQueue.async {
+                    print("📤🧭 NAV_UNIT_UPSERT: Starting nav unit favorite upsert")
+                    print("📤🧭 NAV_UNIT_UPSERT: Table = user_nav_unit_favorites")
+                    print("📤🧭 NAV_UNIT_UPSERT: NavUnit ID = \(favorite.navUnitId)")
+                    print("📤🧭 NAV_UNIT_UPSERT: Name = \(favorite.navUnitName ?? "unknown")")
+                    print("📤🧭 NAV_UNIT_UPSERT: User ID = \(favorite.userId)")
+                    print("📤🧭 NAV_UNIT_UPSERT: Is Favorite = \(favorite.isFavorite)")
+                    print("📤🧭 NAV_UNIT_UPSERT: Last Modified = \(favorite.lastModified)")
+                    print("📤🧭 NAV_UNIT_UPSERT: Device ID = \(favorite.deviceId)")
+                    print("📤🧭 NAV_UNIT_UPSERT: Timestamp = \(Date())")
+                }
+                
+                // Use upsert to handle both insert and update cases
+                // Supabase will insert if no matching record exists, update if it does
+                try await client
+                    .from("user_nav_unit_favorites")
+                    .upsert(favorite)
+                    .execute()
+                
+                logQueue.async {
+                    print("✅📤🧭 NAV_UNIT_UPSERT_SUCCESS: Nav unit favorite upserted successfully")
+                    print("✅📤🧭 NAV_UNIT_UPSERT_SUCCESS: NavUnit \(favorite.navUnitId) - \(favorite.navUnitName ?? "unknown")")
+                    print("✅📤🧭 NAV_UNIT_UPSERT_SUCCESS: Final state: isFavorite = \(favorite.isFavorite)")
+                }
+                
+                endOperation(operationId, success: true)
+                
+            } catch {
+                logQueue.async {
+                    print("❌📤🧭 NAV_UNIT_UPSERT_ERROR: Failed to upsert nav unit favorite")
+                    print("❌📤🧭 NAV_UNIT_UPSERT_ERROR: NavUnit = \(favorite.navUnitId)")
+                    print("❌📤🧭 NAV_UNIT_UPSERT_ERROR_DETAILS: \(error.localizedDescription)")
+                    print("❌📤🧭 NAV_UNIT_UPSERT_ERROR_TYPE: \(type(of: error))")
+                    
+                    // Log the favorite data that failed to upsert for debugging
+                    print("❌📤🧭 NAV_UNIT_UPSERT_FAILED_DATA:")
+                    print("   NavUnit ID: \(favorite.navUnitId)")
+                    print("   User ID: \(favorite.userId)")
+                    print("   Is Favorite: \(favorite.isFavorite)")
+                    print("   Last Modified: \(favorite.lastModified)")
+                    print("   Device ID: \(favorite.deviceId)")
+                    
+                    // Log additional error context for debugging
+                    if let postgrestError = error as? PostgrestError {
+                        print("❌📤🧭 NAV_UNIT_UPSERT_POSTGREST_ERROR: \(postgrestError)")
+                    }
+                }
+                
+                endOperation(operationId, success: false, error: error)
+                throw error
+            }
+        }
+        
+        /// Delete a navigation unit favorite from Supabase
+        /// Used when a user completely removes a favorite (rare, but included for completeness)
+        /// - Parameters:
+        ///   - userId: The authenticated user's unique identifier
+        ///   - navUnitId: The navigation unit identifier to remove
+        /// - Throws: Database errors or network issues
+        func deleteNavUnitFavorite(userId: UUID, navUnitId: String) async throws {
+            let operationId = startOperation("deleteNavUnitFavorite",
+                                           details: "userId: \(userId), navUnitId: \(navUnitId)")
+            
+            do {
+                logQueue.async {
+                    print("🗑️🧭 NAV_UNIT_DELETE: Starting nav unit favorite deletion")
+                    print("🗑️🧭 NAV_UNIT_DELETE: Table = user_nav_unit_favorites")
+                    print("🗑️🧭 NAV_UNIT_DELETE: User ID = \(userId)")
+                    print("🗑️🧭 NAV_UNIT_DELETE: NavUnit ID = \(navUnitId)")
+                    print("🗑️🧭 NAV_UNIT_DELETE: Timestamp = \(Date())")
+                }
+                
+                // Delete the specific record for this user and nav unit
+                try await client
+                    .from("user_nav_unit_favorites")
+                    .delete()
+                    .eq("user_id", value: userId.uuidString)
+                    .eq("nav_unit_id", value: navUnitId)
+                    .execute()
+                
+                logQueue.async {
+                    print("✅🗑️🧭 NAV_UNIT_DELETE_SUCCESS: Nav unit favorite deleted successfully")
+                    print("✅🗑️🧭 NAV_UNIT_DELETE_SUCCESS: User \(userId) - NavUnit \(navUnitId)")
+                }
+                
+                endOperation(operationId, success: true)
+                
+            } catch {
+                logQueue.async {
+                    print("❌🗑️🧭 NAV_UNIT_DELETE_ERROR: Failed to delete nav unit favorite")
+                    print("❌🗑️🧭 NAV_UNIT_DELETE_ERROR: User = \(userId)")
+                    print("❌🗑️🧭 NAV_UNIT_DELETE_ERROR: NavUnit = \(navUnitId)")
+                    print("❌🗑️🧭 NAV_UNIT_DELETE_ERROR_DETAILS: \(error.localizedDescription)")
+                    print("❌🗑️🧭 NAV_UNIT_DELETE_ERROR_TYPE: \(type(of: error))")
+                    
+                    // Log additional error context for debugging
+                    if let postgrestError = error as? PostgrestError {
+                        print("❌🗑️🧭 NAV_UNIT_DELETE_POSTGREST_ERROR: \(postgrestError)")
+                    }
+                }
+                
+                endOperation(operationId, success: false, error: error)
+                throw error
+            }
+        }
+        
+        /// Bulk delete all navigation unit favorites for a user
+        /// Used for complete sync resets or user data cleanup
+        /// - Parameter userId: The authenticated user's unique identifier
+        /// - Returns: Number of records deleted
+        /// - Throws: Database errors or network issues
+        func deleteAllNavUnitFavorites(userId: UUID) async throws -> Int {
+            let operationId = startOperation("deleteAllNavUnitFavorites", details: "userId: \(userId)")
+            
+            do {
+                logQueue.async {
+                    print("🗑️🧭 NAV_UNIT_BULK_DELETE: Starting bulk nav unit favorites deletion")
+                    print("🗑️🧭 NAV_UNIT_BULK_DELETE: Table = user_nav_unit_favorites")
+                    print("🗑️🧭 NAV_UNIT_BULK_DELETE: User ID = \(userId)")
+                    print("🗑️🧭 NAV_UNIT_BULK_DELETE: Timestamp = \(Date())")
+                }
+                
+                // First, get count of records that will be deleted for reporting
+                let countResponse: PostgrestResponse<[RemoteNavUnitFavorite]> = try await client
+                    .from("user_nav_unit_favorites")
+                    .select("id")
+                    .eq("user_id", value: userId.uuidString)
+                    .execute()
+                
+                let recordCount = countResponse.value.count
+                
+                // Delete all records for this user
+                try await client
+                    .from("user_nav_unit_favorites")
+                    .delete()
+                    .eq("user_id", value: userId.uuidString)
+                    .execute()
+                
+                logQueue.async {
+                    print("✅🗑️🧭 NAV_UNIT_BULK_DELETE_SUCCESS: Bulk deletion completed")
+                    print("✅🗑️🧭 NAV_UNIT_BULK_DELETE_SUCCESS: User \(userId)")
+                    print("✅🗑️🧭 NAV_UNIT_BULK_DELETE_SUCCESS: Records deleted: \(recordCount)")
+                }
+                
+                endOperation(operationId, success: true)
+                return recordCount
+                
+            } catch {
+                logQueue.async {
+                    print("❌🗑️🧭 NAV_UNIT_BULK_DELETE_ERROR: Failed to bulk delete nav unit favorites")
+                    print("❌🗑️🧭 NAV_UNIT_BULK_DELETE_ERROR: User = \(userId)")
+                    print("❌🗑️🧭 NAV_UNIT_BULK_DELETE_ERROR_DETAILS: \(error.localizedDescription)")
+                    print("❌🗑️🧭 NAV_UNIT_BULK_DELETE_ERROR_TYPE: \(type(of: error))")
+                    
+                    // Log additional error context for debugging
+                    if let postgrestError = error as? PostgrestError {
+                        print("❌🗑️🧭 NAV_UNIT_BULK_DELETE_POSTGREST_ERROR: \(postgrestError)")
+                    }
+                }
+                
+                endOperation(operationId, success: false, error: error)
+                throw error
+            }
+        }
+    
+    
 }
 
 // MARK: - Supporting Types
@@ -399,5 +654,6 @@ class DatabaseQueryBuilder {
             throw error
         }
     }
+    
     
 }

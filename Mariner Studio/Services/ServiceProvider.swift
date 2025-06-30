@@ -62,7 +62,16 @@ class ServiceProvider: ObservableObject {
         self.currentStationService = CurrentStationDatabaseService(databaseCore: databaseCore)
         self.currentStationSyncService = CurrentStationSyncService(databaseService: self.currentStationService)
         self.navUnitService = NavUnitDatabaseService(databaseCore: databaseCore)
-        self.navUnitSyncService = NavUnitSyncService.shared
+        
+        // FIXED: Initialize NavUnitSyncService with dependency injection instead of singleton
+        self.navUnitSyncService = NavUnitSyncService(
+            navUnitService: self.navUnitService,
+            supabaseManager: SupabaseManager.shared
+        )
+        
+        
+        
+        
         self.vesselService = VesselDatabaseService(databaseCore: databaseCore)
         self.buoyDatabaseService = BuoyDatabaseService(databaseCore: databaseCore)
         self.weatherService = WeatherDatabaseService(databaseCore: databaseCore)
