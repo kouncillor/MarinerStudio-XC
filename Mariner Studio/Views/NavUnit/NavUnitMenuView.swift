@@ -18,6 +18,7 @@ struct NavUnitMenuView: View {
                 }
                 
                 // Local NavUnits - System Icon
+                // Local NavUnits - System Icon
                 NavigationLink(destination: NavUnitsView(
                     navUnitService: serviceProvider.navUnitService,
                     locationService: serviceProvider.locationService
