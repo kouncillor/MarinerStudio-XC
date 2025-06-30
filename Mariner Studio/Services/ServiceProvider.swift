@@ -625,8 +625,6 @@ class ServiceProvider: ObservableObject {
                 // Initialize tables
                 try await self.tideStationService.initializeTideStationFavoritesTableAsync()
                 try await self.currentStationService.initializeCurrentStationFavoritesTableAsync()
-                try await self.navUnitService.initializeNavUnitFavoritesTableAsync()
-                
                 try await self.photoService.initializePhotosTableAsync()
                 try await self.photoService.initializeBargePhotosTableAsync()
                 try await self.weatherService.initializeWeatherLocationFavoritesTableAsync()
