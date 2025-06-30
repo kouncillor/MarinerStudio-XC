@@ -341,13 +341,7 @@ struct MapClusteringView: View {
                            let detailsViewModel = NavUnitDetailsViewModel(
                                navUnit: navUnit,
                                databaseService: viewModel.navUnitService,
-                               photoService: serviceProvider.photoService,
-                               navUnitFtpService: serviceProvider.navUnitFtpService,
-                               imageCacheService: serviceProvider.imageCacheService,
                                favoritesService: serviceProvider.favoritesService,
-                               photoCaptureService: serviceProvider.photoCaptureService,
-                               fileStorageService: serviceProvider.fileStorageService,
-                               iCloudSyncService: serviceProvider.iCloudSyncService,
                                noaaChartService: serviceProvider.noaaChartService // NEW: Add chart service
                            )
                            NavUnitDetailsView(viewModel: detailsViewModel)

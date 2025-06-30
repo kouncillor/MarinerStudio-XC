@@ -163,13 +163,7 @@ struct NavUnitFavoritesView: View {
                         let detailsViewModel = NavUnitDetailsViewModel(
                             navUnit: navUnitWithDistance.station,
                             databaseService: serviceProvider.navUnitService,
-                            photoService: serviceProvider.photoService,
-                            navUnitFtpService: serviceProvider.navUnitFtpService,
-                            imageCacheService: serviceProvider.imageCacheService,
                             favoritesService: serviceProvider.favoritesService,
-                            photoCaptureService: serviceProvider.photoCaptureService,
-                            fileStorageService: serviceProvider.fileStorageService,
-                            iCloudSyncService: serviceProvider.iCloudSyncService,
                             noaaChartService: serviceProvider.noaaChartService
                         )
                         

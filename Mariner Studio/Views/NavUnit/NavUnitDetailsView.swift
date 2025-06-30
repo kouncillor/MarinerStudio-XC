@@ -138,13 +138,6 @@ struct NavUnitDetailsView: View {
                 // Action Buttons
                 actionButtons
                 
-                // Photos Section
-                localPhotosSection
-                
-                // FTP Photos Section - COMMENTED OUT FOR INITIAL RELEASE
-                // TODO: Re-enable remote photos feature in future version
-                // remotePhotosSection
-                
                 // Primary Location
                 locationDetailsSection
                 
@@ -189,26 +182,7 @@ struct NavUnitDetailsView: View {
                 })
             }
         }
-        .sheet(isPresented: $showingPhotoPicker) {
-            PhotoPickerView(isPresented: $showingPhotoPicker) { image in
-                Task {
-                    await viewModel.saveNewPhoto(image)
-                }
-            }
-        }
-        .sheet(isPresented: $showingSyncSettings) {
-            NavigationView {
-                PhotoSyncSettingsView(iCloudService: viewModel.iCloudSyncService as! iCloudSyncServiceImpl)
-                    .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .navigationBarTrailing) {
-                            Button("Done") {
-                                showingSyncSettings = false
-                            }
-                        }
-                    }
-            }
-        }
+    
         .sheet(isPresented: $showingRecommendationForm) {
             if let navUnit = viewModel.unit {
                 RecommendationFormView(
@@ -220,15 +194,7 @@ struct NavUnitDetailsView: View {
                 )
             }
         }
-        .fullScreenCover(isPresented: $viewModel.showingPhotoGallery) {
-            PhotoGalleryView(
-                viewModel: viewModel.createPhotoGalleryViewModel(),
-                isPresented: $viewModel.showingPhotoGallery
-            )
-            .onDisappear {
-                viewModel.refreshPhotosAfterGalleryDismiss()
-            }
-        }
+     
         
     }
     
@@ -370,209 +336,9 @@ struct NavUnitDetailsView: View {
         .disabled(!isEnabled)
     }
      
-    // Add this section to the localPhotosSection in NavUnitDetailsView.swift
-    // Replace the existing localPhotosSection with this updated version:
+    
 
-    private var localPhotosSection: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                .background(RoundedRectangle(cornerRadius: 10).fill(Color.white))
-            
-            VStack(spacing: 15) {
-                // Header with sync settings button
-                HStack {
-                    Text("Private Photos")
-                        .font(.title3)
-                        .fontWeight(.bold)
-                    
-                    Spacer()
-                    
-                    // Auto-sync indicator
-                    if viewModel.isAutoSyncing {
-                        HStack(spacing: 4) {
-                            ProgressView()
-                                .scaleEffect(0.6)
-                            Text("Syncing...")
-                                .font(.caption)
-                                .foregroundColor(.blue)
-                        }
-                    }
-                    
-                    // iCloud sync status indicator
-                    HStack(spacing: 8) {
-                        Image(systemName: viewModel.iCloudAccountStatusIcon)
-                            .foregroundColor(viewModel.iCloudAccountStatusColor)
-                            .font(.caption)
-                        
-                        Button(action: {
-                            showingSyncSettings = true
-                        }) {
-                            Image(systemName: "gear")
-                                .foregroundColor(.blue)
-                                .font(.caption)
-                        }
-                        
-                        // Manual sync button
-                        if viewModel.iCloudSyncService.isEnabled && !viewModel.isAutoSyncing {
-                            Button(action: {
-                                Task {
-                                    await viewModel.manualSyncNavUnit()
-                                }
-                            }) {
-                                Image(systemName: "arrow.clockwise")
-                                    .foregroundColor(.blue)
-                                    .font(.caption)
-                            }
-                        }
-                    }
-                }
-                .padding(.horizontal)
-                
-                if viewModel.localPhotos.isEmpty {
-                    VStack {
-                        Text("No photos yet")
-                            .foregroundColor(.gray)
-                    }
-                    .frame(height: 200)
-                } else {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        LazyHStack(spacing: 10) {
-                            ForEach(viewModel.localPhotos) { photo in
-                                photoItem(photo: photo)
-                            }
-                        }
-                        .padding(.horizontal)
-                    }
-                    .frame(height: 200)
-                }
-                
-                HStack {
-                    Button(action: {
-                        showingPhotoPicker = true
-                    }) {
-                        Image("camerasixseven")
-                            .resizable()
-                            .frame(width: 44, height: 44)
-                    }
-                    
-                    Text("New Photo")
-                        .font(.title3)
-                        .fontWeight(.bold)
-                }
-            }
-            .padding()
-        }
-    }
     
-    private func photoItem(photo: NavUnitPhoto) -> some View {
-        ZStack(alignment: .topLeading) {
-            // Async image loading with thumbnail
-            AsyncPhotoThumbnail(photo: photo, viewModel: viewModel)
-                .frame(width: 180, height: 180)
-                .cornerRadius(8)
-                .onTapGesture {
-                    viewModel.viewPhoto(photo)
-                }
-            
-            // Sync status indicator in top-left
-            VStack {
-                HStack {
-                    syncStatusIndicator(for: photo)
-                    Spacer()
-                }
-                Spacer()
-            }
-            .padding(8)
-        }
-        .frame(width: 180, height: 180)
-    }
-    
-    private func syncStatusIndicator(for photo: NavUnitPhoto) -> some View {
-        let status = viewModel.getSyncStatus(for: photo.id)
-        
-        return ZStack {
-            Circle()
-                .fill(Color.black.opacity(0.6))
-                .frame(width: 24, height: 24)
-            
-            Group {
-                if status == .syncing {
-                    ProgressView()
-                        .scaleEffect(0.7)
-                        .tint(.white)
-                } else {
-                    Image(systemName: status.iconName)
-                        .foregroundColor(syncStatusColor(for: status))
-                        .font(.system(size: 12))
-                }
-            }
-        }
-    }
-    
-    private func syncStatusColor(for status: PhotoSyncStatus) -> Color {
-        switch status {
-        case .notSynced: return .gray
-        case .syncing, .uploading, .downloading: return .blue
-        case .synced: return .green
-        case .failed: return .red
-        case .processing: return .orange
-        }
-    }
-    
-    private var remotePhotosSection: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                .background(RoundedRectangle(cornerRadius: 10).fill(Color.white))
-            
-            VStack(spacing: 15) {
-                Text(viewModel.remotePhotosHeader)
-                    .font(.headline)
-                
-                if viewModel.isLoadingFtpPhotos {
-                    ProgressView()
-                        .frame(height: 300)
-                } else if viewModel.ftpPhotos.isEmpty {
-                    Text("No remote photos available")
-                        .foregroundColor(.gray)
-                        .frame(height: 300)
-                } else {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        LazyHStack(spacing: 10) {
-                            ForEach(viewModel.ftpPhotos) { photo in
-                                ftpPhotoItem(photo: photo)
-                            }
-                        }
-                        .padding(.horizontal)
-                    }
-                    .frame(height: 300)
-                    
-                    Text("Found \(viewModel.ftpPhotos.count) photos")
-                        .font(.caption)
-                }
-            }
-            .padding()
-        }
-    }
-    
-    private func ftpPhotoItem(photo: FtpPhotoItem) -> some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color.gray.opacity(0.1))
-                .frame(width: 280, height: 280)
-            
-            // Simplify to always use a colored rectangle
-            Rectangle()
-                .fill(Color.green)
-                .frame(width: 260, height: 260)
-                .cornerRadius(8)
-        }
-        .cornerRadius(8)
-        .onTapGesture {
-            viewModel.viewFtpPhoto(photo)
-        }
-    }
     
     // MARK: - Detail Sections
     

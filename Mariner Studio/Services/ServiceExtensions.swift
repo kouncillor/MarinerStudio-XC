@@ -27,10 +27,6 @@ extension EnvironmentObject where ObjectType == ServiceProvider {
         wrappedValue.navUnitService
     }
     
-    var photoService: PhotoDatabaseService {
-        wrappedValue.photoService
-    }
-    
     var vesselService: VesselDatabaseService {
         wrappedValue.vesselService
     }
@@ -74,19 +70,6 @@ extension EnvironmentObject where ObjectType == ServiceProvider {
     
     var routeCalculationService: RouteCalculationService {
         wrappedValue.routeCalculationService
-    }
-    
-    // Photo Services
-    var photoCaptureService: PhotoCaptureService {
-        wrappedValue.photoCaptureService
-    }
-    
-    var fileStorageService: FileStorageService {
-        wrappedValue.fileStorageService
-    }
-    
-    var iCloudSyncService: iCloudSyncService {
-        wrappedValue.iCloudSyncService
     }
     
     // NEW: Recommendation Service Extension
