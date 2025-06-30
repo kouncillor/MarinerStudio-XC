@@ -68,36 +68,15 @@ struct MainView: View {
 //                            iconColor: .blue
 //                        )
 //                    }
-
                     
                     
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-//                    NavigationLink(destination: NavUnitMenuView()) {
-//                        NavigationButtonContent(
-//                            icon: "docksixseven",
-//                            title: "DOCKS"
-//                        )
-//                    }
-//                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
+                    NavigationLink(destination: NavUnitMenuView()) {
+                        NavigationButtonContent(
+                            icon: "docksixseven",
+                            title: "DOCKS"
+                        )
+                    }
+        
 
                     NavigationLink(destination: BuoyMenuView()) {
                         NavigationButtonContent(
