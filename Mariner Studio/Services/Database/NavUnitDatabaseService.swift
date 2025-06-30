@@ -144,7 +144,7 @@ class NavUnitDatabaseService {
                 results.append(unit)
                 count += 1
             }
-
+            
             let duration = Date().timeIntervalSince(startTime)
             print("✅ NAV_UNIT_DB_SERVICE: Retrieved \(results.count) nav units in \(String(format: "%.3f", duration))s")
             return results
@@ -161,21 +161,21 @@ class NavUnitDatabaseService {
         
         do {
             let db = try databaseCore.ensureConnection()
-
+            
             // Find the specific NavUnit row
             let query = navUnits.filter(colNavUnitId == navUnitId)
-
+            
             // Get the current unit's favorite status
             guard let unit = try db.pluck(query) else {
                 print("❌ NAV_UNIT_DB_SERVICE: NavUnit \(navUnitId) not found")
                 throw NSError(domain: "DatabaseService", code: 10, userInfo: [NSLocalizedDescriptionKey: "NavUnit not found for toggling favorite."])
             }
-
+            
             let currentValue = unit[colIsFavorite]
             let newValue = !currentValue // Toggle the boolean value
-
+            
             print("⭐ NAV_UNIT_DB_SERVICE: Toggling favorite for \(navUnitId) from \(currentValue) to \(newValue)")
-
+            
             // Get user info for sync metadata
             guard let userId = await getCurrentUserId() else {
                 throw NSError(domain: "DatabaseService", code: 401, userInfo: [NSLocalizedDescriptionKey: "No authenticated user"])
@@ -183,7 +183,7 @@ class NavUnitDatabaseService {
             
             let deviceId = await getDeviceId()
             let currentTime = Date()
-
+            
             // Update the main NavUnits table with new favorite status and sync metadata
             let updatedRow = navUnits.filter(colNavUnitId == navUnitId)
             try db.run(updatedRow.update(
@@ -192,7 +192,7 @@ class NavUnitDatabaseService {
                 colLastModified <- currentTime,
                 colDeviceId <- deviceId
             ))
-
+            
             // Flush changes to disk
             try await databaseCore.flushDatabaseAsync()
             
@@ -205,4 +205,233 @@ class NavUnitDatabaseService {
             throw error
         }
     }
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    /// Get all navigation units with distance calculated in database
+    //    func getNavUnitsWithDistanceAsync(userLatitude: Double, userLongitude: Double) async throws -> [StationWithDistance<NavUnit>] {
+    //        print("🔄 NAV_UNIT_DB_SERVICE: Starting getNavUnitsWithDistanceAsync with user location: \(userLatitude), \(userLongitude)")
+    //        let startTime = Date()
+    //
+    //        do {
+    //            let db = try databaseCore.ensureConnection()
+    //            var results: [StationWithDistance<NavUnit>] = []
+    //
+    //            // Create a distance expression using Haversine formula
+    //            let haversineFormula = """
+    //                CASE
+    //                    WHEN LATITUDE IS NULL OR LONGITUDE IS NULL THEN 999999999.0
+    //                    ELSE (6371000.0 * acos(
+    //                        cos(radians(\(userLatitude))) * cos(radians(LATITUDE)) *
+    //                        cos(radians(LONGITUDE) - radians(\(userLongitude))) +
+    //                        sin(radians(\(userLatitude))) * sin(radians(LATITUDE))
+    //                    ))
+    //                END
+    //            """
+    //
+    //            let distanceExpression = Expression<Double>(literal: haversineFormula)
+    //            let sortOrderExpression = Expression<Int>(literal: "CASE WHEN (\(haversineFormula)) = 999999999.0 THEN 1 ELSE 0 END")
+    //
+    //            // Build query using existing Expression objects
+    //            let query = navUnits
+    //                .select(navUnits[*], distanceExpression)
+    //                .order(sortOrderExpression.asc, distanceExpression.asc, colNavUnitName.asc)
+    //
+    //            print("📊 NAV_UNIT_DB_SERVICE: Executing distance query")
+    //
+    //            for row in try db.prepare(query) {
+    //                // Use existing Expression objects to extract values
+    //                let latValue = row[colLatitude]
+    //                let lonValue = row[colLongitude]
+    //                let calculatedDistance = try row.get(distanceExpression)
+    //
+    //                let unit = NavUnit(
+    //                    navUnitId: row[colNavUnitId],
+    //                    unloCode: row[colUnloCode],
+    //                    navUnitName: row[colNavUnitName],
+    //                    locationDescription: row[colLocationDescription],
+    //                    facilityType: row[colFacilityType],
+    //                    streetAddress: row[colStreetAddress],
+    //                    cityOrTown: row[colCityOrTown],
+    //                    statePostalCode: row[colStatePostalCode],
+    //                    zipCode: row[colZipCode],
+    //                    countyName: row[colCountyName],
+    //                    countyFipsCode: row[colCountyFipsCode],
+    //                    congress: row[colCongress],
+    //                    congressFips: row[colCongressFips],
+    //                    waterwayName: row[colWaterwayName],
+    //                    portName: row[colPortName],
+    //                    mile: row[colMile],
+    //                    bank: row[colBank],
+    //                    latitude: latValue ?? 0.0,
+    //                    longitude: lonValue ?? 0.0,
+    //                    operators: row[colOperators],
+    //                    owners: row[colOwners],
+    //                    purpose: row[colPurpose],
+    //                    highwayNote: row[colHighwayNote],
+    //                    railwayNote: row[colRailwayNote],
+    //                    location: row[colLocation],
+    //                    dock: row[colDock],
+    //                    commodities: row[colCommodities],
+    //                    construction: row[colConstruction],
+    //                    mechanicalHandling: row[colMechanicalHandling],
+    //                    remarks: row[colRemarks],
+    //                    verticalDatum: row[colVerticalDatum],
+    //                    depthMin: row[colDepthMin],
+    //                    depthMax: row[colDepthMax],
+    //                    berthingLargest: row[colBerthingLargest],
+    //                    berthingTotal: row[colBerthingTotal],
+    //                    deckHeightMin: row[colDeckHeightMin],
+    //                    deckHeightMax: row[colDeckHeightMax],
+    //                    serviceInitiationDate: row[colServiceInitiationDate],
+    //                    serviceTerminationDate: row[colServiceTerminationDate],
+    //                    isFavorite: row[colIsFavorite]
+    //                )
+    //
+    //                // Create StationWithDistance object with database-calculated distance
+    //                let finalDistance = calculatedDistance == 999999999.0 ? Double.greatestFiniteMagnitude : calculatedDistance
+    //                let stationWithDistance = StationWithDistance<NavUnit>(
+    //                    station: unit,
+    //                    distanceFromUser: finalDistance
+    //                )
+    //
+    //                results.append(stationWithDistance)
+    //            }
+    //
+    //            let duration = Date().timeIntervalSince(startTime)
+    //            print("✅ NAV_UNIT_DB_SERVICE: Retrieved \(results.count) nav units with distances in \(String(format: "%.3f", duration))s")
+    //            return results
+    //
+    //        } catch {
+    //            print("❌ NAV_UNIT_DB_SERVICE: Error fetching nav units with distance: \(error.localizedDescription)")
+    //            throw error
+    //        }
+    //    }
+    //
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    /// Get minimal nav unit list items with distance calculated in database
+    func getNavUnitListItemsWithDistanceAsync(userLatitude: Double, userLongitude: Double) async throws -> [NavUnitListItem] {
+        print("🔄 NAV_UNIT_DB_SERVICE: Starting getNavUnitListItemsWithDistanceAsync (MINIMAL LOADING)")
+        let startTime = Date()
+        
+        do {
+            let db = try databaseCore.ensureConnection()
+            var results: [NavUnitListItem] = []
+            
+            // Minimal query - only ID, name, and calculated distance
+            let haversineFormula = """
+                CASE 
+                    WHEN LATITUDE IS NULL OR LONGITUDE IS NULL THEN 999999999.0
+                    ELSE (6371000.0 * acos(
+                        cos(radians(\(userLatitude))) * cos(radians(LATITUDE)) * 
+                        cos(radians(LONGITUDE) - radians(\(userLongitude))) + 
+                        sin(radians(\(userLatitude))) * sin(radians(LATITUDE))
+                    ))
+                END
+            """
+            
+            let distanceExpression = Expression<Double>(literal: haversineFormula)
+            let sortOrderExpression = Expression<Int>(literal: "CASE WHEN (\(haversineFormula)) = 999999999.0 THEN 1 ELSE 0 END")
+            
+            // Build minimal query - only 3 columns instead of 30+
+            let query = navUnits
+                .select(colNavUnitId, colNavUnitName, distanceExpression)
+                .order(sortOrderExpression.asc, distanceExpression.asc, colNavUnitName.asc)
+            
+            print("📊 NAV_UNIT_DB_SERVICE: Executing minimal distance query (3 columns only)")
+            
+            for row in try db.prepare(query) {
+                let calculatedDistance = try row.get(distanceExpression)
+                let finalDistance = calculatedDistance == 999999999.0 ? Double.greatestFiniteMagnitude : calculatedDistance
+                
+                let listItem = NavUnitListItem(
+                    id: row[colNavUnitId],
+                    name: row[colNavUnitName],
+                    distanceFromUser: finalDistance
+                )
+                
+                results.append(listItem)
+            }
+
+            let duration = Date().timeIntervalSince(startTime)
+            print("✅ NAV_UNIT_DB_SERVICE: Retrieved \(results.count) minimal nav unit items in \(String(format: "%.3f", duration))s")
+            return results
+            
+        } catch {
+            print("❌ NAV_UNIT_DB_SERVICE: Error fetching minimal nav unit items: \(error.localizedDescription)")
+            throw error
+        }
+    }
+
+    /// Get minimal nav unit list items without distance calculation (fallback)
+    func getNavUnitListItemsAsync() async throws -> [NavUnitListItem] {
+        print("🔄 NAV_UNIT_DB_SERVICE: Starting getNavUnitListItemsAsync (NO DISTANCE)")
+        let startTime = Date()
+        
+        do {
+            let db = try databaseCore.ensureConnection()
+            var results: [NavUnitListItem] = []
+            
+            // Simple query - just ID and name, alphabetically sorted
+            let query = navUnits
+                .select(colNavUnitId, colNavUnitName)
+                .order(colNavUnitName.asc)
+            
+            print("📊 NAV_UNIT_DB_SERVICE: Executing minimal query (2 columns only)")
+            
+            for row in try db.prepare(query) {
+                let listItem = NavUnitListItem(
+                    id: row[colNavUnitId],
+                    name: row[colNavUnitName],
+                    distanceFromUser: Double.greatestFiniteMagnitude
+                )
+                
+                results.append(listItem)
+            }
+
+            let duration = Date().timeIntervalSince(startTime)
+            print("✅ NAV_UNIT_DB_SERVICE: Retrieved \(results.count) minimal nav unit items (no distance) in \(String(format: "%.3f", duration))s")
+            return results
+            
+        } catch {
+            print("❌ NAV_UNIT_DB_SERVICE: Error fetching minimal nav unit items: \(error.localizedDescription)")
+            throw error
+        }
+    }
+    
 }
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+
