@@ -1,9 +1,17 @@
 
+//
+//  NavUnitDetailsView.swift
+//  Mariner Studio
+//
+//  Navigation Unit Details View - Shows comprehensive information about a navigation unit
+//  Updated to support both direct model injection and async loading by ID
+//
+
 import SwiftUI
 import MapKit
 import CoreLocation
 
-// MARK: - NavUnit Chart Map View (NEW)
+// MARK: - NavUnit Chart Map View
 struct NavUnitChartMapView: UIViewRepresentable {
     let mapRegion: MapRegion
     let annotation: NavUnitMapAnnotation
@@ -102,345 +110,417 @@ struct NavUnitChartMapView: UIViewRepresentable {
 }
 
 struct NavUnitDetailsView: View {
-    // Use ObservedObject instead of StateObject since we'll initialize it from outside
-    @ObservedObject var viewModel: NavUnitDetailsViewModel
+    @StateObject private var viewModel: NavUnitDetailsViewModel
     @EnvironmentObject var serviceProvider: ServiceProvider
     
-    // State for photo picker and gallery
-    @State private var showingPhotoPicker = false
-    @State private var showingSyncSettings = false
+    // MARK: - Initializers
     
-    // State for recommendations
-    @State private var showingRecommendationForm = false
-    @State private var showingUserRecommendations = false
-    
-    // Simple initializer that takes a view model
-    init(viewModel: NavUnitDetailsViewModel) {
-        self.viewModel = viewModel
+    // New initializer: Load nav unit by ID (for navigation from list)
+    init(navUnitId: String, serviceProvider: ServiceProvider) {
+        _viewModel = StateObject(wrappedValue: NavUnitDetailsViewModel(
+            navUnitId: navUnitId,
+            databaseService: serviceProvider.navUnitService,
+            favoritesService: serviceProvider.favoritesService,
+            noaaChartService: serviceProvider.noaaChartService
+        ))
     }
+    
+    // Existing initializer: Direct model injection (for other use cases)
+    init(viewModel: NavUnitDetailsViewModel) {
+        _viewModel = StateObject(wrappedValue: viewModel)
+    }
+    
+    // MARK: - Body
     
     var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                // Error Message
-                if !viewModel.errorMessage.isEmpty {
-                    Text(viewModel.errorMessage)
-                        .foregroundColor(.red)
-                        .multilineTextAlignment(.center)
-                }
-                
-                // Unit Header Card
-                headerCard
-                
-                // Map Frame with Chart Overlay
-                mapView
-                
-                // Action Buttons
-                actionButtons
-                
-                // Primary Location
-                locationDetailsSection
-                
-                // Waterway Info
-                if viewModel.hasWaterwayInfo {
-                    waterwayInfoSection
-                }
-                
-                // Facility Info
-                facilityInfoSection
-                
-                // Transportation
-                if viewModel.hasTransportationInfo {
-                    transportationInfoSection
-                }
-                
-                // Specifications
-                specificationsSection
-                
-                // Additional Info
-                if viewModel.hasAdditionalInfo {
-                    additionalInfoSection
-                }
-                
-                // Service Info
-                serviceInfoSection
-            }
-            .padding()
-        }
-        .navigationBarTitle("Navigation Unit Details", displayMode: .inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                NavigationLink(destination: MainView(shouldClearNavigation: true)) {
-                    Image(systemName: "house.fill")
-                        .foregroundColor(.blue)
-                }
-                .simultaneousGesture(TapGesture().onEnded {
-                    // Provide haptic feedback
-                    let impactGenerator = UIImpactFeedbackGenerator(style: .medium)
-                    impactGenerator.prepare()
-                    impactGenerator.impactOccurred()
-                })
-            }
-        }
-    
-        .sheet(isPresented: $showingRecommendationForm) {
-            if let navUnit = viewModel.unit {
-                RecommendationFormView(
-                    viewModel: RecommendationFormViewModel(
-                        navUnit: navUnit,
-                        recommendationService: serviceProvider.recommendationService
-                    ),
-                    isPresented: $showingRecommendationForm
-                )
-            }
-        }
-     
-        
-    }
-    
-    // MARK: - View Components
-    
-    private var headerCard: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                .background(RoundedRectangle(cornerRadius: 10).fill(Color.white))
-            
-            VStack(spacing: 10) {
-                Text(viewModel.unit?.navUnitName ?? "")
-                    .font(.title)
-                    .fontWeight(.bold)
-                    .multilineTextAlignment(.center)
-                
-                Divider()
-                
-                Text(viewModel.unit?.navUnitId ?? "")
-                    .font(.body)
-                    .foregroundColor(.gray)
-                
-                Text(viewModel.unit?.facilityType ?? "")
-                    .font(.body)
-                    .foregroundColor(.gray)
-            }
-            .padding()
-        }
-    }
-
-    private var mapView: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                .background(RoundedRectangle(cornerRadius: 10).fill(Color.white))
-            
-            if viewModel.hasCoordinates,
-               let mapRegion = viewModel.mapRegion,
-               let mapAnnotation = viewModel.mapAnnotation {
-                // NEW: Use custom map view with chart overlay support
-                NavUnitChartMapView(
-                    mapRegion: mapRegion,
-                    annotation: mapAnnotation,
-                    chartOverlay: viewModel.chartOverlay
-                )
-                .frame(height: 300)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-                .padding()
-            } else {
-                ZStack {
-                    Color(UIColor.systemGray6)
-                        .cornerRadius(10)
+        Group {
+            if viewModel.isLoadingNavUnit {
+                // Loading state for async nav unit fetch
+                VStack(spacing: 16) {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .blue))
+                        .scaleEffect(1.2)
                     
-                    Text("No location coordinates available")
-                        .foregroundColor(.gray)
+                    Text("Loading Navigation Unit...")
+                        .font(.headline)
+                        .foregroundColor(.secondary)
                 }
-                .frame(height: 300)
-                .padding()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color(.systemBackground))
+                
+            } else if !viewModel.navUnitLoadError.isEmpty {
+                // Error state for nav unit loading
+                VStack(spacing: 16) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 48))
+                        .foregroundColor(.orange)
+                    
+                    Text("Unable to Load Navigation Unit")
+                        .font(.headline)
+                        .multilineTextAlignment(.center)
+                    
+                    Text(viewModel.navUnitLoadError)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                    
+                    Button("Try Again") {
+                        Task {
+                            await viewModel.retryLoadNavUnit()
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color(.systemBackground))
+                
+            } else if let navUnit = viewModel.unit {
+                // Main content when nav unit is loaded
+                mainContentView(for: navUnit)
+                
+            } else {
+                // Fallback empty state
+                VStack {
+                    Text("No navigation unit data available")
+                        .font(.headline)
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color(.systemBackground))
+            }
+        }
+        .navigationTitle(viewModel.unit?.navUnitName ?? "Navigation Unit")
+        .navigationBarTitleDisplayMode(.inline)
+        .withHomeButton()
+        .onAppear {
+            Task {
+                await viewModel.loadNavUnitIfNeeded()
             }
         }
     }
     
-    private var actionButtons: some View {
-        HStack(spacing: 15) {
-            actionButton(
-                icon: "carsixseven",
-                action: { viewModel.openInMaps() },
-                isEnabled: viewModel.hasCoordinates
-            )
-            
-            actionButton(
-                icon: "greenphonesixseven",
-                action: { viewModel.makePhoneCall() },
-                isEnabled: viewModel.hasPhoneNumbers
-            )
-            
-            actionButton(
-                icon: viewModel.favoriteIcon,
-                action: {
+    // MARK: - Main Content View
+    
+    @ViewBuilder
+    private func mainContentView(for navUnit: NavUnit) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                // Header section with name and coordinates
+                headerSection(for: navUnit)
+                
+                
+                // Map section
+                if viewModel.hasCoordinates {
+                    mapSection()
+                }
+                
+                
+                
+                
+                // Location information
+                if hasLocationInfo(for: navUnit) {
+                    locationSection(for: navUnit)
+                }
+                
+                // Facility details
+                if hasFacilityInfo(for: navUnit) {
+                    facilitySection(for: navUnit)
+                }
+                
+                // Contact information
+                if hasContactInfo(for: navUnit) {
+                    contactSection(for: navUnit)
+                }
+                
+                // Technical specifications
+                if hasTechnicalInfo(for: navUnit) {
+                    technicalSection(for: navUnit)
+                }
+                
+                // Additional information
+                if hasAdditionalInfo(for: navUnit) {
+                    additionalSection(for: navUnit)
+                }
+                
+              
+            }
+            .padding()
+        }
+    }
+    
+    // MARK: - Section Views
+    
+    @ViewBuilder
+    private func headerSection(for navUnit: NavUnit) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(navUnit.navUnitName)
+                    .font(.title2)
+                    .fontWeight(.bold)
+                
+                Spacer()
+                
+                // Favorite button
+                Button(action: {
                     Task {
                         await viewModel.toggleFavorite()
                     }
-                },
-                isEnabled: true
-            )
-            
-            actionButton(
-                icon: "commentsixseven",
-                action: { showingUserRecommendations = true },
-                isEnabled: true
-            )
-            
-            // NEW: Suggest Update button
-            actionButton(
-                icon: "lightbulb.fill",
-                action: { showingRecommendationForm = true },
-                isEnabled: true
-            )
-            
-            actionButton(
-                icon: "sharesixseven",
-                action: { viewModel.shareUnit() },
-                isEnabled: true
-            )
-        }
-        .padding(.horizontal)
-        .sheet(isPresented: $showingUserRecommendations) {
-            NavigationView {
-                UserRecommendationsView()
-                    .environmentObject(serviceProvider)
-                    .toolbar {
-                        ToolbarItem(placement: .navigationBarTrailing) {
-                            Button("Done") {
-                                showingUserRecommendations = false
-                            }
-                        }
-                    }
-            }
-        }
-    }
-    
-    private func actionButton(icon: String, action: @escaping () -> Void, isEnabled: Bool) -> some View {
-        Button(action: action) {
-            if icon == "lightbulb.fill" {
-                // Use system icon for the new suggestion button
-                Image(systemName: icon)
-                    .resizable()
-                    .frame(width: 44, height: 44)
-                    .foregroundColor(isEnabled ? .orange : .gray.opacity(0.5))
-            } else {
-                // Use custom icons for existing buttons
-                Image(icon)
-                    .resizable()
-                    .frame(width: 44, height: 44)
-                    .opacity(isEnabled ? 1.0 : 0.5)
-            }
-        }
-        .disabled(!isEnabled)
-    }
-     
-    
-
-    
-    
-    // MARK: - Detail Sections
-    
-    private var locationDetailsSection: some View {
-        detailSection(title: "Location Details") {
-            detailRow(label: "Address:", value: viewModel.unit?.streetAddress)
-            detailRow(label: "City:", value: viewModel.unit?.cityOrTown)
-            detailRow(label: "State:", value: viewModel.unit?.statePostalCode)
-            detailRow(label: "ZIP:", value: viewModel.unit?.zipCode)
-            detailRow(label: "Location:", value: viewModel.unit?.location)
-            detailRow(label: "Description:", value: viewModel.unit?.locationDescription)
-        }
-    }
-    
-    private var waterwayInfoSection: some View {
-        detailSection(title: "Waterway Information") {
-            detailRow(label: "Waterway:", value: viewModel.unit?.waterwayName)
-            detailRow(label: "Port:", value: viewModel.unit?.portName)
-            
-            if let mile = viewModel.unit?.mile {
-                detailRow(label: "Mile Marker:", value: String(mile))
+                }) {
+                    Image(viewModel.favoriteIcon)
+                        .resizable()
+                        .frame(width: 24, height: 24)
+                }
             }
             
-            detailRow(label: "Bank:", value: viewModel.unit?.bank)
-            detailRow(label: "Coordinates:", value: viewModel.formattedCoordinates)
-        }
-    }
-    
-    private var facilityInfoSection: some View {
-        detailSection(title: "Facility Information") {
-            detailRow(label: "Operators:", value: viewModel.unit?.operators)
-            detailRow(label: "Owners:", value: viewModel.unit?.owners)
-            detailRow(label: "Purpose:", value: viewModel.unit?.purpose)
-        }
-    }
-    
-    private var transportationInfoSection: some View {
-        detailSection(title: "Transportation") {
-            detailRow(label: "Highway:", value: viewModel.unit?.highwayNote)
-            detailRow(label: "Railway:", value: viewModel.unit?.railwayNote)
-        }
-    }
-    
-    private var specificationsSection: some View {
-        detailSection(title: "Specifications") {
-            detailRow(label: "Depth Range:", value: viewModel.depthRange)
-            detailRow(label: "Deck Height:", value: viewModel.deckHeightRange)
+            if !viewModel.formattedCoordinates.isEmpty {
+                Text(viewModel.formattedCoordinates)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
             
-            let berthingText = "Largest: \(viewModel.unit?.berthingLargest?.description ?? "N/A"), Total: \(viewModel.unit?.berthingTotal?.description ?? "N/A")"
-            detailRow(label: "Berthing:", value: berthingText)
-            
-            detailRow(label: "Vertical Datum:", value: viewModel.unit?.verticalDatum)
-            detailRow(label: "Dock:", value: viewModel.unit?.dock)
-        }
-    }
-    
-    private var additionalInfoSection: some View {
-        detailSection(title: "Additional Information") {
-            detailRow(label: "Construction:", value: viewModel.unit?.construction)
-            detailRow(label: "Mechanical:", value: viewModel.unit?.mechanicalHandling)
-            detailRow(label: "Commodities:", value: viewModel.unit?.commodities)
-            detailRow(label: "Remarks:", value: viewModel.unit?.remarks)
-        }
-    }
-    
-    private var serviceInfoSection: some View {
-        detailSection(title: "Service Information") {
-            detailRow(label: "Initiated:", value: viewModel.unit?.serviceInitiationDate)
-            detailRow(label: "Terminated:", value: viewModel.unit?.serviceTerminationDate)
-        }
-    }
-    
-    private func detailSection<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(title)
-                .font(.headline)
-                .fontWeight(.bold)
-                .padding(.bottom, 5)
-            
-            content()
+            if let facilityType = navUnit.facilityType, !facilityType.isEmpty {
+                Text(facilityType)
+                    .font(.subheadline)
+                    .foregroundColor(.blue)
+            }
         }
         .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                .background(RoundedRectangle(cornerRadius: 10).fill(Color.white))
-        )
+        .background(Color(.systemGray6))
+        .cornerRadius(12)
     }
     
-    private func detailRow(label: String, value: String?) -> some View {
-        HStack(alignment: .top) {
-            Text(label)
-                .font(.body)
-                .fontWeight(.bold)
-                .frame(width: 120, alignment: .leading)
+    @ViewBuilder
+    private func locationSection(for navUnit: NavUnit) -> some View {
+        SectionCard(title: "Location") {
+            VStack(alignment: .leading, spacing: 8) {
+                if let streetAddress = navUnit.streetAddress, !streetAddress.isEmpty {
+                    InfoRow(label: "Address", value: streetAddress)
+                }
+                
+                if let city = navUnit.cityOrTown, !city.isEmpty {
+                    InfoRow(label: "City", value: city)
+                }
+                
+                if let state = navUnit.statePostalCode, !state.isEmpty {
+                    InfoRow(label: "State", value: state)
+                }
+                
+                if let zip = navUnit.zipCode, !zip.isEmpty {
+                    InfoRow(label: "ZIP Code", value: zip)
+                }
+                
+                if let county = navUnit.countyName, !county.isEmpty {
+                    InfoRow(label: "County", value: county)
+                }
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private func facilitySection(for navUnit: NavUnit) -> some View {
+        SectionCard(title: "Facility Information") {
+            VStack(alignment: .leading, spacing: 8) {
+                if let waterwayName = navUnit.waterwayName, !waterwayName.isEmpty {
+                    InfoRow(label: "Waterway", value: waterwayName)
+                }
+                
+                if let portName = navUnit.portName, !portName.isEmpty {
+                    InfoRow(label: "Port", value: portName)
+                }
+                
+                if let mile = navUnit.mile {
+                    InfoRow(label: "Mile", value: String(format: "%.1f", mile))
+                }
+                
+                if let bank = navUnit.bank, !bank.isEmpty {
+                    InfoRow(label: "Bank", value: bank)
+                }
+                
+                if let location = navUnit.location, !location.isEmpty {
+                    InfoRow(label: "Location", value: location)
+                }
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private func contactSection(for navUnit: NavUnit) -> some View {
+        SectionCard(title: "Contact Information") {
+            VStack(alignment: .leading, spacing: 8) {
+                if let operators = navUnit.operators, !operators.isEmpty {
+                    InfoRow(label: "Operators", value: operators)
+                }
+                
+                if let owners = navUnit.owners, !owners.isEmpty {
+                    InfoRow(label: "Owners", value: owners)
+                }
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private func technicalSection(for navUnit: NavUnit) -> some View {
+        SectionCard(title: "Technical Specifications") {
+            VStack(alignment: .leading, spacing: 8) {
+                if !viewModel.depthRange.isEmpty {
+                    InfoRow(label: "Depth", value: viewModel.depthRange)
+                }
+                
+                if !viewModel.deckHeightRange.isEmpty {
+                    InfoRow(label: "Deck Height", value: viewModel.deckHeightRange)
+                }
+                
+                if let berthingLargest = navUnit.berthingLargest {
+                    InfoRow(label: "Largest Berthing", value: String(format: "%.1f ft", berthingLargest))
+                }
+                
+                if let berthingTotal = navUnit.berthingTotal {
+                    InfoRow(label: "Total Berthing", value: String(format: "%.1f ft", berthingTotal))
+                }
+                
+                if let verticalDatum = navUnit.verticalDatum, !verticalDatum.isEmpty {
+                    InfoRow(label: "Vertical Datum", value: verticalDatum)
+                }
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private func additionalSection(for navUnit: NavUnit) -> some View {
+        SectionCard(title: "Additional Information") {
+            VStack(alignment: .leading, spacing: 8) {
+                if let purpose = navUnit.purpose, !purpose.isEmpty {
+                    InfoRow(label: "Purpose", value: purpose)
+                }
+                
+                if let commodities = navUnit.commodities, !commodities.isEmpty {
+                    InfoRow(label: "Commodities", value: commodities)
+                }
+                
+                if let construction = navUnit.construction, !construction.isEmpty {
+                    InfoRow(label: "Construction", value: construction)
+                }
+                
+                if let mechanicalHandling = navUnit.mechanicalHandling, !mechanicalHandling.isEmpty {
+                    InfoRow(label: "Mechanical Handling", value: mechanicalHandling)
+                }
+                
+                if let remarks = navUnit.remarks, !remarks.isEmpty {
+                    InfoRow(label: "Remarks", value: remarks)
+                }
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private func mapSection() -> some View {
+        SectionCard(title: "Location Map") {
+            if let mapRegion = viewModel.mapRegion,
+               let annotation = viewModel.mapAnnotation {
+                NavUnitChartMapView(
+                    mapRegion: mapRegion,
+                    annotation: annotation,
+                    chartOverlay: viewModel.chartOverlay
+                )
+                .frame(height: 300)
+                .cornerRadius(8)
+            } else {
+                Rectangle()
+                    .fill(Color(.systemGray5))
+                    .frame(height: 200)
+                    .overlay(
+                        Text("Location coordinates not available")
+                            .foregroundColor(.secondary)
+                            .frame(height: 100)
+                    )
+                    .cornerRadius(8)
+            }
+        }
+    }
+    
+    // MARK: - Helper Methods
+    
+    private func hasLocationInfo(for navUnit: NavUnit) -> Bool {
+        return !(navUnit.streetAddress?.isEmpty ?? true) ||
+               !(navUnit.cityOrTown?.isEmpty ?? true) ||
+               !(navUnit.statePostalCode?.isEmpty ?? true) ||
+               !(navUnit.zipCode?.isEmpty ?? true) ||
+               !(navUnit.countyName?.isEmpty ?? true)
+    }
+    
+    private func hasFacilityInfo(for navUnit: NavUnit) -> Bool {
+        return !(navUnit.waterwayName?.isEmpty ?? true) ||
+               !(navUnit.portName?.isEmpty ?? true) ||
+               navUnit.mile != nil ||
+               !(navUnit.bank?.isEmpty ?? true) ||
+               !(navUnit.location?.isEmpty ?? true)
+    }
+    
+    private func hasContactInfo(for navUnit: NavUnit) -> Bool {
+        return !(navUnit.operators?.isEmpty ?? true) ||
+               !(navUnit.owners?.isEmpty ?? true)
+    }
+    
+    private func hasTechnicalInfo(for navUnit: NavUnit) -> Bool {
+        return !viewModel.depthRange.isEmpty ||
+               !viewModel.deckHeightRange.isEmpty ||
+               navUnit.berthingLargest != nil ||
+               navUnit.berthingTotal != nil ||
+               !(navUnit.verticalDatum?.isEmpty ?? true)
+    }
+    
+    private func hasAdditionalInfo(for navUnit: NavUnit) -> Bool {
+        return !(navUnit.purpose?.isEmpty ?? true) ||
+               !(navUnit.commodities?.isEmpty ?? true) ||
+               !(navUnit.construction?.isEmpty ?? true) ||
+               !(navUnit.mechanicalHandling?.isEmpty ?? true) ||
+               !(navUnit.remarks?.isEmpty ?? true)
+    }
+}
+
+// MARK: - Helper Views
+
+struct SectionCard<Content: View>: View {
+    let title: String
+    let content: Content
+    
+    init(title: String, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.content = content()
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.headline)
+                .fontWeight(.semibold)
             
-            Text(value ?? "Not specified")
-                .font(.body)
-                .foregroundColor(.primary)
+            content
+        }
+        .padding()
+        .background(Color(.systemBackground))
+        .cornerRadius(12)
+        .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+    }
+}
+
+struct InfoRow: View {
+    let label: String
+    let value: String
+    
+    var body: some View {
+        HStack(alignment: .top) {
+            Text(label + ":")
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .foregroundColor(.secondary)
+                .frame(width: 100, alignment: .leading)
+            
+            Text(value)
+                .font(.subheadline)
                 .multilineTextAlignment(.leading)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.vertical, 5)
     }
 }

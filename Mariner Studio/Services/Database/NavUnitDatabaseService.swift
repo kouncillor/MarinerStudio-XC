@@ -206,128 +206,6 @@ class NavUnitDatabaseService {
         }
     }
     
-    
-    
-    
-    
-    
-    
-    
-    
-    /// Get all navigation units with distance calculated in database
-    //    func getNavUnitsWithDistanceAsync(userLatitude: Double, userLongitude: Double) async throws -> [StationWithDistance<NavUnit>] {
-    //        print("🔄 NAV_UNIT_DB_SERVICE: Starting getNavUnitsWithDistanceAsync with user location: \(userLatitude), \(userLongitude)")
-    //        let startTime = Date()
-    //
-    //        do {
-    //            let db = try databaseCore.ensureConnection()
-    //            var results: [StationWithDistance<NavUnit>] = []
-    //
-    //            // Create a distance expression using Haversine formula
-    //            let haversineFormula = """
-    //                CASE
-    //                    WHEN LATITUDE IS NULL OR LONGITUDE IS NULL THEN 999999999.0
-    //                    ELSE (6371000.0 * acos(
-    //                        cos(radians(\(userLatitude))) * cos(radians(LATITUDE)) *
-    //                        cos(radians(LONGITUDE) - radians(\(userLongitude))) +
-    //                        sin(radians(\(userLatitude))) * sin(radians(LATITUDE))
-    //                    ))
-    //                END
-    //            """
-    //
-    //            let distanceExpression = Expression<Double>(literal: haversineFormula)
-    //            let sortOrderExpression = Expression<Int>(literal: "CASE WHEN (\(haversineFormula)) = 999999999.0 THEN 1 ELSE 0 END")
-    //
-    //            // Build query using existing Expression objects
-    //            let query = navUnits
-    //                .select(navUnits[*], distanceExpression)
-    //                .order(sortOrderExpression.asc, distanceExpression.asc, colNavUnitName.asc)
-    //
-    //            print("📊 NAV_UNIT_DB_SERVICE: Executing distance query")
-    //
-    //            for row in try db.prepare(query) {
-    //                // Use existing Expression objects to extract values
-    //                let latValue = row[colLatitude]
-    //                let lonValue = row[colLongitude]
-    //                let calculatedDistance = try row.get(distanceExpression)
-    //
-    //                let unit = NavUnit(
-    //                    navUnitId: row[colNavUnitId],
-    //                    unloCode: row[colUnloCode],
-    //                    navUnitName: row[colNavUnitName],
-    //                    locationDescription: row[colLocationDescription],
-    //                    facilityType: row[colFacilityType],
-    //                    streetAddress: row[colStreetAddress],
-    //                    cityOrTown: row[colCityOrTown],
-    //                    statePostalCode: row[colStatePostalCode],
-    //                    zipCode: row[colZipCode],
-    //                    countyName: row[colCountyName],
-    //                    countyFipsCode: row[colCountyFipsCode],
-    //                    congress: row[colCongress],
-    //                    congressFips: row[colCongressFips],
-    //                    waterwayName: row[colWaterwayName],
-    //                    portName: row[colPortName],
-    //                    mile: row[colMile],
-    //                    bank: row[colBank],
-    //                    latitude: latValue ?? 0.0,
-    //                    longitude: lonValue ?? 0.0,
-    //                    operators: row[colOperators],
-    //                    owners: row[colOwners],
-    //                    purpose: row[colPurpose],
-    //                    highwayNote: row[colHighwayNote],
-    //                    railwayNote: row[colRailwayNote],
-    //                    location: row[colLocation],
-    //                    dock: row[colDock],
-    //                    commodities: row[colCommodities],
-    //                    construction: row[colConstruction],
-    //                    mechanicalHandling: row[colMechanicalHandling],
-    //                    remarks: row[colRemarks],
-    //                    verticalDatum: row[colVerticalDatum],
-    //                    depthMin: row[colDepthMin],
-    //                    depthMax: row[colDepthMax],
-    //                    berthingLargest: row[colBerthingLargest],
-    //                    berthingTotal: row[colBerthingTotal],
-    //                    deckHeightMin: row[colDeckHeightMin],
-    //                    deckHeightMax: row[colDeckHeightMax],
-    //                    serviceInitiationDate: row[colServiceInitiationDate],
-    //                    serviceTerminationDate: row[colServiceTerminationDate],
-    //                    isFavorite: row[colIsFavorite]
-    //                )
-    //
-    //                // Create StationWithDistance object with database-calculated distance
-    //                let finalDistance = calculatedDistance == 999999999.0 ? Double.greatestFiniteMagnitude : calculatedDistance
-    //                let stationWithDistance = StationWithDistance<NavUnit>(
-    //                    station: unit,
-    //                    distanceFromUser: finalDistance
-    //                )
-    //
-    //                results.append(stationWithDistance)
-    //            }
-    //
-    //            let duration = Date().timeIntervalSince(startTime)
-    //            print("✅ NAV_UNIT_DB_SERVICE: Retrieved \(results.count) nav units with distances in \(String(format: "%.3f", duration))s")
-    //            return results
-    //
-    //        } catch {
-    //            print("❌ NAV_UNIT_DB_SERVICE: Error fetching nav units with distance: \(error.localizedDescription)")
-    //            throw error
-    //        }
-    //    }
-    //
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
     /// Get minimal nav unit list items with distance calculated in database
     func getNavUnitListItemsWithDistanceAsync(userLatitude: Double, userLongitude: Double) async throws -> [NavUnitListItem] {
         print("🔄 NAV_UNIT_DB_SERVICE: Starting getNavUnitListItemsWithDistanceAsync (MINIMAL LOADING)")
@@ -417,6 +295,90 @@ class NavUnitDatabaseService {
             throw error
         }
     }
+    
+    /// Get a single navigation unit by ID
+    func getNavUnitByIdAsync(_ navUnitId: String) async throws -> NavUnit {
+        print("🔄 NAV_UNIT_DB_SERVICE: Starting getNavUnitByIdAsync for ID: \(navUnitId)")
+        let startTime = Date()
+        
+        do {
+            let db = try databaseCore.ensureConnection()
+            
+            // Query for specific nav unit by ID
+            let query = navUnits.filter(colNavUnitId == navUnitId)
+            
+            print("📊 NAV_UNIT_DB_SERVICE: Querying NavUnits table for ID: \(navUnitId)")
+            
+            guard let row = try db.pluck(query) else {
+                print("❌ NAV_UNIT_DB_SERVICE: NavUnit with ID \(navUnitId) not found")
+                throw NSError(domain: "NavUnitDatabaseService", code: 404,
+                             userInfo: [NSLocalizedDescriptionKey: "Navigation unit with ID \(navUnitId) not found"])
+            }
+            
+            let latValue = row[colLatitude]
+            let lonValue = row[colLongitude]
+            
+            let unit = NavUnit(
+                navUnitId: row[colNavUnitId],
+                unloCode: row[colUnloCode],
+                navUnitName: row[colNavUnitName],
+                locationDescription: row[colLocationDescription],
+                facilityType: row[colFacilityType],
+                streetAddress: row[colStreetAddress],
+                cityOrTown: row[colCityOrTown],
+                statePostalCode: row[colStatePostalCode],
+                zipCode: row[colZipCode],
+                countyName: row[colCountyName],
+                countyFipsCode: row[colCountyFipsCode],
+                congress: row[colCongress],
+                congressFips: row[colCongressFips],
+                waterwayName: row[colWaterwayName],
+                portName: row[colPortName],
+                mile: row[colMile],
+                bank: row[colBank],
+                latitude: latValue ?? 0.0,
+                longitude: lonValue ?? 0.0,
+                operators: row[colOperators],
+                owners: row[colOwners],
+                purpose: row[colPurpose],
+                highwayNote: row[colHighwayNote],
+                railwayNote: row[colRailwayNote],
+                location: row[colLocation],
+                dock: row[colDock],
+                commodities: row[colCommodities],
+                construction: row[colConstruction],
+                mechanicalHandling: row[colMechanicalHandling],
+                remarks: row[colRemarks],
+                verticalDatum: row[colVerticalDatum],
+                depthMin: row[colDepthMin],
+                depthMax: row[colDepthMax],
+                berthingLargest: row[colBerthingLargest],
+                berthingTotal: row[colBerthingTotal],
+                deckHeightMin: row[colDeckHeightMin],
+                deckHeightMax: row[colDeckHeightMax],
+                serviceInitiationDate: row[colServiceInitiationDate],
+                serviceTerminationDate: row[colServiceTerminationDate],
+                isFavorite: row[colIsFavorite]
+            )
+            
+            let duration = Date().timeIntervalSince(startTime)
+            print("✅ NAV_UNIT_DB_SERVICE: Retrieved nav unit '\(unit.navUnitName)' in \(String(format: "%.3f", duration))s")
+            return unit
+            
+        } catch {
+            print("❌ NAV_UNIT_DB_SERVICE: Error fetching nav unit by ID \(navUnitId): \(error.localizedDescription)")
+            throw error
+        }
+    }
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
 }
     
