@@ -9,13 +9,13 @@ struct NavUnitMenuView: View {
         ScrollView {
             VStack(spacing: 12) {
                 // Favorites - Star Icon
-//                NavigationLink(destination: NavUnitFavoritesView()) {
-//                    MenuButtonContentNavUnit(
-//                        iconType: .system("star.fill"),
-//                        title: "FAVORITES",
-//                        color: .yellow
-//                    )
-//                }
+                NavigationLink(destination: NavUnitFavoritesView()) {
+                    MenuButtonContentNavUnit(
+                        iconType: .system("star.fill"),
+                        title: "FAVORITES",
+                        color: .yellow
+                    )
+                }
                 
                 // Local NavUnits - System Icon
                 NavigationLink(destination: NavUnitsView(
