@@ -419,7 +419,8 @@ final class SupabaseManager {
                 // Supabase will insert if no matching record exists, update if it does
                 try await client
                     .from("user_nav_unit_favorites")
-                    .upsert(favorite)
+                   // .upsert(favorite)
+                    .upsert(favorite, onConflict: "user_id,nav_unit_id")
                     .execute()
                 
                 logQueue.async {

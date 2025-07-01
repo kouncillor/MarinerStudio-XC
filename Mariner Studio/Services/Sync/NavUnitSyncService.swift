@@ -64,27 +64,452 @@ class NavUnitSyncService: ObservableObject {
         print("   - SupabaseManager: \(type(of: supabaseManager))")
     }
     
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
     // MARK: - Public Sync Interface
     
+//    /// Performs a full bidirectional sync of navigation unit favorites
+//    /// This is the main entry point for manual sync operations triggered by the user
+//    /// - Returns: Success/failure status - errors are logged but not thrown to UI
+//    @MainActor
+//    func performFullSync() async -> Bool {
+//        // Generate unique operation ID for tracking this specific sync operation
+//        let operationId = "nav_unit_full_sync_\(UUID().uuidString.prefix(8))"
+//        let startTime = Date()
+//        
+//        print("🟢🧭 NAV_UNIT_SYNC_START: ===================================================")
+//        print("🟢🧭 OPERATION_ID: \(operationId)")
+//        print("🟢🧭 START_TIME: \(startTime)")
+//        
+//        // STEP 1: Prevent Concurrent Operations
+//        // Check if another sync is already running on this instance to prevent data corruption
+//        guard !isSyncing else {
+//            print("⚠️🧭 CONCURRENT_SYNC_BLOCKED: Another sync operation is already in progress on this instance")
+//            print("⚠️🧭 ACTIVE_OPERATIONS: \(activeOperations)")
+//            return false
+//        }
+//        
+//        // Mark sync as active and track the operation
+//        isSyncing = true
+//        activeOperations.insert(operationId)
+//        
+//        print("🔒🧭 SYNC_LOCK_ACQUIRED: Operation \(operationId) now has exclusive access")
+//        print("📊🧭 ACTIVE_OPERATIONS_COUNT: \(activeOperations.count)")
+//        
+//        // STEP 2: Authentication Verification
+//        // Ensure user is authenticated before attempting any remote operations
+//        print("🔐🧭 AUTH_CHECK: Starting authentication verification...")
+//        guard let session = await verifyAuthentication() else {
+//            // Authentication failed - clean up and exit
+//            await cleanupSyncOperation(operationId: operationId, startTime: startTime, success: false)
+//            return false
+//        }
+//        
+//        let userId = session.user.id
+//        print("✅🔐🧭 AUTH_SUCCESS: User \(userId) authenticated successfully")
+//        
+//        // STEP 3: Local Data Retrieval
+//        // Get all current local favorites with their sync metadata
+//        print("📱🧭 LOCAL_DATA: Starting local favorites retrieval...")
+//        guard let localFavorites = await getLocalFavorites() else {
+//            // Local data retrieval failed - clean up and exit
+//            await cleanupSyncOperation(operationId: operationId, startTime: startTime, success: false)
+//            return false
+//        }
+//        
+//        print("✅📱🧭 LOCAL_DATA_SUCCESS: Retrieved \(localFavorites.count) local favorites")
+//        
+//        // STEP 4: Remote Data Retrieval
+//        // Fetch all user's nav unit favorites from Supabase
+//        print("☁️🧭 REMOTE_DATA: Starting remote favorites retrieval...")
+//        guard let remoteFavorites = await getRemoteFavorites(userId: userId) else {
+//            // Remote data retrieval failed - clean up and exit
+//            await cleanupSyncOperation(operationId: operationId, startTime: startTime, success: false)
+//            return false
+//        }
+//        
+//        print("✅☁️🧭 REMOTE_DATA_SUCCESS: Retrieved \(remoteFavorites.count) remote favorites")
+//        
+//        // STEP 5: Data Analysis and Sync Planning
+//        // Compare local and remote data to determine what operations are needed
+//        print("🔍🧭 ANALYSIS: Starting data comparison and sync planning...")
+//        let syncPlan = analyzeSyncRequirements(local: localFavorites, remote: remoteFavorites)
+//        
+//        print("✅🔍🧭 ANALYSIS_COMPLETE:")
+//        print("📤🧭 UPLOAD_NEEDED: \(syncPlan.toUpload.count) nav units")
+//        print("📥🧭 DOWNLOAD_NEEDED: \(syncPlan.toDownload.count) nav units")
+//        print("🔧🧭 CONFLICTS_TO_RESOLVE: \(syncPlan.conflicts.count) nav units")
+//        
+//        // STEP 6: Execute Sync Operations
+//        var syncSuccess = true
+//        
+//        // Upload local-only favorites to remote
+//        if !syncPlan.toUpload.isEmpty {
+//            print("📤🧭 UPLOAD_PHASE: Starting upload of \(syncPlan.toUpload.count) nav units...")
+//            let uploadSuccess = await uploadFavorites(syncPlan.toUpload, userId: userId)
+//            if !uploadSuccess {
+//                print("❌📤🧭 UPLOAD_FAILED: One or more uploads failed")
+//                syncSuccess = false
+//            } else {
+//                print("✅📤🧭 UPLOAD_SUCCESS: All uploads completed successfully")
+//            }
+//        }
+//        
+//        // Download remote-only favorites to local
+//        if !syncPlan.toDownload.isEmpty {
+//            print("📥🧭 DOWNLOAD_PHASE: Starting download of \(syncPlan.toDownload.count) nav units...")
+//            let downloadSuccess = await downloadFavorites(syncPlan.toDownload)
+//            if !downloadSuccess {
+//                print("❌📥🧭 DOWNLOAD_FAILED: One or more downloads failed")
+//                syncSuccess = false
+//            } else {
+//                print("✅📥🧭 DOWNLOAD_SUCCESS: All downloads completed successfully")
+//            }
+//        }
+//        
+//        // Resolve conflicts using last-write-wins strategy
+//        if !syncPlan.conflicts.isEmpty {
+//            print("🔧🧭 CONFLICT_RESOLUTION: Starting resolution of \(syncPlan.conflicts.count) conflicts...")
+//            let conflictSuccess = await resolveConflicts(syncPlan.conflicts)
+//            if !conflictSuccess {
+//                print("❌🔧🧭 CONFLICT_RESOLUTION_FAILED: One or more conflicts could not be resolved")
+//                syncSuccess = false
+//            } else {
+//                print("✅🔧🧭 CONFLICT_RESOLUTION_SUCCESS: All conflicts resolved successfully")
+//            }
+//        }
+//        
+//        // STEP 7: Cleanup and Results
+//        await cleanupSyncOperation(operationId: operationId, startTime: startTime, success: syncSuccess)
+//        
+//        return syncSuccess
+//    }
+//
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    // MARK: - STEP 0: Critical Conflict Resolution
+    // This addresses the fundamental sync flaw where unfavorited items get re-downloaded
+    // Must complete successfully before proceeding with main sync logic
+
+    /// STEP 0: Download all remote favorites and resolve conflicts with local NavUnits
+    /// This prevents unfavorited items from being incorrectly re-downloaded
+    /// Uses "last write wins" strategy with existing conflict resolution infrastructure
+    /// - Parameter userId: Current authenticated user ID
+    /// - Returns: Success status - any failure should abort entire sync
+    private func performStep0ConflictResolution(userId: UUID) async -> Bool {
+        print("🔍🧭 STEP_0_START: ================================================")
+        print("🔍🧭 STEP_0: Beginning critical conflict resolution for user: \(userId)")
+        print("🔍🧭 STEP_0: This step prevents unfavorited items from being re-downloaded")
+        
+        let step0StartTime = Date()
+        
+        // Download ALL remote favorites for this user
+        guard let allRemoteFavorites = await downloadAllRemoteFavoritesForUser(userId: userId) else {
+            print("❌🔍🧭 STEP_0_FAILED: Could not download remote favorites - aborting sync")
+            return false
+        }
+        
+        print("🔍🧭 STEP_0_REMOTE_COUNT: Found \(allRemoteFavorites.count) remote favorites")
+        
+        // If no remote favorites exist, STEP 0 is complete (new user scenario)
+        if allRemoteFavorites.isEmpty {
+            print("✅🔍🧭 STEP_0_COMPLETE: No remote favorites found - new user scenario")
+            return true
+        }
+        
+        // Check each remote favorite against local NavUnit state
+        let conflicts = await detectConflictsWithLocalNavUnits(remoteFavorites: allRemoteFavorites)
+        
+        print("🔍🧭 STEP_0_CONFLICTS: Found \(conflicts.count) conflicts to resolve")
+        
+        // Resolve all conflicts using existing infrastructure
+        if !conflicts.isEmpty {
+            let conflictResolutionSuccess = await resolveConflicts(conflicts)
+            
+            if !conflictResolutionSuccess {
+                print("❌🔍🧭 STEP_0_FAILED: Conflict resolution failed - aborting sync")
+                return false
+            }
+        }
+        
+        let step0Duration = Date().timeIntervalSince(step0StartTime)
+        print("✅🔍🧭 STEP_0_COMPLETE: ============================================")
+        print("✅🔍🧭 STEP_0_SUMMARY:")
+        print("   Remote favorites checked: \(allRemoteFavorites.count)")
+        print("   Conflicts found: \(conflicts.count)")
+        print("   Conflicts resolved: \(conflicts.count)")
+        print("   Duration: \(String(format: "%.3f", step0Duration))s")
+        print("✅🔍🧭 STEP_0: Safe to proceed with main sync logic")
+        
+        return true
+    }
+
+    /// Download ALL remote favorites for a specific user
+    /// Unlike existing methods, this gets complete remote state for conflict detection
+    /// - Parameter userId: User ID to query remote favorites for
+    /// - Returns: Array of all remote favorites or nil if download fails
+    private func downloadAllRemoteFavoritesForUser(userId: UUID) async -> [RemoteNavUnitFavorite]? {
+        print("☁️🔍🧭 STEP_0_DOWNLOAD: Fetching ALL remote favorites for user...")
+        
+        do {
+            // Query Supabase for ALL user's nav unit favorites
+            let remoteFavorites: [RemoteNavUnitFavorite] = try await supabaseManager
+                .from("user_nav_unit_favorites")
+                .select()
+                .eq("user_id", value: userId)
+                .execute()
+                .value
+            
+            print("☁️🔍🧭 STEP_0_DOWNLOAD_SUCCESS: Retrieved \(remoteFavorites.count) remote favorites")
+            
+            // Log details for debugging
+            for (index, favorite) in remoteFavorites.enumerated() {
+                print("☁️🔍🧭 STEP_0_REMOTE_\(index + 1): \(favorite.navUnitId)")
+                print("   Name: \(favorite.navUnitName ?? "unknown")")
+                print("   Is Favorite: \(favorite.isFavorite)")
+                print("   Last Modified: \(favorite.lastModified)")
+                print("   Device ID: \(favorite.deviceId)")
+            }
+            
+            return remoteFavorites
+            
+        } catch {
+            print("❌☁️🔍🧭 STEP_0_DOWNLOAD_ERROR: Failed to download remote favorites")
+            print("❌☁️🔍🧭 STEP_0_ERROR_DETAILS: \(error.localizedDescription)")
+            print("❌☁️🔍🧭 STEP_0_ERROR_TYPE: \(type(of: error))")
+            return nil
+        }
+    }
+
+    /// Detect conflicts between remote favorites and local NavUnit states
+    /// This is the core logic that prevents unfavorited items from being re-downloaded
+    /// - Parameter remoteFavorites: All remote favorites for the user
+    /// - Returns: Array of conflicts that need resolution using existing ConflictResolution struct
+    private func detectConflictsWithLocalNavUnits(remoteFavorites: [RemoteNavUnitFavorite]) async -> [ConflictResolution] {
+        print("🔍🧭 STEP_0_DETECT: Checking \(remoteFavorites.count) remote favorites against local NavUnits...")
+        
+        var conflicts: [ConflictResolution] = []
+        var checkedCount = 0
+        var conflictCount = 0
+        var matchCount = 0
+        var missingLocalCount = 0
+        
+        for remoteFavorite in remoteFavorites {
+            checkedCount += 1
+            print("🔍🧭 STEP_0_CHECK_\(checkedCount): \(remoteFavorite.navUnitId)")
+            
+            do {
+                // Get the corresponding local NavUnit (regardless of isFavorite status)
+                if let localNavUnit = try? await navUnitService.getNavUnitByIdAsync(remoteFavorite.navUnitId) {
+                    
+                    // Convert local NavUnit to RemoteNavUnitFavorite format for comparison
+                    let localAsRemote = RemoteNavUnitFavorite(
+                        userId: remoteFavorite.userId, // Use same user ID for comparison
+                        navUnitId: localNavUnit.navUnitId,
+                        isFavorite: localNavUnit.isFavorite,
+                        deviceId: localNavUnit.deviceId ?? UIDevice.current.identifierForVendor?.uuidString ?? "unknown",
+                        navUnitName: localNavUnit.navUnitName,
+                        latitude: localNavUnit.latitude,
+                        longitude: localNavUnit.longitude,
+                        facilityType: localNavUnit.facilityType
+                    )
+                    
+                    // Check if there's a conflict
+                    let statesMatch = localNavUnit.isFavorite == remoteFavorite.isFavorite
+                    
+                    if !statesMatch {
+                        // CONFLICT DETECTED - This is exactly what we're trying to fix!
+                        conflictCount += 1
+                        
+                        // Use last-write-wins to determine winner
+                        let localLastModified = localNavUnit.lastModified ?? Date.distantPast
+                        let localWins = localLastModified > remoteFavorite.lastModified
+                        let winningFavorite = localWins ? localAsRemote : remoteFavorite
+                        
+                        let resolution = localWins ?
+                            "STEP_0: Local state (\(localNavUnit.isFavorite)) wins over remote state (\(remoteFavorite.isFavorite))" :
+                            "STEP_0: Remote state (\(remoteFavorite.isFavorite)) wins over local state (\(localNavUnit.isFavorite))"
+                        
+                        let conflict = ConflictResolution(
+                            navUnitId: remoteFavorite.navUnitId,
+                            localFavorite: localAsRemote,
+                            remoteFavorite: remoteFavorite,
+                            winningFavorite: winningFavorite,
+                            resolution: resolution
+                        )
+                        
+                        conflicts.append(conflict)
+                        
+                        print("🔧🔍🧭 STEP_0_CONFLICT_FOUND: \(remoteFavorite.navUnitId)")
+                        print("   Local: favorite=\(localNavUnit.isFavorite), modified=\(localLastModified)")
+                        print("   Remote: favorite=\(remoteFavorite.isFavorite), modified=\(remoteFavorite.lastModified)")
+                        print("   Winner: \(localWins ? "LOCAL" : "REMOTE")")
+                        print("   This prevents: \(remoteFavorite.isFavorite ? "Re-download of unfavorited item" : "Loss of favorited item")")
+                        
+                    } else {
+                        matchCount += 1
+                        print("✅🔍🧭 STEP_0_MATCH: \(remoteFavorite.navUnitId) - states match (\(localNavUnit.isFavorite))")
+                    }
+                    
+                } else {
+                    missingLocalCount += 1
+                    print("⚠️🔍🧭 STEP_0_MISSING_LOCAL: \(remoteFavorite.navUnitId) - remote favorite references non-existent local NavUnit")
+                    // This is not a conflict - the main sync will handle downloading this NavUnit
+                }
+                
+            } catch {
+                print("❌🔍🧭 STEP_0_ERROR: Failed to check \(remoteFavorite.navUnitId): \(error.localizedDescription)")
+                // Continue with other checks - don't fail entire STEP 0 for individual NavUnit issues
+            }
+        }
+        
+        print("📊🔍🧭 STEP_0_DETECT_SUMMARY:")
+        print("   Total remote favorites checked: \(checkedCount)")
+        print("   Conflicts found: \(conflictCount)")
+        print("   States matching: \(matchCount)")
+        print("   Missing local NavUnits: \(missingLocalCount)")
+        
+        return conflicts
+    }
+
+    // MARK: - Modified performFullSync() with STEP 0
+
     /// Performs a full bidirectional sync of navigation unit favorites
-    /// This is the main entry point for manual sync operations triggered by the user
-    /// - Returns: Success/failure status - errors are logged but not thrown to UI
+    /// NOW INCLUDES STEP 0: Critical conflict resolution to prevent unfavorited items from being re-downloaded
     @MainActor
     func performFullSync() async -> Bool {
         // Generate unique operation ID for tracking this specific sync operation
@@ -94,27 +519,6 @@ class NavUnitSyncService: ObservableObject {
         print("🟢🧭 NAV_UNIT_SYNC_START: ===================================================")
         print("🟢🧭 OPERATION_ID: \(operationId)")
         print("🟢🧭 START_TIME: \(startTime)")
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        //TODO:
-        //STEP0: We need to address a fundamental flaw in the Sync Logic. When we fetch teh local favorites this is what I believe is happening  (1) This function checks the huge NavUnits table (24,000 plus entries) and fetches us a list of all the navunits where the    isFavorite property is set to TRUE.                                                                                                   THE PROBLEM: The user may have 'unfavorited' a navunit and set its toggle to 'False' preventing it from being added to the list     RESULT OF PROBLEM: The navunit still exists on the supabase table, so when the comparison is done in the sync logic, it sees the supabase entry as a one sided entry since there is nothing in the local list to compare it to, the result is that the navunit which the user 'unfavorited' will be downloaded again to the favorites by this sync method.                                                SOLUTION: Before anything else is done by the sync logic we need to download all the entries from teh Supabase table and compare them to the corresponding navunits in the navunits table. Then resolve the toggle conflict based on the 'last write wins'            IMPORTANT: This check must be completed successfully before proceeding with the rest of the syn or the entire sync should fail and be exited.
-        
-        
-        
-        
-        
-        
-        
-        
-        
         
         // STEP 1: Prevent Concurrent Operations
         // Check if another sync is already running on this instance to prevent data corruption
@@ -131,53 +535,48 @@ class NavUnitSyncService: ObservableObject {
         print("🔒🧭 SYNC_LOCK_ACQUIRED: Operation \(operationId) now has exclusive access")
         print("📊🧭 ACTIVE_OPERATIONS_COUNT: \(activeOperations.count)")
         
-        // STEP 2: Authentication Verification
-        // Ensure user is authenticated before attempting any remote operations
-        print("🔐🧭 AUTH_CHECK: Starting authentication verification...")
+        var syncSuccess = true
+        
+        // STEP 2: Authentication verification
         guard let session = await verifyAuthentication() else {
-            // Authentication failed - clean up and exit
             await cleanupSyncOperation(operationId: operationId, startTime: startTime, success: false)
             return false
         }
         
         let userId = session.user.id
-        print("✅🔐🧭 AUTH_SUCCESS: User \(userId) authenticated successfully")
+        print("🟢🧭 USER_AUTHENTICATED: \(userId)")
         
-        // STEP 3: Local Data Retrieval
-        // Get all current local favorites with their sync metadata
-        print("📱🧭 LOCAL_DATA: Starting local favorites retrieval...")
+        // STEP 0: CRITICAL CONFLICT RESOLUTION (NEW)
+        // This must complete successfully before proceeding with main sync logic
+        guard await performStep0ConflictResolution(userId: userId) else {
+            print("❌🧭 SYNC_ABORTED: STEP 0 conflict resolution failed")
+            await cleanupSyncOperation(operationId: operationId, startTime: startTime, success: false)
+            return false
+        }
+        
+        // STEP 2: Get local favorites (now safe after STEP 0 conflict resolution)
         guard let localFavorites = await getLocalFavorites() else {
-            // Local data retrieval failed - clean up and exit
+            print("❌🧭 LOCAL_DATA_FAILED: Could not retrieve local favorites")
             await cleanupSyncOperation(operationId: operationId, startTime: startTime, success: false)
             return false
         }
         
-        print("✅📱🧭 LOCAL_DATA_SUCCESS: Retrieved \(localFavorites.count) local favorites")
-        
-        // STEP 4: Remote Data Retrieval
-        // Fetch all user's nav unit favorites from Supabase
-        print("☁️🧭 REMOTE_DATA: Starting remote favorites retrieval...")
+        // STEP 3: Get remote favorites
         guard let remoteFavorites = await getRemoteFavorites(userId: userId) else {
-            // Remote data retrieval failed - clean up and exit
+            print("❌🧭 REMOTE_DATA_FAILED: Could not retrieve remote favorites")
             await cleanupSyncOperation(operationId: operationId, startTime: startTime, success: false)
             return false
         }
         
-        print("✅☁️🧭 REMOTE_DATA_SUCCESS: Retrieved \(remoteFavorites.count) remote favorites")
-        
-        // STEP 5: Data Analysis and Sync Planning
-        // Compare local and remote data to determine what operations are needed
-        print("🔍🧭 ANALYSIS: Starting data comparison and sync planning...")
+        // STEP 4: Analyze sync requirements (remaining differences after STEP 0)
         let syncPlan = analyzeSyncRequirements(local: localFavorites, remote: remoteFavorites)
         
-        print("✅🔍🧭 ANALYSIS_COMPLETE:")
-        print("📤🧭 UPLOAD_NEEDED: \(syncPlan.toUpload.count) nav units")
-        print("📥🧭 DOWNLOAD_NEEDED: \(syncPlan.toDownload.count) nav units")
-        print("🔧🧭 CONFLICTS_TO_RESOLVE: \(syncPlan.conflicts.count) nav units")
+        print("📋🧭 SYNC_PLAN_SUMMARY:")
+        print("   Upload needed: \(syncPlan.toUpload.count)")
+        print("   Download needed: \(syncPlan.toDownload.count)")
+        print("   Conflicts remaining: \(syncPlan.conflicts.count)")
         
-        // STEP 6: Execute Sync Operations
-        var syncSuccess = true
-        
+        // STEP 5: Execute sync plan
         // Upload local-only favorites to remote
         if !syncPlan.toUpload.isEmpty {
             print("📤🧭 UPLOAD_PHASE: Starting upload of \(syncPlan.toUpload.count) nav units...")
@@ -202,9 +601,9 @@ class NavUnitSyncService: ObservableObject {
             }
         }
         
-        // Resolve conflicts using last-write-wins strategy
+        // Resolve any remaining conflicts (should be minimal after STEP 0)
         if !syncPlan.conflicts.isEmpty {
-            print("🔧🧭 CONFLICT_RESOLUTION: Starting resolution of \(syncPlan.conflicts.count) conflicts...")
+            print("🔧🧭 CONFLICT_RESOLUTION: Starting resolution of \(syncPlan.conflicts.count) remaining conflicts...")
             let conflictSuccess = await resolveConflicts(syncPlan.conflicts)
             if !conflictSuccess {
                 print("❌🔧🧭 CONFLICT_RESOLUTION_FAILED: One or more conflicts could not be resolved")
@@ -214,11 +613,76 @@ class NavUnitSyncService: ObservableObject {
             }
         }
         
-        // STEP 7: Cleanup and Results
+        // STEP 6: Cleanup and Results
         await cleanupSyncOperation(operationId: operationId, startTime: startTime, success: syncSuccess)
         
         return syncSuccess
     }
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
     // MARK: - Authentication Management
     
@@ -647,3 +1111,90 @@ class NavUnitSyncService: ObservableObject {
         }
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
