@@ -15,6 +15,23 @@ class EmbeddedRoutesBrowseViewModel: ObservableObject {
     @Published var errorMessage: String = ""
     @Published var isDownloading = false
     @Published var downloadingRouteId: UUID? = nil
+    @Published var downloadedRouteIds: Set<UUID> = []
+    
+    // MARK: - Dependencies
+    private let routeFavoritesService: RouteFavoritesDatabaseService
+    
+    init(routeFavoritesService: RouteFavoritesDatabaseService? = nil) {
+        // Use provided service or create a new one with shared DatabaseCore
+        if let service = routeFavoritesService {
+            self.routeFavoritesService = service
+            print("🛣️ BROWSE: ✅ Using provided RouteFavoritesDatabaseService")
+        } else {
+            // Create new service with shared DatabaseCore for fallback
+            let databaseCore = DatabaseCore()
+            self.routeFavoritesService = RouteFavoritesDatabaseService(databaseCore: databaseCore)
+            print("🛣️ BROWSE: ⚠️ Creating fallback RouteFavoritesDatabaseService")
+        }
+    }
     
     // MARK: - Route Loading
     
@@ -28,10 +45,15 @@ class EmbeddedRoutesBrowseViewModel: ObservableObject {
                 print("🛣️ BROWSE: Fetching routes from Supabase")
                 let fetchedRoutes = try await SupabaseManager.shared.getEmbeddedRoutes(limit: 50)
                 
+                // Check which routes are already downloaded
+                print("🛣️ BROWSE: Checking download status for \(fetchedRoutes.count) routes")
+                await checkDownloadedStatus(for: fetchedRoutes)
+                
                 await MainActor.run {
                     self.routes = fetchedRoutes
                     self.isLoading = false
                     print("🛣️ BROWSE: ✅ Loaded \(fetchedRoutes.count) routes successfully")
+                    print("🛣️ BROWSE: 📊 Downloaded routes: \(self.downloadedRouteIds.count)/\(fetchedRoutes.count)")
                 }
                 
             } catch {
@@ -47,7 +69,22 @@ class EmbeddedRoutesBrowseViewModel: ObservableObject {
     // MARK: - Route Downloading
     
     func downloadRoute(_ route: RemoteEmbeddedRoute) {
+        // Check if route has a valid ID
+        guard let routeId = route.id else {
+            print("🛣️ BROWSE: ❌ Route '\(route.name)' has no valid ID, skipping")
+            errorMessage = "Route '\(route.name)' has no valid ID"
+            return
+        }
+        
+        // Check if already downloaded
+        if downloadedRouteIds.contains(routeId) {
+            print("🛣️ BROWSE: ⚠️ Route '\(route.name)' is already downloaded, skipping")
+            errorMessage = "Route '\(route.name)' is already downloaded"
+            return
+        }
+        
         print("🛣️ BROWSE: Starting download for route: \(route.name)")
+        print("🛣️ BROWSE: 🔍 Route ID: \(routeId)")
         isDownloading = true
         downloadingRouteId = route.id
         errorMessage = ""
@@ -68,7 +105,11 @@ class EmbeddedRoutesBrowseViewModel: ObservableObject {
                 await MainActor.run {
                     self.isDownloading = false
                     self.downloadingRouteId = nil
+                    if let routeId = route.id {
+                        self.downloadedRouteIds.insert(routeId)
+                    }
                     print("🛣️ BROWSE: ✅ Route '\(route.name)' downloaded successfully")
+                    print("🛣️ BROWSE: 📊 Total downloaded routes: \(self.downloadedRouteIds.count)")
                 }
                 
             } catch {
@@ -87,20 +128,28 @@ class EmbeddedRoutesBrowseViewModel: ObservableObject {
     private func saveRouteToLocalDatabase(gpxFile: GpxFile, originalRoute: RemoteEmbeddedRoute) async throws {
         print("🛣️ BROWSE: Saving route to local database")
         
-        // TODO: Implement local database saving
-        // This would integrate with your existing RouteFavorites table
-        // For now, we'll simulate the save
+        // Create RouteFavorite object from the remote route and GPX data
+        let routeFavorite = RouteFavorite(
+            name: originalRoute.name,
+            gpxData: originalRoute.gpxData,
+            waypointCount: gpxFile.route.routePoints.count,
+            totalDistance: Double(originalRoute.totalDistance),
+            createdAt: Date(),
+            lastAccessedAt: Date(),
+            tags: originalRoute.category,
+            notes: originalRoute.description
+        )
         
         print("🛣️ BROWSE: Creating local route entry")
         print("🛣️ BROWSE: - Route Name: \(originalRoute.name)")
-        print("🛣️ BROWSE: - Category: \(originalRoute.category ?? "General")")
+        print("🛣️ BROWSE: - Category: \(originalRoute.category ?? "Imported Routes")")
         print("🛣️ BROWSE: - Waypoints: \(gpxFile.route.routePoints.count)")
         print("🛣️ BROWSE: - Distance: \(originalRoute.totalDistance)")
+        print("🛣️ BROWSE: - GPX Data Size: \(originalRoute.gpxData.count) characters")
         
-        // Simulate save delay
-        try await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
-        
-        print("🛣️ BROWSE: ✅ Route saved to local database")
+        // Save to database
+        let savedId = try await routeFavoritesService.addRouteFavoriteAsync(favorite: routeFavorite)
+        print("🛣️ BROWSE: ✅ Route saved to local database with ID: \(savedId)")
     }
     
     // MARK: - Helper Methods
@@ -108,6 +157,38 @@ class EmbeddedRoutesBrowseViewModel: ObservableObject {
     func refresh() {
         print("🛣️ BROWSE: Manual refresh triggered")
         loadRoutes()
+    }
+    
+    // MARK: - Download Status Checking
+    
+    private func checkDownloadedStatus(for routes: [RemoteEmbeddedRoute]) async {
+        print("🛣️ BROWSE: 🔍 Checking download status for routes...")
+        
+        var newDownloadedIds: Set<UUID> = []
+        
+        for route in routes {
+            let isDownloaded = await routeFavoritesService.isRouteFavoriteAsync(
+                name: route.name,
+                waypointCount: route.waypointCount
+            )
+            
+            if isDownloaded, let routeId = route.id {
+                newDownloadedIds.insert(routeId)
+                print("🛣️ BROWSE: ✅ Route '\(route.name)' is already downloaded")
+            } else {
+                print("🛣️ BROWSE: 📥 Route '\(route.name)' is available for download")
+            }
+        }
+        
+        await MainActor.run {
+            self.downloadedRouteIds = newDownloadedIds
+            print("🛣️ BROWSE: 📊 Download status check complete: \(newDownloadedIds.count)/\(routes.count) already downloaded")
+        }
+    }
+    
+    func isRouteDownloaded(_ route: RemoteEmbeddedRoute) -> Bool {
+        guard let routeId = route.id else { return false }
+        return downloadedRouteIds.contains(routeId)
     }
     
     func formatDistance(_ distance: Float) -> String {

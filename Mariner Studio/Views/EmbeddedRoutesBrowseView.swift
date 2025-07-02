@@ -8,7 +8,11 @@
 import SwiftUI
 
 struct EmbeddedRoutesBrowseView: View {
-    @StateObject private var viewModel = EmbeddedRoutesBrowseViewModel()
+    @StateObject private var viewModel: EmbeddedRoutesBrowseViewModel
+    
+    init(routeFavoritesService: RouteFavoritesDatabaseService? = nil) {
+        _viewModel = StateObject(wrappedValue: EmbeddedRoutesBrowseViewModel(routeFavoritesService: routeFavoritesService))
+    }
     
     var body: some View {
         NavigationView {
@@ -83,6 +87,7 @@ struct EmbeddedRoutesBrowseView: View {
             RouteRowView(
                 route: route,
                 isDownloading: viewModel.downloadingRouteId == route.id,
+                isDownloaded: viewModel.isRouteDownloaded(route),
                 onDownload: {
                     viewModel.downloadRoute(route)
                 }
@@ -181,6 +186,7 @@ struct EmbeddedRoutesBrowseView: View {
 struct RouteRowView: View {
     let route: RemoteEmbeddedRoute
     let isDownloading: Bool
+    let isDownloaded: Bool
     let onDownload: () -> Void
     
     var body: some View {
@@ -223,21 +229,43 @@ struct RouteRowView: View {
                 if isDownloading {
                     ProgressView()
                         .scaleEffect(0.8)
+                } else if isDownloaded {
+                    Image(systemName: "checkmark.circle.fill")
                 } else {
                     Image(systemName: "icloud.and.arrow.down")
                 }
                 
-                Text(isDownloading ? "Downloading..." : "Download")
+                Text(buttonText)
                     .font(.caption)
                     .fontWeight(.medium)
             }
             .foregroundColor(.white)
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
-            .background(isDownloading ? Color.gray : Color.blue)
+            .background(buttonBackgroundColor)
             .cornerRadius(8)
         }
-        .disabled(isDownloading)
+        .disabled(isDownloading || isDownloaded)
+    }
+    
+    private var buttonText: String {
+        if isDownloading {
+            return "Downloading..."
+        } else if isDownloaded {
+            return "Downloaded"
+        } else {
+            return "Download"
+        }
+    }
+    
+    private var buttonBackgroundColor: Color {
+        if isDownloading {
+            return Color.gray
+        } else if isDownloaded {
+            return Color.green
+        } else {
+            return Color.blue
+        }
     }
     
     private var routeDetailsView: some View {

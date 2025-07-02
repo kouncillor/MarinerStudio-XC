@@ -26,10 +26,35 @@ struct RouteMenuView: View {
                 NavigationLink(destination: RouteFavoritesView()) {
                     RouteMenuButtonContent(
                         icon: "star.fill",
-                        title: "FAVORITES",
+                        title: "FAVORITE ROUTES",
                         subtitle: "Your Saved Routes",
                         isSystemIcon: true,
                         iconColor: .yellow
+                    )
+                }
+                
+                // All Routes - Stub for future implementation
+                Button(action: {
+                    // TODO: Navigate to AllRoutesView when implemented
+                    print("All Routes tapped - view not implemented yet")
+                }) {
+                    RouteMenuButtonContent(
+                        icon: "list.bullet",
+                        title: "ALL ROUTES",
+                        subtitle: "Browse All Available Routes",
+                        isSystemIcon: true,
+                        iconColor: .gray
+                    )
+                }
+                
+                // Download Routes from Supabase
+                NavigationLink(destination: EmbeddedRoutesBrowseView(routeFavoritesService: serviceProvider.routeFavoritesService)) {
+                    RouteMenuButtonContent(
+                        icon: "icloud.and.arrow.down.fill",
+                        title: "DOWNLOAD PUBLIC ROUTES",
+                        subtitle: "Download Community Routes",
+                        isSystemIcon: true,
+                        iconColor: .blue
                     )
                 }
                 
@@ -73,7 +98,8 @@ struct RouteMenuView: View {
                 }
                 */
                 
-                // Route Converter - Convert between formats
+                // Route Converter - Convert between formats - COMMENTED OUT
+                /*
                 NavigationLink(destination: RouteConverterView()) {
                     RouteMenuButtonContent(
                         icon: "arrow.triangle.2.circlepath",
@@ -83,17 +109,7 @@ struct RouteMenuView: View {
                         iconColor: .indigo
                     )
                 }
-                
-                // Browse & Download Routes from Supabase
-                NavigationLink(destination: EmbeddedRoutesBrowseView()) {
-                    RouteMenuButtonContent(
-                        icon: "icloud.and.arrow.down.fill",
-                        title: "BROWSE ROUTES",
-                        subtitle: "Download Community Routes",
-                        isSystemIcon: true,
-                        iconColor: .blue
-                    )
-                }
+                */
             }
             .padding()
             
