@@ -128,6 +128,20 @@ struct DevPageView: View {
             }
             .navigationTitle("Dev Tools")
             .navigationBarTitleDisplayMode(.inline)
+            .fileImporter(
+                isPresented: $viewModel.showingFilePicker,
+                allowedContentTypes: [.init(filenameExtension: "gpx")!, .xml],
+                allowsMultipleSelection: false
+            ) { result in
+                switch result {
+                case .success(let urls):
+                    if let url = urls.first {
+                        viewModel.importGPXFile(from: url)
+                    }
+                case .failure(let error):
+                    viewModel.statusMessage = "❌ File selection failed: \(error.localizedDescription)"
+                }
+            }
         }
     }
 }
