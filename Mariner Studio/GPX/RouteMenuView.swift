@@ -55,7 +55,7 @@ struct RouteMenuView: View {
                         title: "VOYAGE PLAN",
                         subtitle: "Load GPX and Calculate Voyage",
                         isSystemIcon: true,
-                        iconColor: .blue
+                        iconColor: .green
                     )
                 }
                 .disabled(isLoadingFile)
