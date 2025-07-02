@@ -109,6 +109,17 @@ struct MainView: View {
                             title: "ROUTES"
                         )
                     }
+
+                    #if DEBUG
+                    NavigationLink(destination: DevPageView()) {
+                        NavigationButtonContent(
+                            icon: "gear.badge",
+                            title: "DEV TOOLS",
+                            isSystemIcon: true,
+                            iconColor: .orange
+                        )
+                    }
+                    #endif
                 }
                 .padding()
             }
