@@ -569,6 +569,175 @@ final class SupabaseManager {
             }
         }
     
+    // MARK: - Schema Discovery Methods
+    
+    /// Test if embedded_routes table exists and discover its structure
+    /// Used for debugging schema issues
+    func testEmbeddedRoutesTable() async throws -> String {
+        let operationId = startOperation("testEmbeddedRoutesTable")
+        
+        do {
+            logQueue.async {
+                print("🔍📊 TABLE_TEST: Testing embedded_routes table existence")
+                print("🔍📊 TABLE_TEST: Attempting simple SELECT query")
+            }
+            
+            // Try a simple query to see if the table exists at all
+            let response: PostgrestResponse<[String]> = try await client
+                .from("embedded_routes")
+                .select("*")
+                .limit(0)  // Don't actually return data, just test schema
+                .execute()
+            
+            logQueue.async {
+                print("✅🔍📊 TABLE_TEST_SUCCESS: embedded_routes table EXISTS")
+                print("✅🔍📊 TABLE_TEST_SUCCESS: Table is accessible")
+            }
+            
+            endOperation(operationId, success: true)
+            return "Table exists and is accessible"
+            
+        } catch {
+            logQueue.async {
+                print("❌🔍📊 TABLE_TEST_ERROR: embedded_routes table issue")
+                print("❌🔍📊 TABLE_TEST_ERROR_DETAILS: \(error.localizedDescription)")
+                
+                if let postgrestError = error as? PostgrestError {
+                    print("❌🔍📊 TABLE_TEST_POSTGREST_ERROR: \(postgrestError)")
+                    if let code = postgrestError.code {
+                        print("❌🔍📊 TABLE_TEST_ERROR_CODE: \(code)")
+                    }
+                    print("❌🔍📊 TABLE_TEST_ERROR_MESSAGE: \(postgrestError.message)")
+                }
+            }
+            
+            endOperation(operationId, success: false, error: error)
+            throw error
+        }
+    }
+    
+    // MARK: - Embedded Route Methods
+    
+    /// Upload or update an embedded route to Supabase
+    /// Used for syncing locally parsed GPX routes to the cloud database
+    /// - Parameter route: The embedded route data to insert
+    /// - Throws: Database errors or network issues  
+    func upsertEmbeddedRoute(_ route: RemoteEmbeddedRoute) async throws {
+        // Ensure we have an authenticated session for RLS
+        let session = try await getSession()
+        let operationId = startOperation("upsertEmbeddedRoute",
+                                       details: "routeName: \(route.name)")
+        
+        do {
+            logQueue.async {
+                print("📤🛣️ ROUTE_INSERT: Starting embedded route insert")
+                print("📤🛣️ ROUTE_INSERT: Table = embedded_routes (RLS-protected table)")
+                print("📤🛣️ ROUTE_INSERT: Authenticated User = \(session.user.id)")
+                print("📤🛣️ ROUTE_INSERT: Route Name = \(route.name)")
+                print("📤🛣️ ROUTE_INSERT: Category = \(route.category ?? "nil")")
+                print("📤🛣️ ROUTE_INSERT: Waypoint Count = \(route.waypointCount)")
+                print("📤🛣️ ROUTE_INSERT: Total Distance = \(route.totalDistance)")
+                print("📤🛣️ ROUTE_INSERT: Is Active = \(route.isActive ?? false)")
+                print("📤🛣️ ROUTE_INSERT: Timestamp = \(Date())")
+            }
+            
+            // Use insert since there's no unique constraint on name
+            // Each upload creates a new route entry
+            try await client
+                .from("embedded_routes")
+                .insert(route)
+                .execute()
+            
+            logQueue.async {
+                print("✅📤🛣️ ROUTE_INSERT_SUCCESS: Embedded route inserted successfully")
+                print("✅📤🛣️ ROUTE_INSERT_SUCCESS: Route '\(route.name)' added by user \(session.user.id)")
+                print("✅📤🛣️ ROUTE_INSERT_SUCCESS: Waypoints: \(route.waypointCount), Distance: \(route.totalDistance)")
+            }
+            
+            endOperation(operationId, success: true)
+            
+        } catch {
+            logQueue.async {
+                print("❌📤🛣️ ROUTE_INSERT_ERROR: Failed to insert embedded route")
+                print("❌📤🛣️ ROUTE_INSERT_ERROR: Route = \(route.name)")
+                print("❌📤🛣️ ROUTE_INSERT_ERROR_DETAILS: \(error.localizedDescription)")
+                print("❌📤🛣️ ROUTE_INSERT_ERROR_TYPE: \(type(of: error))")
+                
+                // Log the route data that failed to insert for debugging
+                print("❌📤🛣️ ROUTE_INSERT_FAILED_DATA:")
+                print("   Route Name: \(route.name)")
+                print("   Category: \(route.category ?? "nil")")
+                print("   Waypoint Count: \(route.waypointCount)")
+                print("   Total Distance: \(route.totalDistance)")
+                print("   Is Active: \(route.isActive ?? false)")
+                
+                // Log additional error context for debugging
+                if let postgrestError = error as? PostgrestError {
+                    print("❌📤🛣️ ROUTE_INSERT_POSTGREST_ERROR: \(postgrestError)")
+                }
+            }
+            
+            endOperation(operationId, success: false, error: error)
+            throw error
+        }
+    }
+    
+    /// Retrieve all embedded routes from the public Supabase table
+    /// Used for browsing available routes from the cloud database
+    /// - Parameter limit: Optional limit on number of routes to fetch (default: no limit)
+    /// - Returns: Array of all embedded routes
+    /// - Throws: Database errors or network issues
+    func getEmbeddedRoutes(limit: Int? = nil) async throws -> [RemoteEmbeddedRoute] {
+        let operationId = startOperation("getEmbeddedRoutes", details: "limit: \(limit?.description ?? "none")")
+        
+        do {
+            logQueue.async {
+                print("📥🛣️ ROUTE_FETCH: Starting embedded routes fetch")
+                print("📥🛣️ ROUTE_FETCH: Table = embedded_routes (public table)")
+                print("📥🛣️ ROUTE_FETCH: Limit = \(limit?.description ?? "none")")
+                print("📥🛣️ ROUTE_FETCH: Timestamp = \(Date())")
+            }
+            
+            var query = client
+                .from("embedded_routes")
+                .select("*")
+                .eq("is_active", value: true) // Only fetch active routes
+                .order("created_at", ascending: false)
+            
+            if let limit = limit {
+                query = query.limit(limit)
+            }
+            
+            let response: PostgrestResponse<[RemoteEmbeddedRoute]> = try await query.execute()
+            
+            logQueue.async {
+                print("✅📥🛣️ ROUTE_FETCH_SUCCESS: Embedded routes fetched successfully")
+                print("✅📥🛣️ ROUTE_FETCH_SUCCESS: Routes found: \(response.value.count)")
+                if !response.value.isEmpty {
+                    print("✅📥🛣️ ROUTE_FETCH_SUCCESS: Route names: \(response.value.map { $0.name })")
+                }
+            }
+            
+            endOperation(operationId, success: true)
+            return response.value
+            
+        } catch {
+            logQueue.async {
+                print("❌📥🛣️ ROUTE_FETCH_ERROR: Failed to fetch embedded routes")
+                print("❌📥🛣️ ROUTE_FETCH_ERROR_DETAILS: \(error.localizedDescription)")
+                print("❌📥🛣️ ROUTE_FETCH_ERROR_TYPE: \(type(of: error))")
+                
+                // Log additional error context for debugging
+                if let postgrestError = error as? PostgrestError {
+                    print("❌📥🛣️ ROUTE_FETCH_POSTGREST_ERROR: \(postgrestError)")
+                }
+            }
+            
+            endOperation(operationId, success: false, error: error)
+            throw error
+        }
+    }
+    
     
 }
 

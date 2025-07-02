@@ -10,7 +10,6 @@ import SwiftUI
 #if DEBUG
 struct DevPageView: View {
     @EnvironmentObject var authViewModel: AuthenticationViewModel
-    @EnvironmentObject var serviceProvider: ServiceProvider
     @StateObject private var viewModel = DevPageViewModel()
     
     var body: some View {
@@ -68,17 +67,17 @@ struct DevPageView: View {
                         }
                         .buttonStyle(PlainButtonStyle())
                         
-                        // Load GPX Files Button
+                        // Upload GPX to Supabase Button
                         Button(action: {
-                            viewModel.loadGPXFiles()
+                            viewModel.uploadGPXToSupabase()
                         }) {
                             HStack {
-                                Image(systemName: "map.fill")
+                                Image(systemName: "icloud.and.arrow.up")
                                     .font(.title2)
-                                Text("Load GPX Files to Database")
+                                Text("Upload GPX to Supabase")
                                     .font(.headline)
                                 Spacer()
-                                if viewModel.isLoading {
+                                if viewModel.isUploading {
                                     ProgressView()
                                         .scaleEffect(0.8)
                                 } else {
@@ -99,7 +98,7 @@ struct DevPageView: View {
                             )
                         }
                         .buttonStyle(PlainButtonStyle())
-                        .disabled(viewModel.isLoading)
+                        .disabled(viewModel.isUploading)
                     }
                     .padding(.horizontal)
                     
@@ -136,7 +135,7 @@ struct DevPageView: View {
                 switch result {
                 case .success(let urls):
                     if let url = urls.first {
-                        viewModel.importGPXFile(from: url)
+                        viewModel.processGPXForSupabase(from: url)
                     }
                 case .failure(let error):
                     viewModel.statusMessage = "❌ File selection failed: \(error.localizedDescription)"
@@ -149,6 +148,5 @@ struct DevPageView: View {
 #Preview {
     DevPageView()
         .environmentObject(AuthenticationViewModel())
-        .environmentObject(ServiceProvider())
 }
 #endif

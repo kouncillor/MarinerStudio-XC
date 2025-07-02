@@ -84,18 +84,16 @@ struct RouteMenuView: View {
                     )
                 }
                 
-                // Download Routes - COMMENTED OUT
-                /*
-                NavigationLink(destination: DownloadRoutesView()) {
+                // Browse & Download Routes from Supabase
+                NavigationLink(destination: EmbeddedRoutesBrowseView()) {
                     RouteMenuButtonContent(
-                        icon: "arrow.down.circle.fill",
-                        title: "DOWNLOAD ROUTES",
-                        subtitle: "Online Route Library",
+                        icon: "icloud.and.arrow.down.fill",
+                        title: "BROWSE ROUTES",
+                        subtitle: "Download Community Routes",
                         isSystemIcon: true,
-                        iconColor: .green
+                        iconColor: .blue
                     )
                 }
-                */
             }
             .padding()
             

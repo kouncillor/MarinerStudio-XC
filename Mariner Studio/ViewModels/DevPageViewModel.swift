@@ -2,208 +2,215 @@
 //  DevPageViewModel.swift
 //  Mariner Studio
 //
-//  Created for development page logic and GPX import functionality.
+//  Created for development tools and utilities.
 //
 
 import Foundation
 import SwiftUI
-#if canImport(SQLite)
-import SQLite
-#endif
+import UIKit
 
 #if DEBUG
 @MainActor
 class DevPageViewModel: ObservableObject {
-    @Published var isLoading: Bool = false
     @Published var statusMessage: String = ""
+    @Published var isUploading: Bool = false
     @Published var showingFilePicker: Bool = false
     
-    // MARK: - GPX Loading
+    // MARK: - GPX Upload to Supabase
     
-    func loadGPXFiles() {
+    func uploadGPXToSupabase() {
+        print("🔧 DEV: Starting GPX upload process to Supabase")
         statusMessage = "Opening file picker for GPX selection..."
         showingFilePicker = true
     }
     
-    func importGPXFile(from url: URL) {
-        isLoading = true
-        statusMessage = "Importing GPX file: \(url.lastPathComponent)"
+    func processGPXForSupabase(from url: URL) {
+        print("🔧 DEV: Processing GPX file for Supabase upload: \(url.lastPathComponent)")
+        isUploading = true
+        statusMessage = "Processing GPX file: \(url.lastPathComponent)"
         
         Task {
             do {
                 // Start accessing the security-scoped resource
+                print("🔧 DEV: Starting security-scoped resource access")
                 let _ = url.startAccessingSecurityScopedResource()
-                defer { url.stopAccessingSecurityScopedResource() }
-                
-                try await processGPXFile(from: url)
-                
-                await MainActor.run {
-                    self.statusMessage = "✅ Successfully imported \(url.lastPathComponent) to base database!"
-                    self.isLoading = false
+                defer { 
+                    print("🔧 DEV: Stopping security-scoped resource access")
+                    url.stopAccessingSecurityScopedResource() 
                 }
-            } catch {
+                
+                // Parse GPX file
+                print("🔧 DEV: Beginning GPX parsing process")
+                let parsedData = try await parseGPXForSupabase(from: url)
+                print("🔧 DEV: GPX parsing completed successfully")
+                
+                // Upload to Supabase
+                print("🔧 DEV: Starting Supabase upload")
+                try await uploadToSupabase(parsedData)
+                print("🔧 DEV: Supabase upload completed successfully")
+                
                 await MainActor.run {
-                    self.statusMessage = "❌ Failed to import \(url.lastPathComponent): \(error.localizedDescription)"
-                    self.isLoading = false
+                    self.statusMessage = "✅ Successfully uploaded '\(parsedData.name)' to Supabase!"
+                    self.isUploading = false
+                }
+                print("🔧 DEV: Upload process completed for: \(parsedData.name)")
+                
+            } catch {
+                print("🔧 DEV: ❌ Error during GPX upload process: \(error)")
+                await MainActor.run {
+                    self.statusMessage = "❌ Failed to upload \(url.lastPathComponent): \(error.localizedDescription)"
+                    self.isUploading = false
                 }
             }
         }
     }
     
-    // MARK: - GPX Processing Implementation
+    // MARK: - GPX Parsing for Supabase
     
-    private func processGPXFile(from url: URL) async throws {
-        // 1. Load and parse GPX file
+    private func parseGPXForSupabase(from url: URL) async throws -> SupabaseRouteData {
+        print("🔧 DEV: Reading GPX file content from: \(url.path)")
+        
+        // 1. Read GPX file content
         let gpxData = try String(contentsOf: url, encoding: .utf8)
         let fileName = url.deletingPathExtension().lastPathComponent
+        print("🔧 DEV: GPX file read successfully, size: \(gpxData.count) characters")
+        print("🔧 DEV: Extracted file name: \(fileName)")
         
-        // 2. Parse GPX to extract metadata
-        let gpxFile = try await parseGPXData(gpxData)
+        // 2. Parse GPX using existing service
+        print("🔧 DEV: Creating GPX service for parsing")
+        let gpxService = GpxServiceFactory.shared.createServiceForReading()
+        print("🔧 DEV: GPX service created: \(type(of: gpxService))")
         
-        // 3. Insert into base database (project's SS1.db)
-        try await insertIntoBaseDatabase(
-            name: fileName,
+        print("🔧 DEV: Parsing GPX data with service")
+        let gpxFile = try await gpxService.loadGpxFile(from: gpxData)
+        print("🔧 DEV: GPX file parsed successfully")
+        print("🔧 DEV: Route name from GPX: \(gpxFile.route.name)")
+        print("🔧 DEV: Route points count: \(gpxFile.route.routePoints.count)")
+        print("🔧 DEV: Total distance: \(gpxFile.route.totalDistance)")
+        
+        // 3. Extract start and end coordinates
+        guard let startPoint = gpxFile.route.routePoints.first else {
+            print("🔧 DEV: ❌ No route points found in GPX file")
+            throw NSError(domain: "DevPageViewModel", code: 1, userInfo: [NSLocalizedDescriptionKey: "No route points found in GPX file"])
+        }
+        
+        guard let endPoint = gpxFile.route.routePoints.last else {
+            print("🔧 DEV: ❌ No end point found in GPX file")
+            throw NSError(domain: "DevPageViewModel", code: 2, userInfo: [NSLocalizedDescriptionKey: "No end point found in GPX file"])
+        }
+        
+        print("🔧 DEV: Start point - Lat: \(startPoint.latitude), Lon: \(startPoint.longitude), Name: \(startPoint.name ?? "N/A")")
+        print("🔧 DEV: End point - Lat: \(endPoint.latitude), Lon: \(endPoint.longitude), Name: \(endPoint.name ?? "N/A")")
+        
+        // 4. Calculate bounding box
+        let latitudes = gpxFile.route.routePoints.map { $0.latitude }
+        let longitudes = gpxFile.route.routePoints.map { $0.longitude }
+        
+        let bboxNorth = latitudes.max() ?? startPoint.latitude
+        let bboxSouth = latitudes.min() ?? startPoint.latitude  
+        let bboxEast = longitudes.max() ?? startPoint.longitude
+        let bboxWest = longitudes.min() ?? startPoint.longitude
+        
+        print("🔧 DEV: Calculated bounding box - North: \(bboxNorth), South: \(bboxSouth), East: \(bboxEast), West: \(bboxWest)")
+        
+        // 5. Create route data for Supabase
+        let routeData = SupabaseRouteData(
+            name: gpxFile.route.name.isEmpty ? fileName : gpxFile.route.name,
+            description: "Imported from \(fileName)",
             gpxData: gpxData,
             waypointCount: gpxFile.route.routePoints.count,
-            totalDistance: gpxFile.route.totalDistance
+            totalDistance: gpxFile.route.totalDistance,
+            startLatitude: startPoint.latitude,
+            startLongitude: startPoint.longitude,
+            startName: startPoint.name,
+            endLatitude: endPoint.latitude,
+            endLongitude: endPoint.longitude,
+            endName: endPoint.name,
+            category: "Imported Routes",
+            bboxNorth: bboxNorth,
+            bboxSouth: bboxSouth,
+            bboxEast: bboxEast,
+            bboxWest: bboxWest
         )
         
-        // 4. Optionally refresh user's database to see the new route
-        try await refreshUserDatabase()
+        print("🔧 DEV: Created SupabaseRouteData successfully")
+        print("🔧 DEV: Final route name: \(routeData.name)")
+        print("🔧 DEV: Final route category: \(routeData.category)")
+        
+        return routeData
     }
     
-    private func parseGPXData(_ gpxData: String) async throws -> GpxFile {
-        // Use existing GPX service factory singleton to get the best available service
-        let gpxService = GpxServiceFactory.shared.createServiceForReading()
-        
-        // Parse the GPX data using the existing service
-        return try await gpxService.loadGpxFile(from: gpxData)
-    }
+    // MARK: - Supabase Upload
     
-    private func insertIntoBaseDatabase(name: String, gpxData: String, waypointCount: Int, totalDistance: Double) async throws {
-        // Get path to project's base SS1.db file
-        guard let projectBasePath = getProjectBaseDatabasePath() else {
-            throw NSError(domain: "DevPageViewModel", code: 2, userInfo: [NSLocalizedDescriptionKey: "Could not locate project's base database"])
-        }
+    private func uploadToSupabase(_ routeData: SupabaseRouteData) async throws {
+        print("🔧 DEV: Starting Supabase upload for route: \(routeData.name)")
         
-        print("📊 DEV: Inserting route '\(name)' into base database at: \(projectBasePath)")
-        print("📊 DEV: Route has \(waypointCount) waypoints, distance: \(totalDistance)")
+        // Get authenticated user session (needed for RLS policy)
+        print("🔧 DEV: Getting user session for RLS authentication")
+        let session = try await SupabaseManager.shared.getSession()
+        print("🔧 DEV: User session obtained: \(session.user.id)")
         
-        // Open connection to base database
-        let connection = try Connection(projectBasePath)
-        
-        // Define table and columns (same as RouteFavoritesDatabaseService)
-        let routeFavorites = SQLite.Table("RouteFavorites")
-        let colId = SQLite.Expression<Int>("id")
-        let colName = SQLite.Expression<String>("name")
-        let colGpxData = SQLite.Expression<String>("gpx_data")
-        let colWaypointCount = SQLite.Expression<Int>("waypoint_count")
-        let colTotalDistance = SQLite.Expression<Double>("total_distance")
-        let colCreatedAt = SQLite.Expression<Date>("created_at")
-        let colLastAccessedAt = SQLite.Expression<Date>("last_accessed_at")
-        let colTags = SQLite.Expression<String?>("tags")
-        let colNotes = SQLite.Expression<String?>("notes")
-        let colIsEmbedded = SQLite.Expression<Bool>("is_embedded")
-        let colCategory = SQLite.Expression<String?>("category")
-        
-        // First, ensure the table has the new columns we need
-        try await ensureEmbeddedColumnsExist(connection: connection, table: routeFavorites, colIsEmbedded: colIsEmbedded, colCategory: colCategory)
-        
-        // Insert the route with embedded flag
-        let insert = routeFavorites.insert(
-            colName <- name,
-            colGpxData <- gpxData,
-            colWaypointCount <- waypointCount,
-            colTotalDistance <- totalDistance,
-            colCreatedAt <- Date(),
-            colLastAccessedAt <- Date(),
-            colTags <- nil,
-            colNotes <- "Imported via dev tools",
-            colIsEmbedded <- true,
-            colCategory <- "Imported Routes"
+        // Create RemoteEmbeddedRoute from parsed data
+        print("🔧 DEV: Creating RemoteEmbeddedRoute object for RLS-protected table")
+        let embeddedRoute = RemoteEmbeddedRoute(
+            id: nil,
+            name: routeData.name,
+            description: routeData.description.isEmpty ? nil : routeData.description,
+            gpxData: routeData.gpxData,
+            waypointCount: routeData.waypointCount,
+            totalDistance: Float(routeData.totalDistance),
+            startLatitude: Float(routeData.startLatitude),
+            startLongitude: Float(routeData.startLongitude),
+            startName: routeData.startName,
+            endLatitude: Float(routeData.endLatitude),
+            endLongitude: Float(routeData.endLongitude),
+            endName: routeData.endName,
+            category: routeData.category,
+            difficulty: nil, // Could be set based on route analysis
+            region: nil, // Could be derived from location
+            estimatedDurationHours: nil, // Could be calculated
+            createdAt: nil, // Let Supabase set this with default
+            updatedAt: nil, // Let Supabase set this with default
+            isActive: true, // Default to active
+            bboxNorth: Float(routeData.bboxNorth),
+            bboxSouth: Float(routeData.bboxSouth),
+            bboxEast: Float(routeData.bboxEast),
+            bboxWest: Float(routeData.bboxWest)
         )
         
-        try connection.run(insert)
-        print("📊 DEV: ✅ Successfully inserted route '\(name)' into base database")
-    }
-    
-    private func ensureEmbeddedColumnsExist(connection: Connection, table: SQLite.Table, colIsEmbedded: SQLite.Expression<Bool>, colCategory: SQLite.Expression<String?>) async throws {
-        // Add is_embedded column if it doesn't exist
-        do {
-            try connection.run(table.addColumn(colIsEmbedded, defaultValue: false))
-            print("📊 DEV: Added 'is_embedded' column to RouteFavorites table")
-        } catch {
-            // Column might already exist, which is fine
-            print("📊 DEV: 'is_embedded' column already exists or couldn't be added")
-        }
+        print("🔧 DEV: RemoteEmbeddedRoute created successfully")
+        print("🔧 DEV: - Route Name: \(embeddedRoute.name)")
+        print("🔧 DEV: - Category: \(embeddedRoute.category ?? "nil")")
+        print("🔧 DEV: - Waypoint Count: \(embeddedRoute.waypointCount)")
+        print("🔧 DEV: - Total Distance: \(embeddedRoute.totalDistance)")
+        print("🔧 DEV: - Is Active: \(embeddedRoute.isActive ?? false)")
         
-        // Add category column if it doesn't exist
-        do {
-            try connection.run(table.addColumn(colCategory, defaultValue: nil))
-            print("📊 DEV: Added 'category' column to RouteFavorites table")
-        } catch {
-            // Column might already exist, which is fine
-            print("📊 DEV: 'category' column already exists or couldn't be added")
-        }
-    }
-    
-    private func getProjectBaseDatabasePath() -> String? {
-        // In development, try to locate the project's SS1.db file
-        // This should point to the source database in your Xcode project
-        
-        // Try to find the project directory and SS1.db file
-        let fileManager = FileManager.default
-        let currentPath = fileManager.currentDirectoryPath
-        
-        // Look for SS1.db in various locations relative to current path
-        let possiblePaths = [
-            "\(currentPath)/SS1.db",
-            "\(currentPath)/Mariner Studio/SS1.db",
-            "\(currentPath)/../SS1.db",
-            "\(currentPath)/../Mariner Studio/SS1.db"
-        ]
-        
-        for path in possiblePaths {
-            if fileManager.fileExists(atPath: path) {
-                print("📊 DEV: Found project database at: \(path)")
-                return path
-            }
-        }
-        
-        // If not found, try to use Bundle.main as a reference
-        if let bundlePath = Bundle.main.path(forResource: "SS1", ofType: "db") {
-            print("📊 DEV: Using bundle database path: \(bundlePath)")
-            return bundlePath
-        }
-        
-        print("📊 DEV: Could not locate project's base database")
-        return nil
-    }
-    
-    private func refreshUserDatabase() async throws {
-        // Copy updated base database to user's Documents directory
-        // So developer can immediately see the new routes
-        guard let basePath = getProjectBaseDatabasePath() else {
-            throw NSError(domain: "DevPageViewModel", code: 4, userInfo: [NSLocalizedDescriptionKey: "Cannot refresh - base database not found"])
-        }
-        
-        let fileManager = FileManager.default
-        let documentsDirectory = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
-        let userDbPath = documentsDirectory.appendingPathComponent("SS1.db").path
-        
-        // Backup current user database
-        let backupPath = documentsDirectory.appendingPathComponent("SS1_backup.db").path
-        if fileManager.fileExists(atPath: userDbPath) {
-            try? fileManager.removeItem(atPath: backupPath)
-            try fileManager.copyItem(atPath: userDbPath, toPath: backupPath)
-        }
-        
-        // Copy updated base database to user location
-        try? fileManager.removeItem(atPath: userDbPath)
-        try fileManager.copyItem(atPath: basePath, toPath: userDbPath)
-        
-        print("📊 DEV: ✅ Refreshed user database with updated base database")
-        print("📊 DEV: Backup saved to: \(backupPath)")
+        // Upload to Supabase using existing manager
+        print("🔧 DEV: Uploading to Supabase using SupabaseManager")
+        try await SupabaseManager.shared.upsertEmbeddedRoute(embeddedRoute)
+        print("🔧 DEV: ✅ Upload to Supabase completed successfully")
     }
 }
+
+// MARK: - Data Structures
+
+struct SupabaseRouteData {
+    let name: String
+    let description: String
+    let gpxData: String
+    let waypointCount: Int
+    let totalDistance: Double
+    let startLatitude: Double
+    let startLongitude: Double
+    let startName: String?
+    let endLatitude: Double
+    let endLongitude: Double
+    let endName: String?
+    let category: String
+    let bboxNorth: Double
+    let bboxSouth: Double
+    let bboxEast: Double
+    let bboxWest: Double
+}
+
 #endif
