@@ -1,23 +1,23 @@
 //
-//  EmbeddedRoutesBrowseView.swift
+//  AllRoutesView.swift
 //  Mariner Studio
 //
-//  Created for browsing and downloading embedded routes from Supabase.
+//  Created for displaying all routes from various sources (public, imported, created).
 //
 
 import SwiftUI
 
-struct EmbeddedRoutesBrowseView: View {
-    @StateObject private var viewModel: EmbeddedRoutesBrowseViewModel
+struct AllRoutesView: View {
+    @StateObject private var viewModel: AllRoutesViewModel
     
     init(allRoutesService: AllRoutesDatabaseService? = nil) {
-        _viewModel = StateObject(wrappedValue: EmbeddedRoutesBrowseViewModel(allRoutesService: allRoutesService))
+        _viewModel = StateObject(wrappedValue: AllRoutesViewModel(allRoutesService: allRoutesService))
     }
     
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                // Header
+                // Header with filters
                 headerView
                 
                 // Content
@@ -34,7 +34,7 @@ struct EmbeddedRoutesBrowseView: View {
                     errorView
                 }
             }
-            .navigationTitle("Browse Routes")
+            .navigationTitle("All Routes")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -50,13 +50,13 @@ struct EmbeddedRoutesBrowseView: View {
     // MARK: - Header View
     
     private var headerView: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 12) {
             HStack {
-                Image(systemName: "map")
+                Image(systemName: "list.bullet")
                     .font(.title2)
                     .foregroundColor(.blue)
                 
-                Text("Available Routes")
+                Text("All Available Routes")
                     .font(.headline)
                     .fontWeight(.semibold)
                 
@@ -71,6 +71,9 @@ struct EmbeddedRoutesBrowseView: View {
             .padding(.horizontal)
             .padding(.top)
             
+            // Filter buttons
+            filterButtonsView
+            
             if viewModel.isLoading && !viewModel.routes.isEmpty {
                 ProgressView("Refreshing...")
                     .font(.caption)
@@ -80,16 +83,49 @@ struct EmbeddedRoutesBrowseView: View {
         .background(Color(.systemGroupedBackground))
     }
     
+    private var filterButtonsView: some View {
+        HStack(spacing: 8) {
+            ForEach(["all", "public", "imported", "created"], id: \.self) { filter in
+                Button(action: {
+                    viewModel.selectedFilter = filter
+                    viewModel.applyFilter()
+                }) {
+                    Text(filterDisplayName(filter))
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(viewModel.selectedFilter == filter ? Color.blue : Color.gray.opacity(0.2))
+                        .foregroundColor(viewModel.selectedFilter == filter ? .white : .primary)
+                        .cornerRadius(8)
+                }
+            }
+            Spacer()
+        }
+        .padding(.horizontal)
+    }
+    
+    private func filterDisplayName(_ filter: String) -> String {
+        switch filter {
+        case "all": return "All"
+        case "public": return "Public"
+        case "imported": return "Imported"
+        case "created": return "Created"
+        default: return filter.capitalized
+        }
+    }
+    
     // MARK: - Routes List
     
     private var routesListView: some View {
-        List(viewModel.routes) { route in
-            RouteRowView(
+        List(viewModel.filteredRoutes) { route in
+            AllRouteRowView(
                 route: route,
-                isDownloading: viewModel.downloadingRouteId == route.id,
-                isDownloaded: viewModel.isRouteDownloaded(route),
-                onDownload: {
-                    viewModel.downloadRoute(route)
+                onFavoriteToggle: {
+                    viewModel.toggleFavorite(route)
+                },
+                onDelete: {
+                    viewModel.deleteRoute(route)
                 }
             )
             .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
@@ -119,7 +155,7 @@ struct EmbeddedRoutesBrowseView: View {
     
     private var emptyStateView: some View {
         VStack(spacing: 20) {
-            Image(systemName: "map.circle")
+            Image(systemName: "list.bullet.circle")
                 .font(.system(size: 60))
                 .foregroundColor(.gray)
             
@@ -127,7 +163,7 @@ struct EmbeddedRoutesBrowseView: View {
                 .font(.title2)
                 .fontWeight(.semibold)
             
-            Text("No embedded routes have been uploaded yet. Use the dev tools to upload some GPX files to get started.")
+            Text("Download public routes, import your own files, or create new routes to get started.")
                 .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -181,25 +217,39 @@ struct EmbeddedRoutesBrowseView: View {
     }
 }
 
-// MARK: - Route Row View
+// MARK: - All Route Row View
 
-struct RouteRowView: View {
-    let route: RemoteEmbeddedRoute
-    let isDownloading: Bool
-    let isDownloaded: Bool
-    let onDownload: () -> Void
+struct AllRouteRowView: View {
+    let route: AllRoute
+    let onFavoriteToggle: () -> Void
+    let onDelete: () -> Void
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Route Header
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(route.name)
-                        .font(.headline)
-                        .fontWeight(.semibold)
+                    HStack(spacing: 8) {
+                        Text(route.name)
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                        
+                        // Source type indicator
+                        HStack(spacing: 4) {
+                            Image(systemName: route.sourceTypeIcon)
+                                .font(.caption2)
+                            Text(route.sourceTypeDisplayName)
+                                .font(.caption2)
+                        }
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(sourceTypeColor.opacity(0.2))
+                        .foregroundColor(sourceTypeColor)
+                        .cornerRadius(4)
+                    }
                     
-                    if let description = route.description, !description.isEmpty {
-                        Text(description)
+                    if let notes = route.notes, !notes.isEmpty {
+                        Text(notes)
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                             .lineLimit(2)
@@ -208,7 +258,11 @@ struct RouteRowView: View {
                 
                 Spacer()
                 
-                downloadButton
+                // Action buttons
+                HStack(spacing: 8) {
+                    favoriteButton
+                    deleteButton
+                }
             }
             
             // Route Details
@@ -223,79 +277,53 @@ struct RouteRowView: View {
         .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
     }
     
-    private var downloadButton: some View {
-        Button(action: onDownload) {
-            HStack(spacing: 6) {
-                if isDownloading {
-                    ProgressView()
-                        .scaleEffect(0.8)
-                } else if isDownloaded {
-                    Image(systemName: "checkmark.circle.fill")
-                } else {
-                    Image(systemName: "icloud.and.arrow.down")
-                }
-                
-                Text(buttonText)
-                    .font(.caption)
-                    .fontWeight(.medium)
-            }
-            .foregroundColor(.white)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(buttonBackgroundColor)
-            .cornerRadius(8)
-        }
-        .disabled(isDownloading || isDownloaded)
-    }
-    
-    private var buttonText: String {
-        if isDownloading {
-            return "Downloading..."
-        } else if isDownloaded {
-            return "Downloaded"
-        } else {
-            return "Download"
+    private var favoriteButton: some View {
+        Button(action: onFavoriteToggle) {
+            Image(systemName: route.isFavorite ? "heart.fill" : "heart")
+                .foregroundColor(route.isFavorite ? .red : .gray)
+                .font(.title3)
         }
     }
     
-    private var buttonBackgroundColor: Color {
-        if isDownloading {
-            return Color.gray
-        } else if isDownloaded {
-            return Color.green
-        } else {
-            return Color.blue
+    private var deleteButton: some View {
+        Button(action: onDelete) {
+            Image(systemName: "trash")
+                .foregroundColor(.red)
+                .font(.title3)
+        }
+    }
+    
+    private var sourceTypeColor: Color {
+        switch route.sourceType {
+        case "public":
+            return .blue
+        case "imported":
+            return .purple
+        case "created":
+            return .orange
+        default:
+            return .gray
         }
     }
     
     private var routeDetailsView: some View {
         HStack(spacing: 16) {
+            if let tags = route.tags, !tags.isEmpty {
+                Label {
+                    Text(tags)
+                        .font(.caption)
+                } icon: {
+                    Image(systemName: "tag")
+                        .foregroundColor(.orange)
+                }
+            }
+            
             Label {
-                Text(route.category ?? "General")
+                Text(route.formattedCreatedDate)
                     .font(.caption)
             } icon: {
-                Image(systemName: "tag")
-                    .foregroundColor(.orange)
-            }
-            
-            if let difficulty = route.difficulty {
-                Label {
-                    Text(difficulty)
-                        .font(.caption)
-                } icon: {
-                    Image(systemName: "chart.bar")
-                        .foregroundColor(.red)
-                }
-            }
-            
-            if let region = route.region {
-                Label {
-                    Text(region)
-                        .font(.caption)
-                } icon: {
-                    Image(systemName: "location")
-                        .foregroundColor(.green)
-                }
+                Image(systemName: "calendar")
+                    .foregroundColor(.green)
             }
         }
     }
@@ -311,14 +339,14 @@ struct RouteRowView: View {
             statItem(
                 icon: "ruler",
                 label: "Distance",
-                value: formatDistance(route.totalDistance)
+                value: route.formattedDistance
             )
             
-            if let duration = route.estimatedDurationHours {
+            if route.isFavorite {
                 statItem(
-                    icon: "clock",
-                    label: "Duration",
-                    value: formatDuration(duration)
+                    icon: "heart.fill",
+                    label: "Favorite",
+                    value: "★"
                 )
             }
         }
@@ -341,26 +369,10 @@ struct RouteRowView: View {
                 .fontWeight(.medium)
         }
     }
-    
-    private func formatDistance(_ distance: Float) -> String {
-        if distance < 1.0 {
-            return String(format: "%.0f m", distance * 1000)
-        } else {
-            return String(format: "%.1f km", distance)
-        }
-    }
-    
-    private func formatDuration(_ hours: Float) -> String {
-        if hours < 1.0 {
-            return String(format: "%.0f min", hours * 60)
-        } else {
-            return String(format: "%.1f hrs", hours)
-        }
-    }
 }
 
 // MARK: - Preview
 
 #Preview {
-    EmbeddedRoutesBrowseView()
+    AllRoutesView()
 }

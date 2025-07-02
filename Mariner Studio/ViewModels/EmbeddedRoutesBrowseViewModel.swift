@@ -18,18 +18,18 @@ class EmbeddedRoutesBrowseViewModel: ObservableObject {
     @Published var downloadedRouteIds: Set<UUID> = []
     
     // MARK: - Dependencies
-    private let routeFavoritesService: RouteFavoritesDatabaseService
+    private let allRoutesService: AllRoutesDatabaseService
     
-    init(routeFavoritesService: RouteFavoritesDatabaseService? = nil) {
+    init(allRoutesService: AllRoutesDatabaseService? = nil) {
         // Use provided service or create a new one with shared DatabaseCore
-        if let service = routeFavoritesService {
-            self.routeFavoritesService = service
-            print("🛣️ BROWSE: ✅ Using provided RouteFavoritesDatabaseService")
+        if let service = allRoutesService {
+            self.allRoutesService = service
+            print("🛣️ BROWSE: ✅ Using provided AllRoutesDatabaseService")
         } else {
             // Create new service with shared DatabaseCore for fallback
             let databaseCore = DatabaseCore()
-            self.routeFavoritesService = RouteFavoritesDatabaseService(databaseCore: databaseCore)
-            print("🛣️ BROWSE: ⚠️ Creating fallback RouteFavoritesDatabaseService")
+            self.allRoutesService = AllRoutesDatabaseService(databaseCore: databaseCore)
+            print("🛣️ BROWSE: ⚠️ Creating fallback AllRoutesDatabaseService")
         }
     }
     
@@ -126,14 +126,16 @@ class EmbeddedRoutesBrowseViewModel: ObservableObject {
     // MARK: - Local Database Integration
     
     private func saveRouteToLocalDatabase(gpxFile: GpxFile, originalRoute: RemoteEmbeddedRoute) async throws {
-        print("🛣️ BROWSE: Saving route to local database")
+        print("🛣️ BROWSE: Saving route to AllRoutes database")
         
-        // Create RouteFavorite object from the remote route and GPX data
-        let routeFavorite = RouteFavorite(
+        // Create AllRoute object from the remote route and GPX data
+        let allRoute = AllRoute(
             name: originalRoute.name,
             gpxData: originalRoute.gpxData,
             waypointCount: gpxFile.route.routePoints.count,
             totalDistance: Double(originalRoute.totalDistance),
+            sourceType: "public",
+            isFavorite: false,
             createdAt: Date(),
             lastAccessedAt: Date(),
             tags: originalRoute.category,
@@ -142,14 +144,15 @@ class EmbeddedRoutesBrowseViewModel: ObservableObject {
         
         print("🛣️ BROWSE: Creating local route entry")
         print("🛣️ BROWSE: - Route Name: \(originalRoute.name)")
-        print("🛣️ BROWSE: - Category: \(originalRoute.category ?? "Imported Routes")")
+        print("🛣️ BROWSE: - Category: \(originalRoute.category ?? "Public Route")")
+        print("🛣️ BROWSE: - Source Type: public")
         print("🛣️ BROWSE: - Waypoints: \(gpxFile.route.routePoints.count)")
         print("🛣️ BROWSE: - Distance: \(originalRoute.totalDistance)")
         print("🛣️ BROWSE: - GPX Data Size: \(originalRoute.gpxData.count) characters")
         
-        // Save to database
-        let savedId = try await routeFavoritesService.addRouteFavoriteAsync(favorite: routeFavorite)
-        print("🛣️ BROWSE: ✅ Route saved to local database with ID: \(savedId)")
+        // Save to AllRoutes database
+        let savedId = try await allRoutesService.addRouteAsync(route: allRoute)
+        print("🛣️ BROWSE: ✅ Route saved to AllRoutes database with ID: \(savedId)")
     }
     
     // MARK: - Helper Methods
@@ -167,7 +170,7 @@ class EmbeddedRoutesBrowseViewModel: ObservableObject {
         var newDownloadedIds: Set<UUID> = []
         
         for route in routes {
-            let isDownloaded = await routeFavoritesService.isRouteFavoriteAsync(
+            let isDownloaded = await allRoutesService.routeExistsAsync(
                 name: route.name,
                 waypointCount: route.waypointCount
             )

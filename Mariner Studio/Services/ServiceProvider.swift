@@ -19,6 +19,7 @@ class ServiceProvider: ObservableObject {
     let weatherService: WeatherDatabaseService
     let mapOverlayService: MapOverlayDatabaseService
     let routeFavoritesService: RouteFavoritesDatabaseService
+    let allRoutesService: AllRoutesDatabaseService
     
     // MARK: - Weather Services
     let openMeteoService: WeatherService
@@ -77,6 +78,7 @@ class ServiceProvider: ObservableObject {
         self.weatherService = WeatherDatabaseService(databaseCore: databaseCore)
         self.mapOverlayService = MapOverlayDatabaseService(databaseCore: databaseCore)
         self.routeFavoritesService = RouteFavoritesDatabaseService(databaseCore: databaseCore)
+        self.allRoutesService = AllRoutesDatabaseService(databaseCore: databaseCore)
         print("📦 ServiceProvider: Initialized all database services.")
         
         print("📦 ServiceProvider: Initialized sync services (TideStation, CurrentStation, NavUnit).")

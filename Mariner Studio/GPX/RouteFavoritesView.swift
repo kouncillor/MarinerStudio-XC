@@ -1,9 +1,8 @@
-
 import SwiftUI
 
 struct RouteFavoritesView: View {
     @EnvironmentObject var serviceProvider: ServiceProvider
-    @State private var routeFavorites: [RouteFavorite] = []
+    @State private var favoriteRoutes: [AllRoute] = []
     @State private var searchText = ""
     @State private var isLoading = true
     @State private var errorMessage = ""
@@ -11,11 +10,11 @@ struct RouteFavoritesView: View {
     @State private var selectedGpxFile: GpxFile?
     @State private var selectedRouteName: String = ""
     
-    var filteredFavorites: [RouteFavorite] {
+    var filteredFavorites: [AllRoute] {
         if searchText.isEmpty {
-            return routeFavorites
+            return favoriteRoutes
         } else {
-            return routeFavorites.filter { favorite in
+            return favoriteRoutes.filter { favorite in
                 favorite.name.localizedCaseInsensitiveContains(searchText)
             }
         }
@@ -33,7 +32,7 @@ struct RouteFavoritesView: View {
                             .foregroundColor(.secondary)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if routeFavorites.isEmpty {
+                } else if favoriteRoutes.isEmpty {
                     // Empty state
                     VStack(spacing: 20) {
                         Image(systemName: "star.slash")
@@ -44,7 +43,7 @@ struct RouteFavoritesView: View {
                             .font(.title2)
                             .fontWeight(.semibold)
                         
-                        Text("Routes you add to favorites will appear here.\nOpen a GPX file and tap the star to add it.")
+                        Text("Routes you mark as favorites will appear here.\nDownload or import routes and tap the heart to add them.")
                             .multilineTextAlignment(.center)
                             .foregroundColor(.secondary)
                     }
@@ -58,10 +57,13 @@ struct RouteFavoritesView: View {
                     // Favorites list
                     List {
                         ForEach(filteredFavorites) { favorite in
-                            RouteFavoriteRow(
-                                favorite: favorite,
+                            AllRouteFavoriteRow(
+                                route: favorite,
                                 onTap: {
                                     loadRoute(favorite)
+                                },
+                                onToggleFavorite: {
+                                    toggleFavorite(favorite)
                                 }
                             )
                         }
@@ -80,7 +82,7 @@ struct RouteFavoritesView: View {
                         .padding()
                 }
             }
-            .navigationTitle("Route Favorites")
+            .navigationTitle("Favorite Routes")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -117,11 +119,12 @@ struct RouteFavoritesView: View {
         }
         
         do {
-            let favorites = try await serviceProvider.routeFavoritesService.getRouteFavoritesAsync()
+            let favorites = try await serviceProvider.allRoutesService.getFavoriteRoutesAsync()
             
             await MainActor.run {
-                routeFavorites = favorites
+                favoriteRoutes = favorites
                 isLoading = false
+                print("⭐ FAVORITES: Loaded \(favorites.count) favorite routes")
             }
         } catch {
             await MainActor.run {
@@ -131,11 +134,11 @@ struct RouteFavoritesView: View {
         }
     }
     
-    private func loadRoute(_ favorite: RouteFavorite) {
+    private func loadRoute(_ favorite: AllRoute) {
         Task {
             do {
                 // Update last accessed time
-                try await serviceProvider.routeFavoritesService.updateLastAccessedAsync(favoriteId: favorite.id)
+                try await serviceProvider.allRoutesService.updateLastAccessedAsync(routeId: favorite.id)
                 
                 // Parse GPX data from database
                 let gpxFile = try await serviceProvider.gpxService.loadGpxFile(from: favorite.gpxData)
@@ -157,18 +160,34 @@ struct RouteFavoritesView: View {
     
     private func deleteFavorites(offsets: IndexSet) {
         Task {
-            do {
-                for index in offsets {
-                    let favorite = filteredFavorites[index]
-                    try await serviceProvider.routeFavoritesService.deleteRouteFavoriteAsync(favoriteId: favorite.id)
+            for index in offsets {
+                let favorite = filteredFavorites[index]
+                do {
+                    try await serviceProvider.allRoutesService.deleteRouteAsync(routeId: favorite.id)
+                    
+                    await MainActor.run {
+                        favoriteRoutes.removeAll { $0.id == favorite.id }
+                        print("⭐ FAVORITES: Deleted route '\(favorite.name)'")
+                    }
+                } catch {
+                    await MainActor.run {
+                        errorMessage = "Failed to delete favorite: \(error.localizedDescription)"
+                    }
                 }
-                
-                // Reload favorites
+            }
+        }
+    }
+    
+    private func toggleFavorite(_ route: AllRoute) {
+        Task {
+            do {
+                try await serviceProvider.allRoutesService.toggleFavoriteAsync(routeId: route.id)
+                // Reload favorites to reflect the change
                 await loadFavorites()
-                
+                print("⭐ FAVORITES: Toggled favorite for '\(route.name)'")
             } catch {
                 await MainActor.run {
-                    errorMessage = "Failed to delete favorite: \(error.localizedDescription)"
+                    errorMessage = "Failed to update favorite: \(error.localizedDescription)"
                 }
             }
         }
@@ -198,35 +217,110 @@ struct SearchBar: View {
     }
 }
 
+struct AllRouteFavoriteRow: View {
+    let route: AllRoute
+    let onTap: () -> Void
+    let onToggleFavorite: () -> Void
+    
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text(route.name)
+                        .font(.headline)
+                        .fontWeight(.medium)
+                    
+                    // Source type indicator
+                    HStack(spacing: 4) {
+                        Image(systemName: route.sourceTypeIcon)
+                            .font(.caption2)
+                        Text(route.sourceTypeDisplayName)
+                            .font(.caption2)
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(sourceTypeColor.opacity(0.2))
+                    .foregroundColor(sourceTypeColor)
+                    .cornerRadius(4)
+                }
+                
+                HStack(spacing: 16) {
+                    Label(route.waypointCountText, systemImage: "point.3.connected.trianglepath.dotted")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    
+                    Label(route.formattedDistance, systemImage: "ruler")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                
+                if let notes = route.notes, !notes.isEmpty {
+                    Text(notes)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+            }
+            
+            Spacer()
+            
+            Button(action: onToggleFavorite) {
+                Image(systemName: route.isFavorite ? "heart.fill" : "heart")
+                    .foregroundColor(route.isFavorite ? .red : .gray)
+                    .font(.title3)
+            }
+        }
+        .padding(.vertical, 4)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            onTap()
+        }
+    }
+    
+    private var sourceTypeColor: Color {
+        switch route.sourceType {
+        case "public":
+            return .blue
+        case "imported":
+            return .purple
+        case "created":
+            return .orange
+        default:
+            return .gray
+        }
+    }
+}
+
+// Legacy support for old RouteFavorite if needed elsewhere
 struct RouteFavoriteRow: View {
     let favorite: RouteFavorite
     let onTap: () -> Void
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            // Route name
-            Text(favorite.name)
-                .font(.headline)
-                .foregroundColor(.primary)
-            
-            // Route details
-            HStack(spacing: 16) {
-                Label(favorite.waypointCountText, systemImage: "location")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(favorite.name)
+                    .font(.headline)
+                    .fontWeight(.medium)
                 
-                Label(favorite.formattedDistance, systemImage: "ruler")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                HStack(spacing: 16) {
+                    Label(favorite.waypointCountText, systemImage: "point.3.connected.trianglepath.dotted")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    
+                    Label(favorite.formattedDistance, systemImage: "ruler")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
             }
             
-            // Date created
-            Text("Created: \(favorite.formattedCreatedDate)")
-                .font(.caption2)
+            Spacer()
+            
+            Image(systemName: "chevron.right")
                 .foregroundColor(.secondary)
+                .font(.caption)
         }
-        .padding(.vertical, 8)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 4)
         .contentShape(Rectangle())
         .onTapGesture {
             onTap()

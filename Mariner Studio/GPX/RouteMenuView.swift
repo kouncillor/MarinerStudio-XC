@@ -33,11 +33,8 @@ struct RouteMenuView: View {
                     )
                 }
                 
-                // All Routes - Stub for future implementation
-                Button(action: {
-                    // TODO: Navigate to AllRoutesView when implemented
-                    print("All Routes tapped - view not implemented yet")
-                }) {
+                // All Routes - Display all routes from various sources
+                NavigationLink(destination: AllRoutesView(allRoutesService: serviceProvider.allRoutesService)) {
                     RouteMenuButtonContent(
                         icon: "list.bullet",
                         title: "ALL ROUTES",
@@ -48,13 +45,27 @@ struct RouteMenuView: View {
                 }
                 
                 // Download Routes from Supabase
-                NavigationLink(destination: EmbeddedRoutesBrowseView(routeFavoritesService: serviceProvider.routeFavoritesService)) {
+                NavigationLink(destination: EmbeddedRoutesBrowseView(allRoutesService: serviceProvider.allRoutesService)) {
                     RouteMenuButtonContent(
                         icon: "icloud.and.arrow.down.fill",
                         title: "DOWNLOAD PUBLIC ROUTES",
                         subtitle: "Download Community Routes",
                         isSystemIcon: true,
                         iconColor: .blue
+                    )
+                }
+                
+                // Import Personal Routes - Access files from various storage locations
+                NavigationLink(destination: ImportPersonalRoutesView(
+                    allRoutesService: serviceProvider.allRoutesService,
+                    gpxService: serviceProvider.gpxService
+                )) {
+                    RouteMenuButtonContent(
+                        icon: "folder.fill",
+                        title: "IMPORT PERSONAL ROUTES",
+                        subtitle: "Files, iCloud, OneDrive, Dropbox",
+                        isSystemIcon: true,
+                        iconColor: .purple
                     )
                 }
                 
