@@ -94,17 +94,17 @@ class DevPageViewModel: ObservableObject {
         
         // Define table and columns (same as RouteFavoritesDatabaseService)
         let routeFavorites = SQLite.Table("RouteFavorites")
-        let colId = Expression<Int>("id")
-        let colName = Expression<String>("name")
-        let colGpxData = Expression<String>("gpx_data")
-        let colWaypointCount = Expression<Int>("waypoint_count")
-        let colTotalDistance = Expression<Double>("total_distance")
-        let colCreatedAt = Expression<Date>("created_at")
-        let colLastAccessedAt = Expression<Date>("last_accessed_at")
-        let colTags = Expression<String?>("tags")
-        let colNotes = Expression<String?>("notes")
-        let colIsEmbedded = Expression<Bool>("is_embedded")
-        let colCategory = Expression<String?>("category")
+        let colId = SQLite.Expression<Int>("id")
+        let colName = SQLite.Expression<String>("name")
+        let colGpxData = SQLite.Expression<String>("gpx_data")
+        let colWaypointCount = SQLite.Expression<Int>("waypoint_count")
+        let colTotalDistance = SQLite.Expression<Double>("total_distance")
+        let colCreatedAt = SQLite.Expression<Date>("created_at")
+        let colLastAccessedAt = SQLite.Expression<Date>("last_accessed_at")
+        let colTags = SQLite.Expression<String?>("tags")
+        let colNotes = SQLite.Expression<String?>("notes")
+        let colIsEmbedded = SQLite.Expression<Bool>("is_embedded")
+        let colCategory = SQLite.Expression<String?>("category")
         
         // First, ensure the table has the new columns we need
         try await ensureEmbeddedColumnsExist(connection: connection, table: routeFavorites, colIsEmbedded: colIsEmbedded, colCategory: colCategory)
@@ -127,7 +127,7 @@ class DevPageViewModel: ObservableObject {
         print("📊 DEV: ✅ Successfully inserted route '\(name)' into base database")
     }
     
-    private func ensureEmbeddedColumnsExist(connection: Connection, table: SQLite.Table, colIsEmbedded: Expression<Bool>, colCategory: Expression<String?>) async throws {
+    private func ensureEmbeddedColumnsExist(connection: Connection, table: SQLite.Table, colIsEmbedded: SQLite.Expression<Bool>, colCategory: SQLite.Expression<String?>) async throws {
         // Add is_embedded column if it doesn't exist
         do {
             try connection.run(table.addColumn(colIsEmbedded, defaultValue: false))
@@ -139,7 +139,7 @@ class DevPageViewModel: ObservableObject {
         
         // Add category column if it doesn't exist
         do {
-            try connection.run(table.addColumn(colCategory))
+            try connection.run(table.addColumn(colCategory, defaultValue: nil))
             print("📊 DEV: Added 'category' column to RouteFavorites table")
         } catch {
             // Column might already exist, which is fine
