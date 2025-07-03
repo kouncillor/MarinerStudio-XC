@@ -113,6 +113,10 @@ struct NavUnitDetailsView: View {
     @StateObject private var viewModel: NavUnitDetailsViewModel
     @EnvironmentObject var serviceProvider: ServiceProvider
     
+    // State for sheet presentations
+    @State private var showingRecommendationForm = false
+    @State private var showingUserRecommendations = false
+    
     // MARK: - Initializers
     
     // New initializer: Load nav unit by ID (for navigation from list)
@@ -215,8 +219,8 @@ struct NavUnitDetailsView: View {
                     mapSection()
                 }
                 
-                
-                
+                // Action buttons menu bar
+                actionButtonsSection()
                 
                 // Location information
                 if hasLocationInfo(for: navUnit) {
@@ -437,6 +441,98 @@ struct NavUnitDetailsView: View {
                     .cornerRadius(8)
             }
         }
+    }
+    
+    // MARK: - Action Buttons Section
+    
+    @ViewBuilder
+    private func actionButtonsSection() -> some View {
+        HStack(spacing: 15) {
+            actionButton(
+                icon: "carsixseven",
+                action: { viewModel.openInMaps() },
+                isEnabled: viewModel.hasCoordinates
+            )
+            
+            actionButton(
+                icon: "greenphonesixseven",
+                action: { viewModel.makePhoneCall() },
+                isEnabled: viewModel.hasPhoneNumbers
+            )
+            
+            actionButton(
+                icon: viewModel.favoriteIcon,
+                action: {
+                    Task {
+                        await viewModel.toggleFavorite()
+                    }
+                },
+                isEnabled: true
+            )
+            
+            actionButton(
+                icon: "commentsixseven",
+                action: { showingUserRecommendations = true },
+                isEnabled: true
+            )
+            
+            actionButton(
+                icon: "lightbulb.fill",
+                action: { showingRecommendationForm = true },
+                isEnabled: true
+            )
+            
+            actionButton(
+                icon: "sharesixseven",
+                action: { viewModel.shareUnit() },
+                isEnabled: true
+            )
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+        .sheet(isPresented: $showingUserRecommendations) {
+            NavigationView {
+                UserRecommendationsView()
+                    .environmentObject(serviceProvider)
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarTrailing) {
+                            Button("Done") {
+                                showingUserRecommendations = false
+                            }
+                        }
+                    }
+            }
+        }
+        .sheet(isPresented: $showingRecommendationForm) {
+            if let navUnit = viewModel.unit {
+                RecommendationFormView(
+                    viewModel: RecommendationFormViewModel(
+                        navUnit: navUnit,
+                        recommendationService: serviceProvider.recommendationService
+                    ),
+                    isPresented: $showingRecommendationForm
+                )
+            }
+        }
+    }
+    
+    private func actionButton(icon: String, action: @escaping () -> Void, isEnabled: Bool) -> some View {
+        Button(action: action) {
+            if icon == "lightbulb.fill" {
+                // Use system icon for the suggestion button
+                Image(systemName: icon)
+                    .resizable()
+                    .frame(width: 44, height: 44)
+                    .foregroundColor(isEnabled ? .orange : .gray.opacity(0.5))
+            } else {
+                // Use custom icons for other buttons
+                Image(icon)
+                    .resizable()
+                    .frame(width: 44, height: 44)
+                    .opacity(isEnabled ? 1.0 : 0.5)
+            }
+        }
+        .disabled(!isEnabled)
     }
     
     // MARK: - Helper Methods

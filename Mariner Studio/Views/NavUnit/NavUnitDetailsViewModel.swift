@@ -297,6 +297,124 @@ class NavUnitDetailsViewModel: ObservableObject {
     
     // MARK: - User Actions
     
+    /// Open navigation unit location in Maps app
+    func openInMaps() {
+        guard let unit = unit,
+              let lat = unit.latitude,
+              let lon = unit.longitude else {
+            print("⚠️ NavUnitDetailsViewModel: Cannot open in Maps - no coordinates available")
+            return
+        }
+        
+        let coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+        let placemark = MKPlacemark(coordinate: coordinate)
+        let mapItem = MKMapItem(placemark: placemark)
+        mapItem.name = unit.navUnitName
+        mapItem.openInMaps(launchOptions: [
+            MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving
+        ])
+        
+        print("🗺️ NavUnitDetailsViewModel: Opening \(unit.navUnitName) in Maps")
+    }
+    
+    /// Make phone call to navigation unit facility
+    func makePhoneCall() {
+        guard let unit = unit else {
+            print("⚠️ NavUnitDetailsViewModel: Cannot make phone call - no nav unit loaded")
+            return
+        }
+        
+        // Try to find a phone number from various fields
+        var phoneNumber: String?
+        
+        if let operators = unit.operators, !operators.isEmpty {
+            phoneNumber = extractPhoneNumber(from: operators)
+        }
+        
+        if phoneNumber == nil, let owners = unit.owners, !owners.isEmpty {
+            phoneNumber = extractPhoneNumber(from: owners)
+        }
+        
+        if phoneNumber == nil, let remarks = unit.remarks, !remarks.isEmpty {
+            phoneNumber = extractPhoneNumber(from: remarks)
+        }
+        
+        guard let validPhoneNumber = phoneNumber else {
+            print("⚠️ NavUnitDetailsViewModel: No phone number found for \(unit.navUnitName)")
+            return
+        }
+        
+        let cleanedNumber = validPhoneNumber.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()
+        if let url = URL(string: "tel://\(cleanedNumber)"), UIApplication.shared.canOpenURL(url) {
+            UIApplication.shared.open(url)
+            print("📞 NavUnitDetailsViewModel: Making phone call to \(validPhoneNumber)")
+        } else {
+            print("⚠️ NavUnitDetailsViewModel: Unable to make phone call to \(validPhoneNumber)")
+        }
+    }
+    
+    /// Share navigation unit information
+    func shareUnit() {
+        guard let unit = unit else {
+            print("⚠️ NavUnitDetailsViewModel: Cannot share - no nav unit loaded")
+            return
+        }
+        
+        var shareText = "Navigation Unit: \(unit.navUnitName)\n"
+        
+        if let facilityType = unit.facilityType, !facilityType.isEmpty {
+            shareText += "Type: \(facilityType)\n"
+        }
+        
+        if !formattedCoordinates.isEmpty {
+            shareText += "Location: \(formattedCoordinates)\n"
+        }
+        
+        if let waterwayName = unit.waterwayName, !waterwayName.isEmpty {
+            shareText += "Waterway: \(waterwayName)\n"
+        }
+        
+        if let operators = unit.operators, !operators.isEmpty {
+            shareText += "Operators: \(operators)\n"
+        }
+        
+        shareText += "\nShared from Mariner Studio"
+        
+        let activityViewController = UIActivityViewController(activityItems: [shareText], applicationActivities: nil)
+        
+        // Get the root view controller
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let rootViewController = windowScene.windows.first?.rootViewController {
+            
+            // Handle iPad presentation
+            if let popoverController = activityViewController.popoverPresentationController {
+                popoverController.sourceView = rootViewController.view
+                popoverController.sourceRect = CGRect(x: rootViewController.view.bounds.midX, y: rootViewController.view.bounds.midY, width: 0, height: 0)
+            }
+            
+            rootViewController.present(activityViewController, animated: true)
+            print("📤 NavUnitDetailsViewModel: Sharing \(unit.navUnitName)")
+        } else {
+            print("⚠️ NavUnitDetailsViewModel: Unable to present share sheet")
+        }
+    }
+    
+    // MARK: - Helper Methods
+    
+    /// Extract phone number from text using regex
+    private func extractPhoneNumber(from text: String) -> String? {
+        let phoneRegex = try? NSRegularExpression(pattern: #"(\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4})"#, options: [])
+        let range = NSRange(location: 0, length: text.utf16.count)
+        
+        if let match = phoneRegex?.firstMatch(in: text, options: [], range: range) {
+            if let matchRange = Range(match.range, in: text) {
+                return String(text[matchRange])
+            }
+        }
+        
+        return nil
+    }
+    
     /// Toggle favorite status
     func toggleFavorite() async {
         guard let unit = unit else {
