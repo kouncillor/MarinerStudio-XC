@@ -15,9 +15,9 @@ class CreateRouteViewModel: ObservableObject {
     // MARK: - Published Properties
     @Published var routeName: String = ""
     @Published var waypoints: [CreateRouteWaypoint] = []
-    @Published var isExporting = false
-    @Published var exportError: String = ""
-    @Published var exportSuccess = false
+    @Published var isSaving = false
+    @Published var saveError: String = ""
+    @Published var saveSuccess = false
     @Published var mapRegion = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: 39.0458, longitude: -76.6413), // Chesapeake Bay fallback
         span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1)
@@ -36,6 +36,7 @@ class CreateRouteViewModel: ObservableObject {
     private let gpxService: ExtendedGpxServiceProtocol
     private let locationService: LocationService
     private let noaaChartService: NOAAChartService
+    private let allRoutesService: AllRoutesDatabaseService
     
     // MARK: - Computed Properties
     var canSaveRoute: Bool {
@@ -67,10 +68,11 @@ class CreateRouteViewModel: ObservableObject {
     }
     
     // MARK: - Initialization
-    init(gpxService: ExtendedGpxServiceProtocol, locationService: LocationService, noaaChartService: NOAAChartService) {
+    init(gpxService: ExtendedGpxServiceProtocol, locationService: LocationService, noaaChartService: NOAAChartService, allRoutesService: AllRoutesDatabaseService) {
         self.gpxService = gpxService
         self.locationService = locationService
         self.noaaChartService = noaaChartService
+        self.allRoutesService = allRoutesService
         print("📍 CreateRouteViewModel: Initialized with chart overlay and leg information support")
         print("📍 CreateRouteViewModel: Initial state - showLegLabels: \(showLegLabels), chartOverlay: \(isChartOverlayEnabled)")
         
@@ -372,32 +374,46 @@ class CreateRouteViewModel: ObservableObject {
         }
     }
     
-    // MARK: - Route Export
-    func exportRoute() async {
-        print("📤 CreateRouteViewModel: exportRoute() started")
-        print("📤 CreateRouteViewModel: Route validation - canSaveRoute: \(canSaveRoute)")
+    // MARK: - Route Distance Calculation
+    var totalRouteDistance: Double {
+        guard waypoints.count >= 2 else { return 0.0 }
+        
+        var totalDistance = 0.0
+        for i in 0..<(waypoints.count - 1) {
+            let distance = calculateDistance(from: waypoints[i].coordinate, to: waypoints[i + 1].coordinate)
+            totalDistance += distance
+        }
+        
+        print("📐 CreateRouteViewModel: Total route distance calculated: \(String(format: "%.2f", totalDistance)) nm")
+        return totalDistance
+    }
+    
+    // MARK: - Route Save
+    func saveRoute() async {
+        print("💾 CreateRouteViewModel: saveRoute() started")
+        print("💾 CreateRouteViewModel: Route validation - canSaveRoute: \(canSaveRoute)")
         
         guard canSaveRoute else {
             await MainActor.run {
-                exportError = "Please enter a route name and add at least 2 waypoints"
-                print("❌ CreateRouteViewModel: Export failed - validation error: \(exportError)")
+                saveError = "Please enter a route name and add at least 2 waypoints"
+                print("❌ CreateRouteViewModel: Save failed - validation error: \(saveError)")
             }
             return
         }
         
         await MainActor.run {
-            isExporting = true
-            exportError = ""
-            exportSuccess = false
-            print("🚀 CreateRouteViewModel: Export process started - isExporting: \(isExporting)")
+            isSaving = true
+            saveError = ""
+            saveSuccess = false
+            print("🚀 CreateRouteViewModel: Save process started - isSaving: \(isSaving)")
         }
         
         do {
-            print("📤 CreateRouteViewModel: Converting \(waypoints.count) waypoints to GPX format")
+            print("💾 CreateRouteViewModel: Converting \(waypoints.count) waypoints to GPX format")
             
             // Convert waypoints to GpxRoutePoints
             let gpxRoutePoints = waypoints.map { waypoint in
-                print("📤 CreateRouteViewModel: Converting waypoint '\(waypoint.name)' at (\(waypoint.coordinate.latitude), \(waypoint.coordinate.longitude))")
+                print("💾 CreateRouteViewModel: Converting waypoint '\(waypoint.name)' at (\(waypoint.coordinate.latitude), \(waypoint.coordinate.longitude))")
                 return GpxRoutePoint(
                     latitude: waypoint.coordinate.latitude,
                     longitude: waypoint.coordinate.longitude,
@@ -405,9 +421,9 @@ class CreateRouteViewModel: ObservableObject {
                 )
             }
             
-            // Create GPX route and file
+            // Create GPX route and file for storage
             let routeNameTrimmed = routeName.trimmingCharacters(in: .whitespacesAndNewlines)
-            print("📤 CreateRouteViewModel: Creating GPX route with name '\(routeNameTrimmed)'")
+            print("💾 CreateRouteViewModel: Creating GPX route with name '\(routeNameTrimmed)'")
             
             let gpxRoute = GpxRoute(
                 name: routeNameTrimmed,
@@ -415,102 +431,52 @@ class CreateRouteViewModel: ObservableObject {
             )
             
             let gpxFile = GpxFile(route: gpxRoute)
-            print("✅ CreateRouteViewModel: GPX file structure created successfully")
             
-            // Create temporary file with actual GPX content
-            print("📤 CreateRouteViewModel: Creating temporary GPX file...")
-            let tempFileURL = try await createTemporaryGPXFile(gpxFile: gpxFile)
+            // Generate GPX string for database storage
+            let gpxString = try await gpxService.generateGpxString(from: gpxFile)
+            print("✅ CreateRouteViewModel: GPX string generated successfully (\(gpxString.count) characters)")
             
-            // Present document picker for save location
-            print("📤 CreateRouteViewModel: Presenting document picker for save location...")
-            let finalURL = try await presentDocumentPickerForSave(tempFileURL: tempFileURL)
+            // Calculate route metrics
+            let totalDistance = totalRouteDistance
+            let waypointCount = waypoints.count
             
-            // Clean up temporary file
-            print("🧹 CreateRouteViewModel: Cleaning up temporary file at \(tempFileURL.path)")
-            try? FileManager.default.removeItem(at: tempFileURL)
+            // Create AllRoute for database
+            let allRoute = AllRoute(
+                name: routeNameTrimmed,
+                gpxData: gpxString,
+                waypointCount: waypointCount,
+                totalDistance: totalDistance,
+                sourceType: "created",
+                isFavorite: false,
+                createdAt: Date(),
+                lastAccessedAt: Date(),
+                tags: nil,
+                notes: nil
+            )
+            
+            print("💾 CreateRouteViewModel: Saving route to database...")
+            print("💾 CreateRouteViewModel: - Name: '\(routeNameTrimmed)'")
+            print("💾 CreateRouteViewModel: - Waypoints: \(waypointCount)")
+            print("💾 CreateRouteViewModel: - Distance: \(String(format: "%.2f", totalDistance)) nm")
+            print("💾 CreateRouteViewModel: - Source: created")
+            
+            let routeId = try await allRoutesService.addRouteAsync(route: allRoute)
             
             await MainActor.run {
-                exportSuccess = true
-                isExporting = false
-                print("🎉 CreateRouteViewModel: Export completed successfully!")
-                print("✅ CreateRouteViewModel: Route '\(routeNameTrimmed)' exported to \(finalURL.lastPathComponent)")
+                saveSuccess = true
+                isSaving = false
+                print("🎉 CreateRouteViewModel: Route saved successfully!")
+                print("✅ CreateRouteViewModel: Route '\(routeNameTrimmed)' saved to database with ID: \(routeId)")
             }
             
         } catch {
             await MainActor.run {
-                exportError = "Failed to export route: \(error.localizedDescription)"
-                isExporting = false
-                print("❌ CreateRouteViewModel: Export failed with error: \(error.localizedDescription)")
+                saveError = "Failed to save route: \(error.localizedDescription)"
+                isSaving = false
+                print("❌ CreateRouteViewModel: Save failed with error: \(error.localizedDescription)")
                 print("❌ CreateRouteViewModel: Error details: \(error)")
             }
         }
-    }
-    
-    // MARK: - Private Methods
-    private func createTemporaryGPXFile(gpxFile: GpxFile) async throws -> URL {
-        let fileName = routeName.trimmingCharacters(in: .whitespacesAndNewlines)
-            .replacingOccurrences(of: " ", with: "_") + ".gpx"
-        
-        let tempDirectory = FileManager.default.temporaryDirectory
-        let tempFileURL = tempDirectory.appendingPathComponent(fileName)
-        
-        print("📄 CreateRouteViewModel: createTemporaryGPXFile() - filename: '\(fileName)'")
-        print("📄 CreateRouteViewModel: Temporary file path: \(tempFileURL.path)")
-        
-        // Write the GPX file to the temporary location
-        try await gpxService.writeGpxFile(gpxFile, to: tempFileURL)
-        
-        print("✅ CreateRouteViewModel: Temporary GPX file created successfully at \(tempFileURL.path)")
-        return tempFileURL
-    }
-    
-    private func presentDocumentPickerForSave(tempFileURL: URL) async throws -> URL {
-        print("📄 CreateRouteViewModel: presentDocumentPickerForSave() started")
-        
-        return try await withCheckedThrowingContinuation { continuation in
-            DispatchQueue.main.async {
-                print("📄 CreateRouteViewModel: Creating document picker for export")
-                
-                // Create document picker with the existing temporary file
-                let documentPicker = UIDocumentPickerViewController(forExporting: [tempFileURL])
-                
-                // Create delegate
-                let delegate = DocumentPickerExportDelegate { result in
-                    switch result {
-                    case .success(let url):
-                        print("✅ CreateRouteViewModel: Document picker succeeded - saved to: \(url.path)")
-                        continuation.resume(returning: url)
-                    case .failure(let error):
-                        print("❌ CreateRouteViewModel: Document picker failed: \(error.localizedDescription)")
-                        continuation.resume(throwing: error)
-                    }
-                }
-                
-                documentPicker.delegate = delegate
-                
-                // Store delegate to prevent deallocation
-                self.setDocumentPickerDelegate(delegate)
-                
-                // Present picker
-                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                   let window = windowScene.windows.first,
-                   let rootViewController = window.rootViewController {
-                    print("📄 CreateRouteViewModel: Presenting document picker")
-                    rootViewController.present(documentPicker, animated: true)
-                } else {
-                    print("❌ CreateRouteViewModel: Unable to find root view controller for document picker")
-                    continuation.resume(throwing: NSError(domain: "CreateRouteViewModel", code: 500, userInfo: [NSLocalizedDescriptionKey: "Unable to present document picker"]))
-                }
-            }
-        }
-    }
-    
-    // Store delegate to prevent deallocation
-    private var documentPickerDelegate: DocumentPickerExportDelegate?
-    
-    private func setDocumentPickerDelegate(_ delegate: DocumentPickerExportDelegate) {
-        documentPickerDelegate = delegate
-        print("📄 CreateRouteViewModel: Document picker delegate stored to prevent deallocation")
     }
 }
 

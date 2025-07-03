@@ -23,7 +23,8 @@ struct RouteCreationMapView: View {
         _viewModel = StateObject(wrappedValue: CreateRouteViewModel(
             gpxService: serviceProvider.gpxService,
             locationService: serviceProvider.locationService,
-            noaaChartService: serviceProvider.noaaChartService
+            noaaChartService: serviceProvider.noaaChartService,
+            allRoutesService: serviceProvider.allRoutesService
         ))
         print("📍 RouteCreationMapView: Initialized with route name '\(routeName)'")
     }
@@ -123,7 +124,7 @@ struct RouteCreationMapView: View {
                     Spacer()
                     
                     VStack(spacing: 8) {
-                        if viewModel.isExporting {
+                        if viewModel.isSaving {
                             ProgressView()
                                 .padding()
                                 .background(Color.white)
@@ -132,15 +133,15 @@ struct RouteCreationMapView: View {
                         }
                         
                         Button("Save Route") {
-                            print("📤 RouteCreationMapView: Save Route button tapped - canSaveRoute: \(viewModel.canSaveRoute)")
+                            print("💾 RouteCreationMapView: Save Route button tapped - canSaveRoute: \(viewModel.canSaveRoute)")
                             Task {
-                                await viewModel.exportRoute()
+                                await viewModel.saveRoute()
                             }
                         }
-                        .disabled(!viewModel.canSaveRoute || viewModel.isExporting)
+                        .disabled(!viewModel.canSaveRoute || viewModel.isSaving)
                         .padding(.horizontal, 20)
                         .padding(.vertical, 12)
-                        .background(viewModel.canSaveRoute && !viewModel.isExporting ? Color.blue : Color.gray)
+                        .background(viewModel.canSaveRoute && !viewModel.isSaving ? Color.blue : Color.gray)
                         .foregroundColor(.white)
                         .cornerRadius(25)
                         .shadow(radius: 3)
@@ -153,32 +154,40 @@ struct RouteCreationMapView: View {
             }
             
             // Success/Error overlays
-            if viewModel.exportSuccess {
+            if viewModel.saveSuccess {
                 VStack {
                     Spacer()
                     
-                    Text("Route saved successfully!")
-                        .foregroundColor(.white)
-                        .padding()
-                        .background(Color.green)
-                        .cornerRadius(10)
-                        .padding()
+                    VStack(spacing: 8) {
+                        Text("Route saved to database!")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                        
+                        Text("Your route is now available in All Routes and can be favorited.")
+                            .font(.caption)
+                            .foregroundColor(.white)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding()
+                    .background(Color.green)
+                    .cornerRadius(10)
+                    .padding()
                     
                     Spacer()
                 }
                 .transition(.move(edge: .bottom))
                 .onAppear {
-                    print("✅ RouteCreationMapView: Export success message displayed")
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                        print("📍 RouteCreationMapView: Auto-dismissing after successful export")
+                    print("✅ RouteCreationMapView: Save success message displayed")
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                        print("📍 RouteCreationMapView: Auto-dismissing after successful save")
                         dismiss()
                     }
                 }
             }
             
-            if !viewModel.exportError.isEmpty {
+            if !viewModel.saveError.isEmpty {
                 VStack {
-                    Text(viewModel.exportError)
+                    Text(viewModel.saveError)
                         .foregroundColor(.white)
                         .padding()
                         .background(Color.red)
@@ -190,7 +199,7 @@ struct RouteCreationMapView: View {
                 .transition(.move(edge: .top))
                 .onTapGesture {
                     print("🎛️ RouteCreationMapView: Error message tapped - clearing error")
-                    viewModel.exportError = ""
+                    viewModel.saveError = ""
                 }
             }
         }
