@@ -281,8 +281,8 @@ struct AllRouteRowView: View {
     
     private var favoriteButton: some View {
         Button(action: onFavoriteToggle) {
-            Image(systemName: route.isFavorite ? "heart.fill" : "heart")
-                .foregroundColor(isOperationInProgress ? .gray.opacity(0.5) : (route.isFavorite ? .red : .gray))
+            Image(systemName: route.isFavorite ? "star.fill" : "star")
+                .foregroundColor(isOperationInProgress ? .gray.opacity(0.5) : (route.isFavorite ? .yellow : .gray))
                 .font(.title3)
                 .frame(width: 24, height: 24)
                 .contentShape(Rectangle())
@@ -355,11 +355,21 @@ struct AllRouteRowView: View {
             )
             
             if route.isFavorite {
-                statItem(
-                    icon: "heart.fill",
-                    label: "Favorite",
-                    value: "★"
-                )
+                VStack(spacing: 2) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "star.fill")
+                            .font(.caption2)
+                            .foregroundColor(.yellow)
+                        
+                        Text("Favorite")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Text("★")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                }
             }
         }
     }

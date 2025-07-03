@@ -43,7 +43,7 @@ struct RouteFavoritesView: View {
                             .font(.title2)
                             .fontWeight(.semibold)
                         
-                        Text("Routes you mark as favorites will appear here.\nDownload or import routes and tap the heart to add them.")
+                        Text("Routes you mark as favorites will appear here.\nDownload or import routes and tap the star to add them.")
                             .multilineTextAlignment(.center)
                             .foregroundColor(.secondary)
                     }
@@ -265,8 +265,8 @@ struct AllRouteFavoriteRow: View {
             Spacer()
             
             Button(action: onToggleFavorite) {
-                Image(systemName: route.isFavorite ? "heart.fill" : "heart")
-                    .foregroundColor(route.isFavorite ? .red : .gray)
+                Image(systemName: route.isFavorite ? "star.fill" : "star")
+                    .foregroundColor(route.isFavorite ? .yellow : .gray)
                     .font(.title3)
             }
         }
