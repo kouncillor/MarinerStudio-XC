@@ -433,7 +433,7 @@ class CreateRouteViewModel: ObservableObject {
             let gpxFile = GpxFile(route: gpxRoute)
             
             // Generate GPX string for database storage
-            let gpxString = try await gpxService.generateGpxString(from: gpxFile)
+            let gpxString = try await gpxService.serializeGpxFile(gpxFile)
             print("✅ CreateRouteViewModel: GPX string generated successfully (\(gpxString.count) characters)")
             
             // Calculate route metrics
