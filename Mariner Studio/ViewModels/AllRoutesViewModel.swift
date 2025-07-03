@@ -15,6 +15,7 @@ class AllRoutesViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String = ""
     @Published var selectedFilter: String = "all"
+    @Published var operationsInProgress: Set<Int> = []
     
     // MARK: - Dependencies
     private let allRoutesService: AllRoutesDatabaseService
@@ -84,28 +85,61 @@ class AllRoutesViewModel: ObservableObject {
     // MARK: - Route Actions
     
     func toggleFavorite(_ route: AllRoute) {
+        // Check if operation is already in progress for this route
+        guard !operationsInProgress.contains(route.id) else {
+            print("📋 ALL ROUTES: ⚠️ Operation already in progress for route: \(route.name)")
+            return
+        }
+        
         print("📋 ALL ROUTES: Toggling favorite for route: \(route.name)")
+        operationsInProgress.insert(route.id)
         
         Task {
             do {
                 try await allRoutesService.toggleFavoriteAsync(routeId: route.id)
                 
-                // Reload routes to reflect the change
-                await loadRoutes()
+                // Update the route in the local array instead of reloading everything
+                await MainActor.run {
+                    if let index = self.routes.firstIndex(where: { $0.id == route.id }) {
+                        self.routes[index] = AllRoute(
+                            id: route.id,
+                            name: route.name,
+                            gpxData: route.gpxData,
+                            waypointCount: route.waypointCount,
+                            totalDistance: route.totalDistance,
+                            sourceType: route.sourceType,
+                            isFavorite: !route.isFavorite,
+                            createdAt: route.createdAt,
+                            lastAccessedAt: route.lastAccessedAt,
+                            tags: route.tags,
+                            notes: route.notes
+                        )
+                        self.applyFilter()
+                    }
+                    self.operationsInProgress.remove(route.id)
+                }
                 
-                print("📋 ALL ROUTES: ✅ Successfully toggled favorite for '\(route.name)'")
+                print("📋 ALL ROUTES: ✅ Successfully toggled favorite for '\(route.name)' to \(!route.isFavorite)")
                 
             } catch {
                 print("📋 ALL ROUTES: ❌ Failed to toggle favorite: \(error)")
                 await MainActor.run {
                     self.errorMessage = "Failed to update favorite status: \(error.localizedDescription)"
+                    self.operationsInProgress.remove(route.id)
                 }
             }
         }
     }
     
     func deleteRoute(_ route: AllRoute) {
+        // Check if operation is already in progress for this route
+        guard !operationsInProgress.contains(route.id) else {
+            print("📋 ALL ROUTES: ⚠️ Operation already in progress for route: \(route.name)")
+            return
+        }
+        
         print("📋 ALL ROUTES: Deleting route: \(route.name) (ID: \(route.id))")
+        operationsInProgress.insert(route.id)
         
         Task {
             do {
@@ -116,17 +150,22 @@ class AllRoutesViewModel: ObservableObject {
                     await MainActor.run {
                         self.routes.removeAll { $0.id == route.id }
                         self.applyFilter()
+                        self.operationsInProgress.remove(route.id)
                     }
                     
                     print("📋 ALL ROUTES: ✅ Successfully deleted route '\(route.name)'")
                 } else {
                     print("📋 ALL ROUTES: ⚠️ No rows affected when deleting route '\(route.name)'")
+                    await MainActor.run {
+                        self.operationsInProgress.remove(route.id)
+                    }
                 }
                 
             } catch {
                 print("📋 ALL ROUTES: ❌ Failed to delete route: \(error)")
                 await MainActor.run {
                     self.errorMessage = "Failed to delete route: \(error.localizedDescription)"
+                    self.operationsInProgress.remove(route.id)
                 }
             }
         }

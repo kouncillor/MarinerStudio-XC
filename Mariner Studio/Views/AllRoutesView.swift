@@ -121,6 +121,7 @@ struct AllRoutesView: View {
         List(viewModel.filteredRoutes) { route in
             AllRouteRowView(
                 route: route,
+                isOperationInProgress: viewModel.operationsInProgress.contains(route.id),
                 onFavoriteToggle: {
                     viewModel.toggleFavorite(route)
                 },
@@ -221,6 +222,7 @@ struct AllRoutesView: View {
 
 struct AllRouteRowView: View {
     let route: AllRoute
+    let isOperationInProgress: Bool
     let onFavoriteToggle: () -> Void
     let onDelete: () -> Void
     
@@ -259,7 +261,7 @@ struct AllRouteRowView: View {
                 Spacer()
                 
                 // Action buttons
-                HStack(spacing: 8) {
+                HStack(spacing: 20) {
                     favoriteButton
                     deleteButton
                 }
@@ -280,17 +282,27 @@ struct AllRouteRowView: View {
     private var favoriteButton: some View {
         Button(action: onFavoriteToggle) {
             Image(systemName: route.isFavorite ? "heart.fill" : "heart")
-                .foregroundColor(route.isFavorite ? .red : .gray)
+                .foregroundColor(isOperationInProgress ? .gray.opacity(0.5) : (route.isFavorite ? .red : .gray))
                 .font(.title3)
+                .frame(width: 24, height: 24)
+                .contentShape(Rectangle())
         }
+        .frame(minWidth: 44, minHeight: 44)
+        .contentShape(Rectangle())
+        .disabled(isOperationInProgress)
     }
     
     private var deleteButton: some View {
         Button(action: onDelete) {
             Image(systemName: "trash")
-                .foregroundColor(.red)
+                .foregroundColor(isOperationInProgress ? .gray.opacity(0.5) : .red)
                 .font(.title3)
+                .frame(width: 24, height: 24)
+                .contentShape(Rectangle())
         }
+        .frame(minWidth: 44, minHeight: 44)
+        .contentShape(Rectangle())
+        .disabled(isOperationInProgress)
     }
     
     private var sourceTypeColor: Color {
