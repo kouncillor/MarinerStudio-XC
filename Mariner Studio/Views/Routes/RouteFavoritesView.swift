@@ -136,15 +136,6 @@ struct RouteFavoritesView: View {
             }
             .navigationTitle("Favorite Routes")
             .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Refresh") {
-                        Task {
-                            await loadFavorites()
-                        }
-                    }
-                }
-            }
             .onAppear {
                 Task {
                     await loadFavorites()
@@ -362,13 +353,6 @@ struct AllRouteFavoriteRow: View {
                     Label(route.formattedDistance, systemImage: "ruler")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                }
-                
-                if let notes = route.notes, !notes.isEmpty {
-                    Text(notes)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
                 }
             }
             

@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreLocation
 
 struct SimpleRouteDetailsView: View {
     let route: AllRoute
@@ -74,22 +75,6 @@ struct SimpleRouteDetailsView: View {
                     label: "Total Distance", 
                     value: route.formattedDistance
                 )
-                
-                if let notes = route.notes, !notes.isEmpty {
-                    StatRow(
-                        icon: "note.text",
-                        label: "Notes",
-                        value: notes
-                    )
-                }
-                
-                if let tags = route.tags, !tags.isEmpty {
-                    StatRow(
-                        icon: "tag",
-                        label: "Tags",
-                        value: tags
-                    )
-                }
             }
         }
         .padding()
@@ -194,7 +179,10 @@ struct SimpleRouteDetailsView: View {
         
         Task {
             do {
-                let loadedGpxFile = try await serviceProvider.gpxService.loadGpxFile(from: route.gpxData)
+                var loadedGpxFile = try await serviceProvider.gpxService.loadGpxFile(from: route.gpxData)
+                
+                // Calculate distances and bearings between waypoints
+                loadedGpxFile = calculateDistancesAndBearings(for: loadedGpxFile)
                 
                 await MainActor.run {
                     self.gpxFile = loadedGpxFile
@@ -207,6 +195,50 @@ struct SimpleRouteDetailsView: View {
                 }
             }
         }
+    }
+    
+    // MARK: - Distance and Bearing Calculations
+    
+    private func calculateDistancesAndBearings(for gpxFile: GpxFile) -> GpxFile {
+        var updatedGpxFile = gpxFile
+        var updatedRoutePoints = gpxFile.route.routePoints
+        
+        // Calculate distance and bearing from each waypoint to the next
+        for i in 0..<(updatedRoutePoints.count - 1) {
+            let currentPoint = updatedRoutePoints[i]
+            let nextPoint = updatedRoutePoints[i + 1]
+            
+            let fromCoord = CLLocationCoordinate2D(
+                latitude: currentPoint.latitude,
+                longitude: currentPoint.longitude
+            )
+            let toCoord = CLLocationCoordinate2D(
+                latitude: nextPoint.latitude,
+                longitude: nextPoint.longitude
+            )
+            
+            // Calculate distance in nautical miles
+            let distanceKilometers = serviceProvider.routeCalculationService.calculateDistance(from: fromCoord, to: toCoord)
+            let distanceNauticalMiles = distanceKilometers / 1.852 // Convert kilometers to nautical miles
+            
+            // Calculate bearing in degrees
+            let bearing = serviceProvider.routeCalculationService.calculateBearing(from: fromCoord, to: toCoord)
+            
+            // Update the current point with calculated values
+            updatedRoutePoints[i].distanceToNext = distanceNauticalMiles
+            updatedRoutePoints[i].bearingToNext = bearing
+        }
+        
+        // Last waypoint has no "next" waypoint, so distance and bearing remain 0
+        if !updatedRoutePoints.isEmpty {
+            let lastIndex = updatedRoutePoints.count - 1
+            updatedRoutePoints[lastIndex].distanceToNext = 0.0
+            updatedRoutePoints[lastIndex].bearingToNext = 0.0
+        }
+        
+        // Update the route with calculated points
+        updatedGpxFile.route.routePoints = updatedRoutePoints
+        return updatedGpxFile
     }
 }
 
@@ -284,7 +316,7 @@ struct SimpleWaypointRow: View {
                             Text("Distance")
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
-                            Text(String(format: "%.1f nm", waypoint.distanceToNext))
+                            Text(String(format: "%.3f nm", waypoint.distanceToNext))
                                 .font(.caption)
                                 .fontWeight(.medium)
                                 .foregroundColor(.green)
