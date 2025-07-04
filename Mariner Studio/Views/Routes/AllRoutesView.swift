@@ -36,11 +36,6 @@ struct AllRoutesView: View {
             }
             .navigationTitle("All Routes")
             .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    refreshButton
-                }
-            }
             .onAppear {
                 viewModel.loadRoutes()
             }
@@ -51,26 +46,6 @@ struct AllRoutesView: View {
     
     private var headerView: some View {
         VStack(spacing: 12) {
-            HStack {
-                Image(systemName: "list.bullet")
-                    .font(.title2)
-                    .foregroundColor(.blue)
-                
-                Text("All Available Routes")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                
-                Spacer()
-                
-                if !viewModel.routes.isEmpty {
-                    Text("\(viewModel.routes.count) routes")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            }
-            .padding(.horizontal)
-            .padding(.top)
-            
             // Filter buttons
             filterButtonsView
             
@@ -121,15 +96,30 @@ struct AllRoutesView: View {
         List(viewModel.filteredRoutes) { route in
             AllRouteRowView(
                 route: route,
-                isOperationInProgress: viewModel.operationsInProgress.contains(route.id),
-                onFavoriteToggle: {
-                    viewModel.toggleFavorite(route)
-                },
-                onDelete: {
-                    viewModel.deleteRoute(route)
-                }
+                isOperationInProgress: viewModel.operationsInProgress.contains(route.id)
             )
             .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                // Delete button
+                Button(role: .destructive) {
+                    viewModel.deleteRoute(route)
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+                .disabled(viewModel.operationsInProgress.contains(route.id))
+                
+                // Favorite button
+                Button {
+                    viewModel.toggleFavorite(route)
+                } label: {
+                    Label(
+                        route.isFavorite ? "Unfavorite" : "Favorite",
+                        systemImage: route.isFavorite ? "star.fill" : "star"
+                    )
+                }
+                .tint(route.isFavorite ? .gray : .yellow)
+                .disabled(viewModel.operationsInProgress.contains(route.id))
+            }
         }
         .listStyle(PlainListStyle())
         .refreshable {
@@ -206,16 +196,6 @@ struct AllRoutesView: View {
         }
     }
     
-    // MARK: - Refresh Button
-    
-    private var refreshButton: some View {
-        Button(action: {
-            viewModel.refresh()
-        }) {
-            Image(systemName: "arrow.clockwise")
-        }
-        .disabled(viewModel.isLoading)
-    }
 }
 
 // MARK: - All Route Row View
@@ -223,52 +203,40 @@ struct AllRoutesView: View {
 struct AllRouteRowView: View {
     let route: AllRoute
     let isOperationInProgress: Bool
-    let onFavoriteToggle: () -> Void
-    let onDelete: () -> Void
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Route Header
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 8) {
-                        Text(route.name)
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                        
-                        // Source type indicator
-                        HStack(spacing: 4) {
-                            Image(systemName: route.sourceTypeIcon)
-                                .font(.caption2)
-                            Text(route.sourceTypeDisplayName)
-                                .font(.caption2)
-                        }
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(sourceTypeColor.opacity(0.2))
-                        .foregroundColor(sourceTypeColor)
-                        .cornerRadius(4)
-                    }
+                    Text(route.name)
+                        .font(.headline)
+                        .fontWeight(.semibold)
                     
-                    if let notes = route.notes, !notes.isEmpty {
-                        Text(notes)
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                            .lineLimit(2)
+                    // Source type indicator
+                    HStack(spacing: 4) {
+                        Image(systemName: route.sourceTypeIcon)
+                            .font(.caption2)
+                        Text(route.sourceTypeDisplayName)
+                            .font(.caption2)
                     }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(sourceTypeColor.opacity(0.2))
+                    .foregroundColor(sourceTypeColor)
+                    .cornerRadius(4)
                 }
                 
                 Spacer()
                 
-                // Action buttons
-                HStack(spacing: 20) {
-                    favoriteButton
-                    deleteButton
+                // Show favorite indicator if favorited
+                if route.isFavorite {
+                    Image(systemName: "star.fill")
+                        .foregroundColor(.yellow)
+                        .font(.title3)
                 }
             }
             
-            // Route Details
-            routeDetailsView
             
             // Route Stats
             routeStatsView
@@ -279,31 +247,6 @@ struct AllRouteRowView: View {
         .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
     }
     
-    private var favoriteButton: some View {
-        Button(action: onFavoriteToggle) {
-            Image(systemName: route.isFavorite ? "star.fill" : "star")
-                .foregroundColor(isOperationInProgress ? .gray.opacity(0.5) : (route.isFavorite ? .yellow : .gray))
-                .font(.title3)
-                .frame(width: 24, height: 24)
-                .contentShape(Rectangle())
-        }
-        .frame(minWidth: 44, minHeight: 44)
-        .contentShape(Rectangle())
-        .disabled(isOperationInProgress)
-    }
-    
-    private var deleteButton: some View {
-        Button(action: onDelete) {
-            Image(systemName: "trash")
-                .foregroundColor(isOperationInProgress ? .gray.opacity(0.5) : .red)
-                .font(.title3)
-                .frame(width: 24, height: 24)
-                .contentShape(Rectangle())
-        }
-        .frame(minWidth: 44, minHeight: 44)
-        .contentShape(Rectangle())
-        .disabled(isOperationInProgress)
-    }
     
     private var sourceTypeColor: Color {
         switch route.sourceType {
@@ -318,33 +261,11 @@ struct AllRouteRowView: View {
         }
     }
     
-    private var routeDetailsView: some View {
-        HStack(spacing: 16) {
-            if let tags = route.tags, !tags.isEmpty {
-                Label {
-                    Text(tags)
-                        .font(.caption)
-                } icon: {
-                    Image(systemName: "tag")
-                        .foregroundColor(.orange)
-                }
-            }
-            
-            Label {
-                Text(route.formattedCreatedDate)
-                    .font(.caption)
-            } icon: {
-                Image(systemName: "calendar")
-                    .foregroundColor(.green)
-            }
-        }
-    }
-    
     private var routeStatsView: some View {
         HStack(spacing: 20) {
             statItem(
                 icon: "point.3.connected.trianglepath.dotted",
-                label: "Points",
+                label: "Waypoints",
                 value: "\(route.waypointCount)"
             )
             
@@ -353,24 +274,6 @@ struct AllRouteRowView: View {
                 label: "Distance",
                 value: route.formattedDistance
             )
-            
-            if route.isFavorite {
-                VStack(spacing: 2) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "star.fill")
-                            .font(.caption2)
-                            .foregroundColor(.yellow)
-                        
-                        Text("Favorite")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    Text("★")
-                        .font(.caption)
-                        .fontWeight(.medium)
-                }
-            }
         }
     }
     
@@ -396,5 +299,51 @@ struct AllRouteRowView: View {
 // MARK: - Preview
 
 #Preview {
-    AllRoutesView()
+    // Create mock data for preview
+    let mockRoutes = [
+        AllRoute(
+            id: 1,
+            name: "Boston to NYC",
+            gpxData: "",
+            waypointCount: 12,
+            totalDistance: 185.5,
+            sourceType: "public",
+            isFavorite: true,
+            tags: "Harbor, Commercial",
+            notes: "Popular commercial route"
+        ),
+        AllRoute(
+            id: 2,
+            name: "Cape Cod Loop",
+            gpxData: "",
+            waypointCount: 8,
+            totalDistance: 45.2,
+            sourceType: "imported",
+            isFavorite: false,
+            tags: "Scenic",
+            notes: "Beautiful coastal route"
+        ),
+        AllRoute(
+            id: 3,
+            name: "Custom Harbor Route",
+            gpxData: "",
+            waypointCount: 5,
+            totalDistance: 12.8,
+            sourceType: "created",
+            isFavorite: true,
+            notes: "Local harbor navigation"
+        )
+    ]
+    
+    // Create preview with mock data
+    VStack(spacing: 16) {
+        ForEach(mockRoutes) { route in
+            AllRouteRowView(
+                route: route,
+                isOperationInProgress: false
+            )
+            .padding(.horizontal)
+        }
+    }
+    .background(Color(.systemGroupedBackground))
 }
