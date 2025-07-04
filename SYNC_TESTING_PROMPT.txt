@@ -1,0 +1,102 @@
+SYNC TESTING PROMPT FOR MARINER STUDIO
+=========================================
+
+CONTEXT:
+--------
+I have successfully fixed the WeatherStationSyncService to use proper ID-based synchronization instead of coordinate-based logic. The weather sync is now working perfectly with no duplicate records or infinite update loops. I need to apply the same fixes to the other sync services in my iOS app.
+
+BACKGROUND ISSUE:
+-----------------
+The original problem was that sync services were using coordinate-based keys for deduplication, which caused:
+1. Duplicate records due to floating-point precision differences
+2. Failed unique constraints in Supabase
+3. Infinite update loops during conflict resolution
+4. Coordinate-based logic mixing with ID-based tracking
+
+SOLUTION IMPLEMENTED FOR WEATHER SYNC:
+--------------------------------------
+1. **Removed coordinate-based unique constraints** from Supabase schema
+2. **Converted to pure ID-based sync** using UUIDs for tracking
+3. **Added remote_id column** to local SQLite tables for linking
+4. **Rewrote sync logic** to use:
+   - Upload: Local records without remote_id
+   - Download: Remote records not in local remote_id set  
+   - Conflict resolution: Match by remote_id, last-write-wins
+5. **Fixed timestamp preservation** during conflict resolution to prevent loops
+
+FILES THAT NEED SIMILAR FIXES:
+------------------------------
+1. **TideStationSyncService** (if it exists)
+2. **CurrentStationSyncService** (if it exists) 
+3. **NavUnitSyncService** (confirmed to exist)
+4. Any other sync services following coordinate-based patterns
+
+SPECIFIC TASKS TO COMPLETE:
+---------------------------
+
+**Phase 1: Analysis**
+- Search the codebase for all sync services ending in "SyncService"
+- Identify which ones use coordinate-based logic vs ID-based logic
+- Check Supabase schema for coordinate-based unique constraints
+- Review local database schemas for missing remote_id columns
+
+**Phase 2: Database Schema Updates**  
+- Drop coordinate-based unique constraints from Supabase tables
+- Add remote_id columns to local SQLite tables where missing
+- Update local model classes to include remoteId: String? field
+
+**Phase 3: Code Rewrite**
+- Convert coordinate-based sync logic to ID-based matching
+- Implement proper upload/download/conflict resolution like WeatherStationSyncService
+- Add logging to verify timestamp preservation and detect loops
+- Remove all coordinate-based deduplication logic
+
+**Phase 4: Testing**
+- Test each sync service for duplicate prevention
+- Verify no infinite update loops occur
+- Confirm proper ID-based tracking works
+- Test conflict resolution with last-write-wins strategy
+
+REFERENCE IMPLEMENTATION:
+-------------------------
+Use `/Users/timothyrussell/Documents/MarinerStudio-XC/Mariner Studio/Services/Sync/WeatherStationSyncService.swift` as the reference for proper ID-based sync implementation.
+
+Key methods to replicate:
+- `uploadNewLocalRecords()` - Upload records without remote_id
+- `downloadNewRemoteRecords()` - Download records not in local
+- `updateConflictingRecords()` - Resolve conflicts by remote_id matching
+- `updateLocalRecordWithRemoteId()` - Link uploaded records to remote IDs
+
+VERIFICATION CRITERIA:
+---------------------
+✅ No coordinate-based unique constraints in database schemas
+✅ All sync services use pure ID-based logic
+✅ Proper remote_id tracking in local database
+✅ No duplicate records created during sync
+✅ No infinite update loops (verify with timestamp logging)
+✅ Conflict resolution preserves exact timestamps
+✅ Upload/download/conflict phases work correctly
+
+LOG PATTERNS TO LOOK FOR:
+-------------------------
+- "✅🔧🌤️ UPDATE VERIFICATION: Timestamps match (diff: Xs) - NO LOOP"
+- "⚠️🔧🌤️ UPDATE VERIFICATION: Timestamps differ by Xs - POTENTIAL LOOP!"
+- Upload/download counts should be stable across multiple syncs
+- ID-based analysis should show matching local and remote ID sets
+
+IMPORTANT NOTES:
+---------------
+- NEVER use coordinates for sync logic - only use UUIDs
+- Always preserve exact timestamps during conflict resolution  
+- Test with multiple devices to ensure proper sync behavior
+- Add comprehensive logging for debugging sync issues
+- Follow the exact same patterns as WeatherStationSyncService
+
+START WITH:
+-----------
+1. Run: `find . -name "*SyncService.swift" -type f` to find all sync services
+2. Check each one for coordinate-based logic patterns
+3. Prioritize services that show duplicate record issues
+4. Apply the same ID-based transformation as weather sync
+
+This prompt should be used in a fresh chat session to systematically fix all remaining sync services in the Mariner Studio app.

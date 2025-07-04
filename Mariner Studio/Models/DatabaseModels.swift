@@ -146,10 +146,14 @@ struct DbMoonPhase {
 }
 
 struct WeatherLocationFavorite: Identifiable {
-    let id = UUID()
+    let id: Int64
     let latitude: Double
     let longitude: Double
     let locationName: String
     let isFavorite: Bool
     let createdAt: Date
+    let userId: String?
+    let deviceId: String?
+    let lastModified: Date?
+    let remoteId: String?
 }
