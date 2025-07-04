@@ -9,6 +9,12 @@ struct RouteFavoritesView: View {
     @State private var showingGpxView = false
     @State private var selectedGpxFile: GpxFile?
     @State private var selectedRouteName: String = ""
+    @State private var showingRouteDetails = false
+    @State private var selectedRouteForDetails: AllRoute?
+    @State private var showingDeleteConfirmation = false
+    @State private var routeToDelete: AllRoute?
+    @State private var showingUnfavoriteConfirmation = false
+    @State private var routeToUnfavorite: AllRoute?
     
     var filteredFavorites: [AllRoute] {
         if searchText.isEmpty {
@@ -60,14 +66,60 @@ struct RouteFavoritesView: View {
                             AllRouteFavoriteRow(
                                 route: favorite,
                                 onTap: {
-                                    loadRoute(favorite)
+                                    // Do nothing when tapping the main card
                                 },
                                 onToggleFavorite: {
-                                    toggleFavorite(favorite)
+                                    if favorite.isFavorite {
+                                        routeToUnfavorite = favorite
+                                        showingUnfavoriteConfirmation = true
+                                    } else {
+                                        toggleFavorite(favorite)
+                                    }
                                 }
                             )
+                            .swipeActions(edge: .leading) {
+                                // Voyage Plan button (green) - swipe left
+                                Button {
+                                    loadRoute(favorite)
+                                } label: {
+                                    Label("Voyage Plan", systemImage: "map")
+                                }
+                                .tint(.green)
+                            }
+                            .swipeActions(edge: .trailing) {
+                                // Delete button (red) - rightmost
+                                Button(role: .destructive) {
+                                    routeToDelete = favorite
+                                    showingDeleteConfirmation = true
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                                
+                                // Details button (blue) - middle
+                                Button {
+                                    showRouteDetails(favorite)
+                                } label: {
+                                    Label("Details", systemImage: "info.circle")
+                                }
+                                .tint(.blue)
+                                
+                                // Favorite button (yellow) - leftmost
+                                Button {
+                                    if favorite.isFavorite {
+                                        routeToUnfavorite = favorite
+                                        showingUnfavoriteConfirmation = true
+                                    } else {
+                                        toggleFavorite(favorite)
+                                    }
+                                } label: {
+                                    Label(
+                                        favorite.isFavorite ? "Unfavorite" : "Favorite",
+                                        systemImage: favorite.isFavorite ? "star.fill" : "star"
+                                    )
+                                }
+                                .tint(.yellow)
+                            }
                         }
-                        .onDelete(perform: deleteFavorites)
                     }
                     .listStyle(PlainListStyle())
                 }
@@ -105,6 +157,44 @@ struct RouteFavoritesView: View {
                         preLoadedRoute: gpxFile,
                         routeName: selectedRouteName
                     )
+                }
+            }
+            .navigationDestination(isPresented: $showingRouteDetails) {
+                if let route = selectedRouteForDetails {
+                    SimpleRouteDetailsView(route: route)
+                        .environmentObject(serviceProvider)
+                }
+            }
+            .alert("Delete Route Permanently?", isPresented: $showingDeleteConfirmation) {
+                Button("Cancel", role: .cancel) {
+                    routeToDelete = nil
+                }
+                Button("Delete", role: .destructive) {
+                    if let route = routeToDelete {
+                        Task {
+                            await deleteFavorite(route)
+                        }
+                    }
+                    routeToDelete = nil
+                }
+            } message: {
+                if let route = routeToDelete {
+                    Text("This will permanently delete '\(route.name)' and all its waypoint data from your device. This action cannot be undone.")
+                }
+            }
+            .alert("Remove from Favorites?", isPresented: $showingUnfavoriteConfirmation) {
+                Button("Cancel", role: .cancel) {
+                    routeToUnfavorite = nil
+                }
+                Button("Remove", role: .destructive) {
+                    if let route = routeToUnfavorite {
+                        toggleFavorite(route)
+                    }
+                    routeToUnfavorite = nil
+                }
+            } message: {
+                if let route = routeToUnfavorite {
+                    Text("This will remove '\(route.name)' from your favorites list. The route will still be available in All Routes.")
                 }
             }
         }
@@ -189,6 +279,26 @@ struct RouteFavoritesView: View {
                 await MainActor.run {
                     errorMessage = "Failed to update favorite: \(error.localizedDescription)"
                 }
+            }
+        }
+    }
+    
+    private func showRouteDetails(_ route: AllRoute) {
+        selectedRouteForDetails = route
+        showingRouteDetails = true
+    }
+    
+    private func deleteFavorite(_ route: AllRoute) async {
+        do {
+            try await serviceProvider.allRoutesService.deleteRouteAsync(routeId: route.id)
+            
+            await MainActor.run {
+                favoriteRoutes.removeAll { $0.id == route.id }
+                print("⭐ FAVORITES: Deleted route '\(route.name)'")
+            }
+        } catch {
+            await MainActor.run {
+                errorMessage = "Failed to delete favorite: \(error.localizedDescription)"
             }
         }
     }
@@ -326,4 +436,78 @@ struct RouteFavoriteRow: View {
             onTap()
         }
     }
+}
+
+// MARK: - Preview
+
+#Preview {
+    // Create mock ServiceProvider for preview
+    let mockServiceProvider = ServiceProvider()
+    
+    // Create mock favorite routes for preview
+    let mockRoutes = [
+        AllRoute(
+            id: 1,
+            name: "Boston Harbor Tour",
+            gpxData: "<gpx></gpx1>",
+            waypointCount: 12,
+            totalDistance: 25.5,
+            sourceType: "public",
+            isFavorite: true,
+            tags: "Harbor, Scenic",
+            notes: "Beautiful harbor route with historic landmarks"
+        ),
+        AllRoute(
+            id: 2,
+            name: "Cape Cod Bay Crossing",
+            gpxData: "<gpx></gpx>",
+            waypointCount: 6,
+            totalDistance: 18.3,
+            sourceType: "imported",
+            isFavorite: true,
+            tags: "Open Water",
+            notes: "Direct crossing route, check weather conditions"
+        ),
+        AllRoute(
+            id: 3,
+            name: "Martha's Vineyard Approach",
+            gpxData: "<gpx></gpx>",
+            waypointCount: 8,
+            totalDistance: 32.1,
+            sourceType: "created",
+            isFavorite: true,
+            notes: "Custom route avoiding shoals"
+        )
+    ]
+    
+    // Create preview view with mock data
+    VStack(spacing: 16) {
+        Text("Route Favorites Preview")
+            .font(.title2)
+            .fontWeight(.bold)
+            .padding()
+        
+        // Show SearchBar
+        SearchBar(text: .constant(""))
+            .padding(.horizontal)
+        
+        // Show favorite route rows
+        ScrollView {
+            LazyVStack(spacing: 12) {
+                ForEach(mockRoutes) { route in
+                    AllRouteFavoriteRow(
+                        route: route,
+                        onTap: { print("Tapped route: \(route.name)") },
+                        onToggleFavorite: { print("Toggled favorite: \(route.name)") }
+                    )
+                    .padding(.horizontal)
+                }
+            }
+            .padding(.vertical)
+        }
+        
+        Spacer()
+    }
+    .background(Color(.systemGroupedBackground))
+    .environmentObject(mockServiceProvider)
 }
