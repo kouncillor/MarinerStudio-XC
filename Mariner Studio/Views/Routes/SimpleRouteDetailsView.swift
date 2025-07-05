@@ -65,6 +65,17 @@ struct SimpleRouteDetailsView: View {
                         .cornerRadius(8)
                 }
             }
+            
+            // Start and End waypoints
+            if let gpxFile = gpxFile, !gpxFile.route.routePoints.isEmpty {
+                HStack {
+                    Text(routeEndpointsText)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    
+                    Spacer()
+                }
+            }
         }
         .padding()
         .background(Color(UIColor.systemBackground))
@@ -230,6 +241,20 @@ struct SimpleRouteDetailsView: View {
     }
     
     // MARK: - Helper Properties
+    
+    private var routeEndpointsText: String {
+        guard let gpxFile = gpxFile, !gpxFile.route.routePoints.isEmpty else {
+            return ""
+        }
+        
+        let firstPoint = gpxFile.route.routePoints.first!
+        let lastPoint = gpxFile.route.routePoints.last!
+        
+        let startName = firstPoint.name ?? "Start"
+        let endName = lastPoint.name ?? "End"
+        
+        return "\(startName) - \(endName)"
+    }
     
     private var sourceTypeColor: Color {
         switch route.sourceType {
@@ -594,6 +619,15 @@ struct SimpleRouteDetailsViewPreview: View {
                         .background(Color.blue)
                         .cornerRadius(8)
                 }
+            }
+            
+            // Mock Start and End waypoints
+            HStack {
+                Text("Boston Harbor Start - Boston Harbor End")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                
+                Spacer()
             }
         }
         .padding()
