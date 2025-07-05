@@ -18,8 +18,9 @@ class ImportPersonalRoutesViewModel: ObservableObject {
     // MARK: - Dependencies
     private let allRoutesService: AllRoutesDatabaseService
     private let gpxService: ExtendedGpxServiceProtocol
+    private let routeCalculationService: RouteCalculationService
     
-    init(allRoutesService: AllRoutesDatabaseService? = nil, gpxService: ExtendedGpxServiceProtocol? = nil) {
+    init(allRoutesService: AllRoutesDatabaseService? = nil, gpxService: ExtendedGpxServiceProtocol? = nil, routeCalculationService: RouteCalculationService? = nil) {
         // Use provided services or create fallbacks
         if let routesService = allRoutesService {
             self.allRoutesService = routesService
@@ -36,6 +37,14 @@ class ImportPersonalRoutesViewModel: ObservableObject {
         } else {
             self.gpxService = GpxServiceFactory.shared.getDefaultGpxService()
             print("📥 IMPORT: ⚠️ Using default GPX service from factory")
+        }
+        
+        if let calcService = routeCalculationService {
+            self.routeCalculationService = calcService
+            print("📥 IMPORT: ✅ Using provided RouteCalculationService")
+        } else {
+            self.routeCalculationService = RouteCalculationServiceImpl()
+            print("📥 IMPORT: ⚠️ Creating fallback RouteCalculationService")
         }
     }
     
@@ -155,12 +164,15 @@ class ImportPersonalRoutesViewModel: ObservableObject {
         // TODO: In future, preserve original GPX data if needed
         gpxData = generateGpxData(from: gpxFile)
         
+        // Calculate total distance from route points
+        let calculatedDistance = routeCalculationService.calculateTotalDistance(from: gpxFile.route.routePoints)
+        
         // Create AllRoute object for imported route
         let allRoute = AllRoute(
             name: gpxFile.route.name.isEmpty ? originalFileName : gpxFile.route.name,
             gpxData: gpxData,
             waypointCount: gpxFile.route.routePoints.count,
-            totalDistance: gpxFile.route.totalDistance,
+            totalDistance: calculatedDistance,
             sourceType: "imported",
             isFavorite: false,
             createdAt: Date(),

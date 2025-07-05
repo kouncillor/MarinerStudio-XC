@@ -569,6 +569,266 @@ final class SupabaseManager {
             }
         }
     
+    // MARK: - Weather Favorites Methods
+    
+    /// Retrieve all weather location favorites for the specified user from Supabase
+    /// Used for syncing weather favorites between devices and users
+    /// - Parameter userId: The authenticated user's unique identifier
+    /// - Returns: Array of remote weather favorites
+    /// - Throws: Database errors or network issues
+    func getWeatherFavorites(userId: UUID) async throws -> [RemoteWeatherFavorite] {
+        let operationId = startOperation("getWeatherFavorites", details: "userId: \(userId)")
+        
+        do {
+            logQueue.async {
+                print("📥🌤️ WEATHER_FAVORITES_FETCH: Starting weather favorites query for user")
+                print("📥🌤️ WEATHER_FAVORITES_FETCH: Table = user_weather_favorites")
+                print("📥🌤️ WEATHER_FAVORITES_FETCH: User ID = \(userId)")
+                print("📥🌤️ WEATHER_FAVORITES_FETCH: Filter = user_id eq \(userId)")
+                print("📥🌤️ WEATHER_FAVORITES_FETCH: Timestamp = \(Date())")
+            }
+            
+            let response: PostgrestResponse<[RemoteWeatherFavorite]> = try await client
+                .from("user_weather_favorites")
+                .select("*")
+                .eq("user_id", value: userId)
+                .execute()
+            
+            logQueue.async {
+                print("✅📥🌤️ WEATHER_FAVORITES_FETCH_SUCCESS: Weather favorites retrieved successfully")
+                print("✅📥🌤️ WEATHER_FAVORITES_FETCH_SUCCESS: User = \(userId)")
+                print("✅📥🌤️ WEATHER_FAVORITES_FETCH_SUCCESS: Count = \(response.value.count)")
+                
+                if !response.value.isEmpty {
+                    print("✅📥🌤️ WEATHER_FAVORITES_FETCH_SUCCESS: Sample locations:")
+                    for (index, favorite) in response.value.prefix(5).enumerated() {
+                        print("   [\(index + 1)] \(favorite.latitude),\(favorite.longitude) - \(favorite.locationName) (favorite: \(favorite.isFavorite))")
+                    }
+                    if response.value.count > 5 {
+                        print("   ... and \(response.value.count - 5) more")
+                    }
+                } else {
+                    print("✅📥🌤️ WEATHER_FAVORITES_FETCH_SUCCESS: No weather favorites found for user")
+                }
+            }
+            
+            endOperation(operationId, success: true)
+            return response.value
+            
+        } catch {
+            logQueue.async {
+                print("❌📥🌤️ WEATHER_FAVORITES_FETCH_ERROR: Failed to retrieve weather favorites")
+                print("❌📥🌤️ WEATHER_FAVORITES_FETCH_ERROR: User = \(userId)")
+                print("❌📥🌤️ WEATHER_FAVORITES_FETCH_ERROR_DETAILS: \(error.localizedDescription)")
+                print("❌📥🌤️ WEATHER_FAVORITES_FETCH_ERROR_TYPE: \(type(of: error))")
+                
+                // Log additional error context for debugging
+                if let postgrestError = error as? PostgrestError {
+                    print("❌📥🌤️ WEATHER_FAVORITES_FETCH_POSTGREST_ERROR: \(postgrestError)")
+                    if let code = postgrestError.code {
+                        print("❌📥🌤️ WEATHER_FAVORITES_FETCH_ERROR_CODE: \(code)")
+                    }
+                    print("❌📥🌤️ WEATHER_FAVORITES_FETCH_ERROR_MESSAGE: \(postgrestError.message)")
+                }
+            }
+            
+            endOperation(operationId, success: false, error: error)
+            throw error
+        }
+    }
+    
+    /// Insert or update a weather location favorite in Supabase
+    /// Uses upsert to handle both new inserts and updates automatically
+    /// - Parameter favorite: The weather favorite data to insert/update
+    /// - Throws: Database errors or network issues
+    func upsertWeatherFavorite(_ favorite: RemoteWeatherFavorite) async throws {
+        let operationId = startOperation("upsertWeatherFavorite", 
+                                       details: "location: \(favorite.latitude),\(favorite.longitude), name: \(favorite.locationName)")
+        
+        do {
+            logQueue.async {
+                print("📤🌤️ WEATHER_FAVORITE_UPSERT: Starting weather favorite upsert")
+                print("📤🌤️ WEATHER_FAVORITE_UPSERT: Table = user_weather_favorites")
+                print("📤🌤️ WEATHER_FAVORITE_UPSERT: User ID = \(favorite.userId)")
+                print("📤🌤️ WEATHER_FAVORITE_UPSERT: Location = \(favorite.latitude),\(favorite.longitude)")
+                print("📤🌤️ WEATHER_FAVORITE_UPSERT: Location Name = \(favorite.locationName)")
+                print("📤🌤️ WEATHER_FAVORITE_UPSERT: Is Favorite = \(favorite.isFavorite)")
+                print("📤🌤️ WEATHER_FAVORITE_UPSERT: Last Modified = \(favorite.lastModified)")
+                print("📤🌤️ WEATHER_FAVORITE_UPSERT: Device ID = \(favorite.deviceId)")
+                print("📤🌤️ WEATHER_FAVORITE_UPSERT: Conflict Resolution = user_id,latitude,longitude")
+                print("📤🌤️ WEATHER_FAVORITE_UPSERT: Timestamp = \(Date())")
+            }
+            
+            try await client
+                .from("user_weather_favorites")
+                .upsert(favorite, onConflict: "user_id,latitude,longitude")
+                .execute()
+            
+            logQueue.async {
+                print("✅📤🌤️ WEATHER_FAVORITE_UPSERT_SUCCESS: Weather favorite upserted successfully")
+                print("✅📤🌤️ WEATHER_FAVORITE_UPSERT_SUCCESS: User = \(favorite.userId)")
+                print("✅📤🌤️ WEATHER_FAVORITE_UPSERT_SUCCESS: Location = \(favorite.latitude),\(favorite.longitude)")
+                print("✅📤🌤️ WEATHER_FAVORITE_UPSERT_SUCCESS: Name = \(favorite.locationName)")
+                print("✅📤🌤️ WEATHER_FAVORITE_UPSERT_SUCCESS: Favorite Status = \(favorite.isFavorite)")
+            }
+            
+            endOperation(operationId, success: true)
+            
+        } catch {
+            logQueue.async {
+                print("❌📤🌤️ WEATHER_FAVORITE_UPSERT_ERROR: Failed to upsert weather favorite")
+                print("❌📤🌤️ WEATHER_FAVORITE_UPSERT_ERROR: User = \(favorite.userId)")
+                print("❌📤🌤️ WEATHER_FAVORITE_UPSERT_ERROR: Location = \(favorite.latitude),\(favorite.longitude)")
+                print("❌📤🌤️ WEATHER_FAVORITE_UPSERT_ERROR: Name = \(favorite.locationName)")
+                print("❌📤🌤️ WEATHER_FAVORITE_UPSERT_ERROR_DETAILS: \(error.localizedDescription)")
+                print("❌📤🌤️ WEATHER_FAVORITE_UPSERT_ERROR_TYPE: \(type(of: error))")
+                
+                // Log the weather favorite data that failed for debugging
+                print("❌📤🌤️ WEATHER_FAVORITE_UPSERT_FAILED_DATA:")
+                print("   User ID: \(favorite.userId)")
+                print("   Latitude: \(favorite.latitude)")
+                print("   Longitude: \(favorite.longitude)")
+                print("   Location Name: \(favorite.locationName)")
+                print("   Is Favorite: \(favorite.isFavorite)")
+                print("   Last Modified: \(favorite.lastModified)")
+                print("   Device ID: \(favorite.deviceId)")
+                
+                // Log additional error context for debugging
+                if let postgrestError = error as? PostgrestError {
+                    print("❌📤🌤️ WEATHER_FAVORITE_UPSERT_POSTGREST_ERROR: \(postgrestError)")
+                    if let code = postgrestError.code {
+                        print("❌📤🌤️ WEATHER_FAVORITE_UPSERT_ERROR_CODE: \(code)")
+                    }
+                    print("❌📤🌤️ WEATHER_FAVORITE_UPSERT_ERROR_MESSAGE: \(postgrestError.message)")
+                }
+            }
+            
+            endOperation(operationId, success: false, error: error)
+            throw error
+        }
+    }
+    
+    /// Delete a specific weather location favorite from Supabase
+    /// Used for removing individual favorites during sync operations
+    /// - Parameters:
+    ///   - userId: The user who owns the favorite
+    ///   - latitude: The latitude of the weather location
+    ///   - longitude: The longitude of the weather location
+    /// - Throws: Database errors or network issues
+    func deleteWeatherFavorite(userId: UUID, latitude: Double, longitude: Double) async throws {
+        let operationId = startOperation("deleteWeatherFavorite", 
+                                       details: "userId: \(userId), location: \(latitude),\(longitude)")
+        
+        do {
+            logQueue.async {
+                print("🗑️🌤️ WEATHER_FAVORITE_DELETE: Starting weather favorite deletion")
+                print("🗑️🌤️ WEATHER_FAVORITE_DELETE: Table = user_weather_favorites")
+                print("🗑️🌤️ WEATHER_FAVORITE_DELETE: User ID = \(userId)")
+                print("🗑️🌤️ WEATHER_FAVORITE_DELETE: Location = \(latitude),\(longitude)")
+                print("🗑️🌤️ WEATHER_FAVORITE_DELETE: Delete Filter = user_id AND latitude AND longitude")
+                print("🗑️🌤️ WEATHER_FAVORITE_DELETE: Timestamp = \(Date())")
+            }
+            
+            try await client
+                .from("user_weather_favorites")
+                .delete()
+                .eq("user_id", value: userId)
+                .eq("latitude", value: latitude)
+                .eq("longitude", value: longitude)
+                .execute()
+            
+            logQueue.async {
+                print("✅🗑️🌤️ WEATHER_FAVORITE_DELETE_SUCCESS: Weather favorite deleted successfully")
+                print("✅🗑️🌤️ WEATHER_FAVORITE_DELETE_SUCCESS: User = \(userId)")
+                print("✅🗑️🌤️ WEATHER_FAVORITE_DELETE_SUCCESS: Location = \(latitude),\(longitude)")
+            }
+            
+            endOperation(operationId, success: true)
+            
+        } catch {
+            logQueue.async {
+                print("❌🗑️🌤️ WEATHER_FAVORITE_DELETE_ERROR: Failed to delete weather favorite")
+                print("❌🗑️🌤️ WEATHER_FAVORITE_DELETE_ERROR: User = \(userId)")
+                print("❌🗑️🌤️ WEATHER_FAVORITE_DELETE_ERROR: Location = \(latitude),\(longitude)")
+                print("❌🗑️🌤️ WEATHER_FAVORITE_DELETE_ERROR_DETAILS: \(error.localizedDescription)")
+                print("❌🗑️🌤️ WEATHER_FAVORITE_DELETE_ERROR_TYPE: \(type(of: error))")
+                
+                // Log additional error context for debugging
+                if let postgrestError = error as? PostgrestError {
+                    print("❌🗑️🌤️ WEATHER_FAVORITE_DELETE_POSTGREST_ERROR: \(postgrestError)")
+                }
+            }
+            
+            endOperation(operationId, success: false, error: error)
+            throw error
+        }
+    }
+    
+    /// Delete ALL weather location favorites for a specific user from Supabase
+    /// Used for bulk cleanup operations or complete sync resets
+    /// - Parameter userId: The user whose favorites should be deleted
+    /// - Returns: Number of favorites deleted
+    /// - Throws: Database errors or network issues
+    func deleteAllWeatherFavorites(userId: UUID) async throws -> Int {
+        let operationId = startOperation("deleteAllWeatherFavorites", details: "userId: \(userId)")
+        
+        do {
+            logQueue.async {
+                print("🗑️🌤️ WEATHER_BULK_DELETE: Starting bulk weather favorites deletion")
+                print("🗑️🌤️ WEATHER_BULK_DELETE: Table = user_weather_favorites")
+                print("🗑️🌤️ WEATHER_BULK_DELETE: User ID = \(userId)")
+                print("🗑️🌤️ WEATHER_BULK_DELETE: Delete Filter = user_id eq \(userId)")
+                print("🗑️🌤️ WEATHER_BULK_DELETE: Operation = DELETE ALL for user")
+                print("🗑️🌤️ WEATHER_BULK_DELETE: Timestamp = \(Date())")
+            }
+            
+            // First, get the count before deletion for reporting
+            let countResponse: PostgrestResponse<[RemoteWeatherFavorite]> = try await client
+                .from("user_weather_favorites")
+                .select("id")
+                .eq("user_id", value: userId)
+                .execute()
+            
+            let countBefore = countResponse.value.count
+            
+            logQueue.async {
+                print("🗑️🌤️ WEATHER_BULK_DELETE: Found \(countBefore) weather favorites to delete")
+            }
+            
+            // Perform the bulk deletion
+            try await client
+                .from("user_weather_favorites")
+                .delete()
+                .eq("user_id", value: userId)
+                .execute()
+            
+            logQueue.async {
+                print("✅🗑️🌤️ WEATHER_BULK_DELETE_SUCCESS: All weather favorites deleted successfully")
+                print("✅🗑️🌤️ WEATHER_BULK_DELETE_SUCCESS: User = \(userId)")
+                print("✅🗑️🌤️ WEATHER_BULK_DELETE_SUCCESS: Deleted Count = \(countBefore)")
+            }
+            
+            endOperation(operationId, success: true)
+            return countBefore
+            
+        } catch {
+            logQueue.async {
+                print("❌🗑️🌤️ WEATHER_BULK_DELETE_ERROR: Failed to delete all weather favorites")
+                print("❌🗑️🌤️ WEATHER_BULK_DELETE_ERROR: User = \(userId)")
+                print("❌🗑️🌤️ WEATHER_BULK_DELETE_ERROR_DETAILS: \(error.localizedDescription)")
+                print("❌🗑️🌤️ WEATHER_BULK_DELETE_ERROR_TYPE: \(type(of: error))")
+                
+                // Log additional error context for debugging
+                if let postgrestError = error as? PostgrestError {
+                    print("❌🗑️🌤️ WEATHER_BULK_DELETE_POSTGREST_ERROR: \(postgrestError)")
+                }
+            }
+            
+            endOperation(operationId, success: false, error: error)
+            throw error
+        }
+    }
+    
     // MARK: - Schema Discovery Methods
     
     /// Test if embedded_routes table exists and discover its structure

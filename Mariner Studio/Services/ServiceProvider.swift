@@ -42,6 +42,7 @@ class ServiceProvider: ObservableObject {
     // MARK: - Sync Services
     let currentStationSyncService: CurrentStationSyncService
     let navUnitSyncService: NavUnitSyncService
+    let weatherStationSyncService: WeatherStationSyncService
     
     // MARK: - Initialization
     init(locationService: LocationService? = nil) {
@@ -70,8 +71,8 @@ class ServiceProvider: ObservableObject {
             supabaseManager: SupabaseManager.shared
         )
         
-        
-        
+        // Initialize WeatherStationSyncService using singleton pattern (like TideStationSyncService)
+        self.weatherStationSyncService = WeatherStationSyncService.shared
         
         self.vesselService = VesselDatabaseService(databaseCore: databaseCore)
         self.buoyDatabaseService = BuoyDatabaseService(databaseCore: databaseCore)
@@ -81,7 +82,7 @@ class ServiceProvider: ObservableObject {
         self.allRoutesService = AllRoutesDatabaseService(databaseCore: databaseCore)
         print("📦 ServiceProvider: Initialized all database services.")
         
-        print("📦 ServiceProvider: Initialized sync services (TideStation, CurrentStation, NavUnit).")
+        print("📦 ServiceProvider: Initialized sync services (TideStation, CurrentStation, NavUnit, WeatherStation).")
         
         // Initialize Weather Services
         self.openMeteoService = WeatherServiceImpl()
@@ -120,7 +121,6 @@ class ServiceProvider: ObservableObject {
                 // Initialize tables
                 try await self.tideStationService.initializeTideStationFavoritesTableAsync()
                 try await self.currentStationService.initializeCurrentStationFavoritesTableAsync()
-                try await self.weatherService.initializeWeatherLocationFavoritesTableAsync()
                 try await self.mapOverlayService.initializeMapOverlaySettingsTableAsync()
                 try await self.routeFavoritesService.initializeRouteFavoritesTableAsync()
                 

@@ -19,8 +19,9 @@ class EmbeddedRoutesBrowseViewModel: ObservableObject {
     
     // MARK: - Dependencies
     private let allRoutesService: AllRoutesDatabaseService
+    private let routeCalculationService: RouteCalculationService
     
-    init(allRoutesService: AllRoutesDatabaseService? = nil) {
+    init(allRoutesService: AllRoutesDatabaseService? = nil, routeCalculationService: RouteCalculationService? = nil) {
         // Use provided service or create a new one with shared DatabaseCore
         if let service = allRoutesService {
             self.allRoutesService = service
@@ -30,6 +31,14 @@ class EmbeddedRoutesBrowseViewModel: ObservableObject {
             let databaseCore = DatabaseCore()
             self.allRoutesService = AllRoutesDatabaseService(databaseCore: databaseCore)
             print("🛣️ BROWSE: ⚠️ Creating fallback AllRoutesDatabaseService")
+        }
+        
+        if let calcService = routeCalculationService {
+            self.routeCalculationService = calcService
+            print("🛣️ BROWSE: ✅ Using provided RouteCalculationService")
+        } else {
+            self.routeCalculationService = RouteCalculationServiceImpl()
+            print("🛣️ BROWSE: ⚠️ Creating fallback RouteCalculationService")
         }
     }
     
@@ -128,12 +137,15 @@ class EmbeddedRoutesBrowseViewModel: ObservableObject {
     private func saveRouteToLocalDatabase(gpxFile: GpxFile, originalRoute: RemoteEmbeddedRoute) async throws {
         print("🛣️ BROWSE: Saving route to AllRoutes database")
         
+        // Calculate total distance from route points instead of using potentially incorrect Supabase value
+        let calculatedDistance = routeCalculationService.calculateTotalDistance(from: gpxFile.route.routePoints)
+        
         // Create AllRoute object from the remote route and GPX data
         let allRoute = AllRoute(
             name: originalRoute.name,
             gpxData: originalRoute.gpxData,
             waypointCount: gpxFile.route.routePoints.count,
-            totalDistance: Double(originalRoute.totalDistance),
+            totalDistance: calculatedDistance,
             sourceType: "public",
             isFavorite: false,
             createdAt: Date(),

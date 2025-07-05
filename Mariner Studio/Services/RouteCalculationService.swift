@@ -14,6 +14,8 @@ protocol RouteCalculationService {
     func calculateDistance(from: CLLocationCoordinate2D, to: CLLocationCoordinate2D) -> Double
     func calculateBearing(from: CLLocationCoordinate2D, to: CLLocationCoordinate2D) -> Double
     func formatDuration(_ duration: TimeInterval) -> String
+    func calculateTotalDistance(from coordinates: [CLLocationCoordinate2D]) -> Double
+    func calculateTotalDistance(from routePoints: [GpxRoutePoint]) -> Double
 }
 
 class RouteCalculationServiceImpl: RouteCalculationService {
@@ -92,6 +94,24 @@ class RouteCalculationServiceImpl: RouteCalculationService {
         } else {
             return "\(hours) hour\(hours != 1 ? "s" : "") \(minutes) minute\(minutes != 1 ? "s" : "")"
         }
+    }
+    
+    func calculateTotalDistance(from coordinates: [CLLocationCoordinate2D]) -> Double {
+        guard coordinates.count >= 2 else { return 0.0 }
+        
+        var totalDistance = 0.0
+        for i in 0..<(coordinates.count - 1) {
+            let distance = calculateDistance(from: coordinates[i], to: coordinates[i + 1])
+            totalDistance += distance
+        }
+        
+        print("📐 RouteCalculationService: Total route distance calculated: \(String(format: "%.2f", totalDistance)) nm")
+        return totalDistance
+    }
+    
+    func calculateTotalDistance(from routePoints: [GpxRoutePoint]) -> Double {
+        let coordinates = routePoints.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
+        return calculateTotalDistance(from: coordinates)
     }
     
     private func toRadians(_ degrees: Double) -> Double {
