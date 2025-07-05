@@ -591,3 +591,35 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         currentLocation = location
     }
 }
+
+// MARK: - Preview
+
+#Preview {
+    // Create mock route data
+    let mockRoutePoints = [
+        GpxRoutePoint(latitude: 42.3601, longitude: -71.0589, name: "Boston Harbor Start"),
+        GpxRoutePoint(latitude: 42.3528, longitude: -71.0520, name: "Fan Pier"),
+        GpxRoutePoint(latitude: 42.3467, longitude: -71.0428, name: "Castle Island"),
+        GpxRoutePoint(latitude: 42.3398, longitude: -71.0276, name: "Thompson Island"),
+        GpxRoutePoint(latitude: 42.3467, longitude: -71.0428, name: "Return to Castle Island"),
+        GpxRoutePoint(latitude: 42.3601, longitude: -71.0589, name: "Boston Harbor End")
+    ]
+    
+    let mockRoute = GpxRoute(
+        name: "Boston Harbor Tour",
+        routePoints: mockRoutePoints,
+        totalDistance: 12.5,
+        averageSpeed: 8.0
+    )
+    
+    let mockGpxFile = GpxFile(route: mockRoute)
+    
+    // Create a mock service provider for preview
+    let mockServiceProvider = ServiceProvider()
+    
+    GpxView(
+        serviceProvider: mockServiceProvider,
+        preLoadedRoute: mockGpxFile,
+        routeName: "Boston Harbor Tour"
+    )
+}
