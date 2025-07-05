@@ -78,13 +78,21 @@ struct RouteFavoritesView: View {
                                 }
                             )
                             .swipeActions(edge: .leading) {
-                                // Voyage Plan button (green) - swipe left
+                                // Voyage Plan button (green) - rightmost on left side
                                 Button {
                                     loadRoute(favorite)
                                 } label: {
                                     Label("Voyage Plan", systemImage: "map")
                                 }
                                 .tint(.green)
+                                
+                                // Details button (blue) - leftmost on left side
+                                Button {
+                                    showRouteDetails(favorite)
+                                } label: {
+                                    Label("Details", systemImage: "info.circle")
+                                }
+                                .tint(.blue)
                             }
                             .swipeActions(edge: .trailing) {
                                 // Delete button (red) - rightmost
@@ -95,15 +103,7 @@ struct RouteFavoritesView: View {
                                     Label("Delete", systemImage: "trash")
                                 }
                                 
-                                // Details button (blue) - middle
-                                Button {
-                                    showRouteDetails(favorite)
-                                } label: {
-                                    Label("Details", systemImage: "info.circle")
-                                }
-                                .tint(.blue)
-                                
-                                // Favorite button (yellow) - leftmost
+                                // Favorite button (yellow) - leftmost on right side
                                 Button {
                                     if favorite.isFavorite {
                                         routeToUnfavorite = favorite
@@ -323,9 +323,14 @@ struct AllRouteFavoriteRow: View {
     let route: AllRoute
     let onTap: () -> Void
     let onToggleFavorite: () -> Void
+    @State private var showLeftChevron = false
+    @State private var showRightChevron = false
     
     var body: some View {
         HStack {
+            // Left chevron indicator for swipe left (voyage plan)
+            SwipeIndicator(direction: .left, isVisible: showLeftChevron)
+            
             VStack(alignment: .leading, spacing: 4) {
                 // Source type indicator - moved to its own row above the title
                 HStack(spacing: 4) {
@@ -363,11 +368,17 @@ struct AllRouteFavoriteRow: View {
                     .foregroundColor(route.isFavorite ? .yellow : .gray)
                     .font(.title3)
             }
+            
+            // Right chevron indicator for swipe right (actions)
+            SwipeIndicator(direction: .right, isVisible: showRightChevron)
         }
         .padding(.vertical, 4)
         .contentShape(Rectangle())
         .onTapGesture {
             onTap()
+        }
+        .onAppear {
+            startPulsingAnimation()
         }
     }
     
@@ -382,6 +393,35 @@ struct AllRouteFavoriteRow: View {
         default:
             return .gray
         }
+    }
+    
+    private func startPulsingAnimation() {
+        // Start pulsing animation after a delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
+                showLeftChevron = true
+                showRightChevron = true
+            }
+        }
+    }
+}
+
+// MARK: - SwipeIndicator Component
+
+struct SwipeIndicator: View {
+    enum Direction {
+        case left, right
+    }
+    
+    let direction: Direction
+    let isVisible: Bool
+    
+    var body: some View {
+        Image(systemName: direction == .left ? "chevron.left" : "chevron.right")
+            .font(.title3)
+            .foregroundColor(.secondary)
+            .opacity(isVisible ? 0.6 : 0.0)
+            .animation(.easeInOut(duration: 0.8), value: isVisible)
     }
 }
 
@@ -425,69 +465,9 @@ struct RouteFavoriteRow: View {
 // MARK: - Preview
 
 #Preview {
-    // Create mock favorite routes for preview
-    let mockRoutes = [
-        AllRoute(
-            id: 1,
-            name: "Boston Harbor Tour",
-            gpxData: "<gpx></gpx>",
-            waypointCount: 12,
-            totalDistance: 25.5,
-            sourceType: "public",
-            isFavorite: true,
-            tags: "Harbor, Scenic",
-            notes: "Beautiful harbor route with historic landmarks"
-        ),
-        AllRoute(
-            id: 2,
-            name: "Cape Cod Bay Crossing",
-            gpxData: "<gpx></gpx>",
-            waypointCount: 6,
-            totalDistance: 18.3,
-            sourceType: "imported",
-            isFavorite: true,
-            tags: "Open Water",
-            notes: "Direct crossing route, check weather conditions"
-        ),
-        AllRoute(
-            id: 3,
-            name: "Martha's Vineyard Approach",
-            gpxData: "<gpx></gpx>",
-            waypointCount: 8,
-            totalDistance: 32.1,
-            sourceType: "created",
-            isFavorite: true,
-            notes: "Custom route avoiding shoals"
-        )
-    ]
+    // Create mock service provider for preview
+    let mockServiceProvider = ServiceProvider()
     
-    // Create preview view with mock data - simplified without ServiceProvider
-    VStack(spacing: 16) {
-        Text("Route Favorites Preview")
-            .font(.title2)
-            .fontWeight(.bold)
-            .padding()
-        
-        // Show SearchBar
-        SearchBar(text: .constant(""))
-            .padding(.horizontal)
-        
-        // Show favorite route rows
-        ScrollView {
-            LazyVStack(spacing: 12) {
-                ForEach(mockRoutes) { route in
-                    AllRouteFavoriteRow(
-                        route: route,
-                        onTap: { print("Tapped route: \(route.name)") },
-                        onToggleFavorite: { print("Toggled favorite: \(route.name)") }
-                    )
-                    .padding(.horizontal)
-                }
-            }
-            .padding(.vertical)
-        }
-        
-        Spacer()
-    }
-    .background(Color(.systemGroupedBackground))
+    RouteFavoritesView()
+        .environmentObject(mockServiceProvider)
 }
