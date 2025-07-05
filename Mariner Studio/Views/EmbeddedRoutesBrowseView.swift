@@ -10,8 +10,8 @@ import SwiftUI
 struct EmbeddedRoutesBrowseView: View {
     @StateObject private var viewModel: EmbeddedRoutesBrowseViewModel
     
-    init(allRoutesService: AllRoutesDatabaseService? = nil) {
-        _viewModel = StateObject(wrappedValue: EmbeddedRoutesBrowseViewModel(allRoutesService: allRoutesService))
+    init(allRoutesService: AllRoutesDatabaseService? = nil, routeCalculationService: RouteCalculationService? = nil) {
+        _viewModel = StateObject(wrappedValue: EmbeddedRoutesBrowseViewModel(allRoutesService: allRoutesService, routeCalculationService: routeCalculationService))
     }
     
     var body: some View {
@@ -38,7 +38,10 @@ struct EmbeddedRoutesBrowseView: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    refreshButton
+                    HStack {
+                        refreshButton
+                        HomeButton()
+                    }
                 }
             }
             .onAppear {

@@ -36,6 +36,7 @@ struct AllRoutesView: View {
             }
             .navigationTitle("All Routes")
             .navigationBarTitleDisplayMode(.large)
+            .withHomeButton()
             .onAppear {
                 viewModel.loadRoutes()
             }

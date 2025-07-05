@@ -136,6 +136,7 @@ struct RouteFavoritesView: View {
             }
             .navigationTitle("Favorite Routes")
             .navigationBarTitleDisplayMode(.large)
+            .withHomeButton()
             .onAppear {
                 Task {
                     await loadFavorites()
@@ -326,24 +327,23 @@ struct AllRouteFavoriteRow: View {
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Text(route.name)
-                        .font(.headline)
-                        .fontWeight(.medium)
-                    
-                    // Source type indicator
-                    HStack(spacing: 4) {
-                        Image(systemName: route.sourceTypeIcon)
-                            .font(.caption2)
-                        Text(route.sourceTypeDisplayName)
-                            .font(.caption2)
-                    }
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(sourceTypeColor.opacity(0.2))
-                    .foregroundColor(sourceTypeColor)
-                    .cornerRadius(4)
+                // Source type indicator - moved to its own row above the title
+                HStack(spacing: 4) {
+                    Image(systemName: route.sourceTypeIcon)
+                        .font(.caption2)
+                    Text(route.sourceTypeDisplayName)
+                        .font(.caption2)
                 }
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(sourceTypeColor.opacity(0.2))
+                .foregroundColor(sourceTypeColor)
+                .cornerRadius(4)
+                
+                // Route name gets its own row
+                Text(route.name)
+                    .font(.headline)
+                    .fontWeight(.medium)
                 
                 HStack(spacing: 16) {
                     Label(route.waypointCountText, systemImage: "point.3.connected.trianglepath.dotted")
@@ -425,15 +425,12 @@ struct RouteFavoriteRow: View {
 // MARK: - Preview
 
 #Preview {
-    // Create mock ServiceProvider for preview
-    let mockServiceProvider = ServiceProvider()
-    
     // Create mock favorite routes for preview
     let mockRoutes = [
         AllRoute(
             id: 1,
             name: "Boston Harbor Tour",
-            gpxData: "<gpx></gpx1>",
+            gpxData: "<gpx></gpx>",
             waypointCount: 12,
             totalDistance: 25.5,
             sourceType: "public",
@@ -464,7 +461,7 @@ struct RouteFavoriteRow: View {
         )
     ]
     
-    // Create preview view with mock data
+    // Create preview view with mock data - simplified without ServiceProvider
     VStack(spacing: 16) {
         Text("Route Favorites Preview")
             .font(.title2)
@@ -493,5 +490,4 @@ struct RouteFavoriteRow: View {
         Spacer()
     }
     .background(Color(.systemGroupedBackground))
-    .environmentObject(mockServiceProvider)
 }

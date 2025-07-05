@@ -153,6 +153,7 @@ struct RouteMenuView: View {
         }
         .navigationTitle("Routes")
         .navigationBarTitleDisplayMode(.large)
+        .withHomeButton()
         .navigationDestination(isPresented: $showingGpxView) {
             if let gpxFile = loadedGpxFile {
                 GpxView(

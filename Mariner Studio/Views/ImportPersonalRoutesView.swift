@@ -10,10 +10,11 @@ import SwiftUI
 struct ImportPersonalRoutesView: View {
     @StateObject private var viewModel: ImportPersonalRoutesViewModel
     
-    init(allRoutesService: AllRoutesDatabaseService? = nil, gpxService: ExtendedGpxServiceProtocol? = nil) {
+    init(allRoutesService: AllRoutesDatabaseService? = nil, gpxService: ExtendedGpxServiceProtocol? = nil, routeCalculationService: RouteCalculationService? = nil) {
         _viewModel = StateObject(wrappedValue: ImportPersonalRoutesViewModel(
             allRoutesService: allRoutesService,
-            gpxService: gpxService
+            gpxService: gpxService,
+            routeCalculationService: routeCalculationService
         ))
     }
     
@@ -39,6 +40,7 @@ struct ImportPersonalRoutesView: View {
             .padding()
             .navigationTitle("Import Routes")
             .navigationBarTitleDisplayMode(.large)
+            .withHomeButton()
         }
     }
     
