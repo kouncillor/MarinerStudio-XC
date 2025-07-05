@@ -17,12 +17,12 @@ struct SimpleRouteDetailsView: View {
                     // Route content
                     ScrollView {
                         VStack(spacing: 16) {
-                            // Route Summary Card
-                            routeSummaryCard(gpxFile.route)
-                            
-                            // Route Map
+                            // Route Map at top
                             SimpleRouteMapView(gpxFile: gpxFile)
                                 .frame(height: 300)
+                            
+                            // Route Summary Card
+                            routeSummaryCard(gpxFile.route)
                             
                             // Waypoints List
                             waypointsListView(gpxFile.route)
