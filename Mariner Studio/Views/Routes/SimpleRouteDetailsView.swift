@@ -20,6 +20,10 @@ struct SimpleRouteDetailsView: View {
                             // Route Summary Card
                             routeSummaryCard(gpxFile.route)
                             
+                            // Route Map
+                            SimpleRouteMapView(gpxFile: gpxFile)
+                                .frame(height: 300)
+                            
                             // Waypoints List
                             waypointsListView(gpxFile.route)
                         }
