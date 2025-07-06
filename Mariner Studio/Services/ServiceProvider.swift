@@ -195,12 +195,6 @@ class ServiceProvider: ObservableObject {
         print("📦 ServiceProvider initialization complete (async tasks launched).")
     }
     
-    // Helper method to ensure PhotoDatabaseService has the getAllNavUnitPhotosAsync method
-    private func addGetAllPhotosMethodIfNeeded(_ photoService: PhotoDatabaseService) async throws {
-        print("📦 ServiceProvider: Verifying PhotoDatabaseService methods...")
-        // This is a placeholder - the actual implementation should be in PhotoDatabaseService
-        // We'll assume the method exists or add it via extension if needed
-    }
 }
 
 

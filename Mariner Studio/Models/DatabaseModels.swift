@@ -117,23 +117,6 @@ struct TugChangeRecommendation: Identifiable {
     }
 }
 
-struct BargePhoto: Identifiable {
-    let id: Int
-    let bargeId: String
-    let filePath: String
-    let fileName: String
-    let thumbPath: String?
-    let createdAt: Date
-    
-    init(id: Int = 0, bargeId: String, filePath: String, fileName: String, thumbPath: String? = nil, createdAt: Date = Date()) {
-        self.id = id
-        self.bargeId = bargeId
-        self.filePath = filePath
-        self.fileName = fileName
-        self.thumbPath = thumbPath
-        self.createdAt = createdAt
-    }
-}
 
 struct BuoyStationFavorite {
     let stationId: String
