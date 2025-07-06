@@ -38,6 +38,31 @@ struct DevPageView: View {
                     
                     // Development Actions
                     VStack(spacing: 16) {
+                        // Admin Dashboard Navigation Link
+                        NavigationLink(destination: AdminDashboardView()) {
+                            HStack {
+                                Image(systemName: "shield.checkered")
+                                    .font(.title2)
+                                Text("Admin Dashboard")
+                                    .font(.headline)
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            .foregroundColor(.purple)
+                            .padding()
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color.purple.opacity(0.1))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .stroke(Color.purple.opacity(0.3), lineWidth: 1)
+                                    )
+                            )
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        
                         // Sign Out Button
                         Button(action: {
                             Task {
