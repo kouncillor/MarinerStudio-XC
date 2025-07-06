@@ -11,11 +11,27 @@ import SwiftUI
 @MainActor
 class EmbeddedRoutesBrowseViewModel: ObservableObject {
     @Published var routes: [RemoteEmbeddedRoute] = []
+    @Published var searchText: String = ""
     @Published var isLoading = false
     @Published var errorMessage: String = ""
     @Published var isDownloading = false
     @Published var downloadingRouteId: UUID? = nil
     @Published var downloadedRouteIds: Set<UUID> = []
+    
+    // Computed property for filtered routes
+    var filteredRoutes: [RemoteEmbeddedRoute] {
+        if searchText.isEmpty {
+            return routes
+        } else {
+            return routes.filter { route in
+                route.name.localizedCaseInsensitiveContains(searchText) ||
+                route.description?.localizedCaseInsensitiveContains(searchText) == true ||
+                route.category?.localizedCaseInsensitiveContains(searchText) == true ||
+                route.region?.localizedCaseInsensitiveContains(searchText) == true ||
+                route.difficulty?.localizedCaseInsensitiveContains(searchText) == true
+            }
+        }
+    }
     
     // MARK: - Dependencies
     private let allRoutesService: AllRoutesDatabaseService

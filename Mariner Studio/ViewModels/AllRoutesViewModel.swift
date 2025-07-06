@@ -7,11 +7,13 @@
 
 import Foundation
 import SwiftUI
+import Combine
 
 @MainActor
 class AllRoutesViewModel: ObservableObject {
     @Published var routes: [AllRoute] = []
     @Published var filteredRoutes: [AllRoute] = []
+    @Published var searchText: String = ""
     @Published var isLoading = false
     @Published var errorMessage: String = ""
     @Published var selectedFilter: String = "all"
@@ -31,7 +33,16 @@ class AllRoutesViewModel: ObservableObject {
             self.allRoutesService = AllRoutesDatabaseService(databaseCore: databaseCore)
             print("📋 ALL ROUTES: ⚠️ Creating fallback AllRoutesDatabaseService")
         }
+        
+        // Monitor search text changes to trigger filtering
+        $searchText
+            .sink { [weak self] _ in
+                self?.applyFilter()
+            }
+            .store(in: &cancellables)
     }
+    
+    private var cancellables = Set<AnyCancellable>()
     
     // MARK: - Route Loading
     
@@ -66,20 +77,36 @@ class AllRoutesViewModel: ObservableObject {
     // MARK: - Filtering
     
     func applyFilter() {
+        var routesToFilter: [AllRoute] = []
+        
+        // First apply type filter
         switch selectedFilter {
         case "all":
-            filteredRoutes = routes
+            routesToFilter = routes
         case "public":
-            filteredRoutes = routes.filter { $0.sourceType == "public" }
+            routesToFilter = routes.filter { $0.sourceType == "public" }
         case "imported":
-            filteredRoutes = routes.filter { $0.sourceType == "imported" }
+            routesToFilter = routes.filter { $0.sourceType == "imported" }
         case "created":
-            filteredRoutes = routes.filter { $0.sourceType == "created" }
+            routesToFilter = routes.filter { $0.sourceType == "created" }
         default:
-            filteredRoutes = routes
+            routesToFilter = routes
         }
         
-        print("📋 ALL ROUTES: 🔍 Applied filter '\(selectedFilter)': \(filteredRoutes.count)/\(routes.count) routes")
+        // Then apply search filter if search text is not empty
+        if !searchText.isEmpty {
+            routesToFilter = routesToFilter.filter { route in
+                route.name.localizedCaseInsensitiveContains(searchText) ||
+                route.tags?.localizedCaseInsensitiveContains(searchText) == true ||
+                route.notes?.localizedCaseInsensitiveContains(searchText) == true ||
+                route.sourceTypeDisplayName.localizedCaseInsensitiveContains(searchText)
+            }
+        }
+        
+        filteredRoutes = routesToFilter
+        
+        let searchInfo = searchText.isEmpty ? "" : " with search '\(searchText)'"
+        print("📋 ALL ROUTES: 🔍 Applied filter '\(selectedFilter)'\(searchInfo): \(filteredRoutes.count)/\(routes.count) routes")
     }
     
     // MARK: - Route Actions

@@ -20,10 +20,13 @@ struct EmbeddedRoutesBrowseView: View {
                 // Header
                 headerView
                 
+                // Search Bar
+                searchBarView
+                
                 // Content
                 if viewModel.isLoading && viewModel.routes.isEmpty {
                     loadingView
-                } else if viewModel.routes.isEmpty && !viewModel.isLoading {
+                } else if viewModel.filteredRoutes.isEmpty && !viewModel.isLoading {
                     emptyStateView
                 } else {
                     routesListView
@@ -66,7 +69,7 @@ struct EmbeddedRoutesBrowseView: View {
                 Spacer()
                 
                 if !viewModel.routes.isEmpty {
-                    Text("\(viewModel.routes.count) routes")
+                    Text("\(viewModel.filteredRoutes.count) of \(viewModel.routes.count) routes")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -83,10 +86,40 @@ struct EmbeddedRoutesBrowseView: View {
         .background(Color(.systemGroupedBackground))
     }
     
+    // MARK: - Search Bar
+    
+    private var searchBarView: some View {
+        HStack {
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(.secondary)
+                
+                TextField("Search routes...", text: $viewModel.searchText)
+                    .textFieldStyle(PlainTextFieldStyle())
+                
+                if !viewModel.searchText.isEmpty {
+                    Button(action: {
+                        viewModel.searchText = ""
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(Color(.systemBackground))
+            .cornerRadius(10)
+        }
+        .padding(.horizontal)
+        .padding(.bottom, 8)
+        .background(Color(.systemGroupedBackground))
+    }
+    
     // MARK: - Routes List
     
     private var routesListView: some View {
-        List(viewModel.routes) { route in
+        List(viewModel.filteredRoutes) { route in
             RouteRowView(
                 route: route,
                 isDownloading: viewModel.downloadingRouteId == route.id,
@@ -122,24 +155,33 @@ struct EmbeddedRoutesBrowseView: View {
     
     private var emptyStateView: some View {
         VStack(spacing: 20) {
-            Image(systemName: "map.circle")
+            Image(systemName: viewModel.routes.isEmpty ? "map.circle" : "magnifyingglass.circle")
                 .font(.system(size: 60))
                 .foregroundColor(.gray)
             
-            Text("No Routes Available")
+            Text(viewModel.routes.isEmpty ? "No Routes Available" : "No Results Found")
                 .font(.title2)
                 .fontWeight(.semibold)
             
-            Text("No embedded routes have been uploaded yet. Use the dev tools to upload some GPX files to get started.")
+            Text(viewModel.routes.isEmpty ? 
+                 "No embedded routes have been uploaded yet. Use the dev tools to upload some GPX files to get started." :
+                 "No routes match your search criteria. Try adjusting your search terms.")
                 .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
             
-            Button("Refresh") {
-                viewModel.refresh()
+            if viewModel.routes.isEmpty {
+                Button("Refresh") {
+                    viewModel.refresh()
+                }
+                .buttonStyle(.borderedProminent)
+            } else {
+                Button("Clear Search") {
+                    viewModel.searchText = ""
+                }
+                .buttonStyle(.borderedProminent)
             }
-            .buttonStyle(.borderedProminent)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(.systemGroupedBackground))

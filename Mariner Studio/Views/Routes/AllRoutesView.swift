@@ -26,10 +26,13 @@ struct AllRoutesView: View {
                 // Header with filters
                 headerView
                 
+                // Search Bar
+                searchBarView
+                
                 // Content
                 if viewModel.isLoading && viewModel.routes.isEmpty {
                     loadingView
-                } else if viewModel.routes.isEmpty && !viewModel.isLoading {
+                } else if viewModel.filteredRoutes.isEmpty && !viewModel.isLoading {
                     emptyStateView
                 } else {
                     routesListView
@@ -112,6 +115,36 @@ struct AllRoutesView: View {
         }
     }
     
+    // MARK: - Search Bar
+    
+    private var searchBarView: some View {
+        HStack {
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(.secondary)
+                
+                TextField("Search routes...", text: $viewModel.searchText)
+                    .textFieldStyle(PlainTextFieldStyle())
+                
+                if !viewModel.searchText.isEmpty {
+                    Button(action: {
+                        viewModel.searchText = ""
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(Color(.systemBackground))
+            .cornerRadius(10)
+        }
+        .padding(.horizontal)
+        .padding(.bottom, 8)
+        .background(Color(.systemGroupedBackground))
+    }
+    
     // MARK: - Routes List
     
     private var routesListView: some View {
@@ -187,24 +220,45 @@ struct AllRoutesView: View {
     
     private var emptyStateView: some View {
         VStack(spacing: 20) {
-            Image(systemName: "list.bullet.circle")
+            Image(systemName: viewModel.routes.isEmpty ? "list.bullet.circle" : "magnifyingglass.circle")
                 .font(.system(size: 60))
                 .foregroundColor(.gray)
             
-            Text("No Routes Available")
+            Text(viewModel.routes.isEmpty ? "No Routes Available" : "No Results Found")
                 .font(.title2)
                 .fontWeight(.semibold)
             
-            Text("Download public routes, import your own files, or create new routes to get started.")
+            Text(viewModel.routes.isEmpty ? 
+                 "Download public routes, import your own files, or create new routes to get started." :
+                 "No routes match your current filter and search criteria. Try adjusting your search terms or changing the filter.")
                 .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
             
-            Button("Refresh") {
-                viewModel.refresh()
+            if viewModel.routes.isEmpty {
+                Button("Refresh") {
+                    viewModel.refresh()
+                }
+                .buttonStyle(.borderedProminent)
+            } else {
+                HStack(spacing: 12) {
+                    if !viewModel.searchText.isEmpty {
+                        Button("Clear Search") {
+                            viewModel.searchText = ""
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
+                    
+                    if viewModel.selectedFilter != "all" {
+                        Button("Show All") {
+                            viewModel.selectedFilter = "all"
+                            viewModel.applyFilter()
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                }
             }
-            .buttonStyle(.borderedProminent)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(.systemGroupedBackground))
