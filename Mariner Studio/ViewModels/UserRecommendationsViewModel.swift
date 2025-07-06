@@ -9,7 +9,6 @@
 import Foundation
 import SwiftUI
 import Combine
-import CloudKit
 
 class UserRecommendationsViewModel: ObservableObject {
     // MARK: - Published Properties
@@ -66,13 +65,9 @@ class UserRecommendationsViewModel: ObservableObject {
         print("📋 UserRecommendationsViewModel: RecommendationCloudService injected")
         
         // Monitor service state if it's the implementation class
-        if let service = recommendationService as? RecommendationCloudServiceImpl {
-            service.$accountStatus
-                .receive(on: DispatchQueue.main)
-                .sink { [weak self] status in
-                    self?.handleAccountStatusChange(status)
-                }
-                .store(in: &cancellables)
+        if let service = recommendationService as? RecommendationSupabaseService {
+            // Note: We can add state monitoring here later if needed
+            print("📋 UserRecommendationsViewModel: Supabase service monitoring setup")
         }
     }
     
@@ -242,18 +237,18 @@ class UserRecommendationsViewModel: ObservableObject {
         }
     }
     
-    private func handleAccountStatusChange(_ status: CKAccountStatus) {
-        print("📋 UserRecommendationsViewModel: Account status changed to: \(status)")
+    private func handleAccountStatusChange(_ isAuthenticated: Bool) {
+        print("📋 UserRecommendationsViewModel: Account status changed to: \(isAuthenticated ? "authenticated" : "not authenticated")")
         
-        if status == .available && recommendations.isEmpty && errorMessage.isEmpty {
-            // Account became available and we don't have data yet
+        if isAuthenticated && recommendations.isEmpty && errorMessage.isEmpty {
+            // Account became authenticated and we don't have data yet
             Task {
                 await loadRecommendations()
             }
-        } else if status != .available && !errorMessage.isEmpty {
-            // Account became unavailable
+        } else if !isAuthenticated && !errorMessage.isEmpty {
+            // Account became unauthenticated
             Task {
-                await setError("iCloud account not available. Please sign in to iCloud to view your recommendations.")
+                await setError("Supabase account not authenticated. Please sign in to view your recommendations.")
             }
         }
     }

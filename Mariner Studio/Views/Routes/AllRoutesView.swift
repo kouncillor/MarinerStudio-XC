@@ -9,6 +9,12 @@ import SwiftUI
 
 struct AllRoutesView: View {
     @StateObject private var viewModel: AllRoutesViewModel
+    @EnvironmentObject var serviceProvider: ServiceProvider
+    @State private var showingGpxView = false
+    @State private var selectedGpxFile: GpxFile?
+    @State private var selectedRouteName: String = ""
+    @State private var showingRouteDetails = false
+    @State private var selectedRouteForDetails: AllRoute?
     
     init(allRoutesService: AllRoutesDatabaseService? = nil) {
         _viewModel = StateObject(wrappedValue: AllRoutesViewModel(allRoutesService: allRoutesService))
@@ -39,6 +45,21 @@ struct AllRoutesView: View {
             .withHomeButton()
             .onAppear {
                 viewModel.loadRoutes()
+            }
+            .navigationDestination(isPresented: $showingGpxView) {
+                if let gpxFile = selectedGpxFile {
+                    GpxView(
+                        serviceProvider: serviceProvider,
+                        preLoadedRoute: gpxFile,
+                        routeName: selectedRouteName
+                    )
+                }
+            }
+            .navigationDestination(isPresented: $showingRouteDetails) {
+                if let route = selectedRouteForDetails {
+                    SimpleRouteDetailsView(route: route)
+                        .environmentObject(serviceProvider)
+                }
             }
         }
     }
@@ -100,6 +121,25 @@ struct AllRoutesView: View {
                 isOperationInProgress: viewModel.operationsInProgress.contains(route.id)
             )
             .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+            .swipeActions(edge: .leading) {
+                // Voyage Plan button (green) - rightmost on left side
+                Button {
+                    loadRoute(route)
+                } label: {
+                    Label("Voyage Plan", systemImage: "map")
+                }
+                .tint(.green)
+                .disabled(viewModel.operationsInProgress.contains(route.id))
+                
+                // Details button (blue) - leftmost on left side
+                Button {
+                    showRouteDetails(route)
+                } label: {
+                    Label("Details", systemImage: "info.circle")
+                }
+                .tint(.blue)
+                .disabled(viewModel.operationsInProgress.contains(route.id))
+            }
             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                 // Delete button
                 Button(role: .destructive) {
@@ -118,7 +158,7 @@ struct AllRoutesView: View {
                         systemImage: route.isFavorite ? "star.fill" : "star"
                     )
                 }
-                .tint(route.isFavorite ? .gray : .yellow)
+                .tint(.yellow)
                 .disabled(viewModel.operationsInProgress.contains(route.id))
             }
         }
@@ -195,6 +235,34 @@ struct AllRoutesView: View {
             .cornerRadius(8)
             .padding(.horizontal)
         }
+    }
+    
+    // MARK: - Helper Functions
+    
+    private func loadRoute(_ route: AllRoute) {
+        Task {
+            do {
+                // Parse GPX data from database
+                let gpxFile = try await serviceProvider.gpxService.loadGpxFile(from: route.gpxData)
+                
+                await MainActor.run {
+                    // Set up navigation to GpxView with pre-loaded data
+                    selectedGpxFile = gpxFile
+                    selectedRouteName = route.name
+                    showingGpxView = true
+                }
+                
+            } catch {
+                await MainActor.run {
+                    viewModel.errorMessage = "Failed to load route: \(error.localizedDescription)"
+                }
+            }
+        }
+    }
+    
+    private func showRouteDetails(_ route: AllRoute) {
+        selectedRouteForDetails = route
+        showingRouteDetails = true
     }
     
 }

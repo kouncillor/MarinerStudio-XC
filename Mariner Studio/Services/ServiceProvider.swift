@@ -102,9 +102,9 @@ class ServiceProvider: ObservableObject {
         self.routeCalculationService = RouteCalculationServiceImpl()
         print("📦 ServiceProvider: Initialized GPX and route services.")
         
-        // Initialize Recommendation Service
-        self.recommendationService = RecommendationCloudServiceImpl()
-        print("📦 ServiceProvider: Initialized recommendation cloud service.")
+        // Initialize Recommendation Service (using Supabase)
+        self.recommendationService = RecommendationSupabaseService()
+        print("📦 ServiceProvider: Initialized recommendation Supabase service.")
         
         print("📦 ServiceProvider initialization complete (sync portion).")
         self.setupAsyncTasks()
@@ -173,17 +173,17 @@ class ServiceProvider: ObservableObject {
                 
                 print("🚀 ServiceProvider: Setting up recommendation service...")
                 
-                // Check account status and setup notifications
-                let accountStatus = await self.recommendationService.checkAccountStatus()
+                // Check account status (Supabase authentication)
+                let isAuthenticated = await self.recommendationService.checkAccountStatus()
                 
-                if accountStatus == .available {
-                    print("✅ ServiceProvider: iCloud account available for recommendations")
+                if isAuthenticated {
+                    print("✅ ServiceProvider: Supabase account authenticated for recommendations")
                     
-                    // Setup push notifications for new recommendations
+                    // Setup notification subscription (placeholder for now)
                     try await self.recommendationService.setupNotificationSubscription()
                     print("🔔 ServiceProvider: Recommendation notifications configured")
                 } else {
-                    print("⚠️ ServiceProvider: iCloud account not available for recommendations: \(accountStatus)")
+                    print("⚠️ ServiceProvider: Supabase account not authenticated for recommendations")
                 }
                 
             } catch {

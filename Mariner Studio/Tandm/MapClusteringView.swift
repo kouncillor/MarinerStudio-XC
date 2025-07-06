@@ -141,15 +141,6 @@ struct MapClusteringView: View {
                    showNavUnitDetails = true
                },
                
-               
-               
-               
-               
-               
-               
-               
-               
-               
                onTidalHeightStationSelected: { stationId, stationName in
                    print("Tidal Height Station selected: \(stationId), \(stationName)")
                    resetAllNavigationState()
@@ -157,15 +148,6 @@ struct MapClusteringView: View {
                    selectedTidalHeightStationName = stationName
                    showTidalHeightDetails = true
                },
-               
-               
-               
-               
-               
-               
-               
-               
-               
                
                onTidalCurrentStationSelected: { stationId, bin, stationName in
                    print("Tidal Current Station selected: \(stationId), \(bin), \(stationName)")

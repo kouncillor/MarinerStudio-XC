@@ -239,6 +239,8 @@ struct GpxView: View {
                 }
             }
             .withHomeButton()
+            .navigationTitle("Voyage Plan")
+            .navigationBarTitleDisplayMode(.large)
             .navigationDestination(isPresented: $showingRouteDetails) {
                 if let routeDetailsViewModel = routeDetailsViewModel {
                     RouteDetailsView(viewModel: routeDetailsViewModel)

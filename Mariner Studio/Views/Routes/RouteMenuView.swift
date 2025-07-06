@@ -84,7 +84,8 @@ struct RouteMenuView: View {
                     )
                 }
                 
-                // Voyage Plan - Now directly opens file picker for voyage planning
+                // Voyage Plan - COMMENTED OUT - Now accessible via swipe actions on routes
+                /*
                 Button(action: {
                     Task {
                         await openGpxFile()
@@ -99,6 +100,7 @@ struct RouteMenuView: View {
                     )
                 }
                 .disabled(isLoadingFile)
+                */
                 
                 // Import from Cloud Services - COMMENTED OUT
                 /*

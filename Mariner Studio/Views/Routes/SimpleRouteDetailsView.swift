@@ -38,6 +38,8 @@ struct SimpleRouteDetailsView: View {
                     errorView
                 }
             }
+            .navigationTitle("Route Details")
+            .navigationBarTitleDisplayMode(.large)
         }
         .onAppear {
             loadRouteData()
@@ -554,6 +556,8 @@ struct SimpleRouteDetailsViewPreview: View {
                     .padding()
                 }
             }
+            .navigationTitle("Route Details")
+            .navigationBarTitleDisplayMode(.large)
         }
     }
     

@@ -29,7 +29,7 @@ class RecommendationFormViewModel: ObservableObject {
         print("📝 RecommendationFormViewModel: Initialized for nav unit: \(navUnit.navUnitName)")
         
         // Monitor service state changes
-        if let service = recommendationService as? RecommendationCloudServiceImpl {
+        if let service = recommendationService as? RecommendationSupabaseService {
             service.$isSubmitting
                 .receive(on: DispatchQueue.main)
                 .assign(to: \.isSubmitting, on: self)
@@ -69,8 +69,8 @@ class RecommendationFormViewModel: ObservableObject {
         
         // Check account status first
         let accountStatus = await recommendationService.checkAccountStatus()
-        guard accountStatus == .available else {
-            await setError("iCloud account not available. Please sign in to iCloud and try again.")
+        guard accountStatus else {
+            await setError("Supabase account not available. Please sign in and try again.")
             return false
         }
         
@@ -90,7 +90,7 @@ class RecommendationFormViewModel: ObservableObject {
                 userEmail: userEmail?.isEmpty == false ? userEmail : nil
             )
             
-            print("☁️ RecommendationFormViewModel: Submitting to CloudKit...")
+            print("☁️ RecommendationFormViewModel: Submitting to Supabase...")
             let recordID = try await recommendationService.submitRecommendation(recommendation)
             
             print("🎉 RecommendationFormViewModel: Submission successful!")

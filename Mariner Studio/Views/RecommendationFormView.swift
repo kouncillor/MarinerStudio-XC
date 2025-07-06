@@ -252,7 +252,7 @@ struct RecommendationFormView_Previews: PreviewProvider {
                     navUnitName: "Test Marina",
                     facilityType: "Private Marina"
                 ),
-                recommendationService: RecommendationCloudServiceImpl()
+                recommendationService: RecommendationSupabaseService()
             ),
             isPresented: .constant(true)
         )
