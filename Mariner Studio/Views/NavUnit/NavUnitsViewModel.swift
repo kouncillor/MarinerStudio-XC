@@ -143,9 +143,12 @@ import SwiftUI
 class NavUnitsViewModel: ObservableObject {
     @Published var navUnitListItems: [NavUnitListItem] = []  // Changed from navUnits
     @Published var isLoading = false
+    @Published var searchText = ""
+    @Published var showOnlyFavorites = false
     
     private let navUnitService: NavUnitDatabaseService
     private let locationService: LocationService
+    private var allNavUnitListItems: [NavUnitListItem] = []
     
     init(navUnitService: NavUnitDatabaseService, locationService: LocationService) {
         self.navUnitService = navUnitService
@@ -171,7 +174,7 @@ class NavUnitsViewModel: ObservableObject {
                 )
                 
                 await MainActor.run {
-                    navUnitListItems = navUnitItems
+                    allNavUnitListItems = navUnitItems
                     isLoading = false
                 }
                 
@@ -182,10 +185,12 @@ class NavUnitsViewModel: ObservableObject {
                 let navUnitItems = try await navUnitService.getNavUnitListItemsAsync()
                 
                 await MainActor.run {
-                    navUnitListItems = navUnitItems
+                    allNavUnitListItems = navUnitItems
                     isLoading = false
                 }
             }
+            
+            filterNavUnits()
             
         } catch {
             print("Error loading nav unit list items: \(error)")
@@ -193,5 +198,35 @@ class NavUnitsViewModel: ObservableObject {
                 isLoading = false
             }
         }
+    }
+    
+    func filterNavUnits() {
+        let filtered = allNavUnitListItems.filter { navUnit in
+            let matchesSearch = searchText.isEmpty ||
+                navUnit.name.localizedCaseInsensitiveContains(searchText) ||
+                navUnit.id.localizedCaseInsensitiveContains(searchText)
+            return matchesSearch
+        }
+        
+        let sorted = filtered.sorted { first, second in
+            if first.distanceFromUser != Double.greatestFiniteMagnitude && second.distanceFromUser == Double.greatestFiniteMagnitude {
+                return true
+            } else if first.distanceFromUser == Double.greatestFiniteMagnitude && second.distanceFromUser != Double.greatestFiniteMagnitude {
+                return false
+            } else if first.distanceFromUser != second.distanceFromUser {
+                return first.distanceFromUser < second.distanceFromUser
+            } else {
+                return first.name.localizedCompare(second.name) == .orderedAscending
+            }
+        }
+        
+        DispatchQueue.main.async {
+            self.navUnitListItems = sorted
+        }
+    }
+    
+    func clearSearch() {
+        searchText = ""
+        filterNavUnits()
     }
 }

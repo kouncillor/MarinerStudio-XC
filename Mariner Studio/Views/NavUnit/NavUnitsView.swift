@@ -37,29 +37,16 @@ struct NavUnitsView: View {
     }
     
     var body: some View {
-        Group {
-            if viewModel.isLoading {
-                ProgressView("Loading...")
-            } else {
-                List(viewModel.navUnitListItems) { navUnitItem in
-                    NavigationLink(
-                        destination: LazyNavUnitDetailsView(
-                            navUnitId: navUnitItem.id,
-                            serviceProvider: serviceProvider
-                        )
-                    ) {
-                        HStack {
-                            Text(navUnitItem.name)
-                                .foregroundColor(.primary)
-                            Spacer()
-                            if !navUnitItem.distanceDisplay.isEmpty {
-                                Text(navUnitItem.distanceDisplay)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                        .padding(.vertical, 4)
-                    }
+        VStack(spacing: 0) {
+            // Search Bar
+            searchBar
+            
+            // Main Content
+            ZStack {
+                if viewModel.isLoading {
+                    ProgressView("Loading...")
+                } else {
+                    navUnitsList
                 }
             }
         }
@@ -69,6 +56,61 @@ struct NavUnitsView: View {
             Task {
                 await viewModel.loadNavUnits()
             }
+        }
+    }
+    
+    // MARK: - View Components
+    private var searchBar: some View {
+        HStack {
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(.gray)
+                
+                TextField("Search navigation units...", text: $viewModel.searchText)
+                    .onChange(of: viewModel.searchText) {
+                        viewModel.filterNavUnits()
+                    }
+                
+                if !viewModel.searchText.isEmpty {
+                    Button(action: {
+                        viewModel.clearSearch()
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.gray)
+                    }
+                }
+            }
+            .padding(8)
+            .background(Color(.systemBackground))
+            .cornerRadius(10)
+        }
+        .padding([.horizontal, .top])
+    }
+    
+    private var navUnitsList: some View {
+        List(viewModel.navUnitListItems) { navUnitItem in
+            NavigationLink(
+                destination: LazyNavUnitDetailsView(
+                    navUnitId: navUnitItem.id,
+                    serviceProvider: serviceProvider
+                )
+            ) {
+                HStack {
+                    Text(navUnitItem.name)
+                        .foregroundColor(.primary)
+                    Spacer()
+                    if !navUnitItem.distanceDisplay.isEmpty {
+                        Text(navUnitItem.distanceDisplay)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+        }
+        .listStyle(PlainListStyle())
+        .refreshable {
+            await viewModel.loadNavUnits()
         }
     }
 }
