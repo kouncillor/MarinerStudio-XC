@@ -14,181 +14,181 @@ class AuthenticationViewModel: ObservableObject {
     private let networkQueue = DispatchQueue(label: "NetworkMonitor")
 
     init() {
-        print("🎯 AUTH INIT: AuthenticationViewModel initializing")
+        DebugLogger.shared.log("🎯 AUTH INIT: AuthenticationViewModel initializing", category: "AUTH_INIT")
         setupNetworkMonitoring()
         
         Task {
-            print("🎯 AUTH INIT: Starting checkSession task")
+            DebugLogger.shared.log("🎯 AUTH INIT: Starting checkSession task", category: "AUTH_INIT")
             await checkSession()
         }
     }
     
     private func setupNetworkMonitoring() {
-        print("📡 NETWORK: Setting up network monitoring")
+        DebugLogger.shared.log("📡 NETWORK: Setting up network monitoring", category: "AUTH_NETWORK")
         networkMonitor.pathUpdateHandler = { path in
-            print("📡 NETWORK STATUS: \(path.status)")
-            print("📡 NETWORK EXPENSIVE: \(path.isExpensive)")
-            print("📡 NETWORK CONSTRAINED: \(path.isConstrained)")
-            print("📡 NETWORK INTERFACES: \(path.availableInterfaces)")
+            DebugLogger.shared.log("📡 NETWORK STATUS: \(path.status)", category: "AUTH_NETWORK")
+            DebugLogger.shared.log("📡 NETWORK EXPENSIVE: \(path.isExpensive)", category: "AUTH_NETWORK")
+            DebugLogger.shared.log("📡 NETWORK CONSTRAINED: \(path.isConstrained)", category: "AUTH_NETWORK")
+            DebugLogger.shared.log("📡 NETWORK INTERFACES: \(path.availableInterfaces)", category: "AUTH_NETWORK")
             
             if path.status == .satisfied {
-                print("✅ NETWORK: Connection is available")
+                DebugLogger.shared.log("✅ NETWORK: Connection is available", category: "AUTH_NETWORK")
                 if path.usesInterfaceType(.wifi) {
-                    print("📡 NETWORK: Using WiFi")
+                    DebugLogger.shared.log("📡 NETWORK: Using WiFi", category: "AUTH_NETWORK")
                 } else if path.usesInterfaceType(.cellular) {
-                    print("📡 NETWORK: Using Cellular")
+                    DebugLogger.shared.log("📡 NETWORK: Using Cellular", category: "AUTH_NETWORK")
                 } else if path.usesInterfaceType(.wiredEthernet) {
-                    print("📡 NETWORK: Using Ethernet")
+                    DebugLogger.shared.log("📡 NETWORK: Using Ethernet", category: "AUTH_NETWORK")
                 }
             } else {
-                print("❌ NETWORK: No connection available")
+                DebugLogger.shared.log("❌ NETWORK: No connection available", category: "AUTH_NETWORK")
             }
         }
         networkMonitor.start(queue: networkQueue)
     }
 
     func checkSession() async {
-        print("\n🔍 SESSION CHECK: Starting session validation using SupabaseManager")
-        print("🔍 SESSION CHECK: Current authentication state = \(isAuthenticated)")
-        print("🔍 SESSION CHECK: Thread = \(Thread.current)")
-        print("🔍 SESSION CHECK: Timestamp = \(Date())")
+        DebugLogger.shared.log("\n🔍 SESSION CHECK: Starting session validation using SupabaseManager", category: "AUTH_SESSION")
+        DebugLogger.shared.log("🔍 SESSION CHECK: Current authentication state = \(isAuthenticated)", category: "AUTH_SESSION")
+        DebugLogger.shared.log("🔍 SESSION CHECK: Thread = \(Thread.current)", category: "AUTH_SESSION")
+        DebugLogger.shared.log("🔍 SESSION CHECK: Timestamp = \(Date())", category: "AUTH_SESSION")
         
         do {
             let session = try await SupabaseManager.shared.getSession()
             
-            print("✅ SESSION CHECK: SUCCESS! Session retrieved via SupabaseManager")
-            print("✅ SESSION CHECK: User ID = \(session.user.id)")
-            print("✅ SESSION CHECK: User email = \(session.user.email ?? "NO EMAIL")")
+            DebugLogger.shared.log("✅ SESSION CHECK: SUCCESS! Session retrieved via SupabaseManager", category: "AUTH_SESSION")
+            DebugLogger.shared.log("✅ SESSION CHECK: User ID = \(session.user.id)", category: "AUTH_SESSION")
+            DebugLogger.shared.log("✅ SESSION CHECK: User email = \(session.user.email ?? "NO EMAIL")", category: "AUTH_SESSION")
             
             self.isAuthenticated = true
-            print("✅ SESSION CHECK: Authentication state updated to TRUE")
+            DebugLogger.shared.log("✅ SESSION CHECK: Authentication state updated to TRUE", category: "AUTH_SESSION")
             
-            print("🎫 REVENUE CAT: Starting RevenueCat login")
+            DebugLogger.shared.log("🎫 REVENUE CAT: Starting RevenueCat login", category: "AUTH_SESSION")
             await logInToRevenueCat(userId: session.user.id.uuidString)
             
         } catch {
-            print("\n❌ SESSION CHECK: Error occurred via SupabaseManager")
-            print("❌ SESSION CHECK: Error = \(error)")
+            DebugLogger.shared.log("\n❌ SESSION CHECK: Error occurred via SupabaseManager", category: "AUTH_SESSION")
+            DebugLogger.shared.log("❌ SESSION CHECK: Error = \(error)", category: "AUTH_SESSION")
             
             self.isAuthenticated = false
-            print("❌ SESSION CHECK: Authentication state updated to FALSE")
+            DebugLogger.shared.log("❌ SESSION CHECK: Authentication state updated to FALSE", category: "AUTH_SESSION")
         }
         
-        print("🔍 SESSION CHECK: Complete. Final auth state = \(isAuthenticated)\n")
+        DebugLogger.shared.log("🔍 SESSION CHECK: Complete. Final auth state = \(isAuthenticated)\n", category: "AUTH_SESSION")
     }
     
     func signUp(email: String, password: String) async {
-        print("\n📝 SIGN UP: Starting user registration via SupabaseManager")
-        print("📝 SIGN UP: Email = \(email)")
-        print("📝 SIGN UP: Password length = \(password.count)")
+        DebugLogger.shared.log("\n📝 SIGN UP: Starting user registration via SupabaseManager", category: "AUTH_SIGNUP")
+        DebugLogger.shared.log("📝 SIGN UP: Email = \(email)", category: "AUTH_SIGNUP")
+        DebugLogger.shared.log("📝 SIGN UP: Password length = \(password.count)", category: "AUTH_SIGNUP")
         
         isLoading = true
         errorMessage = nil
-        print("📝 SIGN UP: Loading state set to TRUE")
+        DebugLogger.shared.log("📝 SIGN UP: Loading state set to TRUE", category: "AUTH_SIGNUP")
         
         do {
             let authResponse = try await SupabaseManager.shared.signUp(email: email, password: password)
             
-            print("✅ SIGN UP: SUCCESS! User created via SupabaseManager")
-            print("✅ SIGN UP: User ID = \(authResponse.user.id)")
-            print("✅ SIGN UP: User email = \(authResponse.user.email ?? "NO EMAIL")")
+            DebugLogger.shared.log("✅ SIGN UP: SUCCESS! User created via SupabaseManager", category: "AUTH_SIGNUP")
+            DebugLogger.shared.log("✅ SIGN UP: User ID = \(authResponse.user.id)", category: "AUTH_SIGNUP")
+            DebugLogger.shared.log("✅ SIGN UP: User email = \(authResponse.user.email ?? "NO EMAIL")", category: "AUTH_SIGNUP")
             
             await logInToRevenueCat(userId: authResponse.user.id.uuidString)
             
             self.isAuthenticated = true
-            print("✅ SIGN UP: Authentication state updated to TRUE")
+            DebugLogger.shared.log("✅ SIGN UP: Authentication state updated to TRUE", category: "AUTH_SIGNUP")
             
         } catch {
-            print("\n❌ SIGN UP: Error occurred via SupabaseManager")
-            print("❌ SIGN UP: Error = \(error)")
+            DebugLogger.shared.log("\n❌ SIGN UP: Error occurred via SupabaseManager", category: "AUTH_SIGNUP")
+            DebugLogger.shared.log("❌ SIGN UP: Error = \(error)", category: "AUTH_SIGNUP")
             
             self.errorMessage = error.localizedDescription
         }
         
         isLoading = false
-        print("📝 SIGN UP: Complete. Auth state = \(isAuthenticated)\n")
+        DebugLogger.shared.log("📝 SIGN UP: Complete. Auth state = \(isAuthenticated)\n", category: "AUTH_SIGNUP")
     }
 
     func signIn(email: String, password: String) async {
-        print("\n🔐 SIGN IN: Starting user authentication via SupabaseManager")
-        print("🔐 SIGN IN: Email = \(email)")
-        print("🔐 SIGN IN: Password length = \(password.count)")
+        DebugLogger.shared.log("\n🔐 SIGN IN: Starting user authentication via SupabaseManager", category: "AUTH_SIGNIN")
+        DebugLogger.shared.log("🔐 SIGN IN: Email = \(email)", category: "AUTH_SIGNIN")
+        DebugLogger.shared.log("🔐 SIGN IN: Password length = \(password.count)", category: "AUTH_SIGNIN")
         
         isLoading = true
         errorMessage = nil
-        print("🔐 SIGN IN: Loading state set to TRUE")
+        DebugLogger.shared.log("🔐 SIGN IN: Loading state set to TRUE", category: "AUTH_SIGNIN")
         
         do {
             let session = try await SupabaseManager.shared.signIn(email: email, password: password)
             
-            print("✅ SIGN IN: SUCCESS! User authenticated via SupabaseManager")
-            print("✅ SIGN IN: User ID = \(session.user.id)")
-            print("✅ SIGN IN: User email = \(session.user.email ?? "NO EMAIL")")
+            DebugLogger.shared.log("✅ SIGN IN: SUCCESS! User authenticated via SupabaseManager", category: "AUTH_SIGNIN")
+            DebugLogger.shared.log("✅ SIGN IN: User ID = \(session.user.id)", category: "AUTH_SIGNIN")
+            DebugLogger.shared.log("✅ SIGN IN: User email = \(session.user.email ?? "NO EMAIL")", category: "AUTH_SIGNIN")
             
             await logInToRevenueCat(userId: session.user.id.uuidString)
             
             self.isAuthenticated = true
-            print("✅ SIGN IN: Authentication state updated to TRUE")
+            DebugLogger.shared.log("✅ SIGN IN: Authentication state updated to TRUE", category: "AUTH_SIGNIN")
             
         } catch {
-            print("\n❌ SIGN IN: Error occurred via SupabaseManager")
-            print("❌ SIGN IN: Error = \(error)")
+            DebugLogger.shared.log("\n❌ SIGN IN: Error occurred via SupabaseManager", category: "AUTH_SIGNIN")
+            DebugLogger.shared.log("❌ SIGN IN: Error = \(error)", category: "AUTH_SIGNIN")
             
             self.errorMessage = error.localizedDescription
         }
         
         isLoading = false
-        print("🔐 SIGN IN: Complete. Auth state = \(isAuthenticated)\n")
+        DebugLogger.shared.log("🔐 SIGN IN: Complete. Auth state = \(isAuthenticated)\n", category: "AUTH_SIGNIN")
     }
 
     func signOut() async {
-        print("\n🚪 SIGN OUT: Starting user sign out via SupabaseManager")
-        print("🚪 SIGN OUT: Current auth state = \(isAuthenticated)")
+        DebugLogger.shared.log("\n🚪 SIGN OUT: Starting user sign out via SupabaseManager", category: "AUTH_SIGNOUT")
+        DebugLogger.shared.log("🚪 SIGN OUT: Current auth state = \(isAuthenticated)", category: "AUTH_SIGNOUT")
         
         do {
             try await SupabaseManager.shared.signOut()
-            print("✅ SIGN OUT: Supabase signOut completed via SupabaseManager")
+            DebugLogger.shared.log("✅ SIGN OUT: Supabase signOut completed via SupabaseManager", category: "AUTH_SIGNOUT")
             
-            print("🎫 SIGN OUT: Calling RevenueCat logOut...")
+            DebugLogger.shared.log("🎫 SIGN OUT: Calling RevenueCat logOut...", category: "AUTH_SIGNOUT")
             try await Purchases.shared.logOut()
-            print("✅ SIGN OUT: RevenueCat logOut completed")
+            DebugLogger.shared.log("✅ SIGN OUT: RevenueCat logOut completed", category: "AUTH_SIGNOUT")
             
             self.isAuthenticated = false
-            print("✅ SIGN OUT: Authentication state updated to FALSE")
+            DebugLogger.shared.log("✅ SIGN OUT: Authentication state updated to FALSE", category: "AUTH_SIGNOUT")
             
         } catch {
-            print("\n❌ SIGN OUT: Error occurred")
-            print("❌ SIGN OUT: Error = \(error)")
+            DebugLogger.shared.log("\n❌ SIGN OUT: Error occurred", category: "AUTH_SIGNOUT")
+            DebugLogger.shared.log("❌ SIGN OUT: Error = \(error)", category: "AUTH_SIGNOUT")
             
             self.errorMessage = error.localizedDescription
         }
         
-        print("🚪 SIGN OUT: Complete. Auth state = \(isAuthenticated)\n")
+        DebugLogger.shared.log("🚪 SIGN OUT: Complete. Auth state = \(isAuthenticated)\n", category: "AUTH_SIGNOUT")
     }
 
     private func logInToRevenueCat(userId: String) async {
-        print("\n🎫 REVENUE CAT: Starting RevenueCat authentication")
-        print("🎫 REVENUE CAT: User ID = \(userId)")
+        DebugLogger.shared.log("\n🎫 REVENUE CAT: Starting RevenueCat authentication", category: "AUTH_REVENUECAT")
+        DebugLogger.shared.log("🎫 REVENUE CAT: User ID = \(userId)", category: "AUTH_REVENUECAT")
         
         do {
             let result = try await Purchases.shared.logIn(userId)
             
-            print("✅ REVENUE CAT: SUCCESS! Login completed")
-            print("✅ REVENUE CAT: Customer info received")
-            print("✅ REVENUE CAT: Entitlements count = \(result.customerInfo.entitlements.all.count)")
+            DebugLogger.shared.log("✅ REVENUE CAT: SUCCESS! Login completed", category: "AUTH_REVENUECAT")
+            DebugLogger.shared.log("✅ REVENUE CAT: Customer info received", category: "AUTH_REVENUECAT")
+            DebugLogger.shared.log("✅ REVENUE CAT: Entitlements count = \(result.customerInfo.entitlements.all.count)", category: "AUTH_REVENUECAT")
             
         } catch {
-            print("\n❌ REVENUE CAT: Error occurred")
-            print("❌ REVENUE CAT: Error = \(error)")
+            DebugLogger.shared.log("\n❌ REVENUE CAT: Error occurred", category: "AUTH_REVENUECAT")
+            DebugLogger.shared.log("❌ REVENUE CAT: Error = \(error)", category: "AUTH_REVENUECAT")
             
             self.errorMessage = "Could not connect to subscription service: \(error.localizedDescription)"
         }
         
-        print("🎫 REVENUE CAT: Complete\n")
+        DebugLogger.shared.log("🎫 REVENUE CAT: Complete\n", category: "AUTH_REVENUECAT")
     }
     
     deinit {
-        print("💀 AUTH DEINIT: AuthenticationViewModel is being deallocated")
+        DebugLogger.shared.log("💀 AUTH DEINIT: AuthenticationViewModel is being deallocated", category: "AUTH_DEINIT")
         networkMonitor.cancel()
     }
 }

@@ -27,7 +27,7 @@ struct RouteFavoritesView: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack {
                 if isLoading {
                     VStack {

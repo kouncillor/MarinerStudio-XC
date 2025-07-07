@@ -14,6 +14,9 @@ struct Mariner_StudioApp: App {
         // Initialize Supabase manager early
         _ = SupabaseManager.shared
         SupabaseManager.shared.enableVerboseLogging()
+        DebugLogger.shared.printLogLocation()
+        DebugLogger.shared.log("🚀 Mariner_StudioApp: App initialization started", category: "APP_INIT")
+        DebugLogger.shared.log("🔧 Mariner_StudioApp: SupabaseManager initialized and verbose logging enabled", category: "APP_INIT")
     }
     
     var body: some Scene {

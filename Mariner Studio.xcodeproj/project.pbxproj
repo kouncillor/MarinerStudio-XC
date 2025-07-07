@@ -52,9 +52,25 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		2E7228322E1AE2C80090B435 /* DEBUG */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = DEBUG;
+			sourceTree = "<group>";
+		};
+		2E7228332E1AE2C80090B435 /* LOGS */ = {
+			isa = PBXGroup;
+			children = (
+				2E7228322E1AE2C80090B435 /* DEBUG */,
+			);
+			path = LOGS;
+			sourceTree = "<group>";
+		};
 		2EB41CC72DBC80CC009FC129 = {
 			isa = PBXGroup;
 			children = (
+				2E7228332E1AE2C80090B435 /* LOGS */,
 				2EB41CD22DBC80CC009FC129 /* Mariner Studio */,
 				2EDB80DF2E03B3DD00E2A998 /* Frameworks */,
 				2EB41CD12DBC80CC009FC129 /* Products */,

@@ -23,7 +23,7 @@ struct TidalCurrentStationsView: View {
     var body: some View {
         print("🖼️ VIEW: Building TidalCurrentStationsView body")
         
-        return NavigationView {
+        return NavigationStack {
             VStack(spacing: 0) {
                 headerControls
                 contentView

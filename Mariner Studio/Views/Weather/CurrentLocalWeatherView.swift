@@ -3,6 +3,15 @@
 import SwiftUI
 import CoreLocation
 
+extension DateFormatter {
+    static var currentDateString: String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .full
+        formatter.timeStyle = .none
+        return formatter.string(from: Date())
+    }
+}
+
 struct CurrentLocalWeatherView: View {
     @StateObject private var viewModel = CurrentLocalWeatherViewModel()
     @EnvironmentObject var serviceProvider: ServiceProvider
@@ -20,6 +29,13 @@ struct CurrentLocalWeatherView: View {
                 } else if !viewModel.errorMessage.isEmpty {
                     ErrorView(errorMessage: viewModel.errorMessage)
                 } else {
+                    // Current date display
+                    Text(DateFormatter.currentDateString)
+                        .font(.title2)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                    
                     // Location display
                     Text(viewModel.locationDisplay)
                         .font(.title)

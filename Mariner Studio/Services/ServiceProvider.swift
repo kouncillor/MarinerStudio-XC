@@ -48,15 +48,15 @@ class ServiceProvider: ObservableObject {
     init(locationService: LocationService? = nil) {
         // Initialize DatabaseCore
         self.databaseCore = DatabaseCore()
-        print("📦 ServiceProvider: Initialized DatabaseCore.")
+        DebugLogger.shared.log("📦 ServiceProvider: Initialized DatabaseCore.", category: "SERVICE_INIT")
         
         // Initialize LocationService
         if let providedLocationService = locationService {
             self.locationService = providedLocationService
-            print("📦 ServiceProvider: Initialized with provided LocationService.")
+            DebugLogger.shared.log("📦 ServiceProvider: Initialized with provided LocationService.", category: "SERVICE_INIT")
         } else {
             self.locationService = LocationServiceImpl()
-            print("📦 ServiceProvider: Initialized with default LocationServiceImpl.")
+            DebugLogger.shared.log("📦 ServiceProvider: Initialized with default LocationServiceImpl.", category: "SERVICE_INIT")
         }
         
         // Initialize Database Services
@@ -80,15 +80,15 @@ class ServiceProvider: ObservableObject {
         self.mapOverlayService = MapOverlayDatabaseService(databaseCore: databaseCore)
         self.routeFavoritesService = RouteFavoritesDatabaseService(databaseCore: databaseCore)
         self.allRoutesService = AllRoutesDatabaseService(databaseCore: databaseCore)
-        print("📦 ServiceProvider: Initialized all database services.")
+        DebugLogger.shared.log("📦 ServiceProvider: Initialized all database services.", category: "SERVICE_INIT")
         
-        print("📦 ServiceProvider: Initialized sync services (TideStation, CurrentStation, NavUnit, WeatherStation).")
+        DebugLogger.shared.log("📦 ServiceProvider: Initialized sync services (TideStation, CurrentStation, NavUnit, WeatherStation).", category: "SERVICE_INIT")
         
         // Initialize Weather Services
         self.openMeteoService = WeatherServiceImpl()
         self.geocodingService = GeocodingServiceImpl()
         self.currentLocalWeatherService = CurrentLocalWeatherServiceImpl()
-        print("📦 ServiceProvider: Initialized weather services.")
+        DebugLogger.shared.log("📦 ServiceProvider: Initialized weather services.", category: "SERVICE_INIT")
         
         // Initialize Navigation Services
         self.navUnitFtpService = NavUnitFtpServiceImpl()
@@ -100,13 +100,13 @@ class ServiceProvider: ObservableObject {
         // Initialize GPX and Route Services
         self.gpxService = GpxServiceFactory.shared.getDefaultGpxService()
         self.routeCalculationService = RouteCalculationServiceImpl()
-        print("📦 ServiceProvider: Initialized GPX and route services.")
+        DebugLogger.shared.log("📦 ServiceProvider: Initialized GPX and route services.", category: "SERVICE_INIT")
         
         // Initialize Recommendation Service (using Supabase)
         self.recommendationService = RecommendationSupabaseService()
-        print("📦 ServiceProvider: Initialized recommendation Supabase service.")
+        DebugLogger.shared.log("📦 ServiceProvider: Initialized recommendation Supabase service.", category: "SERVICE_INIT")
         
-        print("📦 ServiceProvider initialization complete (sync portion).")
+        DebugLogger.shared.log("📦 ServiceProvider initialization complete (sync portion).", category: "SERVICE_INIT")
         self.setupAsyncTasks()
     }
     
@@ -115,7 +115,7 @@ class ServiceProvider: ObservableObject {
         // Task 1: Initialize database
         Task(priority: .utility) {
             do {
-                print("🚀 ServiceProvider: Initializing Database...")
+                DebugLogger.shared.log("🚀 ServiceProvider: Initializing Database...", category: "SERVICE_ASYNC")
                 try await self.databaseCore.initializeAsync()
                 
                 // Initialize tables
@@ -124,18 +124,18 @@ class ServiceProvider: ObservableObject {
                 try await self.mapOverlayService.initializeMapOverlaySettingsTableAsync()
                 try await self.routeFavoritesService.initializeRouteFavoritesTableAsync()
                 
-                print("📊 Tables initialized including RouteFavorites")
+                DebugLogger.shared.log("📊 Tables initialized including RouteFavorites", category: "SERVICE_ASYNC")
                 
                 // Test database operations to verify connection
                 try await self.databaseCore.checkConnectionWithTestQuery()
                 
                 let tableNames = try await self.databaseCore.getTableNamesAsync()
-                print("📊 Tables in the database: \(tableNames.joined(separator: ", "))")
+                DebugLogger.shared.log("📊 Tables in the database: \(tableNames.joined(separator: ", "))", category: "SERVICE_ASYNC")
                 
-                print("✅ ServiceProvider: Database successfully initialized.")
+                DebugLogger.shared.log("✅ ServiceProvider: Database successfully initialized.", category: "SERVICE_ASYNC")
                 
             } catch {
-                print("❌ ServiceProvider: Error during database initialization: \(error.localizedDescription)")
+                DebugLogger.shared.log("❌ ServiceProvider: Error during database initialization: \(error.localizedDescription)", category: "SERVICE_ASYNC")
                 // Handle initialization error appropriately
             }
         }
@@ -143,23 +143,23 @@ class ServiceProvider: ObservableObject {
         // Task 2: Request location permission if needed and start updates
         Task(priority: .utility) {
             do {
-                print("🚀 ServiceProvider: Requesting location permission...")
+                DebugLogger.shared.log("🚀 ServiceProvider: Requesting location permission...", category: "SERVICE_ASYNC")
                 await self.locationService.requestLocationPermission()
                 
                 // Start location updates if permission was granted
                 let permissionStatus = self.locationService.permissionStatus
-                print("📍 ServiceProvider: Location permission status: \(permissionStatus)")
+                DebugLogger.shared.log("📍 ServiceProvider: Location permission status: \(permissionStatus)", category: "SERVICE_ASYNC")
                 
                 if permissionStatus == .authorizedWhenInUse || permissionStatus == .authorizedAlways {
                     DispatchQueue.main.async {
-                        print("📍 ServiceProvider: Location permission granted. Starting updates.")
+                        DebugLogger.shared.log("📍 ServiceProvider: Location permission granted. Starting updates.", category: "SERVICE_ASYNC")
                         self.locationService.startUpdatingLocation()
                     }
                 } else {
-                    print("⚠️ ServiceProvider: Location permission not authorized at launch. Updates not started.")
+                    DebugLogger.shared.log("⚠️ ServiceProvider: Location permission not authorized at launch. Updates not started.", category: "SERVICE_ASYNC")
                 }
             } catch {
-                print("❌ ServiceProvider: Error during location permission request task: \(error.localizedDescription)")
+                DebugLogger.shared.log("❌ ServiceProvider: Error during location permission request task: \(error.localizedDescription)", category: "SERVICE_ASYNC")
             }
         }
         
@@ -171,28 +171,28 @@ class ServiceProvider: ObservableObject {
                 // Wait for other services to initialize first
                 try await Task.sleep(for: .seconds(1))
                 
-                print("🚀 ServiceProvider: Setting up recommendation service...")
+                DebugLogger.shared.log("🚀 ServiceProvider: Setting up recommendation service...", category: "SERVICE_ASYNC")
                 
                 // Check account status (Supabase authentication)
                 let isAuthenticated = await self.recommendationService.checkAccountStatus()
                 
                 if isAuthenticated {
-                    print("✅ ServiceProvider: Supabase account authenticated for recommendations")
+                    DebugLogger.shared.log("✅ ServiceProvider: Supabase account authenticated for recommendations", category: "SERVICE_ASYNC")
                     
                     // Setup notification subscription (placeholder for now)
                     try await self.recommendationService.setupNotificationSubscription()
-                    print("🔔 ServiceProvider: Recommendation notifications configured")
+                    DebugLogger.shared.log("🔔 ServiceProvider: Recommendation notifications configured", category: "SERVICE_ASYNC")
                 } else {
-                    print("⚠️ ServiceProvider: Supabase account not authenticated for recommendations")
+                    DebugLogger.shared.log("⚠️ ServiceProvider: Supabase account not authenticated for recommendations", category: "SERVICE_ASYNC")
                 }
                 
             } catch {
-                print("❌ ServiceProvider: Error setting up recommendation service: \(error.localizedDescription)")
+                DebugLogger.shared.log("❌ ServiceProvider: Error setting up recommendation service: \(error.localizedDescription)", category: "SERVICE_ASYNC")
                 // Don't fail app startup for recommendation service issues
             }
         }
         
-        print("📦 ServiceProvider initialization complete (async tasks launched).")
+        DebugLogger.shared.log("📦 ServiceProvider initialization complete (async tasks launched).", category: "SERVICE_INIT")
     }
     
 }

@@ -26,8 +26,7 @@ struct MainView: View {
         NavigationStack(path: $navigationPath) {
             ScrollView {
                 LazyVGrid(columns: columns, spacing: 12) {
-                    // All of your NavigationLinks (MAP, WEATHER, etc.) go here
-                    // ...
+                    // Row 1: Map/Weather
                     NavigationLink(destination: MapClusteringView()) {
                         NavigationButtonContent(
                             icon: "earthsixfour",
@@ -42,6 +41,22 @@ struct MainView: View {
                         )
                     }
 
+                    // Row 2: Docks/Routes
+                    NavigationLink(destination: NavUnitMenuView()) {
+                        NavigationButtonContent(
+                            icon: "docksixseven",
+                            title: "DOCKS"
+                        )
+                    }
+
+                    NavigationLink(destination: RouteMenuView()) {
+                        NavigationButtonContent(
+                            icon: "greencompasssixseven",
+                            title: "ROUTES"
+                        )
+                    }
+
+                    // Row 3: Tides/Currents
                     NavigationLink(destination: TideMenuView()) {
                         NavigationButtonContent(
                             icon: "water.waves",
@@ -60,31 +75,7 @@ struct MainView: View {
                         )
                     }
                     
-//                    NavigationLink(destination: WaveDirectionDisplayView()) {
-//                        NavigationButtonContent(
-//                            icon: "arrow.up.down.circle.fill",
-//                            title: "WAVE DIRECTION",
-//                            isSystemIcon: true,
-//                            iconColor: .blue
-//                        )
-//                    }
-                    
-                    
-                    NavigationLink(destination: NavUnitMenuView()) {
-                        NavigationButtonContent(
-                            icon: "docksixseven",
-                            title: "DOCKS"
-                        )
-                    }
-        
-
-                    NavigationLink(destination: BuoyMenuView()) {
-                        NavigationButtonContent(
-                            icon: "buoysixseven",
-                            title: "BUOYS"
-                        )
-                    }
-                    
+                    // Row 4: Tugs/Barges
                     NavigationLink(destination: TugsView(
                         vesselService: serviceProvider.vesselService
                     )) {
@@ -103,13 +94,14 @@ struct MainView: View {
                         )
                     }
 
-                    NavigationLink(destination: RouteMenuView()) {
+                    // Row 5: Buoys/Dev Tools
+                    NavigationLink(destination: BuoyMenuView()) {
                         NavigationButtonContent(
-                            icon: "greencompasssixseven",
-                            title: "ROUTES"
+                            icon: "buoysixseven",
+                            title: "BUOYS"
                         )
                     }
-
+                    
                     #if DEBUG
                     NavigationLink(destination: DevPageView()) {
                         NavigationButtonContent(

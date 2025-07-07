@@ -21,7 +21,7 @@ struct AllRoutesView: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 0) {
                 // Header with filters
                 headerView

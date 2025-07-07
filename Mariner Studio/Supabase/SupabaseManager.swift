@@ -23,9 +23,9 @@ final class SupabaseManager {
     // MARK: - Initialization
     private init() {
         logQueue.async {
-            print("\n🚀 SUPABASE MANAGER: Initializing comprehensive logging system")
-            print("🚀 SUPABASE MANAGER: Thread = \(Thread.current)")
-            print("🚀 SUPABASE MANAGER: Timestamp = \(Date())")
+            DebugLogger.shared.log("\n🚀 SUPABASE MANAGER: Initializing comprehensive logging system", category: "SUPABASE_INIT")
+            DebugLogger.shared.log("🚀 SUPABASE MANAGER: Thread = \(Thread.current)", category: "SUPABASE_INIT")
+            DebugLogger.shared.log("🚀 SUPABASE MANAGER: Timestamp = \(Date())", category: "SUPABASE_INIT")
         }
         
         guard let url = URL(string: "https://lgdsvefqqorvnvkiobth.supabase.co") else {
@@ -37,8 +37,8 @@ final class SupabaseManager {
         self.client = SupabaseClient(supabaseURL: url, supabaseKey: key)
         
         logQueue.async {
-            print("✅ SUPABASE MANAGER: Client initialized successfully")
-            print("✅ SUPABASE MANAGER: Ready for operations\n")
+            DebugLogger.shared.log("✅ SUPABASE MANAGER: Client initialized successfully", category: "SUPABASE_INIT")
+            DebugLogger.shared.log("✅ SUPABASE MANAGER: Ready for operations\n", category: "SUPABASE_INIT")
         }
     }
     
@@ -54,13 +54,13 @@ final class SupabaseManager {
         activeOperations[operationId] = startTime
         
         logQueue.async {
-            print("\n🟢 OPERATION START: \(operationId)")
-            print("🟢 OPERATION: \(name)")
-            print("🟢 DETAILS: \(details)")
-            print("🟢 START TIME: \(startTime)")
-            print("🟢 THREAD: \(Thread.current)")
-            print("🟢 ACTIVE OPERATIONS: \(self.activeOperations.count)")
-            print("🟢 CONCURRENT OPS: \(Array(self.activeOperations.keys))")
+            DebugLogger.shared.log("\n🟢 OPERATION START: \(operationId)", category: "SUPABASE_OPS")
+            DebugLogger.shared.log("🟢 OPERATION: \(name)", category: "SUPABASE_OPS")
+            DebugLogger.shared.log("🟢 DETAILS: \(details)", category: "SUPABASE_OPS")
+            DebugLogger.shared.log("🟢 START TIME: \(startTime)", category: "SUPABASE_OPS")
+            DebugLogger.shared.log("🟢 THREAD: \(Thread.current)", category: "SUPABASE_OPS")
+            DebugLogger.shared.log("🟢 ACTIVE OPERATIONS: \(self.activeOperations.count)", category: "SUPABASE_OPS")
+            DebugLogger.shared.log("🟢 CONCURRENT OPS: \(Array(self.activeOperations.keys))", category: "SUPABASE_OPS")
         }
         
         return operationId
@@ -81,30 +81,30 @@ final class SupabaseManager {
         
         logQueue.async {
             if success {
-                print("\n✅ OPERATION SUCCESS: \(operationId)")
-                print("✅ DURATION: \(String(format: "%.3f", duration))s")
+                DebugLogger.shared.log("\n✅ OPERATION SUCCESS: \(operationId)", category: "SUPABASE_OPS")
+                DebugLogger.shared.log("✅ DURATION: \(String(format: "%.3f", duration))s", category: "SUPABASE_OPS")
             } else {
-                print("\n❌ OPERATION FAILED: \(operationId)")
-                print("❌ DURATION: \(String(format: "%.3f", duration))s")
+                DebugLogger.shared.log("\n❌ OPERATION FAILED: \(operationId)", category: "SUPABASE_OPS")
+                DebugLogger.shared.log("❌ DURATION: \(String(format: "%.3f", duration))s", category: "SUPABASE_OPS")
                 if let error = error {
-                    print("❌ ERROR: \(error)")
-                    print("❌ ERROR TYPE: \(type(of: error))")
+                    DebugLogger.shared.log("❌ ERROR: \(error)", category: "SUPABASE_OPS")
+                    DebugLogger.shared.log("❌ ERROR TYPE: \(type(of: error))", category: "SUPABASE_OPS")
                     let nsError = error as NSError
-                    print("❌ ERROR DOMAIN: \(nsError.domain)")
-                    print("❌ ERROR CODE: \(nsError.code)")
-                    print("❌ ERROR INFO: \(nsError.userInfo)")
+                    DebugLogger.shared.log("❌ ERROR DOMAIN: \(nsError.domain)", category: "SUPABASE_OPS")
+                    DebugLogger.shared.log("❌ ERROR CODE: \(nsError.code)", category: "SUPABASE_OPS")
+                    DebugLogger.shared.log("❌ ERROR INFO: \(nsError.userInfo)", category: "SUPABASE_OPS")
                 }
             }
-            print("✅ REMAINING ACTIVE: \(self.activeOperations.count)")
+            DebugLogger.shared.log("✅ REMAINING ACTIVE: \(self.activeOperations.count)", category: "SUPABASE_OPS")
             if !self.activeOperations.isEmpty {
-                print("⚠️ STILL RUNNING: \(Array(self.activeOperations.keys))")
+                DebugLogger.shared.log("⚠️ STILL RUNNING: \(Array(self.activeOperations.keys))", category: "SUPABASE_OPS")
                 
                 // Check for long-running operations
                 let now = Date()
                 for (opId, startTime) in self.activeOperations {
                     let runTime = now.timeIntervalSince(startTime)
                     if runTime > 10.0 { // More than 10 seconds
-                        print("🚨 LONG RUNNING: \(opId) has been running for \(String(format: "%.1f", runTime))s")
+                        DebugLogger.shared.log("🚨 LONG RUNNING: \(opId) has been running for \(String(format: "%.1f", runTime))s", category: "SUPABASE_OPS")
                     }
                 }
             }
@@ -147,12 +147,12 @@ final class SupabaseManager {
             let result = try await client.auth.signIn(email: email, password: password)
             
             logQueue.async {
-                print("📊 SIGN IN RESULT:")
-                print("   User ID: \(result.user.id)")
-                print("   Email: \(result.user.email ?? "none")")
-                print("   Session expires: \(Date(timeIntervalSince1970: TimeInterval(result.expiresAt)))")
-                print("   Access token length: \(result.accessToken.count)")
-                print("   Refresh token length: \(result.refreshToken.count)")
+                DebugLogger.shared.log("📊 SIGN IN RESULT:", category: "SUPABASE_AUTH")
+                DebugLogger.shared.log("   User ID: \(result.user.id)", category: "SUPABASE_AUTH")
+                DebugLogger.shared.log("   Email: \(result.user.email ?? "none")", category: "SUPABASE_AUTH")
+                DebugLogger.shared.log("   Session expires: \(Date(timeIntervalSince1970: TimeInterval(result.expiresAt)))", category: "SUPABASE_AUTH")
+                DebugLogger.shared.log("   Access token length: \(result.accessToken.count)", category: "SUPABASE_AUTH")
+                DebugLogger.shared.log("   Refresh token length: \(result.refreshToken.count)", category: "SUPABASE_AUTH")
             }
             
             endOperation(operationId, success: true)
@@ -173,10 +173,10 @@ final class SupabaseManager {
             let result = try await client.auth.signUp(email: email, password: password)
             
             logQueue.async {
-                print("📊 SIGN UP RESULT:")
-                print("   User ID: \(result.user.id)")
-                print("   Email: \(result.user.email ?? "none")")
-                print("   Email confirmed: \(result.user.emailConfirmedAt != nil)")
+                DebugLogger.shared.log("📊 SIGN UP RESULT:", category: "SUPABASE_AUTH")
+                DebugLogger.shared.log("   User ID: \(result.user.id)", category: "SUPABASE_AUTH")
+                DebugLogger.shared.log("   Email: \(result.user.email ?? "none")", category: "SUPABASE_AUTH")
+                DebugLogger.shared.log("   Email confirmed: \(result.user.emailConfirmedAt != nil)", category: "SUPABASE_AUTH")
             }
             
             endOperation(operationId, success: true)
@@ -206,11 +206,11 @@ final class SupabaseManager {
             let session = try await client.auth.session
             
             logQueue.async {
-                print("📊 SESSION RESULT:")
-                print("   User ID: \(session.user.id)")
-                print("   Email: \(session.user.email ?? "none")")
-                print("   Expires at: \(Date(timeIntervalSince1970: TimeInterval(session.expiresAt)))")
-                print("   Time until expiry: \(String(format: "%.1f", Date(timeIntervalSince1970: TimeInterval(session.expiresAt)).timeIntervalSinceNow / 60)) minutes")
+                DebugLogger.shared.log("📊 SESSION RESULT:", category: "SUPABASE_AUTH")
+                DebugLogger.shared.log("   User ID: \(session.user.id)", category: "SUPABASE_AUTH")
+                DebugLogger.shared.log("   Email: \(session.user.email ?? "none")", category: "SUPABASE_AUTH")
+                DebugLogger.shared.log("   Expires at: \(Date(timeIntervalSince1970: TimeInterval(session.expiresAt)))", category: "SUPABASE_AUTH")
+                DebugLogger.shared.log("   Time until expiry: \(String(format: "%.1f", Date(timeIntervalSince1970: TimeInterval(session.expiresAt)).timeIntervalSinceNow / 60)) minutes", category: "SUPABASE_AUTH")
             }
             
             endOperation(operationId, success: true)
@@ -225,7 +225,7 @@ final class SupabaseManager {
     
     func from(_ table: String) -> PostgrestQueryBuilder {
         logQueue.async {
-            print("🗄️ DATABASE: Creating query builder for table '\(table)'")
+            DebugLogger.shared.log("🗄️ DATABASE: Creating query builder for table '\(table)'", category: "SUPABASE_DB")
         }
         
         return client.from(table)
@@ -261,31 +261,31 @@ final class SupabaseManager {
         statsLock.unlock()
         
         logQueue.async {
-            print("\n📊 SUPABASE MANAGER STATISTICS:")
-            print("📊 ================================")
+            DebugLogger.shared.log("\n📊 SUPABASE MANAGER STATISTICS:", category: "SUPABASE_STATS")
+            DebugLogger.shared.log("📊 ================================", category: "SUPABASE_STATS")
             
             for (operation, stat) in stats.sorted(by: { $0.key < $1.key }) {
                 let avgDuration = stat.totalDuration / Double(stat.totalCalls)
                 let successRate = Double(stat.successCount) / Double(stat.totalCalls) * 100
                 
-                print("📊 \(operation.uppercased()):")
-                print("   Total calls: \(stat.totalCalls)")
-                print("   Success rate: \(String(format: "%.1f", successRate))%")
-                print("   Avg duration: \(String(format: "%.3f", avgDuration))s")
-                print("   Min duration: \(String(format: "%.3f", stat.minDuration))s")
-                print("   Max duration: \(String(format: "%.3f", stat.maxDuration))s")
-                print("   Failures: \(stat.failureCount)")
-                print("")
+                DebugLogger.shared.log("📊 \(operation.uppercased()):", category: "SUPABASE_STATS")
+                DebugLogger.shared.log("   Total calls: \(stat.totalCalls)", category: "SUPABASE_STATS")
+                DebugLogger.shared.log("   Success rate: \(String(format: "%.1f", successRate))%", category: "SUPABASE_STATS")
+                DebugLogger.shared.log("   Avg duration: \(String(format: "%.3f", avgDuration))s", category: "SUPABASE_STATS")
+                DebugLogger.shared.log("   Min duration: \(String(format: "%.3f", stat.minDuration))s", category: "SUPABASE_STATS")
+                DebugLogger.shared.log("   Max duration: \(String(format: "%.3f", stat.maxDuration))s", category: "SUPABASE_STATS")
+                DebugLogger.shared.log("   Failures: \(stat.failureCount)", category: "SUPABASE_STATS")
+                DebugLogger.shared.log("", category: "SUPABASE_STATS")
             }
             
-            print("📊 Current active operations: \(self.activeOperations.count)")
+            DebugLogger.shared.log("📊 Current active operations: \(self.activeOperations.count)", category: "SUPABASE_STATS")
             if !self.activeOperations.isEmpty {
                 for (opId, startTime) in self.activeOperations {
                     let duration = Date().timeIntervalSince(startTime)
-                    print("   \(opId): \(String(format: "%.1f", duration))s")
+                    DebugLogger.shared.log("   \(opId): \(String(format: "%.1f", duration))s", category: "SUPABASE_STATS")
                 }
             }
-            print("📊 ================================\n")
+            DebugLogger.shared.log("📊 ================================\n", category: "SUPABASE_STATS")
         }
     }
     
@@ -299,7 +299,7 @@ final class SupabaseManager {
     
     func enableVerboseLogging() {
         logQueue.async {
-            print("🔍 SUPABASE MANAGER: Verbose logging ENABLED")
+            DebugLogger.shared.log("🔍 SUPABASE MANAGER: Verbose logging ENABLED", category: "SUPABASE_DEBUG")
         }
     }
     
@@ -307,11 +307,11 @@ final class SupabaseManager {
         let operations = getCurrentOperations()
         
         logQueue.async {
-            print("\n🔍 SUPABASE MANAGER STATE:")
-            print("🔍 Active operations: \(operations.count)")
-            print("🔍 Operations: \(operations)")
-            print("🔍 Thread: \(Thread.current)")
-            print("🔍 Timestamp: \(Date())")
+            DebugLogger.shared.log("\n🔍 SUPABASE MANAGER STATE:", category: "SUPABASE_STATE")
+            DebugLogger.shared.log("🔍 Active operations: \(operations.count)", category: "SUPABASE_STATE")
+            DebugLogger.shared.log("🔍 Operations: \(operations)", category: "SUPABASE_STATE")
+            DebugLogger.shared.log("🔍 Thread: \(Thread.current)", category: "SUPABASE_STATE")
+            DebugLogger.shared.log("🔍 Timestamp: \(Date())", category: "SUPABASE_STATE")
         }
     }
     
@@ -329,10 +329,10 @@ final class SupabaseManager {
             
             do {
                 logQueue.async {
-                    print("☁️🧭 NAV_UNIT_FAVORITES_QUERY: Starting remote favorites retrieval")
-                    print("☁️🧭 NAV_UNIT_FAVORITES_QUERY: Table = user_nav_unit_favorites")
-                    print("☁️🧭 NAV_UNIT_FAVORITES_QUERY: User ID filter = \(userId)")
-                    print("☁️🧭 NAV_UNIT_FAVORITES_QUERY: Timestamp = \(Date())")
+                    DebugLogger.shared.log("☁️🧭 NAV_UNIT_FAVORITES_QUERY: Starting remote favorites retrieval", category: "SUPABASE_NAVUNIT")
+                    DebugLogger.shared.log("☁️🧭 NAV_UNIT_FAVORITES_QUERY: Table = user_nav_unit_favorites", category: "SUPABASE_NAVUNIT")
+                    DebugLogger.shared.log("☁️🧭 NAV_UNIT_FAVORITES_QUERY: User ID filter = \(userId)", category: "SUPABASE_NAVUNIT")
+                    DebugLogger.shared.log("☁️🧭 NAV_UNIT_FAVORITES_QUERY: Timestamp = \(Date())", category: "SUPABASE_NAVUNIT")
                 }
                 
                 // Query the user_nav_unit_favorites table for this specific user
@@ -345,32 +345,32 @@ final class SupabaseManager {
                 let favorites = response.value
                 
                 logQueue.async {
-                    print("✅☁️🧭 NAV_UNIT_FAVORITES_SUCCESS: Retrieved \(favorites.count) nav unit favorites")
-                    print("☁️🧭 NAV_UNIT_FAVORITES_BREAKDOWN:")
+                    DebugLogger.shared.log("✅☁️🧭 NAV_UNIT_FAVORITES_SUCCESS: Retrieved \(favorites.count) nav unit favorites", category: "SUPABASE_NAVUNIT")
+                    DebugLogger.shared.log("☁️🧭 NAV_UNIT_FAVORITES_BREAKDOWN:", category: "SUPABASE_NAVUNIT")
                     
                     // Log breakdown of favorite vs unfavorite records
                     let favoriteRecords = favorites.filter { $0.isFavorite }
                     let unfavoriteRecords = favorites.filter { !$0.isFavorite }
-                    print("   - Favorites (true): \(favoriteRecords.count)")
-                    print("   - Unfavorites (false): \(unfavoriteRecords.count)")
+                    DebugLogger.shared.log("   - Favorites (true): \(favoriteRecords.count)", category: "SUPABASE_NAVUNIT")
+                    DebugLogger.shared.log("   - Unfavorites (false): \(unfavoriteRecords.count)", category: "SUPABASE_NAVUNIT")
                     
                     // Log first few records for debugging
                     if !favorites.isEmpty {
-                        print("☁️🧭 NAV_UNIT_FAVORITES_SAMPLE:")
+                        DebugLogger.shared.log("☁️🧭 NAV_UNIT_FAVORITES_SAMPLE:", category: "SUPABASE_NAVUNIT")
                         for (index, favorite) in favorites.prefix(5).enumerated() {
-                            print("   [\(index)] NavUnit: \(favorite.navUnitId)")
-                            print("       Name: \(favorite.navUnitName ?? "unknown")")
-                            print("       Favorite: \(favorite.isFavorite)")
-                            print("       Modified: \(favorite.lastModified)")
-                            print("       Device: \(favorite.deviceId)")
-                            print("       Coords: \(favorite.latitude?.description ?? "nil"), \(favorite.longitude?.description ?? "nil")")
+                            DebugLogger.shared.log("   [\(index)] NavUnit: \(favorite.navUnitId)", category: "SUPABASE_NAVUNIT")
+                            DebugLogger.shared.log("       Name: \(favorite.navUnitName ?? "unknown")", category: "SUPABASE_NAVUNIT")
+                            DebugLogger.shared.log("       Favorite: \(favorite.isFavorite)", category: "SUPABASE_NAVUNIT")
+                            DebugLogger.shared.log("       Modified: \(favorite.lastModified)", category: "SUPABASE_NAVUNIT")
+                            DebugLogger.shared.log("       Device: \(favorite.deviceId)", category: "SUPABASE_NAVUNIT")
+                            DebugLogger.shared.log("       Coords: \(favorite.latitude?.description ?? "nil"), \(favorite.longitude?.description ?? "nil")", category: "SUPABASE_NAVUNIT")
                         }
                         
                         if favorites.count > 5 {
-                            print("   ... and \(favorites.count - 5) more records")
+                            DebugLogger.shared.log("   ... and \(favorites.count - 5) more records", category: "SUPABASE_NAVUNIT")
                         }
                     } else {
-                        print("⚠️☁️🧭 NAV_UNIT_FAVORITES_WARNING: No remote favorites found for user")
+                        DebugLogger.shared.log("⚠️☁️🧭 NAV_UNIT_FAVORITES_WARNING: No remote favorites found for user", category: "SUPABASE_NAVUNIT")
                     }
                 }
                 
@@ -379,13 +379,13 @@ final class SupabaseManager {
                 
             } catch {
                 logQueue.async {
-                    print("❌☁️🧭 NAV_UNIT_FAVORITES_ERROR: Failed to retrieve remote favorites")
-                    print("❌☁️🧭 NAV_UNIT_FAVORITES_ERROR_DETAILS: \(error.localizedDescription)")
-                    print("❌☁️🧭 NAV_UNIT_FAVORITES_ERROR_TYPE: \(type(of: error))")
+                    DebugLogger.shared.log("❌☁️🧭 NAV_UNIT_FAVORITES_ERROR: Failed to retrieve remote favorites", category: "SUPABASE_NAVUNIT")
+                    DebugLogger.shared.log("❌☁️🧭 NAV_UNIT_FAVORITES_ERROR_DETAILS: \(error.localizedDescription)", category: "SUPABASE_NAVUNIT")
+                    DebugLogger.shared.log("❌☁️🧭 NAV_UNIT_FAVORITES_ERROR_TYPE: \(type(of: error))", category: "SUPABASE_NAVUNIT")
                     
                     // Log additional error context for debugging
                     if let postgrestError = error as? PostgrestError {
-                        print("❌☁️🧭 NAV_UNIT_FAVORITES_POSTGREST_ERROR: \(postgrestError)")
+                        DebugLogger.shared.log("❌☁️🧭 NAV_UNIT_FAVORITES_POSTGREST_ERROR: \(postgrestError)", category: "SUPABASE_NAVUNIT")
                     }
                 }
                 
@@ -404,15 +404,15 @@ final class SupabaseManager {
             
             do {
                 logQueue.async {
-                    print("📤🧭 NAV_UNIT_UPSERT: Starting nav unit favorite upsert")
-                    print("📤🧭 NAV_UNIT_UPSERT: Table = user_nav_unit_favorites")
-                    print("📤🧭 NAV_UNIT_UPSERT: NavUnit ID = \(favorite.navUnitId)")
-                    print("📤🧭 NAV_UNIT_UPSERT: Name = \(favorite.navUnitName ?? "unknown")")
-                    print("📤🧭 NAV_UNIT_UPSERT: User ID = \(favorite.userId)")
-                    print("📤🧭 NAV_UNIT_UPSERT: Is Favorite = \(favorite.isFavorite)")
-                    print("📤🧭 NAV_UNIT_UPSERT: Last Modified = \(favorite.lastModified)")
-                    print("📤🧭 NAV_UNIT_UPSERT: Device ID = \(favorite.deviceId)")
-                    print("📤🧭 NAV_UNIT_UPSERT: Timestamp = \(Date())")
+                    DebugLogger.shared.log("📤🧭 NAV_UNIT_UPSERT: Starting nav unit favorite upsert", category: "SUPABASE_NAVUNIT")
+                    DebugLogger.shared.log("📤🧭 NAV_UNIT_UPSERT: Table = user_nav_unit_favorites", category: "SUPABASE_NAVUNIT")
+                    DebugLogger.shared.log("📤🧭 NAV_UNIT_UPSERT: NavUnit ID = \(favorite.navUnitId)", category: "SUPABASE_NAVUNIT")
+                    DebugLogger.shared.log("📤🧭 NAV_UNIT_UPSERT: Name = \(favorite.navUnitName ?? "unknown")", category: "SUPABASE_NAVUNIT")
+                    DebugLogger.shared.log("📤🧭 NAV_UNIT_UPSERT: User ID = \(favorite.userId)", category: "SUPABASE_NAVUNIT")
+                    DebugLogger.shared.log("📤🧭 NAV_UNIT_UPSERT: Is Favorite = \(favorite.isFavorite)", category: "SUPABASE_NAVUNIT")
+                    DebugLogger.shared.log("📤🧭 NAV_UNIT_UPSERT: Last Modified = \(favorite.lastModified)", category: "SUPABASE_NAVUNIT")
+                    DebugLogger.shared.log("📤🧭 NAV_UNIT_UPSERT: Device ID = \(favorite.deviceId)", category: "SUPABASE_NAVUNIT")
+                    DebugLogger.shared.log("📤🧭 NAV_UNIT_UPSERT: Timestamp = \(Date())", category: "SUPABASE_NAVUNIT")
                 }
                 
                 // Use upsert to handle both insert and update cases
@@ -424,31 +424,31 @@ final class SupabaseManager {
                     .execute()
                 
                 logQueue.async {
-                    print("✅📤🧭 NAV_UNIT_UPSERT_SUCCESS: Nav unit favorite upserted successfully")
-                    print("✅📤🧭 NAV_UNIT_UPSERT_SUCCESS: NavUnit \(favorite.navUnitId) - \(favorite.navUnitName ?? "unknown")")
-                    print("✅📤🧭 NAV_UNIT_UPSERT_SUCCESS: Final state: isFavorite = \(favorite.isFavorite)")
+                    DebugLogger.shared.log("✅📤🧭 NAV_UNIT_UPSERT_SUCCESS: Nav unit favorite upserted successfully", category: "SUPABASE_NAVUNIT")
+                    DebugLogger.shared.log("✅📤🧭 NAV_UNIT_UPSERT_SUCCESS: NavUnit \(favorite.navUnitId) - \(favorite.navUnitName ?? "unknown")", category: "SUPABASE_NAVUNIT")
+                    DebugLogger.shared.log("✅📤🧭 NAV_UNIT_UPSERT_SUCCESS: Final state: isFavorite = \(favorite.isFavorite)", category: "SUPABASE_NAVUNIT")
                 }
                 
                 endOperation(operationId, success: true)
                 
             } catch {
                 logQueue.async {
-                    print("❌📤🧭 NAV_UNIT_UPSERT_ERROR: Failed to upsert nav unit favorite")
-                    print("❌📤🧭 NAV_UNIT_UPSERT_ERROR: NavUnit = \(favorite.navUnitId)")
-                    print("❌📤🧭 NAV_UNIT_UPSERT_ERROR_DETAILS: \(error.localizedDescription)")
-                    print("❌📤🧭 NAV_UNIT_UPSERT_ERROR_TYPE: \(type(of: error))")
+                    DebugLogger.shared.log("❌📤🧭 NAV_UNIT_UPSERT_ERROR: Failed to upsert nav unit favorite", category: "SUPABASE_NAVUNIT")
+                    DebugLogger.shared.log("❌📤🧭 NAV_UNIT_UPSERT_ERROR: NavUnit = \(favorite.navUnitId)", category: "SUPABASE_NAVUNIT")
+                    DebugLogger.shared.log("❌📤🧭 NAV_UNIT_UPSERT_ERROR_DETAILS: \(error.localizedDescription)", category: "SUPABASE_NAVUNIT")
+                    DebugLogger.shared.log("❌📤🧭 NAV_UNIT_UPSERT_ERROR_TYPE: \(type(of: error))", category: "SUPABASE_NAVUNIT")
                     
                     // Log the favorite data that failed to upsert for debugging
-                    print("❌📤🧭 NAV_UNIT_UPSERT_FAILED_DATA:")
-                    print("   NavUnit ID: \(favorite.navUnitId)")
-                    print("   User ID: \(favorite.userId)")
-                    print("   Is Favorite: \(favorite.isFavorite)")
-                    print("   Last Modified: \(favorite.lastModified)")
-                    print("   Device ID: \(favorite.deviceId)")
+                    DebugLogger.shared.log("❌📤🧭 NAV_UNIT_UPSERT_FAILED_DATA:", category: "SUPABASE_NAVUNIT")
+                    DebugLogger.shared.log("   NavUnit ID: \(favorite.navUnitId)", category: "SUPABASE_NAVUNIT")
+                    DebugLogger.shared.log("   User ID: \(favorite.userId)", category: "SUPABASE_NAVUNIT")
+                    DebugLogger.shared.log("   Is Favorite: \(favorite.isFavorite)", category: "SUPABASE_NAVUNIT")
+                    DebugLogger.shared.log("   Last Modified: \(favorite.lastModified)", category: "SUPABASE_NAVUNIT")
+                    DebugLogger.shared.log("   Device ID: \(favorite.deviceId)", category: "SUPABASE_NAVUNIT")
                     
                     // Log additional error context for debugging
                     if let postgrestError = error as? PostgrestError {
-                        print("❌📤🧭 NAV_UNIT_UPSERT_POSTGREST_ERROR: \(postgrestError)")
+                        DebugLogger.shared.log("❌📤🧭 NAV_UNIT_UPSERT_POSTGREST_ERROR: \(postgrestError)", category: "SUPABASE_NAVUNIT")
                     }
                 }
                 
@@ -469,11 +469,11 @@ final class SupabaseManager {
             
             do {
                 logQueue.async {
-                    print("🗑️🧭 NAV_UNIT_DELETE: Starting nav unit favorite deletion")
-                    print("🗑️🧭 NAV_UNIT_DELETE: Table = user_nav_unit_favorites")
-                    print("🗑️🧭 NAV_UNIT_DELETE: User ID = \(userId)")
-                    print("🗑️🧭 NAV_UNIT_DELETE: NavUnit ID = \(navUnitId)")
-                    print("🗑️🧭 NAV_UNIT_DELETE: Timestamp = \(Date())")
+                    DebugLogger.shared.log("🗑️🧭 NAV_UNIT_DELETE: Starting nav unit favorite deletion", category: "SUPABASE_NAVUNIT")
+                    DebugLogger.shared.log("🗑️🧭 NAV_UNIT_DELETE: Table = user_nav_unit_favorites", category: "SUPABASE_NAVUNIT")
+                    DebugLogger.shared.log("🗑️🧭 NAV_UNIT_DELETE: User ID = \(userId)", category: "SUPABASE_NAVUNIT")
+                    DebugLogger.shared.log("🗑️🧭 NAV_UNIT_DELETE: NavUnit ID = \(navUnitId)", category: "SUPABASE_NAVUNIT")
+                    DebugLogger.shared.log("🗑️🧭 NAV_UNIT_DELETE: Timestamp = \(Date())", category: "SUPABASE_NAVUNIT")
                 }
                 
                 // Delete the specific record for this user and nav unit
@@ -485,23 +485,23 @@ final class SupabaseManager {
                     .execute()
                 
                 logQueue.async {
-                    print("✅🗑️🧭 NAV_UNIT_DELETE_SUCCESS: Nav unit favorite deleted successfully")
-                    print("✅🗑️🧭 NAV_UNIT_DELETE_SUCCESS: User \(userId) - NavUnit \(navUnitId)")
+                    DebugLogger.shared.log("✅🗑️🧭 NAV_UNIT_DELETE_SUCCESS: Nav unit favorite deleted successfully", category: "SUPABASE_NAVUNIT")
+                    DebugLogger.shared.log("✅🗑️🧭 NAV_UNIT_DELETE_SUCCESS: User \(userId) - NavUnit \(navUnitId)", category: "SUPABASE_NAVUNIT")
                 }
                 
                 endOperation(operationId, success: true)
                 
             } catch {
                 logQueue.async {
-                    print("❌🗑️🧭 NAV_UNIT_DELETE_ERROR: Failed to delete nav unit favorite")
-                    print("❌🗑️🧭 NAV_UNIT_DELETE_ERROR: User = \(userId)")
-                    print("❌🗑️🧭 NAV_UNIT_DELETE_ERROR: NavUnit = \(navUnitId)")
-                    print("❌🗑️🧭 NAV_UNIT_DELETE_ERROR_DETAILS: \(error.localizedDescription)")
-                    print("❌🗑️🧭 NAV_UNIT_DELETE_ERROR_TYPE: \(type(of: error))")
+                    DebugLogger.shared.log("❌🗑️🧭 NAV_UNIT_DELETE_ERROR: Failed to delete nav unit favorite", category: "SUPABASE_NAVUNIT")
+                    DebugLogger.shared.log("❌🗑️🧭 NAV_UNIT_DELETE_ERROR: User = \(userId)", category: "SUPABASE_NAVUNIT")
+                    DebugLogger.shared.log("❌🗑️🧭 NAV_UNIT_DELETE_ERROR: NavUnit = \(navUnitId)", category: "SUPABASE_NAVUNIT")
+                    DebugLogger.shared.log("❌🗑️🧭 NAV_UNIT_DELETE_ERROR_DETAILS: \(error.localizedDescription)", category: "SUPABASE_NAVUNIT")
+                    DebugLogger.shared.log("❌🗑️🧭 NAV_UNIT_DELETE_ERROR_TYPE: \(type(of: error))", category: "SUPABASE_NAVUNIT")
                     
                     // Log additional error context for debugging
                     if let postgrestError = error as? PostgrestError {
-                        print("❌🗑️🧭 NAV_UNIT_DELETE_POSTGREST_ERROR: \(postgrestError)")
+                        DebugLogger.shared.log("❌🗑️🧭 NAV_UNIT_DELETE_POSTGREST_ERROR: \(postgrestError)", category: "SUPABASE_NAVUNIT")
                     }
                 }
                 
@@ -520,10 +520,10 @@ final class SupabaseManager {
             
             do {
                 logQueue.async {
-                    print("🗑️🧭 NAV_UNIT_BULK_DELETE: Starting bulk nav unit favorites deletion")
-                    print("🗑️🧭 NAV_UNIT_BULK_DELETE: Table = user_nav_unit_favorites")
-                    print("🗑️🧭 NAV_UNIT_BULK_DELETE: User ID = \(userId)")
-                    print("🗑️🧭 NAV_UNIT_BULK_DELETE: Timestamp = \(Date())")
+                    DebugLogger.shared.log("🗑️🧭 NAV_UNIT_BULK_DELETE: Starting bulk nav unit favorites deletion", category: "SUPABASE_NAVUNIT")
+                    DebugLogger.shared.log("🗑️🧭 NAV_UNIT_BULK_DELETE: Table = user_nav_unit_favorites", category: "SUPABASE_NAVUNIT")
+                    DebugLogger.shared.log("🗑️🧭 NAV_UNIT_BULK_DELETE: User ID = \(userId)", category: "SUPABASE_NAVUNIT")
+                    DebugLogger.shared.log("🗑️🧭 NAV_UNIT_BULK_DELETE: Timestamp = \(Date())", category: "SUPABASE_NAVUNIT")
                 }
                 
                 // First, get count of records that will be deleted for reporting
@@ -543,9 +543,9 @@ final class SupabaseManager {
                     .execute()
                 
                 logQueue.async {
-                    print("✅🗑️🧭 NAV_UNIT_BULK_DELETE_SUCCESS: Bulk deletion completed")
-                    print("✅🗑️🧭 NAV_UNIT_BULK_DELETE_SUCCESS: User \(userId)")
-                    print("✅🗑️🧭 NAV_UNIT_BULK_DELETE_SUCCESS: Records deleted: \(recordCount)")
+                    DebugLogger.shared.log("✅🗑️🧭 NAV_UNIT_BULK_DELETE_SUCCESS: Bulk deletion completed", category: "SUPABASE_NAVUNIT")
+                    DebugLogger.shared.log("✅🗑️🧭 NAV_UNIT_BULK_DELETE_SUCCESS: User \(userId)", category: "SUPABASE_NAVUNIT")
+                    DebugLogger.shared.log("✅🗑️🧭 NAV_UNIT_BULK_DELETE_SUCCESS: Records deleted: \(recordCount)", category: "SUPABASE_NAVUNIT")
                 }
                 
                 endOperation(operationId, success: true)
@@ -553,14 +553,14 @@ final class SupabaseManager {
                 
             } catch {
                 logQueue.async {
-                    print("❌🗑️🧭 NAV_UNIT_BULK_DELETE_ERROR: Failed to bulk delete nav unit favorites")
-                    print("❌🗑️🧭 NAV_UNIT_BULK_DELETE_ERROR: User = \(userId)")
-                    print("❌🗑️🧭 NAV_UNIT_BULK_DELETE_ERROR_DETAILS: \(error.localizedDescription)")
-                    print("❌🗑️🧭 NAV_UNIT_BULK_DELETE_ERROR_TYPE: \(type(of: error))")
+                    DebugLogger.shared.log("❌🗑️🧭 NAV_UNIT_BULK_DELETE_ERROR: Failed to bulk delete nav unit favorites", category: "SUPABASE_NAVUNIT")
+                    DebugLogger.shared.log("❌🗑️🧭 NAV_UNIT_BULK_DELETE_ERROR: User = \(userId)", category: "SUPABASE_NAVUNIT")
+                    DebugLogger.shared.log("❌🗑️🧭 NAV_UNIT_BULK_DELETE_ERROR_DETAILS: \(error.localizedDescription)", category: "SUPABASE_NAVUNIT")
+                    DebugLogger.shared.log("❌🗑️🧭 NAV_UNIT_BULK_DELETE_ERROR_TYPE: \(type(of: error))", category: "SUPABASE_NAVUNIT")
                     
                     // Log additional error context for debugging
                     if let postgrestError = error as? PostgrestError {
-                        print("❌🗑️🧭 NAV_UNIT_BULK_DELETE_POSTGREST_ERROR: \(postgrestError)")
+                        DebugLogger.shared.log("❌🗑️🧭 NAV_UNIT_BULK_DELETE_POSTGREST_ERROR: \(postgrestError)", category: "SUPABASE_NAVUNIT")
                     }
                 }
                 
@@ -581,11 +581,11 @@ final class SupabaseManager {
         
         do {
             logQueue.async {
-                print("📥🌤️ WEATHER_FAVORITES_FETCH: Starting weather favorites query for user")
-                print("📥🌤️ WEATHER_FAVORITES_FETCH: Table = user_weather_favorites")
-                print("📥🌤️ WEATHER_FAVORITES_FETCH: User ID = \(userId)")
-                print("📥🌤️ WEATHER_FAVORITES_FETCH: Filter = user_id eq \(userId)")
-                print("📥🌤️ WEATHER_FAVORITES_FETCH: Timestamp = \(Date())")
+                DebugLogger.shared.log("📥🌤️ WEATHER_FAVORITES_FETCH: Starting weather favorites query for user", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("📥🌤️ WEATHER_FAVORITES_FETCH: Table = user_weather_favorites", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("📥🌤️ WEATHER_FAVORITES_FETCH: User ID = \(userId)", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("📥🌤️ WEATHER_FAVORITES_FETCH: Filter = user_id eq \(userId)", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("📥🌤️ WEATHER_FAVORITES_FETCH: Timestamp = \(Date())", category: "SUPABASE_WEATHER")
             }
             
             let response: PostgrestResponse<[RemoteWeatherFavorite]> = try await client
@@ -595,20 +595,20 @@ final class SupabaseManager {
                 .execute()
             
             logQueue.async {
-                print("✅📥🌤️ WEATHER_FAVORITES_FETCH_SUCCESS: Weather favorites retrieved successfully")
-                print("✅📥🌤️ WEATHER_FAVORITES_FETCH_SUCCESS: User = \(userId)")
-                print("✅📥🌤️ WEATHER_FAVORITES_FETCH_SUCCESS: Count = \(response.value.count)")
+                DebugLogger.shared.log("✅📥🌤️ WEATHER_FAVORITES_FETCH_SUCCESS: Weather favorites retrieved successfully", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("✅📥🌤️ WEATHER_FAVORITES_FETCH_SUCCESS: User = \(userId)", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("✅📥🌤️ WEATHER_FAVORITES_FETCH_SUCCESS: Count = \(response.value.count)", category: "SUPABASE_WEATHER")
                 
                 if !response.value.isEmpty {
-                    print("✅📥🌤️ WEATHER_FAVORITES_FETCH_SUCCESS: Sample locations:")
+                    DebugLogger.shared.log("✅📥🌤️ WEATHER_FAVORITES_FETCH_SUCCESS: Sample locations:", category: "SUPABASE_WEATHER")
                     for (index, favorite) in response.value.prefix(5).enumerated() {
-                        print("   [\(index + 1)] \(favorite.latitude),\(favorite.longitude) - \(favorite.locationName) (favorite: \(favorite.isFavorite))")
+                        DebugLogger.shared.log("   [\(index + 1)] \(favorite.latitude),\(favorite.longitude) - \(favorite.locationName) (favorite: \(favorite.isFavorite))", category: "SUPABASE_WEATHER")
                     }
                     if response.value.count > 5 {
-                        print("   ... and \(response.value.count - 5) more")
+                        DebugLogger.shared.log("   ... and \(response.value.count - 5) more", category: "SUPABASE_WEATHER")
                     }
                 } else {
-                    print("✅📥🌤️ WEATHER_FAVORITES_FETCH_SUCCESS: No weather favorites found for user")
+                    DebugLogger.shared.log("✅📥🌤️ WEATHER_FAVORITES_FETCH_SUCCESS: No weather favorites found for user", category: "SUPABASE_WEATHER")
                 }
             }
             
@@ -617,18 +617,18 @@ final class SupabaseManager {
             
         } catch {
             logQueue.async {
-                print("❌📥🌤️ WEATHER_FAVORITES_FETCH_ERROR: Failed to retrieve weather favorites")
-                print("❌📥🌤️ WEATHER_FAVORITES_FETCH_ERROR: User = \(userId)")
-                print("❌📥🌤️ WEATHER_FAVORITES_FETCH_ERROR_DETAILS: \(error.localizedDescription)")
-                print("❌📥🌤️ WEATHER_FAVORITES_FETCH_ERROR_TYPE: \(type(of: error))")
+                DebugLogger.shared.log("❌📥🌤️ WEATHER_FAVORITES_FETCH_ERROR: Failed to retrieve weather favorites", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("❌📥🌤️ WEATHER_FAVORITES_FETCH_ERROR: User = \(userId)", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("❌📥🌤️ WEATHER_FAVORITES_FETCH_ERROR_DETAILS: \(error.localizedDescription)", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("❌📥🌤️ WEATHER_FAVORITES_FETCH_ERROR_TYPE: \(type(of: error))", category: "SUPABASE_WEATHER")
                 
                 // Log additional error context for debugging
                 if let postgrestError = error as? PostgrestError {
-                    print("❌📥🌤️ WEATHER_FAVORITES_FETCH_POSTGREST_ERROR: \(postgrestError)")
+                    DebugLogger.shared.log("❌📥🌤️ WEATHER_FAVORITES_FETCH_POSTGREST_ERROR: \(postgrestError)", category: "SUPABASE_WEATHER")
                     if let code = postgrestError.code {
-                        print("❌📥🌤️ WEATHER_FAVORITES_FETCH_ERROR_CODE: \(code)")
+                        DebugLogger.shared.log("❌📥🌤️ WEATHER_FAVORITES_FETCH_ERROR_CODE: \(code)", category: "SUPABASE_WEATHER")
                     }
-                    print("❌📥🌤️ WEATHER_FAVORITES_FETCH_ERROR_MESSAGE: \(postgrestError.message)")
+                    DebugLogger.shared.log("❌📥🌤️ WEATHER_FAVORITES_FETCH_ERROR_MESSAGE: \(postgrestError.message)", category: "SUPABASE_WEATHER")
                 }
             }
             
@@ -647,16 +647,16 @@ final class SupabaseManager {
         
         do {
             logQueue.async {
-                print("📤🌤️ WEATHER_FAVORITE_UPSERT: Starting weather favorite upsert")
-                print("📤🌤️ WEATHER_FAVORITE_UPSERT: Table = user_weather_favorites")
-                print("📤🌤️ WEATHER_FAVORITE_UPSERT: User ID = \(favorite.userId)")
-                print("📤🌤️ WEATHER_FAVORITE_UPSERT: Location = \(favorite.latitude),\(favorite.longitude)")
-                print("📤🌤️ WEATHER_FAVORITE_UPSERT: Location Name = \(favorite.locationName)")
-                print("📤🌤️ WEATHER_FAVORITE_UPSERT: Is Favorite = \(favorite.isFavorite)")
-                print("📤🌤️ WEATHER_FAVORITE_UPSERT: Last Modified = \(favorite.lastModified)")
-                print("📤🌤️ WEATHER_FAVORITE_UPSERT: Device ID = \(favorite.deviceId)")
-                print("📤🌤️ WEATHER_FAVORITE_UPSERT: Conflict Resolution = user_id,latitude,longitude")
-                print("📤🌤️ WEATHER_FAVORITE_UPSERT: Timestamp = \(Date())")
+                DebugLogger.shared.log("📤🌤️ WEATHER_FAVORITE_UPSERT: Starting weather favorite upsert", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("📤🌤️ WEATHER_FAVORITE_UPSERT: Table = user_weather_favorites", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("📤🌤️ WEATHER_FAVORITE_UPSERT: User ID = \(favorite.userId)", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("📤🌤️ WEATHER_FAVORITE_UPSERT: Location = \(favorite.latitude),\(favorite.longitude)", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("📤🌤️ WEATHER_FAVORITE_UPSERT: Location Name = \(favorite.locationName)", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("📤🌤️ WEATHER_FAVORITE_UPSERT: Is Favorite = \(favorite.isFavorite)", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("📤🌤️ WEATHER_FAVORITE_UPSERT: Last Modified = \(favorite.lastModified)", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("📤🌤️ WEATHER_FAVORITE_UPSERT: Device ID = \(favorite.deviceId)", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("📤🌤️ WEATHER_FAVORITE_UPSERT: Conflict Resolution = user_id,latitude,longitude", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("📤🌤️ WEATHER_FAVORITE_UPSERT: Timestamp = \(Date())", category: "SUPABASE_WEATHER")
             }
             
             try await client
@@ -665,41 +665,41 @@ final class SupabaseManager {
                 .execute()
             
             logQueue.async {
-                print("✅📤🌤️ WEATHER_FAVORITE_UPSERT_SUCCESS: Weather favorite upserted successfully")
-                print("✅📤🌤️ WEATHER_FAVORITE_UPSERT_SUCCESS: User = \(favorite.userId)")
-                print("✅📤🌤️ WEATHER_FAVORITE_UPSERT_SUCCESS: Location = \(favorite.latitude),\(favorite.longitude)")
-                print("✅📤🌤️ WEATHER_FAVORITE_UPSERT_SUCCESS: Name = \(favorite.locationName)")
-                print("✅📤🌤️ WEATHER_FAVORITE_UPSERT_SUCCESS: Favorite Status = \(favorite.isFavorite)")
+                DebugLogger.shared.log("✅📤🌤️ WEATHER_FAVORITE_UPSERT_SUCCESS: Weather favorite upserted successfully", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("✅📤🌤️ WEATHER_FAVORITE_UPSERT_SUCCESS: User = \(favorite.userId)", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("✅📤🌤️ WEATHER_FAVORITE_UPSERT_SUCCESS: Location = \(favorite.latitude),\(favorite.longitude)", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("✅📤🌤️ WEATHER_FAVORITE_UPSERT_SUCCESS: Name = \(favorite.locationName)", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("✅📤🌤️ WEATHER_FAVORITE_UPSERT_SUCCESS: Favorite Status = \(favorite.isFavorite)", category: "SUPABASE_WEATHER")
             }
             
             endOperation(operationId, success: true)
             
         } catch {
             logQueue.async {
-                print("❌📤🌤️ WEATHER_FAVORITE_UPSERT_ERROR: Failed to upsert weather favorite")
-                print("❌📤🌤️ WEATHER_FAVORITE_UPSERT_ERROR: User = \(favorite.userId)")
-                print("❌📤🌤️ WEATHER_FAVORITE_UPSERT_ERROR: Location = \(favorite.latitude),\(favorite.longitude)")
-                print("❌📤🌤️ WEATHER_FAVORITE_UPSERT_ERROR: Name = \(favorite.locationName)")
-                print("❌📤🌤️ WEATHER_FAVORITE_UPSERT_ERROR_DETAILS: \(error.localizedDescription)")
-                print("❌📤🌤️ WEATHER_FAVORITE_UPSERT_ERROR_TYPE: \(type(of: error))")
+                DebugLogger.shared.log("❌📤🌤️ WEATHER_FAVORITE_UPSERT_ERROR: Failed to upsert weather favorite", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("❌📤🌤️ WEATHER_FAVORITE_UPSERT_ERROR: User = \(favorite.userId)", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("❌📤🌤️ WEATHER_FAVORITE_UPSERT_ERROR: Location = \(favorite.latitude),\(favorite.longitude)", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("❌📤🌤️ WEATHER_FAVORITE_UPSERT_ERROR: Name = \(favorite.locationName)", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("❌📤🌤️ WEATHER_FAVORITE_UPSERT_ERROR_DETAILS: \(error.localizedDescription)", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("❌📤🌤️ WEATHER_FAVORITE_UPSERT_ERROR_TYPE: \(type(of: error))", category: "SUPABASE_WEATHER")
                 
                 // Log the weather favorite data that failed for debugging
-                print("❌📤🌤️ WEATHER_FAVORITE_UPSERT_FAILED_DATA:")
-                print("   User ID: \(favorite.userId)")
-                print("   Latitude: \(favorite.latitude)")
-                print("   Longitude: \(favorite.longitude)")
-                print("   Location Name: \(favorite.locationName)")
-                print("   Is Favorite: \(favorite.isFavorite)")
-                print("   Last Modified: \(favorite.lastModified)")
-                print("   Device ID: \(favorite.deviceId)")
+                DebugLogger.shared.log("❌📤🌤️ WEATHER_FAVORITE_UPSERT_FAILED_DATA:", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("   User ID: \(favorite.userId)", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("   Latitude: \(favorite.latitude)", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("   Longitude: \(favorite.longitude)", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("   Location Name: \(favorite.locationName)", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("   Is Favorite: \(favorite.isFavorite)", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("   Last Modified: \(favorite.lastModified)", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("   Device ID: \(favorite.deviceId)", category: "SUPABASE_WEATHER")
                 
                 // Log additional error context for debugging
                 if let postgrestError = error as? PostgrestError {
-                    print("❌📤🌤️ WEATHER_FAVORITE_UPSERT_POSTGREST_ERROR: \(postgrestError)")
+                    DebugLogger.shared.log("❌📤🌤️ WEATHER_FAVORITE_UPSERT_POSTGREST_ERROR: \(postgrestError)", category: "SUPABASE_WEATHER")
                     if let code = postgrestError.code {
-                        print("❌📤🌤️ WEATHER_FAVORITE_UPSERT_ERROR_CODE: \(code)")
+                        DebugLogger.shared.log("❌📤🌤️ WEATHER_FAVORITE_UPSERT_ERROR_CODE: \(code)", category: "SUPABASE_WEATHER")
                     }
-                    print("❌📤🌤️ WEATHER_FAVORITE_UPSERT_ERROR_MESSAGE: \(postgrestError.message)")
+                    DebugLogger.shared.log("❌📤🌤️ WEATHER_FAVORITE_UPSERT_ERROR_MESSAGE: \(postgrestError.message)", category: "SUPABASE_WEATHER")
                 }
             }
             
@@ -721,12 +721,12 @@ final class SupabaseManager {
         
         do {
             logQueue.async {
-                print("🗑️🌤️ WEATHER_FAVORITE_DELETE: Starting weather favorite deletion")
-                print("🗑️🌤️ WEATHER_FAVORITE_DELETE: Table = user_weather_favorites")
-                print("🗑️🌤️ WEATHER_FAVORITE_DELETE: User ID = \(userId)")
-                print("🗑️🌤️ WEATHER_FAVORITE_DELETE: Location = \(latitude),\(longitude)")
-                print("🗑️🌤️ WEATHER_FAVORITE_DELETE: Delete Filter = user_id AND latitude AND longitude")
-                print("🗑️🌤️ WEATHER_FAVORITE_DELETE: Timestamp = \(Date())")
+                DebugLogger.shared.log("🗑️🌤️ WEATHER_FAVORITE_DELETE: Starting weather favorite deletion", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("🗑️🌤️ WEATHER_FAVORITE_DELETE: Table = user_weather_favorites", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("🗑️🌤️ WEATHER_FAVORITE_DELETE: User ID = \(userId)", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("🗑️🌤️ WEATHER_FAVORITE_DELETE: Location = \(latitude),\(longitude)", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("🗑️🌤️ WEATHER_FAVORITE_DELETE: Delete Filter = user_id AND latitude AND longitude", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("🗑️🌤️ WEATHER_FAVORITE_DELETE: Timestamp = \(Date())", category: "SUPABASE_WEATHER")
             }
             
             try await client
@@ -738,24 +738,24 @@ final class SupabaseManager {
                 .execute()
             
             logQueue.async {
-                print("✅🗑️🌤️ WEATHER_FAVORITE_DELETE_SUCCESS: Weather favorite deleted successfully")
-                print("✅🗑️🌤️ WEATHER_FAVORITE_DELETE_SUCCESS: User = \(userId)")
-                print("✅🗑️🌤️ WEATHER_FAVORITE_DELETE_SUCCESS: Location = \(latitude),\(longitude)")
+                DebugLogger.shared.log("✅🗑️🌤️ WEATHER_FAVORITE_DELETE_SUCCESS: Weather favorite deleted successfully", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("✅🗑️🌤️ WEATHER_FAVORITE_DELETE_SUCCESS: User = \(userId)", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("✅🗑️🌤️ WEATHER_FAVORITE_DELETE_SUCCESS: Location = \(latitude),\(longitude)", category: "SUPABASE_WEATHER")
             }
             
             endOperation(operationId, success: true)
             
         } catch {
             logQueue.async {
-                print("❌🗑️🌤️ WEATHER_FAVORITE_DELETE_ERROR: Failed to delete weather favorite")
-                print("❌🗑️🌤️ WEATHER_FAVORITE_DELETE_ERROR: User = \(userId)")
-                print("❌🗑️🌤️ WEATHER_FAVORITE_DELETE_ERROR: Location = \(latitude),\(longitude)")
-                print("❌🗑️🌤️ WEATHER_FAVORITE_DELETE_ERROR_DETAILS: \(error.localizedDescription)")
-                print("❌🗑️🌤️ WEATHER_FAVORITE_DELETE_ERROR_TYPE: \(type(of: error))")
+                DebugLogger.shared.log("❌🗑️🌤️ WEATHER_FAVORITE_DELETE_ERROR: Failed to delete weather favorite", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("❌🗑️🌤️ WEATHER_FAVORITE_DELETE_ERROR: User = \(userId)", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("❌🗑️🌤️ WEATHER_FAVORITE_DELETE_ERROR: Location = \(latitude),\(longitude)", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("❌🗑️🌤️ WEATHER_FAVORITE_DELETE_ERROR_DETAILS: \(error.localizedDescription)", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("❌🗑️🌤️ WEATHER_FAVORITE_DELETE_ERROR_TYPE: \(type(of: error))", category: "SUPABASE_WEATHER")
                 
                 // Log additional error context for debugging
                 if let postgrestError = error as? PostgrestError {
-                    print("❌🗑️🌤️ WEATHER_FAVORITE_DELETE_POSTGREST_ERROR: \(postgrestError)")
+                    DebugLogger.shared.log("❌🗑️🌤️ WEATHER_FAVORITE_DELETE_POSTGREST_ERROR: \(postgrestError)", category: "SUPABASE_WEATHER")
                 }
             }
             
@@ -774,12 +774,12 @@ final class SupabaseManager {
         
         do {
             logQueue.async {
-                print("🗑️🌤️ WEATHER_BULK_DELETE: Starting bulk weather favorites deletion")
-                print("🗑️🌤️ WEATHER_BULK_DELETE: Table = user_weather_favorites")
-                print("🗑️🌤️ WEATHER_BULK_DELETE: User ID = \(userId)")
-                print("🗑️🌤️ WEATHER_BULK_DELETE: Delete Filter = user_id eq \(userId)")
-                print("🗑️🌤️ WEATHER_BULK_DELETE: Operation = DELETE ALL for user")
-                print("🗑️🌤️ WEATHER_BULK_DELETE: Timestamp = \(Date())")
+                DebugLogger.shared.log("🗑️🌤️ WEATHER_BULK_DELETE: Starting bulk weather favorites deletion", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("🗑️🌤️ WEATHER_BULK_DELETE: Table = user_weather_favorites", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("🗑️🌤️ WEATHER_BULK_DELETE: User ID = \(userId)", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("🗑️🌤️ WEATHER_BULK_DELETE: Delete Filter = user_id eq \(userId)", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("🗑️🌤️ WEATHER_BULK_DELETE: Operation = DELETE ALL for user", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("🗑️🌤️ WEATHER_BULK_DELETE: Timestamp = \(Date())", category: "SUPABASE_WEATHER")
             }
             
             // First, get the count before deletion for reporting
@@ -792,7 +792,7 @@ final class SupabaseManager {
             let countBefore = countResponse.value.count
             
             logQueue.async {
-                print("🗑️🌤️ WEATHER_BULK_DELETE: Found \(countBefore) weather favorites to delete")
+                DebugLogger.shared.log("🗑️🌤️ WEATHER_BULK_DELETE: Found \(countBefore) weather favorites to delete", category: "SUPABASE_WEATHER")
             }
             
             // Perform the bulk deletion
@@ -803,9 +803,9 @@ final class SupabaseManager {
                 .execute()
             
             logQueue.async {
-                print("✅🗑️🌤️ WEATHER_BULK_DELETE_SUCCESS: All weather favorites deleted successfully")
-                print("✅🗑️🌤️ WEATHER_BULK_DELETE_SUCCESS: User = \(userId)")
-                print("✅🗑️🌤️ WEATHER_BULK_DELETE_SUCCESS: Deleted Count = \(countBefore)")
+                DebugLogger.shared.log("✅🗑️🌤️ WEATHER_BULK_DELETE_SUCCESS: All weather favorites deleted successfully", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("✅🗑️🌤️ WEATHER_BULK_DELETE_SUCCESS: User = \(userId)", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("✅🗑️🌤️ WEATHER_BULK_DELETE_SUCCESS: Deleted Count = \(countBefore)", category: "SUPABASE_WEATHER")
             }
             
             endOperation(operationId, success: true)
@@ -813,14 +813,14 @@ final class SupabaseManager {
             
         } catch {
             logQueue.async {
-                print("❌🗑️🌤️ WEATHER_BULK_DELETE_ERROR: Failed to delete all weather favorites")
-                print("❌🗑️🌤️ WEATHER_BULK_DELETE_ERROR: User = \(userId)")
-                print("❌🗑️🌤️ WEATHER_BULK_DELETE_ERROR_DETAILS: \(error.localizedDescription)")
-                print("❌🗑️🌤️ WEATHER_BULK_DELETE_ERROR_TYPE: \(type(of: error))")
+                DebugLogger.shared.log("❌🗑️🌤️ WEATHER_BULK_DELETE_ERROR: Failed to delete all weather favorites", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("❌🗑️🌤️ WEATHER_BULK_DELETE_ERROR: User = \(userId)", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("❌🗑️🌤️ WEATHER_BULK_DELETE_ERROR_DETAILS: \(error.localizedDescription)", category: "SUPABASE_WEATHER")
+                DebugLogger.shared.log("❌🗑️🌤️ WEATHER_BULK_DELETE_ERROR_TYPE: \(type(of: error))", category: "SUPABASE_WEATHER")
                 
                 // Log additional error context for debugging
                 if let postgrestError = error as? PostgrestError {
-                    print("❌🗑️🌤️ WEATHER_BULK_DELETE_POSTGREST_ERROR: \(postgrestError)")
+                    DebugLogger.shared.log("❌🗑️🌤️ WEATHER_BULK_DELETE_POSTGREST_ERROR: \(postgrestError)", category: "SUPABASE_WEATHER")
                 }
             }
             
@@ -838,8 +838,8 @@ final class SupabaseManager {
         
         do {
             logQueue.async {
-                print("🔍📊 TABLE_TEST: Testing embedded_routes table existence")
-                print("🔍📊 TABLE_TEST: Attempting simple SELECT query")
+                DebugLogger.shared.log("🔍📊 TABLE_TEST: Testing embedded_routes table existence", category: "SUPABASE_ROUTES")
+                DebugLogger.shared.log("🔍📊 TABLE_TEST: Attempting simple SELECT query", category: "SUPABASE_ROUTES")
             }
             
             // Try a simple query to see if the table exists at all
@@ -850,8 +850,8 @@ final class SupabaseManager {
                 .execute()
             
             logQueue.async {
-                print("✅🔍📊 TABLE_TEST_SUCCESS: embedded_routes table EXISTS")
-                print("✅🔍📊 TABLE_TEST_SUCCESS: Table is accessible")
+                DebugLogger.shared.log("✅🔍📊 TABLE_TEST_SUCCESS: embedded_routes table EXISTS", category: "SUPABASE_ROUTES")
+                DebugLogger.shared.log("✅🔍📊 TABLE_TEST_SUCCESS: Table is accessible", category: "SUPABASE_ROUTES")
             }
             
             endOperation(operationId, success: true)
@@ -859,15 +859,15 @@ final class SupabaseManager {
             
         } catch {
             logQueue.async {
-                print("❌🔍📊 TABLE_TEST_ERROR: embedded_routes table issue")
-                print("❌🔍📊 TABLE_TEST_ERROR_DETAILS: \(error.localizedDescription)")
+                DebugLogger.shared.log("❌🔍📊 TABLE_TEST_ERROR: embedded_routes table issue", category: "SUPABASE_ROUTES")
+                DebugLogger.shared.log("❌🔍📊 TABLE_TEST_ERROR_DETAILS: \(error.localizedDescription)", category: "SUPABASE_ROUTES")
                 
                 if let postgrestError = error as? PostgrestError {
-                    print("❌🔍📊 TABLE_TEST_POSTGREST_ERROR: \(postgrestError)")
+                    DebugLogger.shared.log("❌🔍📊 TABLE_TEST_POSTGREST_ERROR: \(postgrestError)", category: "SUPABASE_ROUTES")
                     if let code = postgrestError.code {
-                        print("❌🔍📊 TABLE_TEST_ERROR_CODE: \(code)")
+                        DebugLogger.shared.log("❌🔍📊 TABLE_TEST_ERROR_CODE: \(code)", category: "SUPABASE_ROUTES")
                     }
-                    print("❌🔍📊 TABLE_TEST_ERROR_MESSAGE: \(postgrestError.message)")
+                    DebugLogger.shared.log("❌🔍📊 TABLE_TEST_ERROR_MESSAGE: \(postgrestError.message)", category: "SUPABASE_ROUTES")
                 }
             }
             
@@ -890,15 +890,15 @@ final class SupabaseManager {
         
         do {
             logQueue.async {
-                print("📤🛣️ ROUTE_INSERT: Starting embedded route insert")
-                print("📤🛣️ ROUTE_INSERT: Table = embedded_routes (RLS-protected table)")
-                print("📤🛣️ ROUTE_INSERT: Authenticated User = \(session.user.id)")
-                print("📤🛣️ ROUTE_INSERT: Route Name = \(route.name)")
-                print("📤🛣️ ROUTE_INSERT: Category = \(route.category ?? "nil")")
-                print("📤🛣️ ROUTE_INSERT: Waypoint Count = \(route.waypointCount)")
-                print("📤🛣️ ROUTE_INSERT: Total Distance = \(route.totalDistance)")
-                print("📤🛣️ ROUTE_INSERT: Is Active = \(route.isActive ?? false)")
-                print("📤🛣️ ROUTE_INSERT: Timestamp = \(Date())")
+                DebugLogger.shared.log("📤🛣️ ROUTE_INSERT: Starting embedded route insert", category: "SUPABASE_ROUTES")
+                DebugLogger.shared.log("📤🛣️ ROUTE_INSERT: Table = embedded_routes (RLS-protected table)", category: "SUPABASE_ROUTES")
+                DebugLogger.shared.log("📤🛣️ ROUTE_INSERT: Authenticated User = \(session.user.id)", category: "SUPABASE_ROUTES")
+                DebugLogger.shared.log("📤🛣️ ROUTE_INSERT: Route Name = \(route.name)", category: "SUPABASE_ROUTES")
+                DebugLogger.shared.log("📤🛣️ ROUTE_INSERT: Category = \(route.category ?? "nil")", category: "SUPABASE_ROUTES")
+                DebugLogger.shared.log("📤🛣️ ROUTE_INSERT: Waypoint Count = \(route.waypointCount)", category: "SUPABASE_ROUTES")
+                DebugLogger.shared.log("📤🛣️ ROUTE_INSERT: Total Distance = \(route.totalDistance)", category: "SUPABASE_ROUTES")
+                DebugLogger.shared.log("📤🛣️ ROUTE_INSERT: Is Active = \(route.isActive ?? false)", category: "SUPABASE_ROUTES")
+                DebugLogger.shared.log("📤🛣️ ROUTE_INSERT: Timestamp = \(Date())", category: "SUPABASE_ROUTES")
             }
             
             // Use insert since there's no unique constraint on name
@@ -909,31 +909,31 @@ final class SupabaseManager {
                 .execute()
             
             logQueue.async {
-                print("✅📤🛣️ ROUTE_INSERT_SUCCESS: Embedded route inserted successfully")
-                print("✅📤🛣️ ROUTE_INSERT_SUCCESS: Route '\(route.name)' added by user \(session.user.id)")
-                print("✅📤🛣️ ROUTE_INSERT_SUCCESS: Waypoints: \(route.waypointCount), Distance: \(route.totalDistance)")
+                DebugLogger.shared.log("✅📤🛣️ ROUTE_INSERT_SUCCESS: Embedded route inserted successfully", category: "SUPABASE_ROUTES")
+                DebugLogger.shared.log("✅📤🛣️ ROUTE_INSERT_SUCCESS: Route '\(route.name)' added by user \(session.user.id)", category: "SUPABASE_ROUTES")
+                DebugLogger.shared.log("✅📤🛣️ ROUTE_INSERT_SUCCESS: Waypoints: \(route.waypointCount), Distance: \(route.totalDistance)", category: "SUPABASE_ROUTES")
             }
             
             endOperation(operationId, success: true)
             
         } catch {
             logQueue.async {
-                print("❌📤🛣️ ROUTE_INSERT_ERROR: Failed to insert embedded route")
-                print("❌📤🛣️ ROUTE_INSERT_ERROR: Route = \(route.name)")
-                print("❌📤🛣️ ROUTE_INSERT_ERROR_DETAILS: \(error.localizedDescription)")
-                print("❌📤🛣️ ROUTE_INSERT_ERROR_TYPE: \(type(of: error))")
+                DebugLogger.shared.log("❌📤🛣️ ROUTE_INSERT_ERROR: Failed to insert embedded route", category: "SUPABASE_ROUTES")
+                DebugLogger.shared.log("❌📤🛣️ ROUTE_INSERT_ERROR: Route = \(route.name)", category: "SUPABASE_ROUTES")
+                DebugLogger.shared.log("❌📤🛣️ ROUTE_INSERT_ERROR_DETAILS: \(error.localizedDescription)", category: "SUPABASE_ROUTES")
+                DebugLogger.shared.log("❌📤🛣️ ROUTE_INSERT_ERROR_TYPE: \(type(of: error))", category: "SUPABASE_ROUTES")
                 
                 // Log the route data that failed to insert for debugging
-                print("❌📤🛣️ ROUTE_INSERT_FAILED_DATA:")
-                print("   Route Name: \(route.name)")
-                print("   Category: \(route.category ?? "nil")")
-                print("   Waypoint Count: \(route.waypointCount)")
-                print("   Total Distance: \(route.totalDistance)")
-                print("   Is Active: \(route.isActive ?? false)")
+                DebugLogger.shared.log("❌📤🛣️ ROUTE_INSERT_FAILED_DATA:", category: "SUPABASE_ROUTES")
+                DebugLogger.shared.log("   Route Name: \(route.name)", category: "SUPABASE_ROUTES")
+                DebugLogger.shared.log("   Category: \(route.category ?? "nil")", category: "SUPABASE_ROUTES")
+                DebugLogger.shared.log("   Waypoint Count: \(route.waypointCount)", category: "SUPABASE_ROUTES")
+                DebugLogger.shared.log("   Total Distance: \(route.totalDistance)", category: "SUPABASE_ROUTES")
+                DebugLogger.shared.log("   Is Active: \(route.isActive ?? false)", category: "SUPABASE_ROUTES")
                 
                 // Log additional error context for debugging
                 if let postgrestError = error as? PostgrestError {
-                    print("❌📤🛣️ ROUTE_INSERT_POSTGREST_ERROR: \(postgrestError)")
+                    DebugLogger.shared.log("❌📤🛣️ ROUTE_INSERT_POSTGREST_ERROR: \(postgrestError)", category: "SUPABASE_ROUTES")
                 }
             }
             
@@ -952,10 +952,10 @@ final class SupabaseManager {
         
         do {
             logQueue.async {
-                print("📥🛣️ ROUTE_FETCH: Starting embedded routes fetch")
-                print("📥🛣️ ROUTE_FETCH: Table = embedded_routes (public table)")
-                print("📥🛣️ ROUTE_FETCH: Limit = \(limit?.description ?? "none")")
-                print("📥🛣️ ROUTE_FETCH: Timestamp = \(Date())")
+                DebugLogger.shared.log("📥🛣️ ROUTE_FETCH: Starting embedded routes fetch", category: "SUPABASE_ROUTES")
+                DebugLogger.shared.log("📥🛣️ ROUTE_FETCH: Table = embedded_routes (public table)", category: "SUPABASE_ROUTES")
+                DebugLogger.shared.log("📥🛣️ ROUTE_FETCH: Limit = \(limit?.description ?? "none")", category: "SUPABASE_ROUTES")
+                DebugLogger.shared.log("📥🛣️ ROUTE_FETCH: Timestamp = \(Date())", category: "SUPABASE_ROUTES")
             }
             
             var query = client
@@ -971,10 +971,10 @@ final class SupabaseManager {
             let response: PostgrestResponse<[RemoteEmbeddedRoute]> = try await query.execute()
             
             logQueue.async {
-                print("✅📥🛣️ ROUTE_FETCH_SUCCESS: Embedded routes fetched successfully")
-                print("✅📥🛣️ ROUTE_FETCH_SUCCESS: Routes found: \(response.value.count)")
+                DebugLogger.shared.log("✅📥🛣️ ROUTE_FETCH_SUCCESS: Embedded routes fetched successfully", category: "SUPABASE_ROUTES")
+                DebugLogger.shared.log("✅📥🛣️ ROUTE_FETCH_SUCCESS: Routes found: \(response.value.count)", category: "SUPABASE_ROUTES")
                 if !response.value.isEmpty {
-                    print("✅📥🛣️ ROUTE_FETCH_SUCCESS: Route names: \(response.value.map { $0.name })")
+                    DebugLogger.shared.log("✅📥🛣️ ROUTE_FETCH_SUCCESS: Route names: \(response.value.map { $0.name })", category: "SUPABASE_ROUTES")
                 }
             }
             
@@ -983,13 +983,13 @@ final class SupabaseManager {
             
         } catch {
             logQueue.async {
-                print("❌📥🛣️ ROUTE_FETCH_ERROR: Failed to fetch embedded routes")
-                print("❌📥🛣️ ROUTE_FETCH_ERROR_DETAILS: \(error.localizedDescription)")
-                print("❌📥🛣️ ROUTE_FETCH_ERROR_TYPE: \(type(of: error))")
+                DebugLogger.shared.log("❌📥🛣️ ROUTE_FETCH_ERROR: Failed to fetch embedded routes", category: "SUPABASE_ROUTES")
+                DebugLogger.shared.log("❌📥🛣️ ROUTE_FETCH_ERROR_DETAILS: \(error.localizedDescription)", category: "SUPABASE_ROUTES")
+                DebugLogger.shared.log("❌📥🛣️ ROUTE_FETCH_ERROR_TYPE: \(type(of: error))", category: "SUPABASE_ROUTES")
                 
                 // Log additional error context for debugging
                 if let postgrestError = error as? PostgrestError {
-                    print("❌📥🛣️ ROUTE_FETCH_POSTGREST_ERROR: \(postgrestError)")
+                    DebugLogger.shared.log("❌📥🛣️ ROUTE_FETCH_POSTGREST_ERROR: \(postgrestError)", category: "SUPABASE_ROUTES")
                 }
             }
             
@@ -1029,7 +1029,7 @@ class DatabaseQueryBuilder {
     func select(_ columns: String) -> DatabaseQueryBuilder {
         query = columns
         manager.logQueue.async {
-            print("🗄️ QUERY: SELECT \(columns) FROM \(self.table)")
+            DebugLogger.shared.log("🗄️ QUERY: SELECT \(columns) FROM \(self.table)", category: "SUPABASE_QUERY")
         }
         return self
     }
@@ -1038,7 +1038,7 @@ class DatabaseQueryBuilder {
         let filter = "\(column)=eq.\(value)"
         filters.append(filter)
         manager.logQueue.async {
-            print("🗄️ FILTER: \(column) = \(value)")
+            DebugLogger.shared.log("🗄️ FILTER: \(column) = \(value)", category: "SUPABASE_QUERY")
         }
         return self
     }
@@ -1046,7 +1046,7 @@ class DatabaseQueryBuilder {
     func limit(_ count: Int) -> DatabaseQueryBuilder {
         limitValue = count
         manager.logQueue.async {
-            print("🗄️ LIMIT: \(count)")
+            DebugLogger.shared.log("🗄️ LIMIT: \(count)", category: "SUPABASE_QUERY")
         }
         return self
     }
@@ -1069,12 +1069,12 @@ class DatabaseQueryBuilder {
             }
             
             manager.logQueue.async {
-                print("📊 QUERY RESULT:")
-                print("   Table: \(self.table)")
-                print("   Query: \(self.query)")
-                print("   Filters: \(self.filters)")
-                print("   Limit: \(self.limitValue?.description ?? "none")")
-                print("   Status: Success")
+                DebugLogger.shared.log("📊 QUERY RESULT:", category: "SUPABASE_QUERY")
+                DebugLogger.shared.log("   Table: \(self.table)", category: "SUPABASE_QUERY")
+                DebugLogger.shared.log("   Query: \(self.query)", category: "SUPABASE_QUERY")
+                DebugLogger.shared.log("   Filters: \(self.filters)", category: "SUPABASE_QUERY")
+                DebugLogger.shared.log("   Limit: \(self.limitValue?.description ?? "none")", category: "SUPABASE_QUERY")
+                DebugLogger.shared.log("   Status: Success", category: "SUPABASE_QUERY")
             }
             
             manager.endOperation(operationId, success: true)

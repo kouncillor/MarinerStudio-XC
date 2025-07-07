@@ -12,7 +12,7 @@ struct ContentView: View {
                     .presentPaywallIfNeeded(
                         requiredEntitlementIdentifier: "Pro"
                     ) { customerInfo in
-                        print("Purchase successful! User now has Pro access.")
+                        DebugLogger.shared.log("Purchase successful! User now has Pro access.", category: "PURCHASE")
                     }
             } else {
                 // User is not authenticated, show the AuthenticationView.

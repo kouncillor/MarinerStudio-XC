@@ -14,7 +14,7 @@ class DatabaseCore {
     
     // MARK: - Initialization
     init() {
-        print("📊 DatabaseCore being initialized")
+        DebugLogger.shared.log("📊 DatabaseCore being initialized", category: "DATABASE_INIT")
     }
     
     // MARK: - Connection Management
@@ -22,7 +22,7 @@ class DatabaseCore {
     /// Ensures connection is valid before performing operations
     func ensureConnection() throws -> Connection {
         guard let db = connection else {
-            print("❌ Database connection is nil, attempting to reinitialize")
+            DebugLogger.shared.log("❌ Database connection is nil, attempting to reinitialize", category: "DATABASE_CONNECTION")
             // Attempt to recover by initializing the database
             let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
             let dbPath = documentsDirectory.appendingPathComponent("SS1.db").path
@@ -42,7 +42,7 @@ class DatabaseCore {
     /// Method to check connection health and optionally reset it
     func checkConnectionHealth() -> Bool {
         guard let db = connection else {
-            print("❌ No connection to check health for")
+            DebugLogger.shared.log("❌ No connection to check health for", category: "DATABASE_CONNECTION")
             return false
         }
         
@@ -51,7 +51,7 @@ class DatabaseCore {
             let _ = try db.scalar("SELECT 1")
             return true
         } catch {
-            print("❌ Connection health check failed: \(error.localizedDescription)")
+            DebugLogger.shared.log("❌ Connection health check failed: \(error.localizedDescription)", category: "DATABASE_CONNECTION")
             connection = nil
             return false
         }
@@ -62,18 +62,18 @@ class DatabaseCore {
         do {
             let db = try ensureConnection()
             
-            print("📊 Flushing database changes to disk")
+            DebugLogger.shared.log("📊 Flushing database changes to disk", category: "DATABASE_FLUSH")
             try db.execute("PRAGMA wal_checkpoint(FULL)")
-            print("📊 Database flush completed")
+            DebugLogger.shared.log("📊 Database flush completed", category: "DATABASE_FLUSH")
         } catch {
-            print("❌ Error flushing database: \(error.localizedDescription)")
+            DebugLogger.shared.log("❌ Error flushing database: \(error.localizedDescription)", category: "DATABASE_FLUSH")
             throw error
         }
     }
     
     func initializeAsync() async throws {
         if connection != nil {
-            print("📊 Database connection already initialized, reusing existing connection")
+            DebugLogger.shared.log("📊 Database connection already initialized, reusing existing connection", category: "DATABASE_INIT")
             return
         }
         
@@ -83,28 +83,28 @@ class DatabaseCore {
         let documentsDirectory = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
         let dbPath = documentsDirectory.appendingPathComponent("SS1.db").path
         
-        print("📊 Database path: \(dbPath)")
+        DebugLogger.shared.log("📊 Database path: \(dbPath)", category: "DATABASE_INIT")
         
         if !fileManager.fileExists(atPath: dbPath) {
-            print("📊 Database not found in documents directory. Attempting to copy from resources.")
+            DebugLogger.shared.log("📊 Database not found in documents directory. Attempting to copy from resources.", category: "DATABASE_INIT")
             try copyDatabaseFromBundle(to: dbPath)
-            print("📊 Database successfully copied to documents directory.")
+            DebugLogger.shared.log("📊 Database successfully copied to documents directory.", category: "DATABASE_INIT")
         } else {
-            print("📊 Database already exists in documents directory.")
+            DebugLogger.shared.log("📊 Database already exists in documents directory.", category: "DATABASE_INIT")
         }
         
         // Check if we have write permissions
         if fileManager.isWritableFile(atPath: dbPath) {
-            print("📊 Database file is writable")
+            DebugLogger.shared.log("📊 Database file is writable", category: "DATABASE_INIT")
         } else {
-            print("❌ Database file is not writable")
+            DebugLogger.shared.log("❌ Database file is not writable", category: "DATABASE_INIT")
         }
         
         if fileManager.fileExists(atPath: dbPath) {
             if let attributes = try? fileManager.attributesOfItem(atPath: dbPath),
                let fileSize = attributes[.size] as? UInt64 {
-                print("📊 Database file confirmed at: \(dbPath)")
-                print("📊 File size: \(fileSize) bytes")
+                DebugLogger.shared.log("📊 Database file confirmed at: \(dbPath)", category: "DATABASE_INIT")
+                DebugLogger.shared.log("📊 File size: \(fileSize) bytes", category: "DATABASE_INIT")
             }
         } else {
             throw NSError(domain: "DatabaseService", code: 1, userInfo: [NSLocalizedDescriptionKey: "Database file not found after copy attempt."])
@@ -131,9 +131,9 @@ class DatabaseCore {
     private func openConnection(atPath path: String) throws {
         do {
             connection = try Connection(path)
-            print("📊 Successfully opened database connection")
+            DebugLogger.shared.log("📊 Successfully opened database connection", category: "DATABASE_CONNECTION")
         } catch {
-            print("❌ Error opening database connection: \(error.localizedDescription)")
+            DebugLogger.shared.log("❌ Error opening database connection: \(error.localizedDescription)", category: "DATABASE_CONNECTION")
             throw error
         }
     }
@@ -153,10 +153,10 @@ class DatabaseCore {
                     tableNames.append(tableName)
                 }
             }
-            print("📊 Found \(tableNames.count) tables in database")
+            DebugLogger.shared.log("📊 Found \(tableNames.count) tables in database", category: "DATABASE_TABLES")
             return tableNames
         } catch {
-            print("❌ Error getting table names: \(error.localizedDescription)")
+            DebugLogger.shared.log("❌ Error getting table names: \(error.localizedDescription)", category: "DATABASE_TABLES")
             throw error
         }
     }
@@ -170,17 +170,17 @@ class DatabaseCore {
             
             // Try to create a temporary test table
             try db.execute("CREATE TABLE \(testTableName) (id INTEGER PRIMARY KEY, value TEXT)")
-            print("✅ Successfully created test table - write permissions OK")
+            DebugLogger.shared.log("✅ Successfully created test table - write permissions OK", category: "DATABASE_PERMISSIONS")
             
             // Insert a test row
             try db.execute("INSERT INTO \(testTableName) (value) VALUES ('test_value')")
-            print("✅ Successfully inserted test row - write permissions OK")
+            DebugLogger.shared.log("✅ Successfully inserted test row - write permissions OK", category: "DATABASE_PERMISSIONS")
             
             // Clean up
             try db.execute("DROP TABLE \(testTableName)")
-            print("✅ Successfully dropped test table - write permissions OK")
+            DebugLogger.shared.log("✅ Successfully dropped test table - write permissions OK", category: "DATABASE_PERMISSIONS")
         } catch {
-            print("❌ Write permissions check failed: \(error.localizedDescription)")
+            DebugLogger.shared.log("❌ Write permissions check failed: \(error.localizedDescription)", category: "DATABASE_PERMISSIONS")
         }
     }
     
@@ -189,14 +189,14 @@ class DatabaseCore {
         do {
             let db = try ensureConnection()
             
-            print("📊 Testing database connection...")
+            DebugLogger.shared.log("📊 Testing database connection...", category: "DATABASE_TEST")
             // Execute a simple test query
             let testQuery = "SELECT 1"
             let result = try db.scalar(testQuery)
-            print("📊 Test query result: \(String(describing: result))")
-            print("📊 Database connection test successful")
+            DebugLogger.shared.log("📊 Test query result: \(String(describing: result))", category: "DATABASE_TEST")
+            DebugLogger.shared.log("📊 Database connection test successful", category: "DATABASE_TEST")
         } catch {
-            print("❌ Test database operation failed: \(error.localizedDescription)")
+            DebugLogger.shared.log("❌ Test database operation failed: \(error.localizedDescription)", category: "DATABASE_TEST")
             throw error
         }
     }
