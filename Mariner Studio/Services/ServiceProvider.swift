@@ -119,7 +119,7 @@ class ServiceProvider: ObservableObject {
                 try await self.databaseCore.initializeAsync()
                 
                 // Initialize tables
-                try await self.currentStationService.initializeCurrentStationFavoritesTableAsync()
+                // Note: TidalCurrentStationFavorites table is manually managed
                 try await self.mapOverlayService.initializeMapOverlaySettingsTableAsync()
                 try await self.routeFavoritesService.initializeRouteFavoritesTableAsync()
                 
