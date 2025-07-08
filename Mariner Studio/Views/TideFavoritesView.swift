@@ -14,8 +14,6 @@ struct TideFavoritesView: View {
         .withHomeButton()
         .toolbar {
             ToolbarItemGroup(placement: .navigationBarTrailing) {
-
-                
                 // Sync button
                 Button(action: {
                     print("☁️ UI: Manual sync button tapped")
@@ -285,11 +283,18 @@ struct TideFavoritesView: View {
                     .onAppear {
                         print("🎨 VIEW: Station row appeared for \(station.id)")
                     }
+                    .swipeActions(edge: .trailing) {
+                        Button {
+                            print("💛 VIEW: Unfavorite gesture triggered for station \(station.id)")
+                            if let index = viewModel.favorites.firstIndex(where: { $0.id == station.id }) {
+                                viewModel.removeFavorite(at: IndexSet(integer: index))
+                            }
+                        } label: {
+                            Label("Unfavorite", systemImage: "star.slash")
+                        }
+                        .tint(.yellow)
+                    }
                 }
-                .onDelete(perform: { offsets in
-                    print("🗑️ VIEW: Delete gesture triggered for offsets \(Array(offsets))")
-                    viewModel.removeFavorite(at: offsets)
-                })
             }
             
             .listStyle(InsetGroupedListStyle())

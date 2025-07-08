@@ -1,5 +1,6 @@
 
 import Foundation
+import UIKit
 #if canImport(SQLite)
 import SQLite
 #endif
@@ -14,100 +15,23 @@ class TideStationDatabaseService {
     private let colStationName = Expression<String?>("station_name")  // CHANGED: Now optional
     private let colLatitude = Expression<Double?>("latitude")
     private let colLongitude = Expression<Double?>("longitude")
+    private let colLastModified = Expression<Date>("last_modified")
+    private let colDeviceId = Expression<String>("device_id")
     
     // MARK: - Properties
     private let databaseCore: DatabaseCore
+    
+    // MARK: - Utility Methods
+    
+    private func getDeviceId() async -> String {
+        return await UIDevice.current.identifierForVendor?.uuidString ?? "unknown-device"
+    }
     
     // MARK: - Initialization
     init(databaseCore: DatabaseCore) {
         self.databaseCore = databaseCore
     }
     
-    // MARK: - Table Initialization
-    
-    func initializeTideStationFavoritesTableAsync() async throws {
-        do {
-            let db = try databaseCore.ensureConnection()
-            
-            print("📊 Creating TideStationFavorites table if it doesn't exist")
-            
-            // Create table with new columns
-            try db.run(tideStationFavorites.create(ifNotExists: true) { table in
-                table.column(colStationId, primaryKey: true)
-                table.column(colIsFavorite)
-                table.column(colStationName)  // Optional by default
-                table.column(colLatitude)
-                table.column(colLongitude)
-            })
-            
-            // Migration: Add new columns if they don't exist in an older database version
-            try addColumnIfNeeded(db: db, tableName: "TideStationFavorites", columnName: "station_name", columnType: "TEXT")  // Removed default value to allow NULL
-            try addColumnIfNeeded(db: db, tableName: "TideStationFavorites", columnName: "latitude", columnType: "REAL")
-            try addColumnIfNeeded(db: db, tableName: "TideStationFavorites", columnName: "longitude", columnType: "REAL")
-            
-            // Verify table was created and columns exist
-            let tableInfo = try db.prepare("PRAGMA table_info(TideStationFavorites)")
-            var columnNames: Set<String> = []
-            for row in tableInfo {
-                if let name = row[1] as? String {
-                    columnNames.insert(name)
-                }
-            }
-            
-            let expectedColumns: Set<String> = ["station_id", "is_favorite", "station_name", "latitude", "longitude"]
-            let allColumnsExist = expectedColumns.isSubset(of: columnNames)
-            
-            if allColumnsExist {
-                print("📊 TideStationFavorites table created or already exists with all required columns")
-                
-                // Test write with all columns (using safe values)
-                try db.run(tideStationFavorites.insert(or: .replace,
-                    colStationId <- "TEST_INIT_V3",
-                    colIsFavorite <- true,
-                    colStationName <- "Test Station Name",
-                    colLatitude <- 0.0,
-                    colLongitude <- 0.0
-                ))
-                
-                let testQuery = tideStationFavorites.filter(colStationId == "TEST_INIT_V3")
-                if try db.pluck(testQuery) != nil {
-                    print("📊 Successfully wrote and read test record with new columns")
-                    _ = try db.run(testQuery.delete())
-                } else {
-                    print("❌ Could not verify test record with new columns")
-                }
-            } else {
-                print("❌ Failed to create TideStationFavorites table or missing columns. Found: \(columnNames)")
-                throw NSError(domain: "DatabaseService", code: 4, userInfo: [NSLocalizedDescriptionKey: "Failed to create table or missing columns"])
-            }
-        } catch {
-            print("❌ Error creating TideStationFavorites table: \(error.localizedDescription)")
-            throw error
-        }
-    }
-    
-    private func addColumnIfNeeded(db: Connection, tableName: String, columnName: String, columnType: String, defaultValue: String? = nil) throws {
-        let tableInfo = try db.prepare("PRAGMA table_info(\(tableName))")
-        var columnExists = false
-        for row in tableInfo {
-            if let name = row[1] as? String, name == columnName {
-                columnExists = true
-                break
-            }
-        }
-        
-        if !columnExists {
-            var alterStatement = "ALTER TABLE \(tableName) ADD COLUMN \(columnName) \(columnType)"
-            if let defaultValue = defaultValue {
-                alterStatement += " DEFAULT \(defaultValue)"
-            }
-            print("📊 Adding column '\(columnName)' to '\(tableName)' table")
-            try db.run(alterStatement)
-            print("✅ Successfully added column '\(columnName)' to '\(tableName)'")
-        } else {
-            print("📊 Column '\(columnName)' already exists in '\(tableName)' table")
-        }
-    }
     
     // MARK: - Favorite Management Methods
     
@@ -145,6 +69,9 @@ class TideStationDatabaseService {
             
             let query = tideStationFavorites.filter(colStationId == safeStationId)
             
+            let currentTime = Date()
+            let deviceId = await getDeviceId()
+            
             let result: Bool
             if let existingFavorite = try db.pluck(query) {
                 let currentFavoriteStatus = existingFavorite[colIsFavorite]
@@ -157,7 +84,9 @@ class TideStationDatabaseService {
                     colIsFavorite <- newFavoriteStatus,
                     colStationName <- safeName,  // Update name with validated value
                     colLatitude <- safeLatitude,
-                    colLongitude <- safeLongitude
+                    colLongitude <- safeLongitude,
+                    colLastModified <- currentTime,
+                    colDeviceId <- deviceId
                 )
                 
                 let updateCount = try db.run(updateQuery)
@@ -172,7 +101,9 @@ class TideStationDatabaseService {
                     colIsFavorite <- true,
                     colStationName <- safeName,
                     colLatitude <- safeLatitude,
-                    colLongitude <- safeLongitude
+                    colLongitude <- safeLongitude,
+                    colLastModified <- currentTime,
+                    colDeviceId <- deviceId
                 ))
                 
                 result = true
@@ -181,6 +112,26 @@ class TideStationDatabaseService {
             
             try await databaseCore.flushDatabaseAsync()
             print("📊 TOGGLE: ✅ Database changes flushed to disk")
+            
+            // BACKGROUND SYNC: Attempt cloud sync after successful local write
+            // This is non-fatal - local operation has already succeeded
+            Task.detached(priority: .background) {
+                print("☁️ TOGGLE: Starting background sync after local write success")
+                
+                // Try the sync operation
+                let syncResult = await TideStationSyncService.shared.syncTideStationFavorites()
+                switch syncResult {
+                case .success(let stats):
+                    print("☁️ TOGGLE: ✅ Background sync completed successfully")
+                    print("☁️ TOGGLE: Sync stats - uploaded: \(stats.uploaded), downloaded: \(stats.downloaded)")
+                case .failure(let error):
+                    print("☁️ TOGGLE: ⚠️ Background sync failed (non-fatal): \(error)")
+                case .partialSuccess(let stats, let errors):
+                    print("☁️ TOGGLE: ⚠️ Background sync partially successful")
+                    print("☁️ TOGGLE: Sync stats - uploaded: \(stats.uploaded), downloaded: \(stats.downloaded)")
+                    print("☁️ TOGGLE: Errors encountered: \(errors.count)")
+                }
+            }
             
             return result
         } catch {
@@ -310,6 +261,34 @@ class TideStationDatabaseService {
         }
     }
     
+    // NEW: Get favorites with timestamps for conflict resolution
+    func getAllFavoriteStationsWithTimestamps() async -> [(stationId: String, isFavorite: Bool, lastModified: Date, deviceId: String, stationName: String?, latitude: Double?, longitude: Double?)] {
+        do {
+            let db = try databaseCore.ensureConnection()
+            
+            var favoriteRecords: [(String, Bool, Date, String, String?, Double?, Double?)] = []
+            
+            for record in try db.prepare(tideStationFavorites) {
+                let stationId = record[colStationId]
+                let isFavorite = record[colIsFavorite]
+                let lastModified = record[colLastModified]
+                let deviceId = record[colDeviceId]
+                let stationName = record[colStationName]
+                let latitude = record[colLatitude]
+                let longitude = record[colLongitude]
+                
+                favoriteRecords.append((stationId, isFavorite, lastModified, deviceId, stationName, latitude, longitude))
+            }
+            
+            print("🌊 TIMESTAMP QUERY: Found \(favoriteRecords.count) station records with timestamps")
+            return favoriteRecords
+            
+        } catch {
+            print("❌ TIMESTAMP QUERY ERROR: \(error.localizedDescription)")
+            return []
+        }
+    }
+    
     // UPDATED: Enhanced with safety checks
     func setTideStationFavorite(id: String, isFavorite: Bool, name: String? = nil, latitude: Double? = nil, longitude: Double? = nil) async -> Bool {
         do {
@@ -325,13 +304,18 @@ class TideStationDatabaseService {
             
             let query = tideStationFavorites.filter(colStationId == safeStationId)
             
+            let currentTime = Date()
+            let deviceId = await getDeviceId()
+            
             if let existingFavorite = try db.pluck(query) {
                 // Update existing record
                 let updateQuery = query.update(
                     colIsFavorite <- isFavorite,
                     colStationName <- safeName,
                     colLatitude <- safeLatitude,
-                    colLongitude <- safeLongitude
+                    colLongitude <- safeLongitude,
+                    colLastModified <- currentTime,
+                    colDeviceId <- deviceId
                 )
                 let updateCount = try db.run(updateQuery)
                 print("📊 SET_FAVORITE: Updated \(updateCount) record(s)")
@@ -342,7 +326,9 @@ class TideStationDatabaseService {
                     colIsFavorite <- isFavorite,
                     colStationName <- safeName,
                     colLatitude <- safeLatitude,
-                    colLongitude <- safeLongitude
+                    colLongitude <- safeLongitude,
+                    colLastModified <- currentTime,
+                    colDeviceId <- deviceId
                 ))
                 print("📊 SET_FAVORITE: Inserted new record")
             }

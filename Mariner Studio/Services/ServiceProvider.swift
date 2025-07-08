@@ -119,7 +119,6 @@ class ServiceProvider: ObservableObject {
                 try await self.databaseCore.initializeAsync()
                 
                 // Initialize tables
-                try await self.tideStationService.initializeTideStationFavoritesTableAsync()
                 try await self.currentStationService.initializeCurrentStationFavoritesTableAsync()
                 try await self.mapOverlayService.initializeMapOverlaySettingsTableAsync()
                 try await self.routeFavoritesService.initializeRouteFavoritesTableAsync()

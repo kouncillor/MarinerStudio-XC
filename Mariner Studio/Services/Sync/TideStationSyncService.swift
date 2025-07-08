@@ -586,11 +586,15 @@ final class TideStationSyncService {
             print("\n🔧🌊 CONFLICT IMPLEMENTATION: Starting detailed conflict resolution...")
             print("🔧🌊 CONFLICT: Conflicting stations = \(conflictingStations)")
             print("🔧🌊 CONFLICT: Count to process = \(conflictingStations.count)")
-            print("🔧🌊 CONFLICT: Strategy = Remote wins (last_modified)")
+            print("🔧🌊 CONFLICT: Strategy = Last Modified Wins")
         }
         
         var resolved = 0
         var errors: [TideSyncError] = []
+        
+        // Get local favorites with timestamps for comparison
+        let localFavorites = await databaseService.getAllFavoriteStationsWithTimestamps()
+        let localFavoritesDict = Dictionary(uniqueKeysWithValues: localFavorites.map { ($0.stationId, $0) })
         
         for (index, stationId) in conflictingStations.enumerated() {
             logQueue.async {
@@ -606,24 +610,111 @@ final class TideStationSyncService {
                 continue
             }
             
+            // Get local record for timestamp comparison
+            guard let localFavorite = localFavoritesDict[stationId] else {
+                logQueue.async {
+                    print("❌🔧🌊 CONFLICT ERROR: No local record found for station \(stationId)")
+                    print("❌🔧🌊 CONFLICT ERROR: This should not happen - conflicting station without local record")
+                }
+                continue
+            }
+            
             logQueue.async {
-                print("🔧🌊 CONFLICT ITEM: Found remote record:")
-                print("🔧🌊 CONFLICT ITEM: - Station: \(remoteFavorite.stationId)")
-                print("🔧🌊 CONFLICT ITEM: - Is Favorite: \(remoteFavorite.isFavorite)")
-                print("🔧🌊 CONFLICT ITEM: - Last Modified: \(remoteFavorite.lastModified)")
-                print("🔧🌊 CONFLICT ITEM: - Device ID: \(remoteFavorite.deviceId)")
-                print("🔧🌊 CONFLICT ITEM: Applying remote state to local...")
+                print("🔧🌊 CONFLICT ITEM: Found both records for comparison:")
+                print("🔧🌊 CONFLICT ITEM: Local - Station: \(localFavorite.stationId), Favorite: \(localFavorite.isFavorite), Modified: \(localFavorite.lastModified)")
+                print("🔧🌊 CONFLICT ITEM: Remote - Station: \(remoteFavorite.stationId), Favorite: \(remoteFavorite.isFavorite), Modified: \(remoteFavorite.lastModified)")
             }
             
             let resolveStartTime = Date()
-            // FIX 2: Use enhanced setTideStationFavorite to preserve name and coordinates during conflict resolution
-            let success = await databaseService.setTideStationFavorite(
-                id: stationId,
-                isFavorite: remoteFavorite.isFavorite,
-                name: remoteFavorite.stationName, // Pass the name
-                latitude: remoteFavorite.latitude, // Pass the latitude
-                longitude: remoteFavorite.longitude // Pass the longitude
-            )
+            let success: Bool
+            
+            // Implement "Last Modified Wins" strategy
+            if localFavorite.lastModified > remoteFavorite.lastModified {
+                // Local is newer - upload local to remote
+                logQueue.async {
+                    print("🔧🌊 CONFLICT: Local record is newer - uploading to remote")
+                    print("🔧🌊 CONFLICT: Local modified: \(localFavorite.lastModified)")
+                    print("🔧🌊 CONFLICT: Remote modified: \(remoteFavorite.lastModified)")
+                }
+                
+                do {
+                    // Create properly typed update record preserving the local timestamp
+                    struct UpdateRecord: Codable {
+                        let stationId: String
+                        let isFavorite: Bool
+                        let lastModified: Date
+                        let deviceId: String
+                        let stationName: String?
+                        let latitude: Double?
+                        let longitude: Double?
+                        
+                        enum CodingKeys: String, CodingKey {
+                            case stationId = "station_id"
+                            case isFavorite = "is_favorite"
+                            case lastModified = "last_modified"
+                            case deviceId = "device_id"
+                            case stationName = "station_name"
+                            case latitude
+                            case longitude
+                        }
+                    }
+                    
+                    let uploadData = UpdateRecord(
+                        stationId: localFavorite.stationId,
+                        isFavorite: localFavorite.isFavorite,
+                        lastModified: localFavorite.lastModified,
+                        deviceId: localFavorite.deviceId,
+                        stationName: localFavorite.stationName,
+                        latitude: localFavorite.latitude,
+                        longitude: localFavorite.longitude
+                    )
+                    
+                    try await SupabaseManager.shared
+                        .from("user_tide_favorites")
+                        .update(uploadData)
+                        .eq("id", value: remoteFavorite.id!)
+                        .execute()
+                    
+                    success = true
+                    logQueue.async {
+                        print("✅🔧🌊 CONFLICT: Successfully uploaded local record to remote")
+                    }
+                } catch {
+                    success = false
+                    logQueue.async {
+                        print("❌🔧🌊 CONFLICT: Failed to upload local record: \(error)")
+                    }
+                }
+            } else if remoteFavorite.lastModified > localFavorite.lastModified {
+                // Remote is newer - download remote to local
+                logQueue.async {
+                    print("🔧🌊 CONFLICT: Remote record is newer - downloading to local")
+                    print("🔧🌊 CONFLICT: Local modified: \(localFavorite.lastModified)")
+                    print("🔧🌊 CONFLICT: Remote modified: \(remoteFavorite.lastModified)")
+                }
+                
+                success = await databaseService.setTideStationFavorite(
+                    id: stationId,
+                    isFavorite: remoteFavorite.isFavorite,
+                    name: remoteFavorite.stationName,
+                    latitude: remoteFavorite.latitude,
+                    longitude: remoteFavorite.longitude
+                )
+                
+                if success {
+                    logQueue.async {
+                        print("✅🔧🌊 CONFLICT: Successfully downloaded remote record to local")
+                    }
+                }
+            } else {
+                // Same timestamp - no action needed
+                logQueue.async {
+                    print("🔧🌊 CONFLICT: Records have same timestamp - no action needed")
+                    print("🔧🌊 CONFLICT: Both modified: \(localFavorite.lastModified)")
+                }
+                success = true
+            }
+            
             let resolveDuration = Date().timeIntervalSince(resolveStartTime)
             
             if success {
