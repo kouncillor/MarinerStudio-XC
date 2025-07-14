@@ -193,7 +193,7 @@ grep -r "authentication\|auth\|login\|signin" "Mariner Studio" --include="*.swif
 ## Debug Logging System
 
 ### Real-Time Log Streaming
-**Live application logs stream to:** https://logflare.app/sources/35709
+**Live application logs stream to:** https://logflare.app/sources/public/aRjXAXyUU10ZNVGL
 
 **Usage:** Tell Claude to "check the logs" and provide this URL for real-time debugging assistance.
 

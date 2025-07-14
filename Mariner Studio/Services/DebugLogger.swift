@@ -151,7 +151,7 @@ class DebugLogger {
         #if DEBUG
         print("🗂️ DEBUG LOGGER: Writing logs to: \(logFileURL.path)")
         print("🗂️ DEBUG LOGGER: Directory exists: \(fileManager.fileExists(atPath: logDirectory.path))")
-        print("🌐 DEBUG LOGGER: Streaming logs to: https://logflare.app/sources/35709")
+        print("🌐 DEBUG LOGGER: Streaming logs to: https://logflare.app/sources/public/aRjXAXyUU10ZNVGL")
         #endif
     }
     

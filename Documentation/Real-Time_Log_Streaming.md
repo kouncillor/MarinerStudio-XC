@@ -24,6 +24,7 @@ iOS App (DebugLogger) → Logflare API → Logflare Dashboard → Public URL
 - **API Key**: `6BeJRu7WWywv`
 - **Dashboard URL**: https://logflare.app/dashboard
 - **Source URL**: https://logflare.app/sources/35709
+- **Public URL**: https://logflare.app/sources/public/aRjXAXyUU10ZNVGL
 
 ### API Endpoint Configuration
 - **Endpoint**: `https://api.logflare.app/logs/json`
@@ -69,15 +70,15 @@ Each log entry includes:
 
 ### Command for Claude Assistance
 ```
-"Check my logs at https://logflare.app/sources/35709"
+"Check my logs at https://logflare.app/sources/public/aRjXAXyUU10ZNVGL"
 ```
 
 ## Public Sharing Setup
 
 ### Current Status
 - ✅ **Logs streaming to Logflare**: Confirmed working
-- ❌ **Public access configured**: Needs setup
-- ❌ **Public URL accessible**: Currently shows login page
+- ✅ **Public access configured**: Successfully enabled
+- ✅ **Public URL accessible**: Working without authentication
 
 ### Required Setup Steps
 1. **Enable Public Access**:
