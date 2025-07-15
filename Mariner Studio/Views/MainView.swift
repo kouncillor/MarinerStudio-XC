@@ -18,7 +18,6 @@ struct MainView: View {
     }
 
     let columns: [GridItem] = [
-        GridItem(.flexible(), spacing: 12),
         GridItem(.flexible(), spacing: 12)
     ]
 
@@ -26,7 +25,7 @@ struct MainView: View {
         NavigationStack(path: $navigationPath) {
             ScrollView {
                 LazyVGrid(columns: columns, spacing: 12) {
-                    // Row 1: Map/Weather
+                    // MAP
                     NavigationLink(destination: MapClusteringView()) {
                         NavigationButtonContent(
                             icon: "earthsixfour",
@@ -34,21 +33,48 @@ struct MainView: View {
                         )
                     }
 
+                    // WEATHER
                     NavigationLink(destination: WeatherMenuView()) {
                         NavigationButtonContent(
-                            icon: "weathersixseventwo",
+                           // icon: "weathersixseventwo",
+                            icon: "weathersunsixseven",
                             title: "WEATHER"
                         )
                     }
 
-                    // Row 2: Docks/Routes
+                    // TIDES
+                    NavigationLink(destination: TideMenuView()) {
+                        NavigationButtonContent(
+                            icon: "tsixseven",
+                            title: "TIDES"
+                        )
+                    }
+                    
+                    // CURRENTS
+                    NavigationLink(destination: CurrentMenuView()) {
+                        NavigationButtonContent(
+                            icon: "csixseven",
+                            title: "CURRENTS"
+                        )
+                    }
+                    
+                    // DOCKS
                     NavigationLink(destination: NavUnitMenuView()) {
                         NavigationButtonContent(
-                            icon: "docksixseven",
-                            title: "DOCKS"
+                            icon: "nsixseven",
+                            title: "NAV UNITS"
+                        )
+                    }
+                    
+                    // BUOYS
+                    NavigationLink(destination: BuoyMenuView()) {
+                        NavigationButtonContent(
+                            icon: "buoysixseven",
+                            title: "BUOYS"
                         )
                     }
 
+                    // ROUTES
                     NavigationLink(destination: RouteMenuView()) {
                         NavigationButtonContent(
                             icon: "greencompasssixseven",
@@ -56,26 +82,7 @@ struct MainView: View {
                         )
                     }
 
-                    // Row 3: Tides/Currents
-                    NavigationLink(destination: TideMenuView()) {
-                        NavigationButtonContent(
-                            icon: "water.waves",
-                            title: "TIDES",
-                            isSystemIcon: true,
-                            iconColor: .green
-                        )
-                    }
-                    
-                    NavigationLink(destination: CurrentMenuView()) {
-                        NavigationButtonContent(
-                            icon: "arrow.right.arrow.left",
-                            title: "CURRENTS",
-                            isSystemIcon: true,
-                            iconColor: .red
-                        )
-                    }
-                    
-                    // Row 4: Tugs/Barges
+                    // TUGS
                     NavigationLink(destination: TugsView(
                         vesselService: serviceProvider.vesselService
                     )) {
@@ -85,6 +92,7 @@ struct MainView: View {
                         )
                     }
 
+                    // BARGES
                     NavigationLink(destination: BargesView(
                         vesselService: serviceProvider.vesselService
                     )) {
@@ -94,14 +102,7 @@ struct MainView: View {
                         )
                     }
 
-                    // Row 5: Buoys/Dev Tools
-                    NavigationLink(destination: BuoyMenuView()) {
-                        NavigationButtonContent(
-                            icon: "buoysixseven",
-                            title: "BUOYS"
-                        )
-                    }
-                    
+                    // DEV TOOLS
                     #if DEBUG
                     NavigationLink(destination: DevPageView()) {
                         NavigationButtonContent(
@@ -154,8 +155,6 @@ struct MainView: View {
         navigationPath = NavigationPath()
     }
     
-    // The rest of your functions (clearNavigationStack, etc.) and helper structs
-    // (NavigationButton, NavigationButtonContent) remain unchanged below.
     
     private func clearNavigationStack() {
          // Small delay to ensure view is fully loaded
@@ -230,34 +229,36 @@ struct NavigationButtonContent: View {
     }
 
     var body: some View {
-        VStack(alignment: .center, spacing: 8) {
+        HStack(alignment: .center, spacing: 16) {
             Group {
                 if isSystemIcon {
                     Image(systemName: icon)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
-                        .frame(width: 60, height: 60)
+                        .frame(width: 50, height: 50)
                         .foregroundColor(iconColor ?? .accentColor)
                 } else {
                     Image(icon)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
-                        .frame(width: 67, height: 67)
+                        .frame(width: 50, height: 50)
                 }
             }
 
             Text(title)
                 .font(.headline)
-                .multilineTextAlignment(.center)
+                .multilineTextAlignment(.leading)
+            
+            Spacer()
         }
         .frame(maxWidth: .infinity)
-        .padding(10)
+        .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 10)
                 .strokeBorder(Color(red: 0.0, green: 0.0, blue: 0.5), lineWidth: 1)
                 .background(RoundedRectangle(cornerRadius: 10).fill(Color.white))
         )
-        .frame(minHeight: 120)
+        .frame(minHeight: 80)
     }
 }
 
