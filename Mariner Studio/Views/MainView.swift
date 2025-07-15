@@ -69,7 +69,7 @@ struct MainView: View {
                     // BUOYS
                     NavigationLink(destination: BuoyMenuView()) {
                         NavigationButtonContent(
-                            icon: "buoysixseven",
+                            icon: "bsixseven",
                             title: "BUOYS"
                         )
                     }
@@ -77,7 +77,7 @@ struct MainView: View {
                     // ROUTES
                     NavigationLink(destination: RouteMenuView()) {
                         NavigationButtonContent(
-                            icon: "greencompasssixseven",
+                            icon: "rsixseven",
                             title: "ROUTES"
                         )
                     }
