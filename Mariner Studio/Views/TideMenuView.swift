@@ -35,6 +35,10 @@ struct TideMenuView: View {
             .padding()
         }
         .navigationTitle("Tides")
+        .navigationBarTitleDisplayMode(.large)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbarBackground(.green, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .withHomeButton()
     }
 }

@@ -35,6 +35,10 @@ struct NavUnitMenuView: View {
             .padding()
         }
         .navigationTitle("Nav Units")
+        .navigationBarTitleDisplayMode(.large)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbarBackground(.blue, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .withHomeButton()
         
     }

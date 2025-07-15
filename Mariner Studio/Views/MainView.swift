@@ -24,7 +24,7 @@ struct MainView: View {
     var body: some View {
         NavigationStack(path: $navigationPath) {
             ScrollView {
-                LazyVGrid(columns: columns, spacing: 12) {
+                LazyVGrid(columns: columns, spacing: 3) {
                     // MAP
                     NavigationLink(destination: MapClusteringView()) {
                         NavigationButtonContent(
@@ -246,19 +246,19 @@ struct NavigationButtonContent: View {
             }
 
             Text(title)
-                .font(.headline)
+                .font(.largeTitle)
                 .multilineTextAlignment(.leading)
             
             Spacer()
         }
         .frame(maxWidth: .infinity)
-        .padding(16)
+        .padding(27)
         .background(
             RoundedRectangle(cornerRadius: 10)
-                .strokeBorder(Color(red: 0.0, green: 0.0, blue: 0.5), lineWidth: 1)
+                .strokeBorder(Color.gray.opacity(0.4), lineWidth: 1)
                 .background(RoundedRectangle(cornerRadius: 10).fill(Color.white))
         )
-        .frame(minHeight: 80)
+        .frame(minHeight: 110)
     }
 }
 

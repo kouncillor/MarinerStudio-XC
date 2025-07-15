@@ -155,6 +155,9 @@ struct RouteMenuView: View {
         }
         .navigationTitle("Routes")
         .navigationBarTitleDisplayMode(.large)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbarBackground(.orange, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .withHomeButton()
         .navigationDestination(isPresented: $showingGpxView) {
             if let gpxFile = loadedGpxFile {

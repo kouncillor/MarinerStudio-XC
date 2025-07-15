@@ -40,6 +40,10 @@ struct BuoyMenuView: View {
             .padding()
         }
         .navigationTitle("Buoys")
+        .navigationBarTitleDisplayMode(.large)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbarBackground(.purple, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .withHomeButton()
         
     }

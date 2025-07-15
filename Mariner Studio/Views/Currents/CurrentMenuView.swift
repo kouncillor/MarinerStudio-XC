@@ -35,6 +35,10 @@ struct CurrentMenuView: View {
             .padding()
         }
         .navigationTitle("Currents")
+        .navigationBarTitleDisplayMode(.large)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbarBackground(.red, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .withHomeButton()
     }
 }
