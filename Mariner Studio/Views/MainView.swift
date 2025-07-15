@@ -115,8 +115,19 @@ struct MainView: View {
                 }
                 .padding()
             }
+            .background(
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color(red: 0.95, green: 0.97, blue: 1.0),
+                        Color.white
+                    ]),
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
             .navigationTitle("Mariner Studio")
             .toolbar {
+                #if DEBUG
                 // 2. ADD THE SIGN OUT BUTTON
                 // This button will appear in the top-left for development builds.
                 ToolbarItem(placement: .topBarLeading) {
@@ -127,14 +138,7 @@ struct MainView: View {
                     }
                     .tint(.red)
                 }
-
-                // This is your existing home button
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: navigateToHome) {
-                        Image(systemName: "house.fill")
-                            .foregroundColor(.blue)
-                    }
-                }
+                #endif
             }
             // 3. REMOVE THE PAYWALL
             // The .presentPaywallIfNeeded modifier has been deleted from here.
@@ -250,7 +254,7 @@ struct NavigationButtonContent: View {
         .padding(10)
         .background(
             RoundedRectangle(cornerRadius: 10)
-                .strokeBorder(Color(UIColor.lightGray), lineWidth: 1)
+                .strokeBorder(Color(red: 0.0, green: 0.0, blue: 0.5), lineWidth: 1)
                 .background(RoundedRectangle(cornerRadius: 10).fill(Color.white))
         )
         .frame(minHeight: 120)
