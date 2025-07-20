@@ -5,7 +5,7 @@ struct HomeButton: View {
     var body: some View {
         NavigationLink(destination: MainView(shouldClearNavigation: true)) {
             Image(systemName: "house.fill")
-                .foregroundColor(.blue)
+                .foregroundColor(.white)
         }
         .simultaneousGesture(TapGesture().onEnded {
             // Provide haptic feedback

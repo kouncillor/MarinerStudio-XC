@@ -49,6 +49,10 @@ struct WeatherMenuView: View {
             .padding()
         }
         .navigationTitle("Weather")
+        .navigationBarTitleDisplayMode(.large)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbarBackground(Color(red: 0.53, green: 0.81, blue: 0.98), for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .withHomeButton()    }
 
     // Opens the NOAA radar website using Safari

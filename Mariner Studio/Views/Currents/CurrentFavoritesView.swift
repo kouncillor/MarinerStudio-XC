@@ -28,6 +28,10 @@ struct CurrentFavoritesView: View {
             }
         }
         .navigationTitle("Favorite Currents")
+        .navigationBarTitleDisplayMode(.large)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbarBackground(.red, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .withHomeButton()
         .onAppear {
             viewModel.initialize(
@@ -210,8 +214,8 @@ struct EnhancedFavoriteCurrentStationRow: View {
     var body: some View {
         HStack(spacing: 16) {
             Image(systemName: "arrow.left.arrow.right")
-                .resizable().frame(width: 28, height: 28).foregroundColor(.blue)
-                .padding(8).background(Color.blue.opacity(0.1)).clipShape(Circle())
+                .resizable().frame(width: 28, height: 28).foregroundColor(.red)
+                .padding(8).background(Color.red.opacity(0.1)).clipShape(Circle())
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(station.name).font(.headline).lineLimit(2)

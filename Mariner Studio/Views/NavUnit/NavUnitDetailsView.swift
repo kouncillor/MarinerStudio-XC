@@ -116,6 +116,7 @@ struct NavUnitDetailsView: View {
     // State for sheet presentations
     @State private var showingRecommendationForm = false
     @State private var showingUserRecommendations = false
+    @State private var showingPhotoGallery = false
     
     // MARK: - Initializers
     
@@ -455,6 +456,13 @@ struct NavUnitDetailsView: View {
             )
             
             actionButton(
+                icon: "camera.fill",
+                action: { showingPhotoGallery = true },
+                isEnabled: true,
+                isSystemIcon: true
+            )
+            
+            actionButton(
                 icon: "greenphonesixseven",
                 action: { viewModel.makePhoneCall() },
                 isEnabled: viewModel.hasPhoneNumbers
@@ -514,16 +522,24 @@ struct NavUnitDetailsView: View {
                 )
             }
         }
+        .sheet(isPresented: $showingPhotoGallery) {
+            if let navUnit = viewModel.unit {
+                NavUnitPhotoGalleryView(
+                    navUnitId: navUnit.navUnitId,
+                    photoService: serviceProvider.photoService
+                )
+            }
+        }
     }
     
-    private func actionButton(icon: String, action: @escaping () -> Void, isEnabled: Bool) -> some View {
+    private func actionButton(icon: String, action: @escaping () -> Void, isEnabled: Bool, isSystemIcon: Bool = false) -> some View {
         Button(action: action) {
-            if icon == "lightbulb.fill" {
-                // Use system icon for the suggestion button
+            if isSystemIcon || icon == "lightbulb.fill" {
+                // Use system icon
                 Image(systemName: icon)
                     .resizable()
                     .frame(width: 44, height: 44)
-                    .foregroundColor(isEnabled ? .orange : .gray.opacity(0.5))
+                    .foregroundColor(isEnabled ? (icon == "lightbulb.fill" ? .orange : .blue) : .gray.opacity(0.5))
             } else {
                 // Use custom icons for other buttons
                 Image(icon)
@@ -619,4 +635,51 @@ struct InfoRow: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
+}
+
+// MARK: - Preview
+
+#Preview {
+    NavigationView {
+        NavUnitDetailsView(
+            viewModel: NavUnitDetailsViewModel(
+                navUnit: NavUnit(
+                    navUnitId: "PREVIEW001",
+                    navUnitName: "Sample Marina",
+                    facilityType: "Marina",
+                    streetAddress: "123 Harbor Way",
+                    cityOrTown: "Newport Beach",
+                    statePostalCode: "CA",
+                    zipCode: "92663",
+                    countyName: "Orange County",
+                    waterwayName: "Newport Bay",
+                    portName: "Newport Harbor",
+                    mile: 2.5,
+                    bank: "Left Bank",
+                    latitude: 33.6189,
+                    longitude: -117.9298,
+                    operators: "Harbor Marina LLC",
+                    owners: "City of Newport Beach",
+                    purpose: "Commercial Marina",
+                    location: "Inner Harbor",
+                    commodities: "Recreational Vessels, Fuel",
+                    construction: "Concrete Docks",
+                    mechanicalHandling: "Fuel Dock, Pump-out Station",
+                    remarks: "Full-service marina with 24-hour security. Phone: 949-555-0123",
+                    verticalDatum: "MLLW",
+                    depthMin: 8.0,
+                    depthMax: 15.0,
+                    berthingLargest: 150.0,
+                    berthingTotal: 2400.0,
+                    deckHeightMin: 3.0,
+                    deckHeightMax: 8.0,
+                    isFavorite: false
+                ),
+                databaseService: NavUnitDatabaseService(databaseCore: DatabaseCore()),
+                favoritesService: FavoritesServiceImpl(),
+                noaaChartService: NOAAChartServiceImpl()
+            )
+        )
+    }
+    .environmentObject(ServiceProvider())
 }

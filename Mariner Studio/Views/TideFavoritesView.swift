@@ -11,6 +11,10 @@ struct TideFavoritesView: View {
             mainContentView
         }
         .navigationTitle("Favorite Tides")
+        .navigationBarTitleDisplayMode(.large)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbarBackground(.green, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .withHomeButton()
         .toolbar {
             ToolbarItemGroup(placement: .navigationBarTrailing) {
@@ -384,41 +388,45 @@ struct FavoriteStationRow: View {
     let station: TidalHeightStation
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
+        HStack(spacing: 16) {
+            Image(systemName: "arrow.up.arrow.down")
+                .resizable().frame(width: 28, height: 28).foregroundColor(.green)
+                .padding(8).background(Color.green.opacity(0.1)).clipShape(Circle())
+            
+            VStack(alignment: .leading, spacing: 4) {
                 Text(station.name)
                     .font(.headline)
                     .foregroundColor(.primary)
                 
-                Spacer()
-                
-                Image(systemName: "star.fill")
-                    .foregroundColor(.yellow)
-                    .font(.caption)
-            }
-            
-            HStack {
-                Text("ID: \(station.id)")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                
-                if let state = station.state, state != "Unknown" {
-                    Text("• \(state)")
+                HStack {
+                    Text("ID: \(station.id)")
                         .font(.caption)
                         .foregroundColor(.secondary)
+                    
+                    if let state = station.state, state != "Unknown" {
+                        Text("• \(state)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
                 }
                 
-                Spacer()
+                // Show coordinate info if available
+                if let latitude = station.latitude, let longitude = station.longitude {
+                    Text("Coordinates: \(String(format: "%.4f", latitude)), \(String(format: "%.4f", longitude))")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
             }
             
-            // Show coordinate info if available
-            if let latitude = station.latitude, let longitude = station.longitude {
-                Text("Coordinates: \(String(format: "%.4f", latitude)), \(String(format: "%.4f", longitude))")
-                    .font(.caption)
-                    .foregroundColor(.gray)
-            }
+            Spacer()
+            
+            Image(systemName: "star.fill")
+                .foregroundColor(.yellow)
+                .font(.system(size: 16))
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, 12)
     }
 }
 

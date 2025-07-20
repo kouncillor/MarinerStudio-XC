@@ -39,6 +39,9 @@ class ServiceProvider: ObservableObject {
     // MARK: - Recommendation Services
     let recommendationService: RecommendationCloudService
     
+    // MARK: - Photo Services
+    let photoService: PhotoService
+    
     // MARK: - Sync Services
     let currentStationSyncService: CurrentStationSyncService
     let navUnitSyncService: NavUnitSyncService
@@ -105,6 +108,24 @@ class ServiceProvider: ObservableObject {
         // Initialize Recommendation Service (using Supabase)
         self.recommendationService = RecommendationSupabaseService()
         DebugLogger.shared.log("📦 ServiceProvider: Initialized recommendation Supabase service.", category: "SERVICE_INIT")
+        
+        // Initialize Photo Service
+        do {
+            let photoCacheService = try PhotoCacheServiceImpl()
+            let photoDatabaseService = PhotoDatabaseServiceImpl(databaseCore: databaseCore)
+            let photoSupabaseService = PhotoSupabaseServiceImpl()
+            
+            self.photoService = PhotoServiceImpl(
+                databaseService: photoDatabaseService,
+                cacheService: photoCacheService,
+                supabaseService: photoSupabaseService
+            )
+            DebugLogger.shared.log("📦 ServiceProvider: Initialized photo service with all components.", category: "SERVICE_INIT")
+        } catch {
+            // Create a mock photo service if initialization fails
+            self.photoService = MockPhotoService()
+            DebugLogger.shared.log("❌ ServiceProvider: Failed to initialize photo service, using mock: \(error)", category: "SERVICE_INIT")
+        }
         
         DebugLogger.shared.log("📦 ServiceProvider initialization complete (sync portion).", category: "SERVICE_INIT")
         self.setupAsyncTasks()
@@ -194,6 +215,50 @@ class ServiceProvider: ObservableObject {
         DebugLogger.shared.log("📦 ServiceProvider initialization complete (async tasks launched).", category: "SERVICE_INIT")
     }
     
+}
+
+// MARK: - Mock Photo Service for Fallback
+
+class MockPhotoService: PhotoService {
+    func getPhotos(for navUnitId: String) async throws -> [NavUnitPhoto] {
+        return []
+    }
+    
+    func takePhoto(for navUnitId: String, image: UIImage) async throws -> NavUnitPhoto {
+        return NavUnitPhoto(navUnitId: navUnitId, localFileName: "mock.jpg")
+    }
+    
+    func deletePhoto(_ photo: NavUnitPhoto) async throws {
+        // Mock implementation
+    }
+    
+    func getPhotoCount(for navUnitId: String) async throws -> Int {
+        return 0
+    }
+    
+    func uploadPhotos(for navUnitId: String) async throws -> PhotoSyncStatus {
+        return .empty
+    }
+    
+    func downloadPhotos(for navUnitId: String) async throws -> PhotoSyncStatus {
+        return .empty
+    }
+    
+    func getSyncStatus(for navUnitId: String) async throws -> PhotoSyncStatus {
+        return .empty
+    }
+    
+    func loadPhotoImage(_ photo: NavUnitPhoto) async throws -> UIImage {
+        return UIImage(systemName: "photo") ?? UIImage()
+    }
+    
+    func loadThumbnailImage(_ photo: NavUnitPhoto) async throws -> UIImage {
+        return UIImage(systemName: "photo") ?? UIImage()
+    }
+    
+    func isAtPhotoLimit(for navUnitId: String) async throws -> Bool {
+        return false
+    }
 }
 
 

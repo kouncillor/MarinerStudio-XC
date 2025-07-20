@@ -8,7 +8,9 @@
 //
 
 import Foundation
+#if os(iOS)
 import UIKit
+#endif
 
 /// Remote navigation unit favorite model matching Supabase user_nav_unit_favorites table structure
 struct RemoteNavUnitFavorite: Codable, Identifiable {
@@ -71,7 +73,11 @@ struct RemoteNavUnitFavorite: Codable, Identifiable {
         longitude: Double? = nil,
         facilityType: String? = nil
     ) -> RemoteNavUnitFavorite {
+        #if os(iOS)
         let deviceId = UIDevice.current.identifierForVendor?.uuidString ?? "unknown_device"
+        #else
+        let deviceId = "unknown_device"
+        #endif
         return RemoteNavUnitFavorite(
             userId: userId,
             navUnitId: navUnitId,

@@ -9,7 +9,7 @@ final class SupabaseManager {
     static let shared = SupabaseManager()
     
     // MARK: - Private Properties
-    private let client: SupabaseClient
+    public let client: SupabaseClient
     private let operationQueue = DispatchQueue(label: "supabase.operations", qos: .utility)
     internal let logQueue = DispatchQueue(label: "supabase.logging", qos: .background)
     private var activeOperations: [String: Date] = [:]
