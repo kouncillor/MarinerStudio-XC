@@ -414,25 +414,20 @@ struct FavoriteStationRow: View {
                 .padding(8).background(Color.green.opacity(0.1)).clipShape(Circle())
             
             VStack(alignment: .leading, spacing: 4) {
+                // Station name
                 Text(station.name)
                     .font(.headline)
                     .foregroundColor(.primary)
                 
-                HStack {
-                    Text("ID: \(station.id)")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    
-                    if let state = station.state, state != "Unknown" {
-                        Text("• \(state)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    Spacer()
+                // Distance from user
+                if let distance = station.distanceFromUser {
+                    Text("\(String(format: "%.1f", distance)) mi")
+                        .font(.subheadline)
+                        .foregroundColor(.blue)
+                        .fontWeight(.medium)
                 }
                 
-                // Show coordinate info if available
+                // Coordinates if available
                 if let latitude = station.latitude, let longitude = station.longitude {
                     Text("Coordinates: \(String(format: "%.4f", latitude)), \(String(format: "%.4f", longitude))")
                         .font(.caption)

@@ -218,25 +218,26 @@ struct EnhancedFavoriteCurrentStationRow: View {
                 .padding(8).background(Color.red.opacity(0.1)).clipShape(Circle())
             
             VStack(alignment: .leading, spacing: 4) {
+                // Station name
                 Text(station.name).font(.headline).lineLimit(2)
-                HStack {
-                    if let state = station.state, !state.isEmpty {
-                        Text(state).font(.subheadline).foregroundColor(.secondary)
-                    }
-                    Spacer()
-                    if let distance = station.distanceFromUser {
-                        Text("\(String(format: "%.1f", distance)) mi").font(.subheadline).foregroundColor(.blue).fontWeight(.medium)
-                    }
+                
+                // Depth - show actual depth or surface/n/a
+                if let depth = station.depth {
+                    Text("Depth: \(String(format: "%.0f", depth)) ft").font(.subheadline).foregroundColor(.secondary)
+                } else {
+                    Text("Depth: surface or n/a").font(.subheadline).foregroundColor(.secondary)
                 }
-                HStack {
-                    if let depth = station.depth {
-                        Text("Depth: \(String(format: "%.1f", depth)) ft").font(.caption).foregroundColor(.secondary)
-                    }
-                    Spacer()
-                    if let bin = station.currentBin, bin > 0 {
-                        Text("Bin \(bin)").font(.caption).foregroundColor(.blue)
-                            .padding(.horizontal, 6).padding(.vertical, 2).background(Color.blue.opacity(0.1)).cornerRadius(4)
-                    }
+                
+                // Distance from user
+                if let distance = station.distanceFromUser {
+                    Text("\(String(format: "%.1f", distance)) mi").font(.subheadline).foregroundColor(.blue).fontWeight(.medium)
+                }
+                
+                // Coordinates if available
+                if let latitude = station.latitude, let longitude = station.longitude {
+                    Text("Coordinates: \(String(format: "%.4f", latitude)), \(String(format: "%.4f", longitude))")
+                        .font(.caption)
+                        .foregroundColor(.gray)
                 }
             }
             Spacer()

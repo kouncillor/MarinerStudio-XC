@@ -126,7 +126,7 @@ class TideFavoritesViewModel: ObservableObject {
             logDebug("📊 PHASE_1: Starting local database query...")
             logDebug("📊 PHASE_1: Calling getAllFavoriteStationsWithDetails()")
             
-            let favoriteStations = await tideStationService.getAllFavoriteStationsWithDetails()
+            var favoriteStations = await tideStationService.getAllFavoriteStationsWithDetails()
             let phase1Duration = Date().timeIntervalSince(phaseStart)
             
             logDebug("📊 PHASE_1: Database query completed")
@@ -136,6 +136,31 @@ class TideFavoritesViewModel: ObservableObject {
             updateDebugInfo("Local DB query: \(favoriteStations.count) favorites in \(String(format: "%.3f", phase1Duration))s")
             updatePerformanceMetric("DB Query: \(String(format: "%.3f", phase1Duration))s for \(favoriteStations.count) records")
             updateDatabaseStat("Favorite stations: \(favoriteStations.count)")
+            
+            // PHASE 1.5: Calculate distances to each station
+            await updateLoadingPhase("Calculating distances")
+            let distancePhaseStart = Date()
+            
+            if let locationService = locationService, let userLocation = locationService.currentLocation {
+                logDebug("📍 DISTANCE: User location available, calculating distances...")
+                
+                for i in 0..<favoriteStations.count {
+                    if let lat = favoriteStations[i].latitude, let lon = favoriteStations[i].longitude {
+                        let stationLocation = CLLocation(latitude: lat, longitude: lon)
+                        let distanceInMeters = userLocation.distance(from: stationLocation)
+                        let distanceInMiles = distanceInMeters * 0.000621371 // Convert meters to miles
+                        favoriteStations[i].distanceFromUser = distanceInMiles
+                        logDebug("📍 DISTANCE: Station \(favoriteStations[i].id) distance = \(String(format: "%.1f", distanceInMiles)) mi")
+                    } else {
+                        logDebug("📍 DISTANCE: Station \(favoriteStations[i].id) missing coordinates")
+                    }
+                }
+            } else {
+                logDebug("📍 DISTANCE: User location not available, distances will not be calculated")
+            }
+            
+            let distancePhaseDuration = Date().timeIntervalSince(distancePhaseStart)
+            updatePerformanceMetric("Distance Calculation: \(String(format: "%.3f", distancePhaseDuration))s for \(favoriteStations.count) stations")
             
             for (index, station) in favoriteStations.prefix(5).enumerated() {
                 logDebug("📊 PHASE_1: [\(index)] Station: \(station.id) - \(station.name)")
@@ -161,7 +186,18 @@ class TideFavoritesViewModel: ObservableObject {
             logDebug("🔄 PHASE_2: Sorting stations with actual names...")
             logDebug("🔄 PHASE_2: Will sort \(favoriteStations.count) stations")
             
-            let sortedStations = favoriteStations.sorted { $0.name < $1.name }
+            let sortedStations = favoriteStations.sorted { 
+                // Sort by distance if available, otherwise fall back to alphabetical
+                if let distance1 = $0.distanceFromUser, let distance2 = $1.distanceFromUser {
+                    return distance1 < distance2
+                } else if $0.distanceFromUser != nil {
+                    return true  // Stations with distance come first
+                } else if $1.distanceFromUser != nil {
+                    return false // Stations with distance come first
+                } else {
+                    return $0.name < $1.name // Fallback to alphabetical
+                }
+            }
             let phase2Duration = Date().timeIntervalSince(phase2Start)
             
             logDebug("🔄 PHASE_2: Sorting completed")

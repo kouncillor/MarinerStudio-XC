@@ -13,6 +13,7 @@ struct TidalHeightStation: Identifiable, Codable {
     let timeMeridian: Int?
     let tidePredOffsets: TidePredOffsets?
     var isFavorite: Bool = false  // This is already marked as 'var' which is good
+    var distanceFromUser: Double?  // Distance in miles, calculated at runtime
     
     // MARK: - Coding Keys
     enum CodingKeys: String, CodingKey {
