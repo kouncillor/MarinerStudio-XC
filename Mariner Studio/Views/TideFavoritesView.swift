@@ -25,15 +25,14 @@ struct TideFavoritesView: View {
                         await viewModel.syncWithCloud()
                     }
                 }) {
-                    Image(systemName: viewModel.syncStatusIcon)
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(viewModel.syncStatusColor)
-                        .rotationEffect(.degrees(viewModel.isSyncing ? 360 : 0))
-                        .animation(
-                            viewModel.isSyncing ?
-                            .linear(duration: 2).repeatForever(autoreverses: false) : .default,
-                            value: viewModel.isSyncing
-                        )
+                    if viewModel.isSyncing {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                    } else {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.white)
+                    }
                 }
             }
         }
@@ -247,30 +246,9 @@ struct TideFavoritesView: View {
     
     private var favoritesListView: some View {
         VStack(spacing: 0) {
-            // Sync Status Bar
-        //    SyncStatusBar(viewModel: viewModel)
+            // Sync Status View
+            SyncStatusView()
             
-            // Quick stats header
-            HStack {
-                Text("\(viewModel.favorites.count) favorite stations")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                
-                Spacer()
-                
-                if let lastMetric = viewModel.performanceMetrics.last {
-                    Text(lastMetric)
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
-            }
-            .padding(.horizontal)
-            .padding(.vertical, 4)
-            .background(Color(.systemGray6))
-        
-            
-            // This shows the updated NavigationLink section in TideFavoritesView.swift
-
             List {
                 ForEach(viewModel.favorites) { station in
                     NavigationLink {
@@ -309,6 +287,48 @@ struct TideFavoritesView: View {
         }
         .onAppear {
             print("🎨 VIEW: Favorites list view appeared with \(viewModel.favorites.count) stations")
+        }
+    }
+    
+    // MARK: - Sync Status View
+    @ViewBuilder
+    private func SyncStatusView() -> some View {
+        if viewModel.isSyncing || viewModel.syncSuccessMessage != nil || viewModel.syncErrorMessage != nil {
+            VStack {
+                HStack {
+                    if viewModel.isSyncing {
+                        ProgressView()
+                            .scaleEffect(0.7)
+                            .frame(width: 20, height: 20)
+                    } else if viewModel.syncErrorMessage != nil {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.red)
+                    } else {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                    }
+                    
+                    if let successMessage = viewModel.syncSuccessMessage {
+                        Text(successMessage)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    } else if let errorMessage = viewModel.syncErrorMessage {
+                        Text(errorMessage)
+                            .font(.caption)
+                            .foregroundColor(.red)
+                    } else {
+                        Text("Syncing...")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 8)
+                .background(Color(UIColor.systemGroupedBackground))
+            }
+            .transition(.move(edge: .top).combined(with: .opacity))
         }
     }
 

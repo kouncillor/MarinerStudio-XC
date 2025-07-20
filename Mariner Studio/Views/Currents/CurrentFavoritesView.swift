@@ -57,7 +57,7 @@ struct CurrentFavoritesView: View {
                         }
                     }) {
                         Image(systemName: "arrow.clockwise")
-                            .foregroundColor(.blue)
+                            .foregroundColor(.white)
                     }
                     .disabled(viewModel.isLoading) // Disable while initial load is happening
                 }
