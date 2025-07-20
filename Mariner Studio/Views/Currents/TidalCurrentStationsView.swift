@@ -69,6 +69,7 @@ struct TidalCurrentStationsView: View {
             }
         }
         .padding([.horizontal, .top])
+        .background(Color(.systemGroupedBackground))
     }
     
     private var searchBar: some View {
@@ -95,9 +96,14 @@ struct TidalCurrentStationsView: View {
                 }
             }
         }
-        .padding(10)
-        .background(Color(.systemGray6))
+        .padding(12)
+        .background(Color(.systemBackground))
         .cornerRadius(10)
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color(.systemGray4), lineWidth: 1)
+        )
+        .padding(.trailing, 8)
     }
     
     private var contentView: some View {
