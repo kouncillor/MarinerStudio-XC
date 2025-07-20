@@ -81,23 +81,8 @@ class TidalCurrentStationsViewModel: ObservableObject {
 
             let stations = response.stations
             
-            // ⭐ REMOVED: All favorite checking logic - NO DATABASE CALLS HERE! ⭐
-            print("🚫 VIEWMODEL: SKIPPING favorite status checks - no database calls will be made")
-            print("🚫 VIEWMODEL: No authentication calls will be made")
-            print("🚫 VIEWMODEL: Favorites will be handled elsewhere in the app")
-            
-            print("📏 VIEWMODEL: Starting distance calculation for \(stations.count) stations")
-            print("📍 VIEWMODEL: Using location for distance calc: \(locationService.currentLocation?.description ?? "nil")")
-            
-            let currentLocationForDistance = locationService.currentLocation
-            let stationsWithDistance = stations.map { station in
-                return StationWithDistance<TidalCurrentStation>.create(
-                    station: station,
-                    userLocation: currentLocationForDistance
-                )
-            }
-            
-            print("✅ VIEWMODEL: Distance calculation completed for \(stationsWithDistance.count) stations")
+            let stationsWithDistance = await processStationsWithDistance(stations)
+            print("✅ VIEWMODEL: Distance calculation and favorite status checking completed for \(stationsWithDistance.count) stations")
 
             print("📱 VIEWMODEL: Updating UI state on main thread")
             await MainActor.run {
@@ -198,6 +183,59 @@ class TidalCurrentStationsViewModel: ObservableObject {
         print("🔍 VIEWMODEL: Calling filterStations() after clearing search")
         filterStations()
         print("🗑️ VIEWMODEL: ===== CLEAR SEARCH END =====\n")
+    }
+    
+    // MARK: - Private Helper Methods
+    private func processStationsWithDistance(_ stations: [TidalCurrentStation]) async -> [StationWithDistance<TidalCurrentStation>] {
+        let userLocation = locationService.currentLocation
+        
+        await MainActor.run {
+            if let location = userLocation {
+                self.userLatitude = String(format: "%.6f", location.coordinate.latitude)
+                self.userLongitude = String(format: "%.6f", location.coordinate.longitude)
+            }
+        }
+        
+        // Load all favorites once for efficiency
+        let favoriteRecords: [TidalCurrentFavoriteRecord]
+        do {
+            favoriteRecords = try await currentStationService.getCurrentStationFavoritesWithMetadata()
+            print("✅ VIEWMODEL: Loaded \(favoriteRecords.count) favorite records for efficient lookup")
+        } catch {
+            print("❌ VIEWMODEL: Failed to load favorites: \(error.localizedDescription)")
+            favoriteRecords = []
+        }
+        
+        // Create a set of favorite station+bin combinations for fast lookup
+        let favoriteKeys = Set(favoriteRecords.map { "\($0.stationId)_\($0.currentBin)" })
+        
+        var stationsWithDistance: [StationWithDistance<TidalCurrentStation>] = []
+        
+        for station in stations {
+            let distance: Double
+            if let userLoc = userLocation,
+               let stationLat = station.latitude,
+               let stationLon = station.longitude {
+                let stationLocation = CLLocation(latitude: stationLat, longitude: stationLon)
+                distance = userLoc.distance(from: stationLocation) / 1000 // Convert meters to km
+            } else {
+                distance = Double.greatestFiniteMagnitude
+            }
+            
+            // Check if this station+bin combination is in favorites
+            let favoriteKey = "\(station.id)_\(station.currentBin ?? 0)"
+            let isFavorite = favoriteKeys.contains(favoriteKey)
+            
+            var updatedStation = station
+            updatedStation.isFavorite = isFavorite
+            
+            stationsWithDistance.append(StationWithDistance(
+                station: updatedStation,
+                distanceFromUser: distance
+            ))
+        }
+        
+        return stationsWithDistance
     }
     
     func toggleFavorites() {
