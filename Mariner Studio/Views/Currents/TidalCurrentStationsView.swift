@@ -54,10 +54,13 @@ struct TidalCurrentStationsView: View {
         return HStack {
             searchBar
             
-            // REMOVED: Favorites filter button entirely - no more star button
-            // This eliminates any UI that would trigger favorite database calls
-            
-            Spacer()
+            Button(action: {
+                viewModel.toggleFavorites()
+            }) {
+                Image(systemName: viewModel.showOnlyFavorites ? "star.fill" : "star")
+                    .foregroundColor(viewModel.showOnlyFavorites ? .yellow : .gray)
+                    .frame(width: 44, height: 44)
+            }
             
             if viewModel.isLoading {
                 ProgressView()
@@ -158,7 +161,14 @@ struct TidalCurrentStationsView: View {
                     stationDepthType: stationWithDistance.station.depthType,    // ← ADD
                     currentStationService: viewModel.currentStationService
                 )) {
-                    TidalCurrentStationRow(stationWithDistance: stationWithDistance)
+                    TidalCurrentStationRow(
+                        stationWithDistance: stationWithDistance,
+                        onToggleFavorite: {
+                            Task {
+                                await viewModel.toggleStationFavorite(stationId: stationWithDistance.station.id)
+                            }
+                        }
+                    )
                         .onAppear {
                             // Only log for first few items to avoid spam
                             if stationWithDistance.station.id.hasSuffix("01") || stationWithDistance.station.id.hasSuffix("02") {
@@ -178,7 +188,7 @@ struct TidalCurrentStationsView: View {
     
     struct TidalCurrentStationRow: View {
         let stationWithDistance: StationWithDistance<TidalCurrentStation>
-        // REMOVED: onToggleFavorite parameter entirely
+        let onToggleFavorite: () -> Void
         
         var body: some View {
             // Log only for first few stations to avoid spam
@@ -191,9 +201,10 @@ struct TidalCurrentStationsView: View {
                     Text(stationWithDistance.station.name)
                         .font(.headline)
                     Spacer()
-                    
-                    // REMOVED: Star button entirely - no more favorite toggle
-                    // This completely eliminates any database interaction from the list
+                    Button(action: onToggleFavorite) {
+                        Image(systemName: stationWithDistance.station.isFavorite ? "star.fill" : "star")
+                            .foregroundColor(stationWithDistance.station.isFavorite ? .yellow : .gray)
+                    }
                 }
                 
                 if let state = stationWithDistance.station.state, !state.isEmpty {
@@ -203,19 +214,17 @@ struct TidalCurrentStationsView: View {
                 }
                 
                 
-                HStack {
-                    if let depth = stationWithDistance.station.depth {
-                        Text("Depth: \(String(format: "%.1f", depth)) ft")
-                            .font(.caption)
-                            .foregroundColor(.gray)
-                    }
-                    
-                    if !stationWithDistance.distanceDisplay.isEmpty {
-                        Text("• \(stationWithDistance.distanceDisplay)")
-                            .font(.subheadline)
-                            .foregroundColor(.blue)
-                            .fontWeight(.medium)
-                    }
+                if !stationWithDistance.distanceDisplay.isEmpty {
+                    Text(stationWithDistance.distanceDisplay)
+                        .font(.subheadline)
+                        .foregroundColor(.blue)
+                        .fontWeight(.medium)
+                }
+                
+                if let depth = stationWithDistance.station.depth {
+                    Text("Depth: \(String(format: "%.1f", depth)) ft")
+                        .font(.caption)
+                        .foregroundColor(.green)
                 }
             }
             .padding(.vertical, 5)

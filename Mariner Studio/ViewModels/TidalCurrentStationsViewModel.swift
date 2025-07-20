@@ -12,6 +12,7 @@ class TidalCurrentStationsViewModel: ObservableObject {
     @Published var totalStations = 0
     @Published var userLatitude: String = "Unknown"
     @Published var userLongitude: String = "Unknown"
+    @Published var showOnlyFavorites = false
 
     // MARK: - Computed Property for Location Status
     var isLocationEnabled: Bool {
@@ -159,7 +160,9 @@ class TidalCurrentStationsViewModel: ObservableObject {
                 (station.station.state?.localizedCaseInsensitiveContains(searchText) ?? false) ||
                 station.station.id.localizedCaseInsensitiveContains(searchText)
             
-            return matchesSearch
+            let matchesFavorites = !showOnlyFavorites || station.station.isFavorite
+            
+            return matchesSearch && matchesFavorites
         }
         
         print("✅ VIEWMODEL: Filtering complete")
@@ -197,7 +200,55 @@ class TidalCurrentStationsViewModel: ObservableObject {
         print("🗑️ VIEWMODEL: ===== CLEAR SEARCH END =====\n")
     }
     
-    // REMOVED: toggleStationFavorite() method entirely
-    // REMOVED: toggleFavorites() method entirely
-    // REMOVED: showOnlyFavorites property entirely
+    func toggleFavorites() {
+        print("\n⭐ VIEWMODEL: ===== TOGGLE FAVORITES START =====")
+        print("⭐ VIEWMODEL: Current showOnlyFavorites: \(showOnlyFavorites)")
+        showOnlyFavorites.toggle()
+        print("⭐ VIEWMODEL: New showOnlyFavorites: \(showOnlyFavorites)")
+        print("🔍 VIEWMODEL: Calling filterStations() to apply favorites filter")
+        filterStations()
+        print("⭐ VIEWMODEL: ===== TOGGLE FAVORITES END =====\n")
+    }
+    
+    func toggleStationFavorite(stationId: String) async {
+        print("\n⭐ VIEWMODEL: ===== TOGGLE STATION FAVORITE START =====")
+        print("⭐ VIEWMODEL: Toggling favorite for station: \(stationId)")
+        
+        // Find the station object first to get the metadata
+        guard let stationWithDistance = allStations.first(where: { $0.station.id == stationId }) else {
+            print("❌ VIEWMODEL: Could not find station \(stationId) in allStations")
+            return
+        }
+        
+        let currentStation = stationWithDistance.station
+        
+        let newFavoriteStatus = await currentStationService.toggleCurrentStationFavoriteWithMetadata(
+            id: stationId,
+            bin: currentStation.currentBin ?? 0,
+            stationName: currentStation.name,
+            latitude: currentStation.latitude,
+            longitude: currentStation.longitude,
+            depth: currentStation.depth,
+            depthType: currentStation.depthType
+        )
+        
+        print("⭐ VIEWMODEL: Toggle completed for station \(stationId), new status: \(newFavoriteStatus)")
+
+        if let index = allStations.firstIndex(where: { $0.station.id == stationId }) {
+            var updatedStation = allStations[index].station
+            updatedStation.isFavorite = newFavoriteStatus
+            allStations[index] = StationWithDistance(
+                station: updatedStation,
+                distanceFromUser: allStations[index].distanceFromUser
+            )
+            
+            await MainActor.run {
+                filterStations()
+            }
+            
+            print("⭐ VIEWMODEL: Updated station \(stationId) in allStations array")
+        }
+        
+        print("⭐ VIEWMODEL: ===== TOGGLE STATION FAVORITE END =====\n")
+    }
 }
