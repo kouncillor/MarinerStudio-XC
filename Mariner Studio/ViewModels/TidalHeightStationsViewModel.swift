@@ -95,7 +95,7 @@ class TidalHeightStationsViewModel: ObservableObject {
                let stationLat = station.latitude,
                let stationLon = station.longitude {
                 let stationLocation = CLLocation(latitude: stationLat, longitude: stationLon)
-                distance = userLoc.distance(from: stationLocation)
+                distance = userLoc.distance(from: stationLocation) / 1000 // Convert meters to km
             } else {
                 distance = Double.greatestFiniteMagnitude
             }

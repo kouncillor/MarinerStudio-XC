@@ -29,6 +29,10 @@ struct TidalCurrentStationsView: View {
                 contentView
             }
             .navigationTitle("Current Stations")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarBackground(.red, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .withHomeButton()
             .onAppear {
                 print("\n👁️ VIEW: ===== VIEW APPEARED =====")
@@ -165,7 +169,7 @@ struct TidalCurrentStationsView: View {
                 }
             }
         }
-        .listStyle(PlainListStyle())
+        .listStyle(InsetGroupedListStyle())
         .refreshable {
             print("🔄 VIEW: Pull-to-refresh triggered")
             await viewModel.refreshStations()
@@ -198,17 +202,6 @@ struct TidalCurrentStationsView: View {
                         .foregroundColor(.gray)
                 }
                 
-                HStack {
-                    Text("ID: \(stationWithDistance.station.id)")
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                    
-                    if let bin = stationWithDistance.station.currentBin {
-                        Text("• Bin: \(bin)")
-                            .font(.caption)
-                            .foregroundColor(.gray)
-                    }
-                }
                 
                 HStack {
                     if let depth = stationWithDistance.station.depth {
@@ -219,8 +212,9 @@ struct TidalCurrentStationsView: View {
                     
                     if !stationWithDistance.distanceDisplay.isEmpty {
                         Text("• \(stationWithDistance.distanceDisplay)")
-                            .font(.caption)
-                            .foregroundColor(.gray)
+                            .font(.subheadline)
+                            .foregroundColor(.blue)
+                            .fontWeight(.medium)
                     }
                 }
             }

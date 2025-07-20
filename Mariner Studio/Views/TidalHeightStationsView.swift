@@ -40,6 +40,10 @@ struct TidalHeightStationsView: View {
             }
         }
         .navigationTitle("Tidal Height Stations")
+        .navigationBarTitleDisplayMode(.large)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbarBackground(.green, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .withHomeButton()
         
         
@@ -70,9 +74,13 @@ struct TidalHeightStationsView: View {
                     }
                 }
             }
-            .padding(8)
+            .padding(12)
             .background(Color(.systemBackground))
             .cornerRadius(10)
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(Color(.systemGray4), lineWidth: 1)
+            )
             .padding(.trailing, 8)
             
             Button(action: {
@@ -83,7 +91,9 @@ struct TidalHeightStationsView: View {
                     .frame(width: 44, height: 44)
             }
         }
-        .padding([.horizontal, .top])
+        .padding(.horizontal, 16)
+        .padding(.top, 5)
+        .background(Color(.systemGroupedBackground))
     }
 
     // This shows only the updated NavigationLink section that needs to change
@@ -110,7 +120,7 @@ struct TidalHeightStationsView: View {
                 }
             }
         }
-        .listStyle(PlainListStyle())
+        .listStyle(InsetGroupedListStyle())
         .refreshable {
             await viewModel.loadStations()
         }
@@ -138,25 +148,19 @@ struct StationRow: View {
                 }
             }
             
-            if let state = stationWithDistance.station.state, !state.isEmpty {
-                Text(state)
+            
+            // Distance from user (matching favorites view style)
+            if !stationWithDistance.distanceDisplay.isEmpty {
+                Text(stationWithDistance.distanceDisplay)
                     .font(.subheadline)
-                    .foregroundColor(.gray)
+                    .foregroundColor(.blue)
+                    .fontWeight(.medium)
             }
             
-            Text("Station ID: \(stationWithDistance.station.id)")
-                .font(.caption)
-                .foregroundColor(.gray)
-            
-            // Fixed this part to handle optional latitude and longitude
+            // Coordinates (matching favorites view format)
             if let latitude = stationWithDistance.station.latitude,
                let longitude = stationWithDistance.station.longitude {
-                Text("Lat: \(String(format: "%.4f", latitude)), Long: \(String(format: "%.4f", longitude))")
-                    .font(.caption)
-            }
-            
-            if !stationWithDistance.distanceDisplay.isEmpty {
-                Text("Distance: \(stationWithDistance.distanceDisplay)")
+                Text("Coordinates: \(String(format: "%.4f", latitude)), \(String(format: "%.4f", longitude))")
                     .font(.caption)
                     .foregroundColor(.gray)
             }
