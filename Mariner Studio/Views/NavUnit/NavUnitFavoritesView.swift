@@ -336,10 +336,10 @@ struct FavoriteNavUnitRow: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            // Favorite star icon
-            Image(systemName: "star.fill")
-                .foregroundColor(.yellow)
-                .font(.system(size: 16))
+            // Nav unit icon (consistent with NavUnitsView)
+            Image("portfoureight")
+                .resizable()
+                .frame(width: 45, height: 45)
             
             // Nav unit info
             VStack(alignment: .leading, spacing: 4) {
@@ -371,10 +371,10 @@ struct FavoriteNavUnitRow: View {
             
             Spacer()
             
-            // Chevron
-            Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundColor(.secondary)
+            // Favorite star icon (moved to right side)
+            Image(systemName: "star.fill")
+                .foregroundColor(.yellow)
+                .font(.system(size: 16))
         }
         .padding(.vertical, 4)
     }

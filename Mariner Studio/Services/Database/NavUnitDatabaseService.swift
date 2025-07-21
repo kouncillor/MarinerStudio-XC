@@ -1353,9 +1353,9 @@ class NavUnitDatabaseService {
             let distanceExpression = Expression<Double>(literal: haversineFormula)
             let sortOrderExpression = Expression<Int>(literal: "CASE WHEN (\(haversineFormula)) = 999999999.0 THEN 1 ELSE 0 END")
             
-            // Build minimal query - only 3 columns instead of 30+
+            // Build minimal query - only essential columns
             let query = navUnits
-                .select(colNavUnitId, colNavUnitName, distanceExpression, colLatitude, colLongitude)
+                .select(colNavUnitId, colNavUnitName, distanceExpression, colLatitude, colLongitude, colIsFavorite)
                 .order(sortOrderExpression.asc, distanceExpression.asc, colNavUnitName.asc)
             
             print("📊 NAV_UNIT_DB_SERVICE: Executing minimal distance query (3 columns only)")
@@ -1369,7 +1369,8 @@ class NavUnitDatabaseService {
                     name: row[colNavUnitName],
                     distanceFromUser: finalDistance,
                     latitude: row[colLatitude],
-                    longitude: row[colLongitude]
+                    longitude: row[colLongitude],
+                    isFavorite: row[colIsFavorite]
                 )
                 
                 results.append(listItem)
@@ -1394,9 +1395,9 @@ class NavUnitDatabaseService {
             let db = try databaseCore.ensureConnection()
             var results: [NavUnitListItem] = []
             
-            // Simple query - just ID and name, alphabetically sorted
+            // Simple query - just essential columns, alphabetically sorted
             let query = navUnits
-                .select(colNavUnitId, colNavUnitName, colLatitude, colLongitude)
+                .select(colNavUnitId, colNavUnitName, colLatitude, colLongitude, colIsFavorite)
                 .order(colNavUnitName.asc)
             
             print("📊 NAV_UNIT_DB_SERVICE: Executing minimal query (2 columns only)")
@@ -1407,7 +1408,8 @@ class NavUnitDatabaseService {
                     name: row[colNavUnitName],
                     distanceFromUser: Double.greatestFiniteMagnitude,
                     latitude: row[colLatitude],
-                    longitude: row[colLongitude]
+                    longitude: row[colLongitude],
+                    isFavorite: row[colIsFavorite]
                 )
                 
                 results.append(listItem)

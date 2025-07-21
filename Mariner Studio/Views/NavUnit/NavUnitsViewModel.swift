@@ -205,7 +205,10 @@ class NavUnitsViewModel: ObservableObject {
             let matchesSearch = searchText.isEmpty ||
                 navUnit.name.localizedCaseInsensitiveContains(searchText) ||
                 navUnit.id.localizedCaseInsensitiveContains(searchText)
-            return matchesSearch
+            
+            let matchesFavorites = !showOnlyFavorites || navUnit.isFavorite
+            
+            return matchesSearch && matchesFavorites
         }
         
         let sorted = filtered.sorted { first, second in
@@ -227,6 +230,11 @@ class NavUnitsViewModel: ObservableObject {
     
     func clearSearch() {
         searchText = ""
+        filterNavUnits()
+    }
+    
+    func toggleFavorites() {
+        showOnlyFavorites.toggle()
         filterNavUnits()
     }
 }

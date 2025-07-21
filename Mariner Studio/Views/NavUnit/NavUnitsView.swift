@@ -16,6 +16,7 @@ struct NavUnitListItem: Identifiable {
     let distanceFromUser: Double
     let latitude: Double?
     let longitude: Double?
+    let isFavorite: Bool
     
     var distanceDisplay: String {
         if distanceFromUser == Double.greatestFiniteMagnitude {
@@ -89,6 +90,19 @@ struct NavUnitsView: View {
             .padding(8)
             .background(Color(.systemBackground))
             .cornerRadius(10)
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(Color(.systemGray4), lineWidth: 1)
+            )
+            .padding(.trailing, 8)
+            
+            Button(action: {
+                viewModel.toggleFavorites()
+            }) {
+                Image(systemName: viewModel.showOnlyFavorites ? "star.fill" : "star")
+                    .foregroundColor(viewModel.showOnlyFavorites ? .yellow : .gray)
+                    .frame(width: 44, height: 44)
+            }
         }
         .padding([.horizontal, .top])
         .background(Color(.secondarySystemBackground))
@@ -102,24 +116,42 @@ struct NavUnitsView: View {
                     serviceProvider: serviceProvider
                 )
             ) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(navUnitItem.name)
-                        .font(.headline)
-                        .foregroundColor(.primary)
+                HStack(spacing: 12) {
+                    // Nav unit icon
+                    Image("portfoureight")
+                  // Image("rigfoureight")
+                   //   Image("refinerysixseven")
+                        .resizable()
+                        .frame(width: 45, height: 45)
                     
-                    if !navUnitItem.distanceDisplay.isEmpty {
-                        Text(navUnitItem.distanceDisplay)
-                            .font(.subheadline)
-                            .foregroundColor(.blue)
-                            .fontWeight(.medium)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(navUnitItem.name)
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                        
+                        if !navUnitItem.distanceDisplay.isEmpty {
+                            Text(navUnitItem.distanceDisplay)
+                                .font(.subheadline)
+                                .foregroundColor(.blue)
+                                .fontWeight(.medium)
+                        }
+                        
+                        // Coordinates - always show if available
+                        if let latitude = navUnitItem.latitude,
+                           let longitude = navUnitItem.longitude {
+                            Text("Coordinates: \(String(format: "%.4f", latitude)), \(String(format: "%.4f", longitude))")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                        }
                     }
                     
-                    // Coordinates - always show if available
-                    if let latitude = navUnitItem.latitude,
-                       let longitude = navUnitItem.longitude {
-                        Text("Coordinates: \(String(format: "%.4f", latitude)), \(String(format: "%.4f", longitude))")
-                            .font(.caption)
-                            .foregroundColor(.gray)
+                    Spacer()
+                    
+                    // Star icon to show favorite status
+                    if navUnitItem.isFavorite {
+                        Image(systemName: "star.fill")
+                            .foregroundColor(.yellow)
+                            .font(.system(size: 16))
                     }
                 }
                 .padding(.vertical, 5)
