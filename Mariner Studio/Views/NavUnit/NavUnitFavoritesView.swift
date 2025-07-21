@@ -30,7 +30,10 @@ struct NavUnitFavoritesView: View {
             }
         }
         .navigationTitle("Favorite Nav Units")
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarTitleDisplayMode(.large)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbarBackground(.blue, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .withHomeButton()
         .onAppear {
             print("🎨 NavUnitFavoritesView: View appeared")
@@ -80,23 +83,11 @@ struct NavUnitFavoritesView: View {
     // MARK: - Sync Icon State
     
     private var syncIconName: String {
-        if viewModel.syncErrorMessage != nil {
-            return "exclamationmark.icloud"
-        } else if viewModel.lastSyncTime != nil {
-            return "checkmark.icloud.fill"
-        } else {
-            return "icloud.slash"
-        }
+        return "arrow.clockwise"
     }
     
     private var syncIconColor: Color {
-        if viewModel.syncErrorMessage != nil {
-            return .orange
-        } else if viewModel.lastSyncTime != nil {
-            return .green
-        } else {
-            return .gray
-        }
+        return .white
     }
     
     // MARK: - Loading View
@@ -196,21 +187,6 @@ struct NavUnitFavoritesView: View {
             // NEW: Sync Status View (like CurrentFavoritesView)
             SyncStatusView()
             
-            // Quick stats header
-            HStack {
-                Text("\(viewModel.favorites.count) favorite nav units")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                
-                Spacer()
-                
-                Text("Swipe to remove")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-            }
-            .padding(.horizontal)
-            .padding(.vertical, 4)
-            .background(Color(.systemGray6))
             
             // List of favorites
             List {
@@ -350,6 +326,14 @@ struct FavoriteNavUnitRow: View {
         }
     }
     
+    private var coordinatesText: String {
+        if let latitude = navUnit.latitude, let longitude = navUnit.longitude {
+            return "Coordinates: \(String(format: "%.4f", latitude)), \(String(format: "%.4f", longitude))"
+        } else {
+            return "Coordinates: Not available"
+        }
+    }
+    
     var body: some View {
         HStack(spacing: 12) {
             // Favorite star icon
@@ -359,11 +343,19 @@ struct FavoriteNavUnitRow: View {
             
             // Nav unit info
             VStack(alignment: .leading, spacing: 4) {
+                // Nav unit name
                 Text(navUnit.navUnitName)
                     .font(.headline)
                     .fontWeight(.medium)
                     .lineLimit(2)
                 
+                // Distance
+                Text(distanceText)
+                    .font(.subheadline)
+                    .foregroundColor(.blue)
+                    .fontWeight(.medium)
+                
+                // Facility type
                 if let facilityType = navUnit.facilityType, !facilityType.isEmpty {
                     Text(facilityType)
                         .font(.subheadline)
@@ -371,26 +363,10 @@ struct FavoriteNavUnitRow: View {
                         .lineLimit(1)
                 }
                 
-                HStack {
-                    if let cityOrTown = navUnit.cityOrTown, !cityOrTown.isEmpty {
-                        Text(cityOrTown)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    if let statePostalCode = navUnit.statePostalCode, !statePostalCode.isEmpty {
-                        Text(statePostalCode)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    Spacer()
-                    
-                    Text(distanceText)
-                        .font(.caption)
-                        .foregroundColor(.blue)
-                        .fontWeight(.medium)
-                }
+                // Coordinates
+                Text(coordinatesText)
+                    .font(.caption)
+                    .foregroundColor(.gray)
             }
             
             Spacer()

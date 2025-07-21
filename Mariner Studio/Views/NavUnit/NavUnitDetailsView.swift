@@ -112,6 +112,11 @@ struct NavUnitDetailsView: View {
     @State private var showingUserRecommendations = false
     @State private var showingPhotoGallery = false
     
+    // Photo state
+    @State private var photos: [NavUnitPhoto] = []
+    @State private var thumbnailImages: [UUID: UIImage] = [:]
+    @State private var isLoadingPhotos = false
+    
     // MARK: - Initializers
     
     // New initializer: Load nav unit by ID (for navigation from list)
@@ -249,6 +254,106 @@ struct NavUnitDetailsView: View {
                             .cornerRadius(12)
                             .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
                         }
+                        
+                        // Photos section
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Text("Photos")
+                                    .font(.headline)
+                                    .fontWeight(.semibold)
+                                
+                                if !photos.isEmpty {
+                                    Text("(\(photos.count))")
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                }
+                                
+                                Spacer()
+                                
+                                if !photos.isEmpty {
+                                    Button(action: { showingPhotoGallery = true }) {
+                                        Text("View All")
+                                            .font(.subheadline)
+                                            .foregroundColor(.blue)
+                                    }
+                                }
+                            }
+                            
+                            if isLoadingPhotos {
+                                HStack {
+                                    ProgressView()
+                                        .scaleEffect(0.8)
+                                    Text("Loading photos...")
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                }
+                                .padding(.vertical, 20)
+                            } else if photos.isEmpty {
+                                VStack(spacing: 8) {
+                                    Image(systemName: "camera")
+                                        .font(.system(size: 32))
+                                        .foregroundColor(.gray)
+                                    Text("No photos yet")
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                    Button(action: { showingPhotoGallery = true }) {
+                                        Text("Add Photo")
+                                            .font(.subheadline)
+                                            .foregroundColor(.blue)
+                                    }
+                                }
+                                .padding(.vertical, 16)
+                            } else {
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 8) {
+                                        ForEach(Array(photos.prefix(4).enumerated()), id: \.element.id) { index, photo in
+                                            Button(action: { showingPhotoGallery = true }) {
+                                                if let thumbnail = thumbnailImages[photo.id] {
+                                                    Image(uiImage: thumbnail)
+                                                        .resizable()
+                                                        .aspectRatio(contentMode: .fill)
+                                                        .frame(width: 80, height: 80)
+                                                        .clipped()
+                                                        .cornerRadius(8)
+                                                } else {
+                                                    RoundedRectangle(cornerRadius: 8)
+                                                        .fill(Color(.systemGray5))
+                                                        .frame(width: 80, height: 80)
+                                                        .overlay(
+                                                            ProgressView()
+                                                                .scaleEffect(0.7)
+                                                        )
+                                                }
+                                            }
+                                        }
+                                        
+                                        // Add photo button (if there are photos)
+                                        if !photos.isEmpty {
+                                            Button(action: { showingPhotoGallery = true }) {
+                                                RoundedRectangle(cornerRadius: 8)
+                                                    .strokeBorder(Color.blue, lineWidth: 2, antialiased: true)
+                                                    .frame(width: 80, height: 80)
+                                                    .overlay(
+                                                        VStack(spacing: 4) {
+                                                            Image(systemName: "plus")
+                                                                .font(.system(size: 24))
+                                                                .foregroundColor(.blue)
+                                                            Text("Add")
+                                                                .font(.caption2)
+                                                                .foregroundColor(.blue)
+                                                        }
+                                                    )
+                                            }
+                                        }
+                                    }
+                                    .padding(.horizontal, 2)
+                                }
+                            }
+                        }
+                        .padding()
+                        .background(Color(.systemBackground))
+                        .cornerRadius(12)
+                        .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
                         
                         // Action buttons section
                         HStack(spacing: 15) {
@@ -753,6 +858,7 @@ struct NavUnitDetailsView: View {
         .onAppear {
             Task {
                 await viewModel.loadNavUnitIfNeeded()
+                await loadPhotos()
             }
         }
         .sheet(isPresented: $showingUserRecommendations) {
@@ -786,6 +892,55 @@ struct NavUnitDetailsView: View {
                     photoService: serviceProvider.photoService
                 )
             }
+        }
+    }
+    
+    // MARK: - Photo Loading Functions
+    
+    private func loadPhotos() async {
+        guard let navUnit = viewModel.unit else { return }
+        
+        isLoadingPhotos = true
+        
+        do {
+            // Get photos from PhotoService
+            let loadedPhotos = try await serviceProvider.photoService.getPhotos(for: navUnit.navUnitId)
+            
+            await MainActor.run {
+                photos = loadedPhotos
+                isLoadingPhotos = false
+            }
+            
+            // Load thumbnails for the first 4 photos
+            for photo in loadedPhotos.prefix(4) {
+                await loadThumbnail(for: photo)
+            }
+            
+        } catch {
+            await MainActor.run {
+                photos = []
+                isLoadingPhotos = false
+            }
+            print("Error loading photos: \(error)")
+        }
+    }
+    
+    private func loadThumbnail(for photo: NavUnitPhoto) async {
+        // Skip if we already have this thumbnail loaded in memory
+        if thumbnailImages[photo.id] != nil { 
+            return 
+        }
+        
+        do {
+            // PhotoService.loadThumbnailImage should handle cache checking internally,
+            // but we avoid redundant calls by checking our memory cache first
+            let thumbnail = try await serviceProvider.photoService.loadThumbnailImage(photo)
+            
+            await MainActor.run {
+                thumbnailImages[photo.id] = thumbnail
+            }
+        } catch {
+            print("Error loading thumbnail for photo \(photo.id): \(error)")
         }
     }
 }
