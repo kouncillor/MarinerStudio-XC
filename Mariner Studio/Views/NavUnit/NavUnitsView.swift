@@ -14,6 +14,8 @@ struct NavUnitListItem: Identifiable {
     let id: String // navUnitId
     let name: String // navUnitName
     let distanceFromUser: Double
+    let latitude: Double?
+    let longitude: Double?
     
     var distanceDisplay: String {
         if distanceFromUser == Double.greatestFiniteMagnitude {
@@ -51,6 +53,10 @@ struct NavUnitsView: View {
             }
         }
         .navigationTitle("Navigation Units")
+        .navigationBarTitleDisplayMode(.large)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbarBackground(.blue, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .withHomeButton()
         .onAppear {
             Task {
@@ -85,6 +91,7 @@ struct NavUnitsView: View {
             .cornerRadius(10)
         }
         .padding([.horizontal, .top])
+        .background(Color(.secondarySystemBackground))
     }
     
     private var navUnitsList: some View {
@@ -95,20 +102,30 @@ struct NavUnitsView: View {
                     serviceProvider: serviceProvider
                 )
             ) {
-                HStack {
+                VStack(alignment: .leading, spacing: 3) {
                     Text(navUnitItem.name)
+                        .font(.headline)
                         .foregroundColor(.primary)
-                    Spacer()
+                    
                     if !navUnitItem.distanceDisplay.isEmpty {
                         Text(navUnitItem.distanceDisplay)
+                            .font(.subheadline)
+                            .foregroundColor(.blue)
+                            .fontWeight(.medium)
+                    }
+                    
+                    // Coordinates - always show if available
+                    if let latitude = navUnitItem.latitude,
+                       let longitude = navUnitItem.longitude {
+                        Text("Coordinates: \(String(format: "%.4f", latitude)), \(String(format: "%.4f", longitude))")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.gray)
                     }
                 }
-                .padding(.vertical, 4)
+                .padding(.vertical, 5)
             }
         }
-        .listStyle(PlainListStyle())
+        .listStyle(InsetGroupedListStyle())
         .refreshable {
             await viewModel.loadNavUnits()
         }

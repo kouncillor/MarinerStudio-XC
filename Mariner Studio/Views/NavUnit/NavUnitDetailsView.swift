@@ -1,10 +1,9 @@
-
 //
 //  NavUnitDetailsView.swift
 //  Mariner Studio
 //
 //  Navigation Unit Details View - Shows comprehensive information about a navigation unit
-//  Updated to support both direct model injection and async loading by ID
+//  Completely rewritten to follow MainView pattern for proper spacing
 //
 
 import SwiftUI
@@ -38,7 +37,6 @@ struct NavUnitChartMapView: UIViewRepresentable {
         // Add chart overlay if available
         if let overlay = chartOverlay {
             mapView.addOverlay(overlay, level: .aboveLabels)
-            print("🗺️ NavUnitChartMapView: Added chart overlay with \(overlay.currentChartLayerCount) layers")
         }
         
         return mapView
@@ -72,14 +70,12 @@ struct NavUnitChartMapView: UIViewRepresentable {
             if let existingOverlay = currentChartOverlay {
                 mapView.removeOverlay(existingOverlay)
                 currentChartOverlay = nil
-                print("🗺️ NavUnitChartMapView: Removed existing chart overlay")
             }
             
             // Add new chart overlay if provided
             if let overlay = newOverlay {
                 mapView.addOverlay(overlay, level: .aboveLabels)
                 currentChartOverlay = overlay
-                print("🗺️ NavUnitChartMapView: Added new chart overlay with \(overlay.currentChartLayerCount) layers")
             }
         }
         
@@ -87,8 +83,7 @@ struct NavUnitChartMapView: UIViewRepresentable {
             // Handle NOAA Chart tile overlays
             if let chartOverlay = overlay as? NOAAChartTileOverlay {
                 let renderer = MKTileOverlayRenderer(tileOverlay: chartOverlay)
-                renderer.alpha = 0.7 // Slightly transparent to keep annotations visible
-                print("🎨 NavUnitChartMapView: Created chart overlay renderer with alpha 0.7")
+                renderer.alpha = 0.7
                 return renderer
             }
             
@@ -103,7 +98,6 @@ struct NavUnitChartMapView: UIViewRepresentable {
         }
         
         func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
-            // Use default annotation view for the navigation unit pin
             return nil
         }
     }
@@ -181,8 +175,566 @@ struct NavUnitDetailsView: View {
                 .background(Color(.systemBackground))
                 
             } else if let navUnit = viewModel.unit {
-                // Main content when nav unit is loaded
-                mainContentView(for: navUnit)
+                // Main content when nav unit is loaded - following MainView pattern exactly
+                ScrollView {
+                    LazyVGrid(columns: [GridItem(.flexible())], spacing: 16) {
+                        
+                        // Header section with name and coordinates
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Text(navUnit.navUnitName)
+                                    .font(.title2)
+                                    .fontWeight(.bold)
+                                
+                                Spacer()
+                                
+                                // Favorite button
+                                Button(action: {
+                                    Task {
+                                        await viewModel.toggleFavorite()
+                                    }
+                                }) {
+                                    Image(viewModel.favoriteIcon)
+                                        .resizable()
+                                        .frame(width: 24, height: 24)
+                                }
+                            }
+                            
+                            if !viewModel.formattedCoordinates.isEmpty {
+                                Text(viewModel.formattedCoordinates)
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            }
+                            
+                            if let facilityType = navUnit.facilityType, !facilityType.isEmpty {
+                                Text(facilityType)
+                                    .font(.subheadline)
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .cornerRadius(12)
+                        
+                        // Map section
+                        if viewModel.hasCoordinates {
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("Location Map")
+                                    .font(.headline)
+                                    .fontWeight(.semibold)
+                                
+                                if let mapRegion = viewModel.mapRegion,
+                                   let annotation = viewModel.mapAnnotation {
+                                    NavUnitChartMapView(
+                                        mapRegion: mapRegion,
+                                        annotation: annotation,
+                                        chartOverlay: viewModel.chartOverlay
+                                    )
+                                    .frame(height: 300)
+                                    .cornerRadius(8)
+                                } else {
+                                    Rectangle()
+                                        .fill(Color(.systemGray5))
+                                        .frame(height: 200)
+                                        .overlay(
+                                            Text("Location coordinates not available")
+                                                .foregroundColor(.secondary)
+                                                .frame(height: 100)
+                                        )
+                                        .cornerRadius(8)
+                                }
+                            }
+                            .padding()
+                            .background(Color(.systemBackground))
+                            .cornerRadius(12)
+                            .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+                        }
+                        
+                        // Action buttons section
+                        HStack(spacing: 15) {
+                            // Maps button
+                            Button(action: { viewModel.openInMaps() }) {
+                                Image("carsixseven")
+                                    .resizable()
+                                    .frame(width: 44, height: 44)
+                                    .opacity(viewModel.hasCoordinates ? 1.0 : 0.5)
+                            }
+                            .disabled(!viewModel.hasCoordinates)
+                            
+                            // Phone button
+                            Button(action: { viewModel.makePhoneCall() }) {
+                                Image("greenphonesixseven")
+                                    .resizable()
+                                    .frame(width: 44, height: 44)
+                                    .opacity(viewModel.hasPhoneNumbers ? 1.0 : 0.5)
+                            }
+                            .disabled(!viewModel.hasPhoneNumbers)
+                            
+                            // Favorite button
+                            Button(action: {
+                                Task {
+                                    await viewModel.toggleFavorite()
+                                }
+                            }) {
+                                Image(viewModel.favoriteIcon)
+                                    .resizable()
+                                    .frame(width: 44, height: 44)
+                            }
+                            
+                            // Comments button
+                            Button(action: { showingUserRecommendations = true }) {
+                                Image("commentsixseven")
+                                    .resizable()
+                                    .frame(width: 44, height: 44)
+                            }
+                            
+                            // Recommendation button
+                            Button(action: { showingRecommendationForm = true }) {
+                                Image(systemName: "lightbulb.fill")
+                                    .resizable()
+                                    .frame(width: 44, height: 44)
+                                    .foregroundColor(.orange)
+                            }
+                            
+                            // Share button
+                            Button(action: { viewModel.shareUnit() }) {
+                                Image("sharesixseven")
+                                    .resizable()
+                                    .frame(width: 44, height: 44)
+                            }
+                        }
+                        .padding(.horizontal)
+                        .padding(.vertical, 8)
+                        
+                        // Location information section
+                        if !(navUnit.streetAddress?.isEmpty ?? true) ||
+                           !(navUnit.cityOrTown?.isEmpty ?? true) ||
+                           !(navUnit.statePostalCode?.isEmpty ?? true) ||
+                           !(navUnit.zipCode?.isEmpty ?? true) ||
+                           !(navUnit.countyName?.isEmpty ?? true) {
+                            
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("Location")
+                                    .font(.headline)
+                                    .fontWeight(.semibold)
+                                
+                                VStack(alignment: .leading, spacing: 8) {
+                                    if let streetAddress = navUnit.streetAddress, !streetAddress.isEmpty {
+                                        HStack(alignment: .top) {
+                                            Text("Address:")
+                                                .font(.subheadline)
+                                                .fontWeight(.medium)
+                                                .foregroundColor(.secondary)
+                                                .frame(width: 100, alignment: .leading)
+                                            
+                                            Text(streetAddress)
+                                                .font(.subheadline)
+                                                .multilineTextAlignment(.leading)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                        }
+                                    }
+                                    
+                                    if let city = navUnit.cityOrTown, !city.isEmpty {
+                                        HStack(alignment: .top) {
+                                            Text("City:")
+                                                .font(.subheadline)
+                                                .fontWeight(.medium)
+                                                .foregroundColor(.secondary)
+                                                .frame(width: 100, alignment: .leading)
+                                            
+                                            Text(city)
+                                                .font(.subheadline)
+                                                .multilineTextAlignment(.leading)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                        }
+                                    }
+                                    
+                                    if let state = navUnit.statePostalCode, !state.isEmpty {
+                                        HStack(alignment: .top) {
+                                            Text("State:")
+                                                .font(.subheadline)
+                                                .fontWeight(.medium)
+                                                .foregroundColor(.secondary)
+                                                .frame(width: 100, alignment: .leading)
+                                            
+                                            Text(state)
+                                                .font(.subheadline)
+                                                .multilineTextAlignment(.leading)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                        }
+                                    }
+                                    
+                                    if let zip = navUnit.zipCode, !zip.isEmpty {
+                                        HStack(alignment: .top) {
+                                            Text("ZIP Code:")
+                                                .font(.subheadline)
+                                                .fontWeight(.medium)
+                                                .foregroundColor(.secondary)
+                                                .frame(width: 100, alignment: .leading)
+                                            
+                                            Text(zip)
+                                                .font(.subheadline)
+                                                .multilineTextAlignment(.leading)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                        }
+                                    }
+                                    
+                                    if let county = navUnit.countyName, !county.isEmpty {
+                                        HStack(alignment: .top) {
+                                            Text("County:")
+                                                .font(.subheadline)
+                                                .fontWeight(.medium)
+                                                .foregroundColor(.secondary)
+                                                .frame(width: 100, alignment: .leading)
+                                            
+                                            Text(county)
+                                                .font(.subheadline)
+                                                .multilineTextAlignment(.leading)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                        }
+                                    }
+                                }
+                            }
+                            .padding()
+                            .background(Color(.systemBackground))
+                            .cornerRadius(12)
+                            .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+                        }
+                        
+                        // Facility information section
+                        if !(navUnit.waterwayName?.isEmpty ?? true) ||
+                           !(navUnit.portName?.isEmpty ?? true) ||
+                           navUnit.mile != nil ||
+                           !(navUnit.bank?.isEmpty ?? true) ||
+                           !(navUnit.location?.isEmpty ?? true) {
+                            
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("Facility Information")
+                                    .font(.headline)
+                                    .fontWeight(.semibold)
+                                
+                                VStack(alignment: .leading, spacing: 8) {
+                                    if let waterwayName = navUnit.waterwayName, !waterwayName.isEmpty {
+                                        HStack(alignment: .top) {
+                                            Text("Waterway:")
+                                                .font(.subheadline)
+                                                .fontWeight(.medium)
+                                                .foregroundColor(.secondary)
+                                                .frame(width: 100, alignment: .leading)
+                                            
+                                            Text(waterwayName)
+                                                .font(.subheadline)
+                                                .multilineTextAlignment(.leading)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                        }
+                                    }
+                                    
+                                    if let portName = navUnit.portName, !portName.isEmpty {
+                                        HStack(alignment: .top) {
+                                            Text("Port:")
+                                                .font(.subheadline)
+                                                .fontWeight(.medium)
+                                                .foregroundColor(.secondary)
+                                                .frame(width: 100, alignment: .leading)
+                                            
+                                            Text(portName)
+                                                .font(.subheadline)
+                                                .multilineTextAlignment(.leading)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                        }
+                                    }
+                                    
+                                    if let mile = navUnit.mile {
+                                        HStack(alignment: .top) {
+                                            Text("Mile:")
+                                                .font(.subheadline)
+                                                .fontWeight(.medium)
+                                                .foregroundColor(.secondary)
+                                                .frame(width: 100, alignment: .leading)
+                                            
+                                            Text(String(format: "%.1f", mile))
+                                                .font(.subheadline)
+                                                .multilineTextAlignment(.leading)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                        }
+                                    }
+                                    
+                                    if let bank = navUnit.bank, !bank.isEmpty {
+                                        HStack(alignment: .top) {
+                                            Text("Bank:")
+                                                .font(.subheadline)
+                                                .fontWeight(.medium)
+                                                .foregroundColor(.secondary)
+                                                .frame(width: 100, alignment: .leading)
+                                            
+                                            Text(bank)
+                                                .font(.subheadline)
+                                                .multilineTextAlignment(.leading)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                        }
+                                    }
+                                    
+                                    if let location = navUnit.location, !location.isEmpty {
+                                        HStack(alignment: .top) {
+                                            Text("Location:")
+                                                .font(.subheadline)
+                                                .fontWeight(.medium)
+                                                .foregroundColor(.secondary)
+                                                .frame(width: 100, alignment: .leading)
+                                            
+                                            Text(location)
+                                                .font(.subheadline)
+                                                .multilineTextAlignment(.leading)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                        }
+                                    }
+                                }
+                            }
+                            .padding()
+                            .background(Color(.systemBackground))
+                            .cornerRadius(12)
+                            .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+                        }
+                        
+                        // Contact information section
+                        if !(navUnit.operators?.isEmpty ?? true) ||
+                           !(navUnit.owners?.isEmpty ?? true) {
+                            
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("Contact Information")
+                                    .font(.headline)
+                                    .fontWeight(.semibold)
+                                
+                                VStack(alignment: .leading, spacing: 8) {
+                                    if let operators = navUnit.operators, !operators.isEmpty {
+                                        HStack(alignment: .top) {
+                                            Text("Operators:")
+                                                .font(.subheadline)
+                                                .fontWeight(.medium)
+                                                .foregroundColor(.secondary)
+                                                .frame(width: 100, alignment: .leading)
+                                            
+                                            Text(operators)
+                                                .font(.subheadline)
+                                                .multilineTextAlignment(.leading)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                        }
+                                    }
+                                    
+                                    if let owners = navUnit.owners, !owners.isEmpty {
+                                        HStack(alignment: .top) {
+                                            Text("Owners:")
+                                                .font(.subheadline)
+                                                .fontWeight(.medium)
+                                                .foregroundColor(.secondary)
+                                                .frame(width: 100, alignment: .leading)
+                                            
+                                            Text(owners)
+                                                .font(.subheadline)
+                                                .multilineTextAlignment(.leading)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                        }
+                                    }
+                                }
+                            }
+                            .padding()
+                            .background(Color(.systemBackground))
+                            .cornerRadius(12)
+                            .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+                        }
+                        
+                        // Technical specifications section
+                        if !viewModel.depthRange.isEmpty ||
+                           !viewModel.deckHeightRange.isEmpty ||
+                           navUnit.berthingLargest != nil ||
+                           navUnit.berthingTotal != nil ||
+                           !(navUnit.verticalDatum?.isEmpty ?? true) {
+                            
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("Technical Specifications")
+                                    .font(.headline)
+                                    .fontWeight(.semibold)
+                                
+                                VStack(alignment: .leading, spacing: 8) {
+                                    if !viewModel.depthRange.isEmpty {
+                                        HStack(alignment: .top) {
+                                            Text("Depth:")
+                                                .font(.subheadline)
+                                                .fontWeight(.medium)
+                                                .foregroundColor(.secondary)
+                                                .frame(width: 100, alignment: .leading)
+                                            
+                                            Text(viewModel.depthRange)
+                                                .font(.subheadline)
+                                                .multilineTextAlignment(.leading)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                        }
+                                    }
+                                    
+                                    if !viewModel.deckHeightRange.isEmpty {
+                                        HStack(alignment: .top) {
+                                            Text("Deck Height:")
+                                                .font(.subheadline)
+                                                .fontWeight(.medium)
+                                                .foregroundColor(.secondary)
+                                                .frame(width: 100, alignment: .leading)
+                                            
+                                            Text(viewModel.deckHeightRange)
+                                                .font(.subheadline)
+                                                .multilineTextAlignment(.leading)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                        }
+                                    }
+                                    
+                                    if let berthingLargest = navUnit.berthingLargest {
+                                        HStack(alignment: .top) {
+                                            Text("Largest Berthing:")
+                                                .font(.subheadline)
+                                                .fontWeight(.medium)
+                                                .foregroundColor(.secondary)
+                                                .frame(width: 100, alignment: .leading)
+                                            
+                                            Text(String(format: "%.1f ft", berthingLargest))
+                                                .font(.subheadline)
+                                                .multilineTextAlignment(.leading)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                        }
+                                    }
+                                    
+                                    if let berthingTotal = navUnit.berthingTotal {
+                                        HStack(alignment: .top) {
+                                            Text("Total Berthing:")
+                                                .font(.subheadline)
+                                                .fontWeight(.medium)
+                                                .foregroundColor(.secondary)
+                                                .frame(width: 100, alignment: .leading)
+                                            
+                                            Text(String(format: "%.1f ft", berthingTotal))
+                                                .font(.subheadline)
+                                                .multilineTextAlignment(.leading)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                        }
+                                    }
+                                    
+                                    if let verticalDatum = navUnit.verticalDatum, !verticalDatum.isEmpty {
+                                        HStack(alignment: .top) {
+                                            Text("Vertical Datum:")
+                                                .font(.subheadline)
+                                                .fontWeight(.medium)
+                                                .foregroundColor(.secondary)
+                                                .frame(width: 100, alignment: .leading)
+                                            
+                                            Text(verticalDatum)
+                                                .font(.subheadline)
+                                                .multilineTextAlignment(.leading)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                        }
+                                    }
+                                }
+                            }
+                            .padding()
+                            .background(Color(.systemBackground))
+                            .cornerRadius(12)
+                            .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+                        }
+                        
+                        // Additional information section
+                        if !(navUnit.purpose?.isEmpty ?? true) ||
+                           !(navUnit.commodities?.isEmpty ?? true) ||
+                           !(navUnit.construction?.isEmpty ?? true) ||
+                           !(navUnit.mechanicalHandling?.isEmpty ?? true) ||
+                           !(navUnit.remarks?.isEmpty ?? true) {
+                            
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("Additional Information")
+                                    .font(.headline)
+                                    .fontWeight(.semibold)
+                                
+                                VStack(alignment: .leading, spacing: 8) {
+                                    if let purpose = navUnit.purpose, !purpose.isEmpty {
+                                        HStack(alignment: .top) {
+                                            Text("Purpose:")
+                                                .font(.subheadline)
+                                                .fontWeight(.medium)
+                                                .foregroundColor(.secondary)
+                                                .frame(width: 100, alignment: .leading)
+                                            
+                                            Text(purpose)
+                                                .font(.subheadline)
+                                                .multilineTextAlignment(.leading)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                        }
+                                    }
+                                    
+                                    if let commodities = navUnit.commodities, !commodities.isEmpty {
+                                        HStack(alignment: .top) {
+                                            Text("Commodities:")
+                                                .font(.subheadline)
+                                                .fontWeight(.medium)
+                                                .foregroundColor(.secondary)
+                                                .frame(width: 100, alignment: .leading)
+                                            
+                                            Text(commodities)
+                                                .font(.subheadline)
+                                                .multilineTextAlignment(.leading)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                        }
+                                    }
+                                    
+                                    if let construction = navUnit.construction, !construction.isEmpty {
+                                        HStack(alignment: .top) {
+                                            Text("Construction:")
+                                                .font(.subheadline)
+                                                .fontWeight(.medium)
+                                                .foregroundColor(.secondary)
+                                                .frame(width: 100, alignment: .leading)
+                                            
+                                            Text(construction)
+                                                .font(.subheadline)
+                                                .multilineTextAlignment(.leading)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                        }
+                                    }
+                                    
+                                    if let mechanicalHandling = navUnit.mechanicalHandling, !mechanicalHandling.isEmpty {
+                                        HStack(alignment: .top) {
+                                            Text("Mechanical Handling:")
+                                                .font(.subheadline)
+                                                .fontWeight(.medium)
+                                                .foregroundColor(.secondary)
+                                                .frame(width: 100, alignment: .leading)
+                                            
+                                            Text(mechanicalHandling)
+                                                .font(.subheadline)
+                                                .multilineTextAlignment(.leading)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                        }
+                                    }
+                                    
+                                    if let remarks = navUnit.remarks, !remarks.isEmpty {
+                                        HStack(alignment: .top) {
+                                            Text("Remarks:")
+                                                .font(.subheadline)
+                                                .fontWeight(.medium)
+                                                .foregroundColor(.secondary)
+                                                .frame(width: 100, alignment: .leading)
+                                            
+                                            Text(remarks)
+                                                .font(.subheadline)
+                                                .multilineTextAlignment(.leading)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                        }
+                                    }
+                                }
+                            }
+                            .padding()
+                            .background(Color(.systemBackground))
+                            .cornerRadius(12)
+                            .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+                        }
+                    }
+                    .padding()
+                }
                 
             } else {
                 // Fallback empty state
@@ -203,301 +755,6 @@ struct NavUnitDetailsView: View {
                 await viewModel.loadNavUnitIfNeeded()
             }
         }
-    }
-    
-    // MARK: - Main Content View
-    
-    @ViewBuilder
-    private func mainContentView(for navUnit: NavUnit) -> some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                // Header section with name and coordinates
-                headerSection(for: navUnit)
-                
-                
-                // Map section
-                if viewModel.hasCoordinates {
-                    mapSection()
-                }
-                
-                // Action buttons menu bar
-                actionButtonsSection()
-                
-                // Location information
-                if hasLocationInfo(for: navUnit) {
-                    locationSection(for: navUnit)
-                }
-                
-                // Facility details
-                if hasFacilityInfo(for: navUnit) {
-                    facilitySection(for: navUnit)
-                }
-                
-                // Contact information
-                if hasContactInfo(for: navUnit) {
-                    contactSection(for: navUnit)
-                }
-                
-                // Technical specifications
-                if hasTechnicalInfo(for: navUnit) {
-                    technicalSection(for: navUnit)
-                }
-                
-                // Additional information
-                if hasAdditionalInfo(for: navUnit) {
-                    additionalSection(for: navUnit)
-                }
-                
-              
-            }
-            .padding()
-        }
-    }
-    
-    // MARK: - Section Views
-    
-    @ViewBuilder
-    private func headerSection(for navUnit: NavUnit) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text(navUnit.navUnitName)
-                    .font(.title2)
-                    .fontWeight(.bold)
-                
-                Spacer()
-                
-                // Favorite button
-                Button(action: {
-                    Task {
-                        await viewModel.toggleFavorite()
-                    }
-                }) {
-                    Image(viewModel.favoriteIcon)
-                        .resizable()
-                        .frame(width: 24, height: 24)
-                }
-            }
-            
-            if !viewModel.formattedCoordinates.isEmpty {
-                Text(viewModel.formattedCoordinates)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-            }
-            
-            if let facilityType = navUnit.facilityType, !facilityType.isEmpty {
-                Text(facilityType)
-                    .font(.subheadline)
-                    .foregroundColor(.blue)
-            }
-        }
-        .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
-    }
-    
-    @ViewBuilder
-    private func locationSection(for navUnit: NavUnit) -> some View {
-        SectionCard(title: "Location") {
-            VStack(alignment: .leading, spacing: 8) {
-                if let streetAddress = navUnit.streetAddress, !streetAddress.isEmpty {
-                    InfoRow(label: "Address", value: streetAddress)
-                }
-                
-                if let city = navUnit.cityOrTown, !city.isEmpty {
-                    InfoRow(label: "City", value: city)
-                }
-                
-                if let state = navUnit.statePostalCode, !state.isEmpty {
-                    InfoRow(label: "State", value: state)
-                }
-                
-                if let zip = navUnit.zipCode, !zip.isEmpty {
-                    InfoRow(label: "ZIP Code", value: zip)
-                }
-                
-                if let county = navUnit.countyName, !county.isEmpty {
-                    InfoRow(label: "County", value: county)
-                }
-            }
-        }
-    }
-    
-    @ViewBuilder
-    private func facilitySection(for navUnit: NavUnit) -> some View {
-        SectionCard(title: "Facility Information") {
-            VStack(alignment: .leading, spacing: 8) {
-                if let waterwayName = navUnit.waterwayName, !waterwayName.isEmpty {
-                    InfoRow(label: "Waterway", value: waterwayName)
-                }
-                
-                if let portName = navUnit.portName, !portName.isEmpty {
-                    InfoRow(label: "Port", value: portName)
-                }
-                
-                if let mile = navUnit.mile {
-                    InfoRow(label: "Mile", value: String(format: "%.1f", mile))
-                }
-                
-                if let bank = navUnit.bank, !bank.isEmpty {
-                    InfoRow(label: "Bank", value: bank)
-                }
-                
-                if let location = navUnit.location, !location.isEmpty {
-                    InfoRow(label: "Location", value: location)
-                }
-            }
-        }
-    }
-    
-    @ViewBuilder
-    private func contactSection(for navUnit: NavUnit) -> some View {
-        SectionCard(title: "Contact Information") {
-            VStack(alignment: .leading, spacing: 8) {
-                if let operators = navUnit.operators, !operators.isEmpty {
-                    InfoRow(label: "Operators", value: operators)
-                }
-                
-                if let owners = navUnit.owners, !owners.isEmpty {
-                    InfoRow(label: "Owners", value: owners)
-                }
-            }
-        }
-    }
-    
-    @ViewBuilder
-    private func technicalSection(for navUnit: NavUnit) -> some View {
-        SectionCard(title: "Technical Specifications") {
-            VStack(alignment: .leading, spacing: 8) {
-                if !viewModel.depthRange.isEmpty {
-                    InfoRow(label: "Depth", value: viewModel.depthRange)
-                }
-                
-                if !viewModel.deckHeightRange.isEmpty {
-                    InfoRow(label: "Deck Height", value: viewModel.deckHeightRange)
-                }
-                
-                if let berthingLargest = navUnit.berthingLargest {
-                    InfoRow(label: "Largest Berthing", value: String(format: "%.1f ft", berthingLargest))
-                }
-                
-                if let berthingTotal = navUnit.berthingTotal {
-                    InfoRow(label: "Total Berthing", value: String(format: "%.1f ft", berthingTotal))
-                }
-                
-                if let verticalDatum = navUnit.verticalDatum, !verticalDatum.isEmpty {
-                    InfoRow(label: "Vertical Datum", value: verticalDatum)
-                }
-            }
-        }
-    }
-    
-    @ViewBuilder
-    private func additionalSection(for navUnit: NavUnit) -> some View {
-        SectionCard(title: "Additional Information") {
-            VStack(alignment: .leading, spacing: 8) {
-                if let purpose = navUnit.purpose, !purpose.isEmpty {
-                    InfoRow(label: "Purpose", value: purpose)
-                }
-                
-                if let commodities = navUnit.commodities, !commodities.isEmpty {
-                    InfoRow(label: "Commodities", value: commodities)
-                }
-                
-                if let construction = navUnit.construction, !construction.isEmpty {
-                    InfoRow(label: "Construction", value: construction)
-                }
-                
-                if let mechanicalHandling = navUnit.mechanicalHandling, !mechanicalHandling.isEmpty {
-                    InfoRow(label: "Mechanical Handling", value: mechanicalHandling)
-                }
-                
-                if let remarks = navUnit.remarks, !remarks.isEmpty {
-                    InfoRow(label: "Remarks", value: remarks)
-                }
-            }
-        }
-    }
-    
-    @ViewBuilder
-    private func mapSection() -> some View {
-        SectionCard(title: "Location Map") {
-            if let mapRegion = viewModel.mapRegion,
-               let annotation = viewModel.mapAnnotation {
-                NavUnitChartMapView(
-                    mapRegion: mapRegion,
-                    annotation: annotation,
-                    chartOverlay: viewModel.chartOverlay
-                )
-                .frame(height: 300)
-                .cornerRadius(8)
-            } else {
-                Rectangle()
-                    .fill(Color(.systemGray5))
-                    .frame(height: 200)
-                    .overlay(
-                        Text("Location coordinates not available")
-                            .foregroundColor(.secondary)
-                            .frame(height: 100)
-                    )
-                    .cornerRadius(8)
-            }
-        }
-    }
-    
-    // MARK: - Action Buttons Section
-    
-    @ViewBuilder
-    private func actionButtonsSection() -> some View {
-        HStack(spacing: 15) {
-            actionButton(
-                icon: "carsixseven",
-                action: { viewModel.openInMaps() },
-                isEnabled: viewModel.hasCoordinates
-            )
-            
-            actionButton(
-                icon: "camera.fill",
-                action: { showingPhotoGallery = true },
-                isEnabled: true,
-                isSystemIcon: true
-            )
-            
-            actionButton(
-                icon: "greenphonesixseven",
-                action: { viewModel.makePhoneCall() },
-                isEnabled: viewModel.hasPhoneNumbers
-            )
-            
-            actionButton(
-                icon: viewModel.favoriteIcon,
-                action: {
-                    Task {
-                        await viewModel.toggleFavorite()
-                    }
-                },
-                isEnabled: true
-            )
-            
-            actionButton(
-                icon: "commentsixseven",
-                action: { showingUserRecommendations = true },
-                isEnabled: true
-            )
-            
-            actionButton(
-                icon: "lightbulb.fill",
-                action: { showingRecommendationForm = true },
-                isEnabled: true
-            )
-            
-            actionButton(
-                icon: "sharesixseven",
-                action: { viewModel.shareUnit() },
-                isEnabled: true
-            )
-        }
-        .padding(.horizontal)
-        .padding(.vertical, 8)
         .sheet(isPresented: $showingUserRecommendations) {
             NavigationView {
                 UserRecommendationsView()
@@ -529,110 +786,6 @@ struct NavUnitDetailsView: View {
                     photoService: serviceProvider.photoService
                 )
             }
-        }
-    }
-    
-    private func actionButton(icon: String, action: @escaping () -> Void, isEnabled: Bool, isSystemIcon: Bool = false) -> some View {
-        Button(action: action) {
-            if isSystemIcon || icon == "lightbulb.fill" {
-                // Use system icon
-                Image(systemName: icon)
-                    .resizable()
-                    .frame(width: 44, height: 44)
-                    .foregroundColor(isEnabled ? (icon == "lightbulb.fill" ? .orange : .blue) : .gray.opacity(0.5))
-            } else {
-                // Use custom icons for other buttons
-                Image(icon)
-                    .resizable()
-                    .frame(width: 44, height: 44)
-                    .opacity(isEnabled ? 1.0 : 0.5)
-            }
-        }
-        .disabled(!isEnabled)
-    }
-    
-    // MARK: - Helper Methods
-    
-    private func hasLocationInfo(for navUnit: NavUnit) -> Bool {
-        return !(navUnit.streetAddress?.isEmpty ?? true) ||
-               !(navUnit.cityOrTown?.isEmpty ?? true) ||
-               !(navUnit.statePostalCode?.isEmpty ?? true) ||
-               !(navUnit.zipCode?.isEmpty ?? true) ||
-               !(navUnit.countyName?.isEmpty ?? true)
-    }
-    
-    private func hasFacilityInfo(for navUnit: NavUnit) -> Bool {
-        return !(navUnit.waterwayName?.isEmpty ?? true) ||
-               !(navUnit.portName?.isEmpty ?? true) ||
-               navUnit.mile != nil ||
-               !(navUnit.bank?.isEmpty ?? true) ||
-               !(navUnit.location?.isEmpty ?? true)
-    }
-    
-    private func hasContactInfo(for navUnit: NavUnit) -> Bool {
-        return !(navUnit.operators?.isEmpty ?? true) ||
-               !(navUnit.owners?.isEmpty ?? true)
-    }
-    
-    private func hasTechnicalInfo(for navUnit: NavUnit) -> Bool {
-        return !viewModel.depthRange.isEmpty ||
-               !viewModel.deckHeightRange.isEmpty ||
-               navUnit.berthingLargest != nil ||
-               navUnit.berthingTotal != nil ||
-               !(navUnit.verticalDatum?.isEmpty ?? true)
-    }
-    
-    private func hasAdditionalInfo(for navUnit: NavUnit) -> Bool {
-        return !(navUnit.purpose?.isEmpty ?? true) ||
-               !(navUnit.commodities?.isEmpty ?? true) ||
-               !(navUnit.construction?.isEmpty ?? true) ||
-               !(navUnit.mechanicalHandling?.isEmpty ?? true) ||
-               !(navUnit.remarks?.isEmpty ?? true)
-    }
-}
-
-// MARK: - Helper Views
-
-struct SectionCard<Content: View>: View {
-    let title: String
-    let content: Content
-    
-    init(title: String, @ViewBuilder content: () -> Content) {
-        self.title = title
-        self.content = content()
-    }
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(title)
-                .font(.headline)
-                .fontWeight(.semibold)
-            
-            content
-        }
-        .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
-    }
-}
-
-struct InfoRow: View {
-    let label: String
-    let value: String
-    
-    var body: some View {
-        HStack(alignment: .top) {
-            Text(label + ":")
-                .font(.subheadline)
-                .fontWeight(.medium)
-                .foregroundColor(.secondary)
-                .frame(width: 100, alignment: .leading)
-            
-            Text(value)
-                .font(.subheadline)
-                .multilineTextAlignment(.leading)
-                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 }

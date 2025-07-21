@@ -1355,7 +1355,7 @@ class NavUnitDatabaseService {
             
             // Build minimal query - only 3 columns instead of 30+
             let query = navUnits
-                .select(colNavUnitId, colNavUnitName, distanceExpression)
+                .select(colNavUnitId, colNavUnitName, distanceExpression, colLatitude, colLongitude)
                 .order(sortOrderExpression.asc, distanceExpression.asc, colNavUnitName.asc)
             
             print("📊 NAV_UNIT_DB_SERVICE: Executing minimal distance query (3 columns only)")
@@ -1367,7 +1367,9 @@ class NavUnitDatabaseService {
                 let listItem = NavUnitListItem(
                     id: row[colNavUnitId],
                     name: row[colNavUnitName],
-                    distanceFromUser: finalDistance
+                    distanceFromUser: finalDistance,
+                    latitude: row[colLatitude],
+                    longitude: row[colLongitude]
                 )
                 
                 results.append(listItem)
@@ -1394,7 +1396,7 @@ class NavUnitDatabaseService {
             
             // Simple query - just ID and name, alphabetically sorted
             let query = navUnits
-                .select(colNavUnitId, colNavUnitName)
+                .select(colNavUnitId, colNavUnitName, colLatitude, colLongitude)
                 .order(colNavUnitName.asc)
             
             print("📊 NAV_UNIT_DB_SERVICE: Executing minimal query (2 columns only)")
@@ -1403,7 +1405,9 @@ class NavUnitDatabaseService {
                 let listItem = NavUnitListItem(
                     id: row[colNavUnitId],
                     name: row[colNavUnitName],
-                    distanceFromUser: Double.greatestFiniteMagnitude
+                    distanceFromUser: Double.greatestFiniteMagnitude,
+                    latitude: row[colLatitude],
+                    longitude: row[colLongitude]
                 )
                 
                 results.append(listItem)

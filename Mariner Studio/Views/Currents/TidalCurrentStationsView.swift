@@ -230,7 +230,15 @@ struct TidalCurrentStationsView: View {
                 if let depth = stationWithDistance.station.depth {
                     Text("Depth: \(String(format: "%.1f", depth)) ft")
                         .font(.caption)
-                        .foregroundColor(.green)
+                        .foregroundColor(Color(red: 0.0, green: 0.6, blue: 0.0))
+                }
+                
+                // Coordinates (matching tidal height stations format)
+                if let latitude = stationWithDistance.station.latitude,
+                   let longitude = stationWithDistance.station.longitude {
+                    Text("Coordinates: \(String(format: "%.4f", latitude)), \(String(format: "%.4f", longitude))")
+                        .font(.caption)
+                        .foregroundColor(.gray)
                 }
             }
             .padding(.vertical, 5)
