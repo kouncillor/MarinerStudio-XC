@@ -73,9 +73,13 @@ struct BuoyStationsView: View {
                     }
                 }
             }
-            .padding(8)
+            .padding(12)
             .background(Color(.systemBackground))
             .cornerRadius(10)
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(Color(.systemGray4), lineWidth: 1)
+            )
             .padding(.trailing, 8)
             
             Button(action: {
@@ -87,6 +91,7 @@ struct BuoyStationsView: View {
             }
         }
         .padding([.horizontal, .top])
+        .background(Color(.systemGroupedBackground))
     }
     
     private var stationsList: some View {
@@ -107,7 +112,7 @@ struct BuoyStationsView: View {
                 }
             }
         }
-        .listStyle(PlainListStyle())
+        .listStyle(InsetGroupedListStyle())
         .refreshable {
             await viewModel.refreshStations()
         }
@@ -120,6 +125,7 @@ struct BuoyStationRow: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
+            // First Row: Station Name
             HStack {
                 // Process the name to remove any ID prefix if present
                 // This handles cases where the name might be formatted as "ID-Name" or empty
@@ -138,36 +144,25 @@ struct BuoyStationRow: View {
                 }
             }
             
-            Text("Type: \(stationWithDistance.station.type)")
-                .font(.subheadline)
-                .foregroundColor(.gray)
-            
-            Text("Station ID: \(stationWithDistance.station.id)")
-                .font(.caption)
-                .foregroundColor(.gray)
-            
-            // Handle optional latitude and longitude
-            if let latitude = stationWithDistance.station.latitude,
-               let longitude = stationWithDistance.station.longitude {
-                Text("Lat: \(String(format: "%.4f", latitude)), Long: \(String(format: "%.4f", longitude))")
-                    .font(.caption)
+            // Second Row: Distance
+            if !stationWithDistance.distanceDisplay.isEmpty {
+                Text(stationWithDistance.distanceDisplay)
+                    .font(.subheadline)
+                    .foregroundColor(.blue)
+                    .fontWeight(.medium)
             }
             
-            // Show additional properties if available
+            // Third Row: Meteorological
             if let met = stationWithDistance.station.meteorological, met == "y" {
                 Text("Meteorological: Yes")
                     .font(.caption)
                     .foregroundColor(.green)
             }
             
-            if let currents = stationWithDistance.station.currents, currents == "y" {
-                Text("Current Data: Yes")
-                    .font(.caption)
-                    .foregroundColor(.green)
-            }
-            
-            if !stationWithDistance.distanceDisplay.isEmpty {
-                Text("Distance: \(stationWithDistance.distanceDisplay)")
+            // Fourth Row: Coordinates
+            if let latitude = stationWithDistance.station.latitude,
+               let longitude = stationWithDistance.station.longitude {
+                Text("Coordinates: \(String(format: "%.4f", latitude)), \(String(format: "%.4f", longitude))")
                     .font(.caption)
                     .foregroundColor(.gray)
             }

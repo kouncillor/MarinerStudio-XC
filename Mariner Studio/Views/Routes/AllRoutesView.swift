@@ -45,6 +45,9 @@ struct AllRoutesView: View {
             }
             .navigationTitle("All Routes")
             .navigationBarTitleDisplayMode(.large)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarBackground(.orange, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .withHomeButton()
             .onAppear {
                 viewModel.loadRoutes()
@@ -71,9 +74,6 @@ struct AllRoutesView: View {
     
     private var headerView: some View {
         VStack(spacing: 12) {
-            // Filter buttons
-            filterButtonsView
-            
             if viewModel.isLoading && !viewModel.routes.isEmpty {
                 ProgressView("Refreshing...")
                     .font(.caption)
@@ -135,12 +135,13 @@ struct AllRoutesView: View {
                     }
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
+            .padding(.horizontal, 18)
+            .padding(.vertical, 12)
             .background(Color(.systemBackground))
             .cornerRadius(10)
         }
         .padding(.horizontal)
+        .padding(.top, 8)
         .padding(.bottom, 8)
         .background(Color(.systemGroupedBackground))
     }
@@ -195,7 +196,8 @@ struct AllRoutesView: View {
                 .disabled(viewModel.operationsInProgress.contains(route.id))
             }
         }
-        .listStyle(PlainListStyle())
+        .listStyle(InsetGroupedListStyle())
+        .background(Color(.systemGroupedBackground))
         .refreshable {
             viewModel.refresh()
         }

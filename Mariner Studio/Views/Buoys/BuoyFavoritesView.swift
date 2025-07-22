@@ -81,6 +81,10 @@ struct BuoyFavoritesView: View {
             }
         }
         .navigationTitle("Favorite Buoys")
+        .navigationBarTitleDisplayMode(.large)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbarBackground(.purple, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .withHomeButton()
         
         .onAppear {
