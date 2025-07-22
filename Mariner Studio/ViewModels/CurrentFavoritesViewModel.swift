@@ -110,19 +110,29 @@ class CurrentFavoritesViewModel: ObservableObject {
     // MARK: - NEW - Sync Method
     @MainActor
     func syncFavorites() async {
+        let syncStartTime = Date()
         isSyncing = true
         syncMessage = "Syncing with cloud..."
+        
+        print("🔄 CURRENT_FAVORITES_SYNC: Starting sync operation")
 
         let result = await CurrentStationSyncService.shared.syncCurrentStationFavorites()
 
         switch result {
         case .success(let stats):
+            let syncDuration = Date().timeIntervalSince(syncStartTime)
             lastSyncTime = Date()
             syncMessage = "Sync complete. Uploaded: \(stats.uploaded), Downloaded: \(stats.downloaded)."
+            
+            print("✅ CURRENT_FAVORITES_SYNC: Sync completed successfully in \(String(format: "%.3f", syncDuration))s. Stats: \(stats.uploaded) uploaded, \(stats.downloaded) downloaded, \(stats.conflictsResolved) conflicts resolved")
+            
             // After a successful sync, reload the local favorites to reflect changes
             await performLoadFavorites()
         case .failure(let error):
+            let syncDuration = Date().timeIntervalSince(syncStartTime)
             syncMessage = "Sync failed: \(error.localizedDescription)"
+            
+            print("❌ CURRENT_FAVORITES_SYNC: Sync failed after \(String(format: "%.3f", syncDuration))s. Error: \(error.localizedDescription)")
         }
         
         isSyncing = false
@@ -143,6 +153,7 @@ class CurrentFavoritesViewModel: ObservableObject {
     @MainActor
     private func updateDebugInfo(_ info: String) {
         debugInfo = info
+        print(info)
     }
     
     private func calculateDistances(for stations: [TidalCurrentStation], locationService: LocationService) async -> [TidalCurrentStation] {

@@ -333,9 +333,11 @@ class CurrentStationDatabaseService {
         latitude: Double? = nil,
         longitude: Double? = nil,
         depth: Double? = nil,
-        depthType: String? = nil
+        depthType: String? = nil,
+        lastModified: Date? = nil
     ) async throws {
-        print("💾 CURRENT_DB_SERVICE: Setting favorite status for station \(stationId) bin \(currentBin) to \(isFavorite)")
+        let timestampSource = lastModified != nil ? "provided" : "current"
+        print("💾 CURRENT_DB_SERVICE: Setting favorite status for station \(stationId) bin \(currentBin) to \(isFavorite) with \(timestampSource) timestamp")
         let startTime = Date()
         
         let db = try databaseCore.ensureConnection()
@@ -344,6 +346,7 @@ class CurrentStationDatabaseService {
         }
         
         let deviceId = await getDeviceId()
+        let timestampToUse = lastModified ?? Date()
         
         let query = tidalCurrentStationFavorites.filter(
             colUserId == userId &&
@@ -355,7 +358,7 @@ class CurrentStationDatabaseService {
             // Update existing record
             let count = try db.run(query.update(
                 colIsFavorite <- isFavorite,
-                colLastModified <- Date(),
+                colLastModified <- timestampToUse,
                 colDeviceId <- deviceId,
                 colStationName <- stationName,
                 colLatitude <- latitude,
@@ -371,7 +374,7 @@ class CurrentStationDatabaseService {
                 colStationId <- stationId,
                 colCurrentBin <- currentBin,
                 colIsFavorite <- isFavorite,
-                colLastModified <- Date(),
+                colLastModified <- timestampToUse,
                 colDeviceId <- deviceId,
                 colStationName <- stationName,
                 colLatitude <- latitude,

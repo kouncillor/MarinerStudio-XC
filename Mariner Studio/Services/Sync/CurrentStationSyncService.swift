@@ -177,7 +177,7 @@ final class CurrentStationSyncService {
                 try await localDatabase.setCurrentStationFavorite(
                     stationId: record.stationId, currentBin: record.currentBin, isFavorite: record.isFavorite,
                     stationName: record.stationName, latitude: record.latitude, longitude: record.longitude,
-                    depth: record.depth, depthType: record.depthType
+                    depth: record.depth, depthType: record.depthType, lastModified: record.lastModified
                 )
                 downloadCount += 1
             } catch { print("  ❌ Download Error: Failed to save record \(record.stationId): \(error)") }
@@ -193,7 +193,13 @@ final class CurrentStationSyncService {
             let key = "\(localRecord.stationId):\(localRecord.currentBin)"
             guard let remoteRecord = remoteDict[key] else { continue }
             
-            if localRecord.lastModified > remoteRecord.lastModified {
+            let timeDiff = localRecord.lastModified.timeIntervalSince(remoteRecord.lastModified)
+            print("🕒 TIMESTAMP CHECK: \(localRecord.stationId) - Local: \(localRecord.lastModified), Remote: \(remoteRecord.lastModified), Diff: \(timeDiff)s")
+            
+            let tolerance: TimeInterval = 0.01  // 10 millisecond tolerance
+            
+            if timeDiff > tolerance {
+                print("⬆️ LOCAL NEWER: Uploading \(localRecord.stationId)")
                 do {
                     let updatedRemoteRecord = RemoteCurrentFavorite(
                         userId: userId, stationId: localRecord.stationId, currentBin: localRecord.currentBin,
@@ -207,15 +213,18 @@ final class CurrentStationSyncService {
                         .execute()
                     uploaded += 1
                 } catch { print("  ❌ Conflict Error (Upload): \(error)") }
-            } else if remoteRecord.lastModified > localRecord.lastModified {
+            } else if timeDiff < -tolerance {
+                print("⬇️ REMOTE NEWER: Downloading \(remoteRecord.stationId)")
                 do {
                     try await localDatabase.setCurrentStationFavorite(
                         stationId: remoteRecord.stationId, currentBin: remoteRecord.currentBin, isFavorite: remoteRecord.isFavorite,
                         stationName: remoteRecord.stationName, latitude: remoteRecord.latitude, longitude: remoteRecord.longitude,
-                        depth: remoteRecord.depth, depthType: remoteRecord.depthType
+                        depth: remoteRecord.depth, depthType: remoteRecord.depthType, lastModified: remoteRecord.lastModified
                     )
                     downloaded += 1
                 } catch { print("  ❌ Conflict Error (Download): \(error)") }
+            } else {
+                print("⏸️ TIMESTAMPS WITHIN TOLERANCE: Skipping \(localRecord.stationId) (diff: \(String(format: "%.6f", timeDiff))s)")
             }
         }
         return (uploaded, downloaded)

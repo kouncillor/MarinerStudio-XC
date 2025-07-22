@@ -41,6 +41,10 @@ struct BuoyStationsView: View {
             }
         }
         .navigationTitle("Buoy Stations")
+        .navigationBarTitleDisplayMode(.large)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbarBackground(.purple, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .withHomeButton()
         
         .task {
