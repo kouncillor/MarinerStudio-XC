@@ -154,7 +154,7 @@ struct AllRoutesView: View {
                 route: route,
                 isOperationInProgress: viewModel.operationsInProgress.contains(route.id)
             )
-            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+            .listRowInsets(EdgeInsets(top: 8, leading: 8, bottom: 8, trailing: 8))
             .swipeActions(edge: .leading) {
                 // Voyage Plan button (green) - rightmost on left side
                 Button {
@@ -362,9 +362,33 @@ struct AllRouteRowView: View {
                 }
             }
             
-            
             // Route Stats
             routeStatsView
+            
+            // Carets row at bottom
+            HStack {
+                // Left side - green and blue together
+                HStack(spacing: 8) {
+                    Image(systemName: "chevron.right")
+                        .font(.title2)
+                        .foregroundColor(.green)
+                    Image(systemName: "chevron.right")
+                        .font(.title2)
+                        .foregroundColor(.blue)
+                }
+                
+                Spacer()
+                
+                // Right side - yellow and red together
+                HStack(spacing: 8) {
+                    Image(systemName: "chevron.left")
+                        .font(.title2)
+                        .foregroundColor(.yellow)
+                    Image(systemName: "chevron.left")
+                        .font(.title2)
+                        .foregroundColor(.red)
+                }
+            }
         }
         .padding()
         .background(Color(.systemBackground))

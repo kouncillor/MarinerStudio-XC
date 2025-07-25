@@ -40,7 +40,7 @@ class MapClusteringViewModel: ObservableObject {
    
    // MARK: - Services
    let navUnitService: NavUnitDatabaseService
-   private let tideStationService: TideStationDatabaseService
+   private let tideFavoritesCloudService: TideFavoritesCloudService
    private let currentStationService: CurrentStationDatabaseService
    private let tidalHeightService: TidalHeightService
    private let tidalCurrentService: TidalCurrentService
@@ -52,7 +52,7 @@ class MapClusteringViewModel: ObservableObject {
    
    // MARK: - Initialization
    init(navUnitService: NavUnitDatabaseService,
-        tideStationService: TideStationDatabaseService,
+        tideFavoritesCloudService: TideFavoritesCloudService,
         currentStationService: CurrentStationDatabaseService,
         tidalHeightService: TidalHeightService,
         tidalCurrentService: TidalCurrentService,
@@ -62,7 +62,7 @@ class MapClusteringViewModel: ObservableObject {
         noaaChartService: NOAAChartService,
         mapOverlayService: MapOverlayDatabaseService) {
        self.navUnitService = navUnitService
-       self.tideStationService = tideStationService
+       self.tideFavoritesCloudService = tideFavoritesCloudService
        self.currentStationService = currentStationService
        self.tidalHeightService = tidalHeightService
        self.tidalCurrentService = tidalCurrentService

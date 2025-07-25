@@ -16,47 +16,18 @@ struct TideFavoritesView: View {
         .toolbarBackground(.green, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .withHomeButton()
-        .toolbar {
-            ToolbarItemGroup(placement: .navigationBarTrailing) {
-                // Sync button
-                Button(action: {
-                    print("☁️ UI: Manual sync button tapped")
-                    Task {
-                        await viewModel.syncWithCloud()
-                    }
-                }) {
-                    if viewModel.isSyncing {
-                        ProgressView()
-                            .scaleEffect(0.8)
-                    } else {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.white)
-                    }
-                }
-            }
-        }
+        // ❌ REMOVED: Sync button - no longer needed with cloud-only approach
         
         .onAppear {
-            print("🌊 VIEW: TideFavoritesView appeared")
-            print("🌊 VIEW: Current thread = \(Thread.current)")
-            print("🌊 VIEW: Is main thread = \(Thread.isMainThread)")
+            print("🌊 VIEW: TideFavoritesView appeared (CLOUD-ONLY)")
             
-            // Initialize services if needed
-            if viewModel.tideStationService == nil {
-                print("🔧 VIEW: Initializing ViewModel with services")
-                print("🔧 VIEW: ServiceProvider available = \(serviceProvider)")
-                
-                viewModel.initialize(
-                    tideStationService: serviceProvider.tideStationService,
-                    tidalHeightService: TidalHeightServiceImpl(),
-                    locationService: serviceProvider.locationService
-                )
+            // Initialize location service
+            viewModel.initialize(locationService: serviceProvider.locationService)
+            
+            // Load favorites from cloud
+            Task {
+                await viewModel.loadFavorites()
             }
-            
-            print("📱 VIEW: Starting loadFavorites()")
-            viewModel.loadFavorites()
-            
         }
         
         .onDisappear {
@@ -92,31 +63,6 @@ struct TideFavoritesView: View {
             Text("Loading favorites...")
                 .font(.headline)
             
-            // Show current loading phase
-            Text(viewModel.loadingPhase)
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .animation(.easeInOut, value: viewModel.loadingPhase)
-            
-            // Performance preview while loading
-            if !viewModel.performanceMetrics.isEmpty {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Performance:")
-                        .font(.caption2)
-                        .fontWeight(.semibold)
-                    
-                    ForEach(viewModel.performanceMetrics.suffix(3), id: \.self) { metric in
-                        Text(metric)
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                .padding(.horizontal)
-                .padding(.vertical, 8)
-                .background(Color(.systemGray6))
-                .cornerRadius(8)
-                .padding(.horizontal)
-            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
@@ -142,28 +88,12 @@ struct TideFavoritesView: View {
                 .padding(.horizontal)
                 .foregroundColor(.secondary)
             
-            // Debug info for errors
-            if !viewModel.debugInfo.isEmpty {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Debug Info:")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                    
-                    ForEach(viewModel.debugInfo.suffix(5), id: \.self) { info in
-                        Text(info)
-                            .font(.caption2)
-                            .foregroundColor(.red)
-                    }
-                }
-                .padding()
-                .background(Color(.systemGray6))
-                .cornerRadius(8)
-                .padding(.horizontal)
-            }
             
             Button("Retry") {
                 print("🔄 VIEW: Retry button tapped")
-                viewModel.loadFavorites()
+                Task {
+                    await viewModel.loadFavorites()
+                }
             }
             .padding()
             .background(Color.blue)
@@ -198,7 +128,7 @@ struct TideFavoritesView: View {
             NavigationLink(destination: TidalHeightStationsView(
                 tidalHeightService: TidalHeightServiceImpl(),
                 locationService: serviceProvider.locationService,
-                tideStationService: serviceProvider.tideStationService
+                tideFavoritesCloudService: serviceProvider.tideFavoritesCloudService
             )) {
                 HStack {
                     Image(systemName: "water.waves")
@@ -210,30 +140,6 @@ struct TideFavoritesView: View {
                 .cornerRadius(10)
             }
             
-            // Debug summary for empty state
-            if !viewModel.debugInfo.isEmpty || !viewModel.performanceMetrics.isEmpty {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Load Summary:")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                    
-                    if let lastMetric = viewModel.performanceMetrics.last {
-                        Text(lastMetric)
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    if let lastDebug = viewModel.debugInfo.last {
-                        Text(lastDebug)
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                .padding()
-                .background(Color(.systemGray6))
-                .cornerRadius(8)
-                .padding(.horizontal)
-            }
         }
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -246,8 +152,7 @@ struct TideFavoritesView: View {
     
     private var favoritesListView: some View {
         VStack(spacing: 0) {
-            // Sync Status View
-            SyncStatusView()
+            // ❌ REMOVED: Sync Status View - no longer needed with cloud-only approach
             
             List {
                 ForEach(viewModel.favorites) { station in
@@ -257,7 +162,7 @@ struct TideFavoritesView: View {
                             stationName: station.name,
                             latitude: station.latitude,
                             longitude: station.longitude,
-                            tideStationService: serviceProvider.tideStationService
+                            tideFavoritesCloudService: serviceProvider.tideFavoritesCloudService
                         )
                     } label: {
                         FavoriteStationRow(station: station)
@@ -281,114 +186,19 @@ struct TideFavoritesView: View {
             
             .listStyle(InsetGroupedListStyle())
             .refreshable {
-                print("🔄 VIEW: Pull-to-refresh triggered")
-                viewModel.loadFavorites()
+                print("🔄 VIEW: Pull-to-refresh triggered (CLOUD-ONLY)")
+                await viewModel.loadFavorites()
             }
         }
         .onAppear {
             print("🎨 VIEW: Favorites list view appeared with \(viewModel.favorites.count) stations")
         }
     }
-    
-    // MARK: - Sync Status View
-    @ViewBuilder
-    private func SyncStatusView() -> some View {
-        if viewModel.isSyncing || viewModel.syncSuccessMessage != nil || viewModel.syncErrorMessage != nil {
-            VStack {
-                HStack {
-                    if viewModel.isSyncing {
-                        ProgressView()
-                            .scaleEffect(0.7)
-                            .frame(width: 20, height: 20)
-                    } else if viewModel.syncErrorMessage != nil {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundColor(.red)
-                    } else {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.green)
-                    }
-                    
-                    if let successMessage = viewModel.syncSuccessMessage {
-                        Text(successMessage)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    } else if let errorMessage = viewModel.syncErrorMessage {
-                        Text(errorMessage)
-                            .font(.caption)
-                            .foregroundColor(.red)
-                    } else {
-                        Text("Syncing...")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    Spacer()
-                }
-                .padding(.horizontal)
-                .padding(.vertical, 8)
-                .background(Color(UIColor.systemGroupedBackground))
-            }
-            .transition(.move(edge: .top).combined(with: .opacity))
-        }
-    }
+    // ❌ REMOVED: SyncStatusView - no longer needed with cloud-only approach
 
 }
 
-// MARK: - Supporting Views
-//
-//struct SyncStatusBar: View {
-//    @ObservedObject var viewModel: TideFavoritesViewModel
-//    
-//    var body: some View {
-//        HStack {
-//            if viewModel.isSyncing {
-//                HStack(spacing: 8) {
-//                    ProgressView()
-//                        .scaleEffect(0.7)
-//                    Text("Syncing...")
-//                        .font(.caption)
-//                }
-//                .foregroundColor(.blue)
-//            } else if let errorMessage = viewModel.syncErrorMessage {
-//                HStack(spacing: 8) {
-//                    Image(systemName: "exclamationmark.triangle.fill")
-//                        .foregroundColor(.red)
-//                    Text(errorMessage)
-//                        .font(.caption)
-//                        .foregroundColor(.red)
-//                }
-//            } else if let successMessage = viewModel.syncSuccessMessage {
-//                HStack(spacing: 8) {
-//                    Image(systemName: "checkmark.circle.fill")
-//                        .foregroundColor(.green)
-//                    Text(successMessage)
-//                        .font(.caption)
-//                        .foregroundColor(.green)
-//                }
-//            } else {
-//                HStack(spacing: 8) {
-//                    Image(systemName: "cloud")
-//                        .foregroundColor(.gray)
-//                    Text("Ready to sync")
-//                        .font(.caption)
-//                        .foregroundColor(.gray)
-//                }
-//            }
-//            
-//            Spacer()
-//            
-//            if let lastSync = viewModel.lastSyncTime {
-//                Text("Last: \(DateFormatter.shortTime.string(from: lastSync))")
-//                    .font(.caption2)
-//                    .foregroundColor(.secondary)
-//            }
-//        }
-//        .padding(.horizontal)
-//        .padding(.vertical, 6)
-//        .background(Color(.systemGray6))
-//    }
-//}
-
+// ❌ REMOVED: All sync-related UI components
 
 
 

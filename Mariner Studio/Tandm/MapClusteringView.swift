@@ -56,7 +56,7 @@ struct MapClusteringView: View {
        // Default initializer - uses ServiceProvider via EnvironmentObject
        _viewModel = StateObject(wrappedValue: MapClusteringViewModel(
            navUnitService: NavUnitDatabaseService(databaseCore: DatabaseCore()),
-           tideStationService: TideStationDatabaseService(databaseCore: DatabaseCore()),
+           tideFavoritesCloudService: TideFavoritesCloudService(),
            currentStationService: CurrentStationDatabaseService(databaseCore: DatabaseCore()),
            tidalHeightService: TidalHeightServiceImpl(),
            tidalCurrentService: TidalCurrentServiceImpl(),
@@ -70,7 +70,7 @@ struct MapClusteringView: View {
    
    // MARK: - Convenience init that takes services for easier testing
    init(navUnitService: NavUnitDatabaseService,
-        tideStationService: TideStationDatabaseService,
+        tideFavoritesCloudService: TideFavoritesCloudService,
         currentStationService: CurrentStationDatabaseService,
         buoyDatabaseService: BuoyDatabaseService,
         locationService: LocationService,
@@ -83,7 +83,7 @@ struct MapClusteringView: View {
        
        _viewModel = StateObject(wrappedValue: MapClusteringViewModel(
            navUnitService: navUnitService,
-           tideStationService: tideStationService,
+           tideFavoritesCloudService: tideFavoritesCloudService,
            currentStationService: currentStationService,
            tidalHeightService: tidalHeightService,
            tidalCurrentService: tidalCurrentService,
@@ -357,7 +357,7 @@ struct MapClusteringView: View {
                                stationName: stationName,
                                latitude: nil,        // Added this line
                                longitude: nil, 
-                               tideStationService: serviceProvider.tideStationService
+                               tideFavoritesCloudService: serviceProvider.tideFavoritesCloudService
                            )
                            
                            

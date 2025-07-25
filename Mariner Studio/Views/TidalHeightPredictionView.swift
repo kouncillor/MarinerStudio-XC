@@ -12,7 +12,7 @@ struct TidalHeightPredictionView: View {
         latitude: Double?,
         longitude: Double?,
         predictionService: TidalHeightPredictionService = TidalHeightPredictionServiceImpl(),
-        tideStationService: TideStationDatabaseService
+        tideFavoritesCloudService: TideFavoritesCloudService
     ) {
         _viewModel = StateObject(wrappedValue: TidalHeightPredictionViewModel(
             stationId: stationId,
@@ -20,7 +20,7 @@ struct TidalHeightPredictionView: View {
             latitude: latitude,
             longitude: longitude,
             predictionService: predictionService,
-            tideStationService: tideStationService
+            tideFavoritesCloudService: tideFavoritesCloudService
         ))
     }
     

@@ -804,18 +804,17 @@ final class TideStationSyncService {
         }
         
         let serviceProvider = ServiceProvider()
-        let service = serviceProvider.tideStationService
+        // MIGRATION NOTE: tideStationService removed during cloud-only migration
+        // This sync service is no longer needed as favorites are stored directly in cloud
+        return nil
+        // let service = serviceProvider.tideStationService
         
         logQueue.async {
-            if service != nil {
-                print("✅💾🌊 SERVICE PROVIDER: Successfully obtained TideStationDatabaseService")
-            } else {
-                print("❌💾🌊 SERVICE PROVIDER: Failed to obtain TideStationDatabaseService")
-                print("❌💾🌊 SERVICE PROVIDER: ServiceProvider may not be properly initialized")
-            }
+            print("❌💾🌊 SERVICE PROVIDER: TideStationDatabaseService removed during cloud-only migration")
+            print("❌💾🌊 SERVICE PROVIDER: This sync service is deprecated - use TideFavoritesCloudService instead")
         }
         
-        return service
+        return nil
     }
     
     /// Check if user is authenticated for sync operations

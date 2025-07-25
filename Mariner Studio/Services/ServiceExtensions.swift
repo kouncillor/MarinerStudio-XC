@@ -15,8 +15,8 @@ extension EnvironmentObject where ObjectType == ServiceProvider {
         wrappedValue.databaseCore
     }
     
-    var tideStationService: TideStationDatabaseService {
-        wrappedValue.tideStationService
+    var tideFavoritesCloudService: TideFavoritesCloudService {
+        wrappedValue.tideFavoritesCloudService
     }
     
     var currentStationService: CurrentStationDatabaseService {

@@ -10,7 +10,10 @@ class ServiceProvider: ObservableObject {
     let locationService: LocationService
     
     // MARK: - Database Services
-    let tideStationService: TideStationDatabaseService
+    // ❌ REMOVED: let tideStationService: TideStationDatabaseService - replaced with cloud service
+    
+    // MARK: - Cloud Services  
+    let tideFavoritesCloudService: TideFavoritesCloudService
     let currentStationService: CurrentStationDatabaseService
     let navUnitService: NavUnitDatabaseService
     let vesselService: VesselDatabaseService
@@ -63,7 +66,10 @@ class ServiceProvider: ObservableObject {
         }
         
         // Initialize Database Services
-        self.tideStationService = TideStationDatabaseService(databaseCore: databaseCore)
+        // ❌ REMOVED: self.tideStationService = TideStationDatabaseService(databaseCore: databaseCore)
+        
+        // Initialize Cloud Services
+        self.tideFavoritesCloudService = TideFavoritesCloudService()
         self.currentStationService = CurrentStationDatabaseService(databaseCore: databaseCore)
         self.currentStationSyncService = CurrentStationSyncService(databaseService: self.currentStationService)
         self.navUnitService = NavUnitDatabaseService(databaseCore: databaseCore)

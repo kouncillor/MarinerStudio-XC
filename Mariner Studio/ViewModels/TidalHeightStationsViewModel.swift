@@ -21,7 +21,7 @@ class TidalHeightStationsViewModel: ObservableObject {
     }
 
     // MARK: - Properties
-    let tideStationService: TideStationDatabaseService
+    let tideFavoritesCloudService: TideFavoritesCloudService
     private let tidalHeightService: TidalHeightService
     private let locationService: LocationService
     private var allStations: [StationWithDistance<TidalHeightStation>] = []
@@ -30,12 +30,12 @@ class TidalHeightStationsViewModel: ObservableObject {
     init(
         tidalHeightService: TidalHeightService,
         locationService: LocationService,
-        tideStationService: TideStationDatabaseService
+        tideFavoritesCloudService: TideFavoritesCloudService
     ) {
         self.tidalHeightService = tidalHeightService
         self.locationService = locationService
-        self.tideStationService = tideStationService
-        print("✅ TidalHeightStationsViewModel initialized. Will rely on ServiceProvider for location permission/start.")
+        self.tideFavoritesCloudService = tideFavoritesCloudService
+        print("✅ TidalHeightStationsViewModel initialized with CLOUD-ONLY favorites service.")
     }
 
     // MARK: - Public Methods
@@ -87,6 +87,12 @@ class TidalHeightStationsViewModel: ObservableObject {
             }
         }
 
+        // Get all favorites at once (much more efficient than individual calls)
+        let favoritesResult = await tideFavoritesCloudService.getFavorites()
+        let favoriteStations = (try? favoritesResult.get()) ?? []
+        let favoriteStationIds = Set(favoriteStations.map { $0.id })
+        print("📍 ViewModel: Retrieved \(favoriteStationIds.count) favorite station IDs for checking")
+
         var stationsWithDistance: [StationWithDistance<TidalHeightStation>] = []
 
         for station in stations {
@@ -100,9 +106,9 @@ class TidalHeightStationsViewModel: ObservableObject {
                 distance = Double.greatestFiniteMagnitude
             }
 
-            let isFavorite = await tideStationService.isTideStationFavorite(id: station.id)
+            // Check if station is favorite using the Set lookup (O(1) instead of O(n) network calls)
             var updatedStation = station
-            updatedStation.isFavorite = isFavorite
+            updatedStation.isFavorite = favoriteStationIds.contains(station.id)
 
             stationsWithDistance.append(StationWithDistance(
                 station: updatedStation,
@@ -115,7 +121,7 @@ class TidalHeightStationsViewModel: ObservableObject {
 
      func filterStations() {
           let filtered = allStations.filter { station in
-              let matchesFavorite = !showOnlyFavorites || (station.station.isFavorite ?? false)
+              let matchesFavorite = !showOnlyFavorites || station.station.isFavorite
               let matchesSearch = searchText.isEmpty ||
                   station.station.name.localizedCaseInsensitiveContains(searchText) ||
                   (station.station.state?.localizedCaseInsensitiveContains(searchText) ?? false) ||
@@ -167,12 +173,21 @@ class TidalHeightStationsViewModel: ObservableObject {
         
         let currentStation = stationWithDistance.station
         
-        let newFavoriteStatus = await tideStationService.toggleTideStationFavorite(
-            id: stationId,
-            name: currentStation.name,
+        let toggleResult = await tideFavoritesCloudService.toggleFavorite(
+            stationId: stationId,
+            stationName: currentStation.name,
             latitude: currentStation.latitude,
             longitude: currentStation.longitude
         )
+        
+        let newFavoriteStatus: Bool
+        switch toggleResult {
+        case .success(let status):
+            newFavoriteStatus = status
+        case .failure(let error):
+            print("❌ ViewModel: Failed to toggle favorite for station \(stationId): \(error)")
+            return // Exit early if toggle failed
+        }
         
         print("⭐ ViewModel: Toggle completed for station \(stationId), new status: \(newFavoriteStatus)")
 
@@ -191,10 +206,7 @@ class TidalHeightStationsViewModel: ObservableObject {
             print("⭐ ViewModel: Updated station \(stationId) in allStations array")
         }
         
-        // Sync after favorite toggle
-        Task {
-            await performSyncAfterFavoriteToggle()
-        }
+        // No sync needed - cloud service is the single source of truth
     }
     
     
@@ -206,28 +218,8 @@ class TidalHeightStationsViewModel: ObservableObject {
     
 }
 
-// MARK: - Sync Integration Extension
-extension TidalHeightStationsViewModel {
-    
-    /// Sync after user toggles a favorite - always runs immediately
-    func performSyncAfterFavoriteToggle() async {
-        print("🔄 STATIONS VIEWMODEL: Performing sync after favorite toggle")
-        
-        let result = await TideStationSyncService.shared.syncTideStationFavorites()
-        
-        switch result {
-        case .success(let stats):
-            print("✅ STATIONS VIEWMODEL: Sync completed successfully")
-            print("✅ SYNC STATS: \(stats.totalOperations) operations in \(String(format: "%.3f", stats.duration))s")
-            
-        case .failure(let error):
-            print("❌ STATIONS VIEWMODEL: Sync failed - \(error.localizedDescription)")
-            
-        case .partialSuccess(let stats, let errors):
-            print("⚠️ STATIONS VIEWMODEL: Partial sync - \(stats.totalOperations) operations, \(errors.count) errors")
-        }
-    }
-}
+// MARK: - Cloud-Only Implementation
+// No sync extension needed - cloud service is the single source of truth
 
 
 

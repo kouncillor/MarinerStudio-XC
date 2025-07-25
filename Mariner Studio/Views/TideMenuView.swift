@@ -21,7 +21,7 @@ struct TideMenuView: View {
                 NavigationLink(destination: TidalHeightStationsView(
                     tidalHeightService: TidalHeightServiceImpl(),
                     locationService: serviceProvider.locationService,
-                    tideStationService: serviceProvider.tideStationService
+                    tideFavoritesCloudService: serviceProvider.tideFavoritesCloudService
                 )) {
                     MenuButtonContentTide(
                         iconType: .system("location.fill"), // Specify system icon

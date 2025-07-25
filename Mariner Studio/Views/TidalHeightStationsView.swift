@@ -10,12 +10,12 @@ struct TidalHeightStationsView: View {
     init(
         tidalHeightService: TidalHeightService = TidalHeightServiceImpl(),
         locationService: LocationService = LocationServiceImpl(),
-        tideStationService: TideStationDatabaseService
+        tideFavoritesCloudService: TideFavoritesCloudService
     ) {
         _viewModel = StateObject(wrappedValue: TidalHeightStationsViewModel(
             tidalHeightService: tidalHeightService,
             locationService: locationService,
-            tideStationService: tideStationService
+            tideFavoritesCloudService: tideFavoritesCloudService
         ))
     }
     
@@ -107,7 +107,7 @@ struct TidalHeightStationsView: View {
                     stationName: stationWithDistance.station.name,
                     latitude: stationWithDistance.station.latitude,
                     longitude: stationWithDistance.station.longitude,
-                    tideStationService: viewModel.tideStationService
+                    tideFavoritesCloudService: viewModel.tideFavoritesCloudService
                 )) {
                     StationRow(
                         stationWithDistance: stationWithDistance,
