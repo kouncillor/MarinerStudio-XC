@@ -17,7 +17,7 @@ class TidalCurrentPredictionViewModel: ObservableObject {
     
     // MARK: - Private Properties
     private let predictionService: TidalCurrentPredictionService
-    private let currentStationService: CurrentStationDatabaseService
+    private let currentFavoritesCloudService: CurrentFavoritesCloudService
     private var stationId: String = ""
     private var bin: Int = 0
     private var currentPredictionIndex: Int = 0
@@ -41,7 +41,7 @@ class TidalCurrentPredictionViewModel: ObservableObject {
             stationDepth: Double? = nil,
             stationDepthType: String? = nil,
             predictionService: TidalCurrentPredictionService,
-            currentStationService: CurrentStationDatabaseService
+            currentFavoritesCloudService: CurrentFavoritesCloudService
         ) {
             self.stationId = stationId
             self.bin = bin
@@ -51,7 +51,7 @@ class TidalCurrentPredictionViewModel: ObservableObject {
             self.stationDepth = stationDepth
             self.stationDepthType = stationDepthType        
             self.predictionService = predictionService
-            self.currentStationService = currentStationService
+            self.currentFavoritesCloudService = currentFavoritesCloudService
             
             dateFormatter = DateFormatter()
             dateFormatter.dateStyle = .medium
@@ -158,12 +158,12 @@ class TidalCurrentPredictionViewModel: ObservableObject {
 
     // Updated toggle method to use stored metadata
        func toggleFavorite() async {
-           print("⭐ PREDICTION_VM: Starting toggle for station \(stationId), bin \(bin)")
+           print("⭐ PREDICTION_VM: Starting toggle for station \(stationId), bin \(bin) (CLOUD-ONLY)")
            print("📊 PREDICTION_VM: Using metadata - Name: \(stationName), Lat: \(stationLatitude?.description ?? "nil"), Lon: \(stationLongitude?.description ?? "nil")")
            
-           let newValue = await currentStationService.toggleCurrentStationFavoriteWithMetadata(
-               id: stationId,
-               bin: bin,
+           let toggleResult = await currentFavoritesCloudService.toggleFavorite(
+               stationId: stationId,
+               currentBin: bin,
                stationName: stationName.isEmpty ? nil : stationName,
                latitude: stationLatitude,
                longitude: stationLongitude,
@@ -171,11 +171,18 @@ class TidalCurrentPredictionViewModel: ObservableObject {
                depthType: stationDepthType
            )
            
-           await MainActor.run {
-               self.isFavorite = newValue
+           switch toggleResult {
+           case .success(let newValue):
+               await MainActor.run {
+                   self.isFavorite = newValue
+               }
+               print("⭐ PREDICTION_VM: Toggle completed for station \(stationId), new status: \(newValue)")
+           case .failure(let error):
+               print("❌ PREDICTION_VM: Failed to toggle favorite for station \(stationId): \(error.localizedDescription)")
+               await MainActor.run {
+                   self.errorMessage = "Failed to update favorite: \(error.localizedDescription)"
+               }
            }
-           
-           print("⭐ PREDICTION_VM: Toggle completed for station \(stationId), new status: \(newValue)")
        }
    
     
@@ -281,7 +288,8 @@ class TidalCurrentPredictionViewModel: ObservableObject {
     }
     
     private func updateFavoriteStatus() async {
-        let isFavorite = await currentStationService.isCurrentStationFavorite(id: stationId, bin: bin)
+        let favoriteResult = await currentFavoritesCloudService.isFavorite(stationId: stationId, currentBin: bin)
+        let isFavorite = (try? favoriteResult.get()) ?? false
         
         await MainActor.run {
             self.isFavorite = isFavorite

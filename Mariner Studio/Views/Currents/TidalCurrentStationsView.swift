@@ -5,19 +5,19 @@ struct TidalCurrentStationsView: View {
     @StateObject var viewModel: TidalCurrentStationsViewModel
     @EnvironmentObject var serviceProvider: ServiceProvider
     
-    init(tidalCurrentService: TidalCurrentService, locationService: LocationService, currentStationService: CurrentStationDatabaseService) {
-        print("🏗️ VIEW: Initializing TidalCurrentStationsView")
+    init(tidalCurrentService: TidalCurrentService, locationService: LocationService, currentFavoritesCloudService: CurrentFavoritesCloudService) {
+        print("🏗️ VIEW: Initializing TidalCurrentStationsView (CLOUD-ONLY)")
         print("🏗️ VIEW: Injecting services - TidalCurrentService: \(type(of: tidalCurrentService))")
         print("🏗️ VIEW: Injecting services - LocationService: \(type(of: locationService))")
-        print("🏗️ VIEW: Injecting services - CurrentStationService: \(type(of: currentStationService))")
+        print("🏗️ VIEW: Injecting services - CurrentFavoritesCloudService: \(type(of: currentFavoritesCloudService))")
         
         _viewModel = StateObject(wrappedValue: TidalCurrentStationsViewModel(
             tidalCurrentService: tidalCurrentService,
             locationService: locationService,
-            currentStationService: currentStationService
+            currentFavoritesCloudService: currentFavoritesCloudService
         ))
         
-        print("✅ VIEW: TidalCurrentStationsView initialization complete")
+        print("✅ VIEW: TidalCurrentStationsView initialization complete (CLOUD-ONLY)")
     }
     
     var body: some View {
@@ -165,7 +165,7 @@ struct TidalCurrentStationsView: View {
                     stationLongitude: stationWithDistance.station.longitude,    // ← ADD
                     stationDepth: stationWithDistance.station.depth,            // ← ADD
                     stationDepthType: stationWithDistance.station.depthType,    // ← ADD
-                    currentStationService: viewModel.currentStationService
+                    currentFavoritesCloudService: viewModel.currentFavoritesCloudService
                 )) {
                     TidalCurrentStationRow(
                         stationWithDistance: stationWithDistance,

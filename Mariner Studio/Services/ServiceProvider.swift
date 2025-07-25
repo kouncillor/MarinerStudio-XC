@@ -14,6 +14,7 @@ class ServiceProvider: ObservableObject {
     
     // MARK: - Cloud Services  
     let tideFavoritesCloudService: TideFavoritesCloudService
+    let currentFavoritesCloudService: CurrentFavoritesCloudService
     let currentStationService: CurrentStationDatabaseService
     let navUnitService: NavUnitDatabaseService
     let vesselService: VesselDatabaseService
@@ -70,6 +71,7 @@ class ServiceProvider: ObservableObject {
         
         // Initialize Cloud Services
         self.tideFavoritesCloudService = TideFavoritesCloudService()
+        self.currentFavoritesCloudService = CurrentFavoritesCloudService()
         self.currentStationService = CurrentStationDatabaseService(databaseCore: databaseCore)
         self.currentStationSyncService = CurrentStationSyncService(databaseService: self.currentStationService)
         self.navUnitService = NavUnitDatabaseService(databaseCore: databaseCore)

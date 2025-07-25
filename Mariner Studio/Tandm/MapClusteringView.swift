@@ -313,7 +313,7 @@ struct MapClusteringView: View {
            chartLayersView
        }
        .background(
-           Group {
+           ZStack {
                // NavUnit navigation link (UPDATED to include NOAAChartService)
                NavigationLink(
                    isActive: $showNavUnitDetails,
@@ -326,9 +326,9 @@ struct MapClusteringView: View {
                                favoritesService: serviceProvider.favoritesService,
                                noaaChartService: serviceProvider.noaaChartService // NEW: Add chart service
                            )
-                           NavUnitDetailsView(viewModel: detailsViewModel)
+                           AnyView(NavUnitDetailsView(viewModel: detailsViewModel))
                        } else {
-                           Text("Navigation Unit not found")
+                           AnyView(Text("Navigation Unit not found"))
                        }
                    },
                    label: { EmptyView() }
@@ -352,13 +352,13 @@ struct MapClusteringView: View {
                            
                            
                            
-                           TidalHeightPredictionView(
+                           AnyView(TidalHeightPredictionView(
                                stationId: stationId,
                                stationName: stationName,
-                               latitude: nil,        // Added this line
+                               latitude: nil,
                                longitude: nil, 
                                tideFavoritesCloudService: serviceProvider.tideFavoritesCloudService
-                           )
+                           ))
                            
                            
                            
@@ -386,14 +386,18 @@ struct MapClusteringView: View {
                        if let stationId = selectedTidalCurrentStationId,
                           let bin = selectedTidalCurrentStationBin,
                           let stationName = selectedTidalCurrentStationName {
-                           TidalCurrentPredictionView(
+                           AnyView(TidalCurrentPredictionView(
                                stationId: stationId,
                                bin: bin,
                                stationName: stationName,
-                               currentStationService: serviceProvider.currentStationService
-                           )
+                               stationLatitude: nil,
+                               stationLongitude: nil,
+                               stationDepth: nil,
+                               stationDepthType: nil,
+                               currentFavoritesCloudService: serviceProvider.currentFavoritesCloudService
+                           ))
                        } else {
-                           Text("Tidal Current Station not found")
+                           AnyView(Text("Tidal Current Station not found"))
                        }
                    },
                    label: { EmptyView() }
@@ -418,12 +422,12 @@ struct MapClusteringView: View {
                                waterQuality: nil,
                                dart: nil
                            )
-                           BuoyStationWebView(
+                           AnyView(BuoyStationWebView(
                                station: buoyStation,
                                buoyDatabaseService: serviceProvider.buoyDatabaseService
-                           )
+                           ))
                        } else {
-                           Text("Buoy Station not found")
+                           AnyView(Text("Buoy Station not found"))
                        }
                    },
                    label: { EmptyView() }

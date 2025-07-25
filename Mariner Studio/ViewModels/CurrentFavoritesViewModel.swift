@@ -1,225 +1,152 @@
-
-//
-//  CurrentFavoritesViewModel.swift
-//  Mariner
-//
-//  Created by Timothy Russell on 2025-06-27.
-//
-
 import Foundation
 import SwiftUI
 import Combine
 import CoreLocation
 
+/// Cloud-only Current Favorites ViewModel - NO sync complexity!
 class CurrentFavoritesViewModel: ObservableObject {
+    
     // MARK: - Published Properties
     @Published var favorites: [TidalCurrentStation] = []
     @Published var isLoading = false
     @Published var errorMessage = ""
-    @Published var lastLoadTime: Date?
-    @Published var loadDuration: Double = 0.0
-    @Published var debugInfo = ""
     
-    // MARK: - NEW - Sync Properties
-    @Published var isSyncing = false
-    @Published var syncMessage = ""
-    @Published var lastSyncTime: Date?
-
-    // MARK: - Private Properties
-    private var currentStationService: CurrentStationDatabaseService?
-    private var tidalCurrentService: TidalCurrentService?
-    private var locationService: LocationService?
-    private var cancellables = Set<AnyCancellable>()
-    private var loadTask: Task<Void, Never>?
-    
-    // Performance tracking
-    private var startTime: Date?
-    private var phaseStartTime: Date?
+    // MARK: - Dependencies  
+    private let cloudService: CurrentFavoritesCloudService
+    private let locationService: LocationService?
     
     // MARK: - Initialization
-    func initialize(
-        currentStationService: CurrentStationDatabaseService?,
-        tidalCurrentService: TidalCurrentService?,
-        locationService: LocationService?
-    ) {
-        self.currentStationService = currentStationService
-        self.tidalCurrentService = tidalCurrentService
+    init(cloudService: CurrentFavoritesCloudService = CurrentFavoritesCloudService(),
+         locationService: LocationService? = nil) {
+        self.cloudService = cloudService
         self.locationService = locationService
-    }
-    
-    deinit {
-        loadTask?.cancel()
-    }
-    
-    // MARK: - Public Methods
-    
-    func loadFavorites() {
-        if let existingTask = loadTask {
-            existingTask.cancel()
-        }
         
-        loadTask = Task { @MainActor in
-            await performLoadFavorites()
-        }
+        print("🎯 INIT: CurrentFavoritesViewModel (CLOUD-ONLY) created at \(Date())")
     }
     
+    // MARK: - Core Operations
+    
+    /// Load favorites from cloud (single source of truth)
     @MainActor
-    private func performLoadFavorites() async {
-        startTime = Date()
+    func loadFavorites() async {
+        print("🚀 LOAD_FAVORITES: Starting cloud-only load")
+        isLoading = true
+        errorMessage = ""
         
-        guard let currentStationService = currentStationService else {
-            await handleLoadError("CurrentStationDatabaseService not available", phase: "Service Check")
-            return
-        }
+        let result = await cloudService.getFavorites()
         
-        do {
-            isLoading = true
-            errorMessage = ""
-            
-            let favoriteRecords = try await currentStationService.getCurrentStationFavoritesWithMetadata()
-            
-            var favoriteStations: [TidalCurrentStation] = favoriteRecords.map { $0.toTidalCurrentStation() }
-            
-            if let locationService = locationService {
-                favoriteStations = await calculateDistances(for: favoriteStations, locationService: locationService)
-            }
-            
-            let sortedStations = favoriteStations.sorted {
-                if let dist1 = $0.distanceFromUser, let dist2 = $1.distanceFromUser {
-                    return dist1 < dist2
-                }
-                if $0.distanceFromUser != nil && $1.distanceFromUser == nil { return true }
-                if $0.distanceFromUser == nil && $1.distanceFromUser != nil { return false }
-                return $0.name < $1.name
-            }
-            
-            if !Task.isCancelled {
-                favorites = sortedStations
-                isLoading = false
-                lastLoadTime = Date()
-                if let startTime = startTime {
-                    loadDuration = Date().timeIntervalSince(startTime)
-                    updateDebugInfo("✅ Loaded \(sortedStations.count) favorites in \(String(format: "%.3f", loadDuration))s")
-                }
-            }
-        } catch {
-            await handleLoadError("Failed to load favorites: \(error.localizedDescription)", phase: "Load Operation")
-        }
-    }
-    
-    // MARK: - NEW - Sync Method
-    @MainActor
-    func syncFavorites() async {
-        let syncStartTime = Date()
-        isSyncing = true
-        syncMessage = "Syncing with cloud..."
-        
-        print("🔄 CURRENT_FAVORITES_SYNC: Starting sync operation")
-
-        let result = await CurrentStationSyncService.shared.syncCurrentStationFavorites()
-
         switch result {
-        case .success(let stats):
-            let syncDuration = Date().timeIntervalSince(syncStartTime)
-            lastSyncTime = Date()
-            syncMessage = "Sync complete. Uploaded: \(stats.uploaded), Downloaded: \(stats.downloaded)."
+        case .success(let stations):
+            print("✅ LOAD_FAVORITES: Retrieved \(stations.count) stations from cloud")
             
-            print("✅ CURRENT_FAVORITES_SYNC: Sync completed successfully in \(String(format: "%.3f", syncDuration))s. Stats: \(stats.uploaded) uploaded, \(stats.downloaded) downloaded, \(stats.conflictsResolved) conflicts resolved")
-            
-            // After a successful sync, reload the local favorites to reflect changes
-            await performLoadFavorites()
-        case .failure(let error):
-            let syncDuration = Date().timeIntervalSince(syncStartTime)
-            syncMessage = "Sync failed: \(error.localizedDescription)"
-            
-            print("❌ CURRENT_FAVORITES_SYNC: Sync failed after \(String(format: "%.3f", syncDuration))s. Error: \(error.localizedDescription)")
-        }
-        
-        isSyncing = false
-    }
-
-    // MARK: - Helper Methods
-    
-    @MainActor
-    private func handleLoadError(_ message: String, phase: String) async {
-        errorMessage = message
-        isLoading = false
-        updateDebugInfo("❌ Error in \(phase)")
-        if let startTime = startTime {
-            loadDuration = Date().timeIntervalSince(startTime)
-        }
-    }
-    
-    @MainActor
-    private func updateDebugInfo(_ info: String) {
-        debugInfo = info
-        print(info)
-    }
-    
-    private func calculateDistances(for stations: [TidalCurrentStation], locationService: LocationService) async -> [TidalCurrentStation] {
-        guard let userLocation = await getUserLocation(locationService: locationService) else {
-            return stations
-        }
-        
-        return stations.map { station in
-            if let lat = station.latitude, let lon = station.longitude {
-                let stationLocation = CLLocation(latitude: lat, longitude: lon)
-                let distance = userLocation.distance(from: stationLocation) * 0.000621371 // meters to miles
-                return station.withDistance(distance)
-            }
-            return station
-        }
-    }
-    
-    private func getUserLocation(locationService: LocationService) async -> CLLocation? {
-        if let currentLocation = locationService.currentLocation {
-            return currentLocation
-        }
-        
-        guard await locationService.requestLocationPermission() else { return nil }
-        
-        await MainActor.run {
-            locationService.startUpdatingLocation()
-        }
-        
-        try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
-        
-        return locationService.currentLocation
-    }
-    
-    // MARK: - User Actions
-    
-    func removeFavorite(at indexSet: IndexSet) {
-        Task {
-            guard let currentStationService = currentStationService else { return }
-            for index in indexSet {
-                guard index < favorites.count else { continue }
-                let favorite = favorites[index]
+            // Calculate distances if location available
+            var stationsWithDistance = stations
+            if let locationService = locationService,
+               let userLocation = locationService.currentLocation {
                 
-                _ = await currentStationService.toggleCurrentStationFavoriteWithMetadata(
-                    id: favorite.id,
-                    bin: favorite.currentBin ?? 0,
-                    stationName: favorite.name,
-                    latitude: favorite.latitude,
-                    longitude: favorite.longitude,
-                    depth: favorite.depth,
-                    depthType: favorite.depthType
-                )
+                for i in 0..<stationsWithDistance.count {
+                    if let lat = stationsWithDistance[i].latitude,
+                       let lon = stationsWithDistance[i].longitude {
+                        let stationLocation = CLLocation(latitude: lat, longitude: lon)
+                        let distanceInMeters = userLocation.distance(from: stationLocation)
+                        let distanceInMiles = distanceInMeters * 0.000621371
+                        stationsWithDistance[i].distanceFromUser = distanceInMiles
+                    }
+                }
             }
-            await MainActor.run {
-                loadFavorites()
+            
+            // Sort by distance, then alphabetically
+            favorites = stationsWithDistance.sorted { station1, station2 in
+                if let distance1 = station1.distanceFromUser,
+                   let distance2 = station2.distanceFromUser {
+                    return distance1 < distance2
+                } else if station1.distanceFromUser != nil {
+                    return true
+                } else if station2.distanceFromUser != nil {
+                    return false
+                } else {
+                    return station1.name < station2.name
+                }
+            }
+            
+            print("✅ LOAD_FAVORITES: Loaded and sorted \(favorites.count) favorites")
+            
+        case .failure(let error):
+            print("❌ LOAD_FAVORITES: Failed - \(error.localizedDescription)")
+            errorMessage = "Failed to load favorites: \(error.localizedDescription)"
+            favorites = []
+        }
+        
+        isLoading = false
+    }
+    
+    /// Remove favorite from cloud (single operation, no sync needed!)
+    @MainActor
+    func removeFavorite(stationId: String, currentBin: Int) async {
+        print("🗑️ REMOVE_FAVORITE: Removing station \(stationId), bin \(currentBin) from cloud")
+        
+        let result = await cloudService.removeFavorite(stationId: stationId, currentBin: currentBin)
+        
+        switch result {
+        case .success():
+            print("✅ REMOVE_FAVORITE: Successfully removed from cloud")
+            // Immediately update UI by removing from local array
+            favorites.removeAll { $0.id == stationId && ($0.currentBin ?? 0) == currentBin }
+            print("✅ REMOVE_FAVORITE: Updated local UI, station removed")
+            
+        case .failure(let error):
+            print("❌ REMOVE_FAVORITE: Failed - \(error.localizedDescription)")
+            errorMessage = "Failed to remove favorite: \(error.localizedDescription)"
+        }
+    }
+    
+    /// Remove favorite by index (for swipe actions)
+    func removeFavorite(at offsets: IndexSet) {
+        print("🗑️ REMOVE_FAVORITE: Removing favorites at offsets \(Array(offsets))")
+        Task { @MainActor in
+            for index in offsets {
+                guard index < favorites.count else { continue }
+                let station = favorites[index]
+                print("🗑️ REMOVE_FAVORITE: Processing station \(station.id), bin \(station.currentBin ?? 0)")
+                await removeFavorite(stationId: station.id, currentBin: station.currentBin ?? 0)
             }
         }
     }
     
-    func cleanup() {
-        loadTask?.cancel()
+    /// Initialize with services (for dependency injection from ServiceProvider)
+    func initialize(locationService: LocationService) {
+        print("🔧 INITIALIZE: Setting location service")
+        // LocationService is already set in init, but keeping this for compatibility
     }
     
-    // MARK: - UPDATED - Refresh Support
-    
-    func refreshFavorites() async {
-        // The refresh action will now trigger a full sync.
-        await syncFavorites()
+    /// Cleanup method (much simpler now)
+    func cleanup() {
+        print("🧹 CLEANUP: Cloud-only cleanup (minimal)")
+        // No complex cleanup needed - no sync tasks or local database
     }
 }
+
+// MARK: - Simplified Architecture Benefits:
+/*
+ 
+ 🎉 WHAT WE ELIMINATED:
+ 
+ ❌ Removed CurrentStationDatabaseService dependency
+ ❌ Removed CurrentStationSyncService complexity  
+ ❌ Removed all sync-related @Published properties
+ ❌ Removed 400+ lines of sync/database code
+ ❌ Removed race conditions and "ghost favorites"
+ ❌ Removed complex error handling and conflict resolution
+ ❌ Removed debug info, performance metrics, database stats
+ ❌ Removed sync status UI (isSyncing, syncErrorMessage, etc.)
+ 
+ ✅ WHAT WE GAINED:
+ 
+ ✅ Single source of truth (cloud-only)
+ ✅ Predictable behavior - no more reappearing favorites
+ ✅ Simple error handling (network errors only)
+ ✅ Fast operations (direct cloud calls)
+ ✅ Easy testing and debugging
+ ✅ Consistent cross-device experience
+ 
+ */

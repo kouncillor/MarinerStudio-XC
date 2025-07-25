@@ -1,11 +1,3 @@
-
-//
-//  CurrentFavoritesView.swift
-//  Mariner
-//
-//  Created by Timothy Russell on 2025-06-27.
-//
-
 import SwiftUI
 
 struct CurrentFavoritesView: View {
@@ -14,18 +6,9 @@ struct CurrentFavoritesView: View {
     @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
-        Group {
-            if viewModel.isLoading && viewModel.favorites.isEmpty {
-                LoadingView()
-            } else if !viewModel.errorMessage.isEmpty {
-                ErrorView(errorMessage: viewModel.errorMessage) {
-                    viewModel.loadFavorites()
-                }
-            } else if viewModel.favorites.isEmpty {
-                EmptyFavoritesView()
-            } else {
-                FavoritesListView()
-            }
+        ZStack {
+            // Main content
+            mainContentView
         }
         .navigationTitle("Favorite Currents")
         .navigationBarTitleDisplayMode(.large)
@@ -33,107 +16,116 @@ struct CurrentFavoritesView: View {
         .toolbarBackground(.red, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .withHomeButton()
+        
         .onAppear {
-            viewModel.initialize(
-                currentStationService: serviceProvider.currentStationService,
-                tidalCurrentService: TidalCurrentServiceImpl(),
-                locationService: serviceProvider.locationService
-            )
-            viewModel.loadFavorites()
+            print("🌊 VIEW: CurrentFavoritesView appeared (CLOUD-ONLY)")
+            
+            // Initialize location service
+            viewModel.initialize(locationService: serviceProvider.locationService)
+            
+            // Load favorites from cloud
+            Task {
+                await viewModel.loadFavorites()
+            }
         }
+        
         .onDisappear {
+            print("🌊 VIEW: CurrentFavoritesView disappeared")
             viewModel.cleanup()
         }
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                // The sync button now correctly reflects the viewModel's syncing state
-                if viewModel.isSyncing {
-                    ProgressView()
-                        .scaleEffect(0.8)
-                } else {
-                    Button(action: {
-                        Task {
-                            await viewModel.refreshFavorites()
-                        }
-                    }) {
-                        Image(systemName: "arrow.clockwise")
-                            .foregroundColor(.white)
-                    }
-                    .disabled(viewModel.isLoading) // Disable while initial load is happening
-                }
+    }
+    
+    // MARK: - Main Content View
+    
+    @ViewBuilder
+    private var mainContentView: some View {
+        Group {
+            if viewModel.isLoading {
+                loadingView
+            } else if !viewModel.errorMessage.isEmpty {
+                errorView
+            } else if viewModel.favorites.isEmpty {
+                emptyStateView
+            } else {
+                favoritesListView
             }
         }
     }
     
     // MARK: - Loading View
     
-    @ViewBuilder
-    private func LoadingView() -> some View {
-        VStack(spacing: 20) {
+    private var loadingView: some View {
+        VStack(spacing: 16) {
             ProgressView()
-                .scaleEffect(1.5)
-                .padding()
+                .scaleEffect(1.2)
             
             Text("Loading favorites...")
                 .font(.headline)
-                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onAppear {
+            print("🎨 VIEW: Loading view appeared")
         }
     }
     
     // MARK: - Error View
     
-    @ViewBuilder
-    private func ErrorView(errorMessage: String, onRetry: @escaping () -> Void) -> some View {
-        VStack(spacing: 20) {
+    private var errorView: some View {
+        VStack(spacing: 16) {
             Image(systemName: "exclamationmark.triangle")
-                .font(.system(size: 60))
+                .font(.largeTitle)
                 .foregroundColor(.orange)
+                .padding()
             
-            Text("Error")
+            Text("Error Loading Favorites")
                 .font(.title2)
                 .fontWeight(.semibold)
             
-            Text(errorMessage)
+            Text(viewModel.errorMessage)
                 .multilineTextAlignment(.center)
-                .foregroundColor(.secondary)
                 .padding(.horizontal)
+                .foregroundColor(.secondary)
             
-            Button(action: onRetry) {
-                HStack {
-                    Image(systemName: "arrow.clockwise")
-                    Text("Try Again")
+            Button("Retry") {
+                print("🔄 VIEW: Retry button tapped")
+                Task {
+                    await viewModel.loadFavorites()
                 }
-                .padding()
-                .background(Color.blue)
-                .foregroundColor(.white)
-                .cornerRadius(10)
             }
+            .padding()
+            .background(Color.blue)
+            .foregroundColor(.white)
+            .cornerRadius(10)
         }
-        .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onAppear {
+            print("🎨 VIEW: Error view appeared with message: \(viewModel.errorMessage)")
+        }
     }
     
-    // MARK: - Empty Favorites View
+    // MARK: - Empty State View
     
-    @ViewBuilder
-    private func EmptyFavoritesView() -> some View {
-        VStack(spacing: 20) {
+    private var emptyStateView: some View {
+        VStack(spacing: 16) {
             Image(systemName: "star.slash")
                 .font(.system(size: 60))
                 .foregroundColor(.gray)
+                .padding()
             
             Text("No Favorite Stations")
                 .font(.title2)
                 .fontWeight(.semibold)
             
-            Text("Pull down to refresh or browse all stations to add favorites.")
+            Text("Current stations you mark as favorites will appear here.")
                 .multilineTextAlignment(.center)
                 .foregroundColor(.secondary)
-                .font(.caption)
+            
+            Spacer().frame(height: 20)
             
             NavigationLink(destination: TidalCurrentStationsView(
                 tidalCurrentService: TidalCurrentServiceImpl(),
                 locationService: serviceProvider.locationService,
-                currentStationService: serviceProvider.currentStationService
+                currentFavoritesCloudService: serviceProvider.currentFavoritesCloudService
             )) {
                 HStack {
                     Image(systemName: "arrow.left.arrow.right")
@@ -146,16 +138,16 @@ struct CurrentFavoritesView: View {
             }
         }
         .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onAppear {
+            print("🎨 VIEW: Empty state view appeared")
+        }
     }
     
     // MARK: - Favorites List View
     
-    @ViewBuilder
-    private func FavoritesListView() -> some View {
+    private var favoritesListView: some View {
         VStack(spacing: 0) {
-            // NEW: Sync Status View
-            SyncStatusView()
-
             List {
                 ForEach(viewModel.favorites, id: \.uniqueId) { station in
                     NavigationLink {
@@ -163,52 +155,41 @@ struct CurrentFavoritesView: View {
                             stationId: station.id,
                             bin: station.currentBin ?? 0,
                             stationName: station.name,
-                            currentStationService: serviceProvider.currentStationService
+                            currentFavoritesCloudService: serviceProvider.currentFavoritesCloudService
                         )
                     } label: {
-                        EnhancedFavoriteCurrentStationRow(station: station)
+                        FavoriteCurrentStationRow(station: station)
+                    }
+                    .onAppear {
+                        print("🎨 VIEW: Station row appeared for \(station.id)")
+                    }
+                    .swipeActions(edge: .trailing) {
+                        Button {
+                            print("💛 VIEW: Unfavorite gesture triggered for station \(station.id)")
+                            if let index = viewModel.favorites.firstIndex(where: { $0.uniqueId == station.uniqueId }) {
+                                viewModel.removeFavorite(at: IndexSet(integer: index))
+                            }
+                        } label: {
+                            Label("Unfavorite", systemImage: "star.slash")
+                        }
+                        .tint(.yellow)
                     }
                 }
-                .onDelete(perform: viewModel.removeFavorite)
             }
+            
             .listStyle(InsetGroupedListStyle())
             .refreshable {
-                await viewModel.refreshFavorites()
+                print("🔄 VIEW: Pull-to-refresh triggered (CLOUD-ONLY)")
+                await viewModel.loadFavorites()
             }
         }
-    }
-
-    // MARK: - NEW - Sync Status View
-    @ViewBuilder
-    private func SyncStatusView() -> some View {
-        if viewModel.isSyncing || !viewModel.syncMessage.isEmpty {
-            VStack {
-                HStack {
-                    if viewModel.isSyncing {
-                        ProgressView()
-                            .scaleEffect(0.7)
-                            .frame(width: 20, height: 20)
-                    } else {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.green)
-                    }
-                    Text(viewModel.syncMessage)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Spacer()
-                }
-                .padding(.horizontal)
-                .padding(.vertical, 8)
-                .background(Color(UIColor.systemGroupedBackground))
-            }
-            .transition(.move(edge: .top).combined(with: .opacity))
+        .onAppear {
+            print("🎨 VIEW: Favorites list view appeared with \(viewModel.favorites.count) stations")
         }
     }
 }
 
-// MARK: - Enhanced Station Row
-
-struct EnhancedFavoriteCurrentStationRow: View {
+struct FavoriteCurrentStationRow: View {
     let station: TidalCurrentStation
     
     var body: some View {
@@ -219,18 +200,27 @@ struct EnhancedFavoriteCurrentStationRow: View {
             
             VStack(alignment: .leading, spacing: 4) {
                 // Station name
-                Text(station.name).font(.headline).lineLimit(2)
+                Text(station.name)
+                    .font(.headline)
+                    .foregroundColor(.primary)
                 
                 // Depth - show actual depth or surface/n/a
                 if let depth = station.depth {
-                    Text("Depth: \(String(format: "%.0f", depth)) ft").font(.subheadline).foregroundColor(.secondary)
+                    Text("Depth: \(String(format: "%.0f", depth)) ft")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
                 } else {
-                    Text("Depth: surface or n/a").font(.subheadline).foregroundColor(.secondary)
+                    Text("Depth: surface or n/a")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
                 }
                 
                 // Distance from user
                 if let distance = station.distanceFromUser {
-                    Text("\(String(format: "%.1f", distance)) mi").font(.subheadline).foregroundColor(.blue).fontWeight(.medium)
+                    Text("\(String(format: "%.1f", distance)) mi")
+                        .font(.subheadline)
+                        .foregroundColor(.blue)
+                        .fontWeight(.medium)
                 }
                 
                 // Coordinates if available
@@ -240,8 +230,12 @@ struct EnhancedFavoriteCurrentStationRow: View {
                         .foregroundColor(.gray)
                 }
             }
+            
             Spacer()
-            Image(systemName: "star.fill").foregroundColor(.yellow).font(.system(size: 16))
+            
+            Image(systemName: "star.fill")
+                .foregroundColor(.yellow)
+                .font(.system(size: 16))
         }
         .padding(.vertical, 12)
     }
