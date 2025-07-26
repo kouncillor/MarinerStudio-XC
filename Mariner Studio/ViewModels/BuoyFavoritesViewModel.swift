@@ -1,138 +1,130 @@
-//
-//  BuoyFavoritesViewModel.swift
-//  Mariner Studio
-//
-//  Created by Timothy Russell on 5/15/25.
-//
-
-
 import Foundation
 import SwiftUI
 import Combine
 import CoreLocation
 
+/// Cloud-only Buoy Favorites ViewModel - NO sync complexity!
 class BuoyFavoritesViewModel: ObservableObject {
+    
     // MARK: - Published Properties
     @Published var favorites: [BuoyStation] = []
     @Published var isLoading = false
     @Published var errorMessage = ""
     
-    // MARK: - Private Properties
-    private var buoyDatabaseService: BuoyDatabaseService?
-    private var buoyService: BuoyApiService?
+    // MARK: - Dependencies  
+    private let cloudService: BuoyFavoritesCloudService
     private var locationService: LocationService?
-    private var cancellables = Set<AnyCancellable>()
-    private var loadTask: Task<Void, Never>?
     
     // MARK: - Initialization
+    init(cloudService: BuoyFavoritesCloudService = BuoyFavoritesCloudService(),
+         locationService: LocationService? = nil) {
+        self.cloudService = cloudService
+        self.locationService = locationService
+        
+        print("🎯 INIT: BuoyFavoritesViewModel (CLOUD-ONLY) created at \(Date())")
+    }
+    
+    // MARK: - Core Operations
+    
+    /// Load favorites from cloud (single source of truth)
+    @MainActor
+    func loadFavorites() async {
+        print("🚀 LOAD_FAVORITES: Starting cloud-only load")
+        isLoading = true
+        errorMessage = ""
+        
+        let result = await cloudService.getFavorites()
+        
+        switch result {
+        case .success(let stations):
+            print("✅ LOAD_FAVORITES: Retrieved \(stations.count) stations from cloud")
+            
+            // Calculate distances if location available
+            var stationsWithDistance = stations
+            if let locationService = locationService,
+               let userLocation = locationService.currentLocation {
+                
+                for i in 0..<stationsWithDistance.count {
+                    if let lat = stationsWithDistance[i].latitude,
+                       let lon = stationsWithDistance[i].longitude {
+                        let stationLocation = CLLocation(latitude: lat, longitude: lon)
+                        let distanceInMeters = userLocation.distance(from: stationLocation)
+                        let distanceInMiles = distanceInMeters * 0.000621371
+                        stationsWithDistance[i].distanceFromUser = distanceInMiles
+                    }
+                }
+            }
+            
+            // Sort by distance, then alphabetically
+            favorites = stationsWithDistance.sorted { station1, station2 in
+                if let distance1 = station1.distanceFromUser,
+                   let distance2 = station2.distanceFromUser {
+                    return distance1 < distance2
+                } else if station1.distanceFromUser != nil {
+                    return true
+                } else if station2.distanceFromUser != nil {
+                    return false
+                } else {
+                    return station1.name < station2.name
+                }
+            }
+            
+            print("✅ LOAD_FAVORITES: Loaded and sorted \(favorites.count) favorites")
+            
+        case .failure(let error):
+            print("❌ LOAD_FAVORITES: Failed - \(error.localizedDescription)")
+            errorMessage = "Failed to load favorites: \(error.localizedDescription)"
+            favorites = []
+        }
+        
+        isLoading = false
+    }
+    
+    /// Remove favorite from cloud (single operation, no sync needed!)
+    @MainActor
+    func removeFavorite(stationId: String) async {
+        print("🗑️ REMOVE_FAVORITE: Removing station \(stationId) from cloud")
+        
+        let result = await cloudService.removeFavorite(stationId: stationId)
+        
+        switch result {
+        case .success():
+            print("✅ REMOVE_FAVORITE: Successfully removed from cloud")
+            // Immediately update UI by removing from local array
+            favorites.removeAll { $0.id == stationId }
+            print("✅ REMOVE_FAVORITE: Updated local UI, station removed")
+            
+        case .failure(let error):
+            print("❌ REMOVE_FAVORITE: Failed - \(error.localizedDescription)")
+            errorMessage = "Failed to remove favorite: \(error.localizedDescription)"
+        }
+    }
+    
+    /// Remove favorite by index (for swipe actions)
+    func removeFavorite(at offsets: IndexSet) {
+        print("🗑️ REMOVE_FAVORITE: Removing favorites at offsets \(Array(offsets))")
+        Task { @MainActor in
+            for index in offsets {
+                guard index < favorites.count else { continue }
+                let station = favorites[index]
+                print("🗑️ REMOVE_FAVORITE: Processing station \(station.id) - \(station.name)")
+                await removeFavorite(stationId: station.id)
+            }
+        }
+    }
+    
+    /// Initialize with services (for dependency injection from ServiceProvider)
     func initialize(
-        buoyDatabaseService: BuoyDatabaseService?,
-        buoyService: BuoyApiService?,
+        buoyFavoritesCloudService: BuoyFavoritesCloudService,
         locationService: LocationService?
     ) {
-        self.buoyDatabaseService = buoyDatabaseService
-        self.buoyService = buoyService
+        print("🔧 INITIALIZE: Setting cloud service and location service")
         self.locationService = locationService
     }
     
-    deinit {
-        loadTask?.cancel()
-    }
-    
-    // MARK: - Public Methods
-    func loadFavorites() {
-        // Cancel any existing task
-        loadTask?.cancel()
-        
-        // Create a new task
-        loadTask = Task {
-            await MainActor.run {
-                isLoading = true
-                errorMessage = ""
-            }
-            
-            do {
-                if let buoyService = buoyService, let buoyDatabaseService = buoyDatabaseService {
-                    // First get all stations
-                    let response = try await buoyService.getBuoyStations()
-                    let allStations = response.stations
-                    
-                    // Process each station individually to find favorites
-                    let favoriteStations = await processStationsForFavorites(
-                        allStations: allStations,
-                        buoyDatabaseService: buoyDatabaseService
-                    )
-                    
-                    // Only update published property if task hasn't been cancelled
-                    if !Task.isCancelled {
-                        await MainActor.run {
-                            favorites = favoriteStations
-                            isLoading = false
-                        }
-                    }
-                } else {
-                    if !Task.isCancelled {
-                        await MainActor.run {
-                            errorMessage = "Services unavailable"
-                            isLoading = false
-                        }
-                    }
-                }
-            } catch {
-                if !Task.isCancelled {
-                    await MainActor.run {
-                        errorMessage = "Failed to load favorites: \(error.localizedDescription)"
-                        isLoading = false
-                    }
-                }
-            }
-        }
-    }
-    
-    // Helper method to process stations concurrently safe
-    private func processStationsForFavorites(
-        allStations: [BuoyStation],
-        buoyDatabaseService: BuoyDatabaseService
-    ) async -> [BuoyStation] {
-        var result: [BuoyStation] = []
-        
-        for var station in allStations {
-            let isFavorite = await buoyDatabaseService.isBuoyStationFavoriteAsync(stationId: station.id)
-            if isFavorite {
-                station.isFavorite = true
-                result.append(station)
-            }
-        }
-        
-        return result
-    }
-    
-    func removeFavorite(at indexSet: IndexSet) {
-        Task {
-            for index in indexSet {
-                if index < favorites.count {
-                    let favorite = favorites[index]
-                    
-                    if let buoyDatabaseService = buoyDatabaseService {
-                        // Toggle the favorite status (which will remove it since it's currently a favorite)
-                        _ = await buoyDatabaseService.toggleBuoyStationFavoriteAsync(stationId: favorite.id)
-                        
-                        // Reload favorites to reflect the changes
-                        loadFavorites()
-                    }
-                }
-            }
-        }
-    }
-    
-    func toggleStationFavorite(stationId: String) async {
-        if let buoyDatabaseService = buoyDatabaseService {
-            _ = await buoyDatabaseService.toggleBuoyStationFavoriteAsync(stationId: stationId)
-            loadFavorites()
-        }
-    }
-    
+    /// Cleanup method (much simpler now)
     func cleanup() {
-        loadTask?.cancel()
+        print("🧹 CLEANUP: Cloud-only cleanup (minimal)")
+        // No complex cleanup needed - no sync tasks or local database
     }
 }

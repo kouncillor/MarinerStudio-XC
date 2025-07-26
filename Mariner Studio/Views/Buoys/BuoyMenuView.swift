@@ -16,7 +16,9 @@ struct BuoyMenuView: View {
         ScrollView {
             VStack(spacing: 12) {
                 // Favorites - Star Icon
-                NavigationLink(destination: BuoyFavoritesView()) {
+                NavigationLink(destination: BuoyFavoritesView(
+                    buoyFavoritesCloudService: serviceProvider.buoyFavoritesCloudService
+                )) {
                     MenuButtonContentBuoy(
                         iconType: .system("star.fill"),
                         title: "FAVORITES",
@@ -28,7 +30,7 @@ struct BuoyMenuView: View {
                 NavigationLink(destination: BuoyStationsView(
                     buoyService: BuoyServiceImpl(),
                     locationService: serviceProvider.locationService,
-                    buoyDatabaseService: serviceProvider.buoyDatabaseService
+                    buoyFavoritesCloudService: serviceProvider.buoyFavoritesCloudService
                 )) {
                     MenuButtonContentBuoy(
                         iconType: .system("location.fill"),

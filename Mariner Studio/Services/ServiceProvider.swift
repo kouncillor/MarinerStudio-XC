@@ -16,6 +16,7 @@ class ServiceProvider: ObservableObject {
     let tideFavoritesCloudService: TideFavoritesCloudService
     let currentFavoritesCloudService: CurrentFavoritesCloudService
     let weatherFavoritesCloudService: WeatherFavoritesCloudService
+    let buoyFavoritesCloudService: BuoyFavoritesCloudService
     let currentStationService: CurrentStationDatabaseService
     let navUnitService: NavUnitDatabaseService
     let vesselService: VesselDatabaseService
@@ -74,6 +75,7 @@ class ServiceProvider: ObservableObject {
         self.tideFavoritesCloudService = TideFavoritesCloudService()
         self.currentFavoritesCloudService = CurrentFavoritesCloudService()
         self.weatherFavoritesCloudService = WeatherFavoritesCloudService()
+        self.buoyFavoritesCloudService = BuoyFavoritesCloudService()
         self.currentStationService = CurrentStationDatabaseService(databaseCore: databaseCore)
         self.currentStationSyncService = CurrentStationSyncService(databaseService: self.currentStationService)
         self.navUnitService = NavUnitDatabaseService(databaseCore: databaseCore)

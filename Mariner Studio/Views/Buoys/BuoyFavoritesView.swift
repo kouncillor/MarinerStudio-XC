@@ -2,81 +2,103 @@
 import SwiftUI
 
 struct BuoyFavoritesView: View {
-    @StateObject private var viewModel = BuoyFavoritesViewModel()
+    @StateObject private var viewModel: BuoyFavoritesViewModel
     @EnvironmentObject var serviceProvider: ServiceProvider
     @Environment(\.colorScheme) var colorScheme
     
+    init(buoyFavoritesCloudService: BuoyFavoritesCloudService) {
+        print("🏗️ VIEW: Initializing BuoyFavoritesView (CLOUD-ONLY)")
+        print("🏗️ VIEW: Injecting BuoyFavoritesCloudService: \(type(of: buoyFavoritesCloudService))")
+        
+        _viewModel = StateObject(wrappedValue: BuoyFavoritesViewModel(
+            cloudService: buoyFavoritesCloudService
+        ))
+        
+        print("✅ VIEW: BuoyFavoritesView initialization complete (CLOUD-ONLY)")
+    }
+    
     var body: some View {
-        Group {
-            if viewModel.isLoading {
-                ProgressView("Loading favorites...")
+        VStack(spacing: 0) {
+            Group {
+                if viewModel.isLoading {
+                    ProgressView("Loading favorites...")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if !viewModel.errorMessage.isEmpty {
+                    VStack {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.largeTitle)
+                            .foregroundColor(.orange)
+                            .padding()
+                        
+                        Text(viewModel.errorMessage)
+                            .multilineTextAlignment(.center)
+                            .padding()
+                    }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if !viewModel.errorMessage.isEmpty {
-                VStack {
-                    Image(systemName: "exclamationmark.triangle")
-                        .font(.largeTitle)
-                        .foregroundColor(.orange)
-                        .padding()
-                    
-                    Text(viewModel.errorMessage)
-                        .multilineTextAlignment(.center)
-                        .padding()
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if viewModel.favorites.isEmpty {
-                VStack(spacing: 16) {
-                    Image(systemName: "star.slash")
-                        .font(.system(size: 60))
-                        .foregroundColor(.gray)
-                        .padding()
-                    
-                    Text("No Favorite Buoys")
-                        .font(.title2)
-                        .fontWeight(.semibold)
-                    
-                    Text("Buoy stations you mark as favorites will appear here.")
-                        .multilineTextAlignment(.center)
-                        .foregroundColor(.secondary)
-                    
-                    Spacer().frame(height: 20)
-                    
-                    NavigationLink(destination: BuoyStationsView(
-                        buoyService: serviceProvider.buoyApiservice,
-                        locationService: serviceProvider.locationService,
-                        buoyDatabaseService: serviceProvider.buoyDatabaseService
-                    )) {
-                        HStack {
-                            Image("buoysixseven")
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .frame(width: 24, height: 24)
-                            Text("Browse All Buoy Stations")
-                        }
-                        .padding()
-                        .background(Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
-                    }
-                }
-                .padding()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                List {
-                    ForEach(viewModel.favorites) { station in
-                        NavigationLink {
-                            BuoyStationWebView(
-                                station: station,
-                                buoyDatabaseService: serviceProvider.buoyDatabaseService
-                            )
-                        } label: {
-                            FavoriteBuoyStationRow(station: station)
+                } else if viewModel.favorites.isEmpty {
+                    VStack(spacing: 16) {
+                        Image(systemName: "star.slash")
+                            .font(.system(size: 60))
+                            .foregroundColor(.gray)
+                            .padding()
+                        
+                        Text("No Favorite Buoys")
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                        
+                        Text("Buoy stations you mark as favorites will appear here.")
+                            .multilineTextAlignment(.center)
+                            .foregroundColor(.secondary)
+                        
+                        Spacer().frame(height: 20)
+                        
+                        NavigationLink(destination: BuoyStationsView(
+                            buoyService: serviceProvider.buoyApiservice,
+                            locationService: serviceProvider.locationService,
+                            buoyFavoritesCloudService: serviceProvider.buoyFavoritesCloudService
+                        )) {
+                            HStack {
+                                Image("buoysixseven")
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .frame(width: 24, height: 24)
+                                Text("Browse All Buoy Stations")
+                            }
+                            .padding()
+                            .background(Color.blue)
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
                         }
                     }
-                    .onDelete(perform: viewModel.removeFavorite)
-                }
-                .listStyle(InsetGroupedListStyle())
-                .refreshable {
-                    viewModel.loadFavorites()
+                    .padding()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    List {
+                        ForEach(viewModel.favorites) { station in
+                            NavigationLink {
+                                BuoyStationWebView(
+                                    station: station,
+                                    buoyFavoritesCloudService: serviceProvider.buoyFavoritesCloudService
+                                )
+                            } label: {
+                                FavoriteBuoyStationRow(station: station)
+                            }
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button {
+                                    if let index = viewModel.favorites.firstIndex(where: { $0.id == station.id }) {
+                                        viewModel.removeFavorite(at: IndexSet(integer: index))
+                                    }
+                                } label: {
+                                    Label("Unfavorite", systemImage: "star.fill")
+                                }
+                                .tint(.yellow)
+                            }
+                        }
+                    }
+                    .listStyle(InsetGroupedListStyle())
+                    .refreshable {
+                        await viewModel.loadFavorites()
+                    }
                 }
             }
         }
@@ -89,11 +111,12 @@ struct BuoyFavoritesView: View {
         
         .onAppear {
             viewModel.initialize(
-                buoyDatabaseService: serviceProvider.buoyDatabaseService,
-                buoyService: serviceProvider.buoyApiservice,
+                buoyFavoritesCloudService: serviceProvider.buoyFavoritesCloudService,
                 locationService: serviceProvider.locationService
             )
-            viewModel.loadFavorites()
+            Task {
+                await viewModel.loadFavorites()
+            }
         }
         .onDisappear {
             viewModel.cleanup()
@@ -165,7 +188,9 @@ struct FavoriteBuoyStationRow: View {
 
 #Preview {
     NavigationView {
-        BuoyFavoritesView()
-            .environmentObject(ServiceProvider())
+        BuoyFavoritesView(
+            buoyFavoritesCloudService: BuoyFavoritesCloudService()
+        )
+        .environmentObject(ServiceProvider())
     }
 }

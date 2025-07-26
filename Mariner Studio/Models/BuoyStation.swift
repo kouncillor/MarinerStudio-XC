@@ -21,6 +21,7 @@ struct BuoyStation: Identifiable, Codable {
     let waterQuality: String?
     let dart: String?
     var isFavorite: Bool = false
+    var distanceFromUser: Double?  // Distance in miles, calculated at runtime
     
     // MARK: - Coding Keys
     enum CodingKeys: String, CodingKey {

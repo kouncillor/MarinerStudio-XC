@@ -424,7 +424,7 @@ struct MapClusteringView: View {
                            )
                            AnyView(BuoyStationWebView(
                                station: buoyStation,
-                               buoyDatabaseService: serviceProvider.buoyDatabaseService
+                               buoyFavoritesCloudService: serviceProvider.buoyFavoritesCloudService
                            ))
                        } else {
                            AnyView(Text("Buoy Station not found"))

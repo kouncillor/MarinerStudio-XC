@@ -20,6 +20,12 @@ final class SupabaseManager {
     private var operationStats: [String: OperationStats] = [:]
     private let statsLock = NSLock()
     
+    // MARK: - Session Caching
+    private var cachedSession: Session?
+    private var sessionCacheTime: Date?
+    private let sessionCacheLock = NSLock()
+    private let sessionCacheValidDuration: TimeInterval = 60 // 1 minute cache
+    
     // MARK: - Initialization
     private init() {
         logQueue.async {
@@ -200,17 +206,40 @@ final class SupabaseManager {
     }
     
     func getSession() async throws -> Session {
+        // Check cache first
+        sessionCacheLock.lock()
+        if let cached = cachedSession,
+           let cacheTime = sessionCacheTime,
+           Date().timeIntervalSince(cacheTime) < sessionCacheValidDuration {
+            sessionCacheLock.unlock()
+            
+            logQueue.async {
+                DebugLogger.shared.log("🎯 SESSION CACHE HIT: Using cached session", category: "SUPABASE_AUTH")
+                DebugLogger.shared.log("   Cache age: \(String(format: "%.1f", Date().timeIntervalSince(cacheTime)))s", category: "SUPABASE_AUTH")
+            }
+            
+            return cached
+        }
+        sessionCacheLock.unlock()
+        
         let operationId = startOperation("getSession")
         
         do {
             let session = try await client.auth.session
             
+            // Cache the session
+            sessionCacheLock.lock()
+            cachedSession = session
+            sessionCacheTime = Date()
+            sessionCacheLock.unlock()
+            
             logQueue.async {
-                DebugLogger.shared.log("📊 SESSION RESULT:", category: "SUPABASE_AUTH")
+                DebugLogger.shared.log("📊 SESSION RESULT (FRESH):", category: "SUPABASE_AUTH")
                 DebugLogger.shared.log("   User ID: \(session.user.id)", category: "SUPABASE_AUTH")
                 DebugLogger.shared.log("   Email: \(session.user.email ?? "none")", category: "SUPABASE_AUTH")
                 DebugLogger.shared.log("   Expires at: \(Date(timeIntervalSince1970: TimeInterval(session.expiresAt)))", category: "SUPABASE_AUTH")
                 DebugLogger.shared.log("   Time until expiry: \(String(format: "%.1f", Date(timeIntervalSince1970: TimeInterval(session.expiresAt)).timeIntervalSinceNow / 60)) minutes", category: "SUPABASE_AUTH")
+                DebugLogger.shared.log("   Cached for future use", category: "SUPABASE_AUTH")
             }
             
             endOperation(operationId, success: true)
