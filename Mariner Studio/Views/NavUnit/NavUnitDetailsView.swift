@@ -854,6 +854,9 @@ struct NavUnitDetailsView: View {
         }
         .navigationTitle(viewModel.unit?.navUnitName ?? "Navigation Unit")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbarBackground(.blue, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .withHomeButton()
         .onAppear {
             Task {
