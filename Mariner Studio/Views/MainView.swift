@@ -83,6 +83,7 @@ struct MainView: View {
                     }
 
                     // TUGS
+                    #if DEBUG
                     NavigationLink(destination: TugsView(
                         vesselService: serviceProvider.vesselService
                     )) {
@@ -91,8 +92,10 @@ struct MainView: View {
                             title: "TUGS"
                         )
                     }
+                    #endif
 
                     // BARGES
+                    #if DEBUG
                     NavigationLink(destination: BargesView(
                         vesselService: serviceProvider.vesselService
                     )) {
@@ -101,6 +104,7 @@ struct MainView: View {
                             title: "BARGES"
                         )
                     }
+                    #endif
 
                     // DEV TOOLS
                     #if DEBUG
