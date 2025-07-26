@@ -128,11 +128,12 @@ struct CurrentLocalWeatherView: View {
         .withHomeButton()
         
         .onAppear {
-            // Initialize with services from the provider, but not the location service
+            // Initialize with services from the provider, including the new cloud service
             viewModel.initialize(
                 currentLocalWeatherService: serviceProvider.currentLocalWeatherService,
                 geocodingService: serviceProvider.geocodingService,
-                databaseService: serviceProvider.weatherService
+                databaseService: serviceProvider.weatherService,
+                weatherFavoritesCloudService: serviceProvider.weatherFavoritesCloudService
             )
             
             // Load weather data (now includes location permission request)

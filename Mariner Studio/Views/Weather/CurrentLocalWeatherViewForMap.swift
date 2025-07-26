@@ -115,14 +115,15 @@ struct CurrentLocalWeatherViewForMap: View {
         .withHomeButton()
         
         .onAppear {
-            // Initialize with services and location coordinates
+            // Initialize with services and location coordinates, including the new cloud service
             viewModel.initialize(
                 latitude: latitude,
                 longitude: longitude,
                 weatherService: serviceProvider.currentLocalWeatherService as? CurrentLocalWeatherServiceForMap
                     ?? CurrentLocalWeatherServiceForMapImpl(), // Fallback to new instance if needed
                 geocodingService: serviceProvider.geocodingService,
-                databaseService: serviceProvider.weatherService
+                databaseService: serviceProvider.weatherService,
+                weatherFavoritesCloudService: serviceProvider.weatherFavoritesCloudService
             )
             
             viewModel.loadWeatherData()

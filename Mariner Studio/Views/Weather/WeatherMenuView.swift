@@ -9,7 +9,9 @@ struct WeatherMenuView: View {
         ScrollView {
             VStack(spacing: 12) {
                 // Favorites - Star Icon
-                NavigationLink(destination: WeatherFavoritesView()) {
+                NavigationLink(destination: WeatherFavoritesView(
+                    weatherFavoritesCloudService: serviceProvider.weatherFavoritesCloudService
+                )) {
                     MenuButtonContent(
                         iconType: .system("star.fill"), // Star icon for favorites
                         title: "FAVORITES",

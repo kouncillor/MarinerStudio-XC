@@ -373,7 +373,7 @@ struct MapClusteringView: View {
                            
                            
                        } else {
-                           Text("Tidal Height Station not found")
+                           AnyView(Text("Tidal Height Station not found"))
                        }
                    },
                    label: { EmptyView() }

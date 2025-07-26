@@ -53,6 +53,7 @@ class CurrentLocalWeatherViewModel: NSObject, ObservableObject, CLLocationManage
     private var currentLocalWeatherService: CurrentLocalWeatherService?
     private var geocodingService: GeocodingService?
     private var databaseService: WeatherDatabaseService?
+    private var weatherFavoritesCloudService: WeatherFavoritesCloudService?
     
     // Location Manager (added directly to view model)
     private let locationManager = CLLocationManager()
@@ -72,13 +73,16 @@ class CurrentLocalWeatherViewModel: NSObject, ObservableObject, CLLocationManage
     func initialize(
         currentLocalWeatherService: CurrentLocalWeatherService?,
         geocodingService: GeocodingService?,
-        databaseService: WeatherDatabaseService?
+        databaseService: WeatherDatabaseService?,
+        weatherFavoritesCloudService: WeatherFavoritesCloudService?
     ) {
         self.currentLocalWeatherService = currentLocalWeatherService
         self.geocodingService = geocodingService
         self.databaseService = databaseService
+        self.weatherFavoritesCloudService = weatherFavoritesCloudService
         
         print("🚀 CurrentLocalWeatherViewModel: Initialized with services")
+        print("🚀 CurrentLocalWeatherViewModel: WeatherFavoritesCloudService injected: \(weatherFavoritesCloudService != nil)")
     }
     
     deinit {
@@ -324,19 +328,38 @@ class CurrentLocalWeatherViewModel: NSObject, ObservableObject, CLLocationManage
     
     func toggleFavorite() {
         Task {
-            guard latitude != 0 && longitude != 0 else { return }
+            guard latitude != 0 && longitude != 0 else { 
+                print("❌ CURRENT_LOCAL_WEATHER_VM: Cannot toggle favorite - invalid coordinates")
+                return 
+            }
             
-            if let databaseService = databaseService {
-                let newFavoriteStatus = await databaseService.toggleWeatherLocationFavoriteAsync(
+            guard !locationDisplay.isEmpty && locationDisplay != "--" else {
+                print("❌ CURRENT_LOCAL_WEATHER_VM: Cannot toggle favorite - invalid location name")
+                return
+            }
+            
+            print("⭐ CURRENT_LOCAL_WEATHER_VM: Toggling favorite for \(locationDisplay) at (\(latitude), \(longitude))")
+            print("⭐ CURRENT_LOCAL_WEATHER_VM: Current favorite status: \(isFavorite)")
+            
+            if let weatherFavoritesCloudService = weatherFavoritesCloudService {
+                let result = await weatherFavoritesCloudService.toggleFavorite(
                     latitude: latitude,
                     longitude: longitude,
                     locationName: locationDisplay
                 )
                 
-                await MainActor.run {
-                    isFavorite = newFavoriteStatus
-                    favoriteIcon = newFavoriteStatus ? "heart.fill" : "heart"
+                switch result {
+                case .success(let newFavoriteStatus):
+                    print("✅ CURRENT_LOCAL_WEATHER_VM: Successfully toggled favorite to: \(newFavoriteStatus)")
+                    await MainActor.run {
+                        isFavorite = newFavoriteStatus
+                        favoriteIcon = newFavoriteStatus ? "heart.fill" : "heart"
+                    }
+                case .failure(let error):
+                    print("❌ CURRENT_LOCAL_WEATHER_VM: Failed to toggle favorite: \(error.localizedDescription)")
                 }
+            } else {
+                print("❌ CURRENT_LOCAL_WEATHER_VM: WeatherFavoritesCloudService not available")
             }
         }
     }
@@ -514,17 +537,30 @@ class CurrentLocalWeatherViewModel: NSObject, ObservableObject, CLLocationManage
     }
     
     private func updateFavoriteStatus() async {
-        if let databaseService = databaseService {
-            // Remove do-catch since no errors are thrown
-            let favoriteStatus = await databaseService.isWeatherLocationFavoriteAsync(
+        print("🔍 CURRENT_LOCAL_WEATHER_VM: Checking favorite status for \(locationDisplay)")
+        
+        if let weatherFavoritesCloudService = weatherFavoritesCloudService {
+            let result = await weatherFavoritesCloudService.isFavorite(
                 latitude: latitude,
                 longitude: longitude
             )
             
-            await MainActor.run {
-                isFavorite = favoriteStatus
-                favoriteIcon = favoriteStatus ? "heart.fill" : "heart"
+            switch result {
+            case .success(let favoriteStatus):
+                print("✅ CURRENT_LOCAL_WEATHER_VM: Favorite status check result: \(favoriteStatus)")
+                await MainActor.run {
+                    isFavorite = favoriteStatus
+                    favoriteIcon = favoriteStatus ? "heart.fill" : "heart"
+                }
+            case .failure(let error):
+                print("❌ CURRENT_LOCAL_WEATHER_VM: Failed to check favorite status: \(error.localizedDescription)")
+                await MainActor.run {
+                    isFavorite = false
+                    favoriteIcon = "heart"
+                }
             }
+        } else {
+            print("❌ CURRENT_LOCAL_WEATHER_VM: WeatherFavoritesCloudService not available for favorite status check")
         }
     }
     

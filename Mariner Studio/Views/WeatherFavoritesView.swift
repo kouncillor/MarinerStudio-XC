@@ -1,9 +1,20 @@
 import SwiftUI
 
 struct WeatherFavoritesView: View {
-    @StateObject private var viewModel = WeatherFavoritesViewModel()
+    @StateObject private var viewModel: WeatherFavoritesViewModel
     @EnvironmentObject var serviceProvider: ServiceProvider
     @Environment(\.colorScheme) var colorScheme
+    
+    init(weatherFavoritesCloudService: WeatherFavoritesCloudService) {
+        print("🏗️ VIEW: Initializing WeatherFavoritesView (CLOUD-ONLY)")
+        print("🏗️ VIEW: Injecting WeatherFavoritesCloudService: \(type(of: weatherFavoritesCloudService))")
+        
+        _viewModel = StateObject(wrappedValue: WeatherFavoritesViewModel(
+            weatherFavoritesCloudService: weatherFavoritesCloudService
+        ))
+        
+        print("✅ VIEW: WeatherFavoritesView initialization complete (CLOUD-ONLY)")
+    }
     
     // State for navigation
     @State private var selectedFavorite: WeatherLocationFavorite?
@@ -11,8 +22,6 @@ struct WeatherFavoritesView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Sync Status View
-            syncStatusView
             
             Group {
                 if viewModel.isLoading {
@@ -89,6 +98,7 @@ struct WeatherFavoritesView: View {
                                         Label("Unfavorite", systemImage: "star.fill")
                                     }
                                     .tint(.yellow)
+                                    .disabled(viewModel.operationInProgress.contains("\(favorite.latitude),\(favorite.longitude)"))
                                 }
                                 .swipeActions(edge: .leading, allowsFullSwipe: false) {
                                     Button {
@@ -102,33 +112,13 @@ struct WeatherFavoritesView: View {
                     }
                     .listStyle(InsetGroupedListStyle())
                     .refreshable {
-                        await viewModel.performManualSync()
+                        await viewModel.loadFavorites()
                     }
                 }
             }
         }
         .navigationTitle("Favorites")
         .withHomeButton()
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                if viewModel.isSyncing {
-                    ProgressView()
-                        .scaleEffect(0.8)
-                } else {
-                    Button(action: {
-                        Task {
-                            await viewModel.performManualSync()
-                        }
-                    }) {
-                        Image(systemName: viewModel.syncStatusIcon)
-                            .foregroundColor(viewModel.syncStatusColor)
-                            .rotationEffect(.degrees(viewModel.isSyncing ? 360 : 0))
-                            .animation(.linear(duration: 1).repeatForever(autoreverses: false), value: viewModel.isSyncing)
-                    }
-                    .disabled(viewModel.isLoading)
-                }
-            }
-        }
         .sheet(isPresented: $viewModel.isEditingName) {
             // Reset values when sheet is dismissed
             viewModel.favoriteToEdit = nil
@@ -164,12 +154,8 @@ struct WeatherFavoritesView: View {
             )
         )
         .onAppear {
-            viewModel.initialize(databaseService: serviceProvider.weatherService)
-            viewModel.loadFavorites()
-            
-            // Perform initial sync on app launch
             Task {
-                await viewModel.performManualSync()
+                await viewModel.loadFavorites()
             }
         }
         .onDisappear {
@@ -177,90 +163,6 @@ struct WeatherFavoritesView: View {
         }
     }
     
-    // MARK: - Sync Status View
-    @ViewBuilder
-    private var syncStatusView: some View {
-        if viewModel.isSyncing {
-            HStack(spacing: 12) {
-                ProgressView()
-                    .scaleEffect(0.8)
-                Text("Syncing weather favorites...")
-                    .font(.caption)
-                Spacer()
-            }
-            .padding(.horizontal)
-            .padding(.vertical, 8)
-            .background(Color.blue.opacity(0.1))
-            .transition(.move(edge: .top).combined(with: .opacity))
-            
-        } else if let errorMessage = viewModel.syncErrorMessage {
-            HStack(spacing: 12) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundColor(.red)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Sync Error")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                    Text(errorMessage)
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
-                Spacer()
-                Button("Retry") {
-                    Task {
-                        await viewModel.performManualSync()
-                    }
-                }
-                .font(.caption)
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-            }
-            .padding(.horizontal)
-            .padding(.vertical, 8)
-            .background(Color.red.opacity(0.1))
-            .transition(.move(edge: .top).combined(with: .opacity))
-            
-        } else if let successMessage = viewModel.syncSuccessMessage {
-            HStack(spacing: 12) {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(.green)
-                Text(successMessage)
-                    .font(.caption)
-                Spacer()
-            }
-            .padding(.horizontal)
-            .padding(.vertical, 8)
-            .background(Color.green.opacity(0.1))
-            .transition(.move(edge: .top).combined(with: .opacity))
-            
-        } else if let lastSyncTime = viewModel.lastSyncTime {
-            HStack(spacing: 12) {
-                Image(systemName: "checkmark.circle")
-                    .foregroundColor(.green)
-                Text("Last synced: \(formatLastSyncTime(lastSyncTime))")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-                Spacer()
-                Button("Sync Now") {
-                    Task {
-                        await viewModel.performManualSync()
-                    }
-                }
-                .font(.caption2)
-                .buttonStyle(.bordered)
-                .controlSize(.mini)
-            }
-            .padding(.horizontal)
-            .padding(.vertical, 6)
-            .background(Color.gray.opacity(0.05))
-        }
-    }
-    
-    private func formatLastSyncTime(_ date: Date) -> String {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .abbreviated
-        return formatter.localizedString(for: date, relativeTo: Date())
-    }
 }
 
 // MARK: - RenameLocationView

@@ -16,45 +16,27 @@ class WeatherFavoritesViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage = ""
     
-    // MARK: - Sync Properties
-    @Published var isSyncing = false
-    @Published var lastSyncTime: Date?
-    @Published var syncErrorMessage: String?
-    @Published var syncSuccessMessage: String?
+    // MARK: - Editing Properties
+    @Published var isEditingName = false
+    @Published var favoriteToEdit: WeatherLocationFavorite?
+    @Published var newLocationName = ""
+    
+    // MARK: - Operation State
+    @Published var operationInProgress: Set<String> = []
     
     // MARK: - Private Properties
-    private var databaseService: WeatherDatabaseService?
+    private let weatherFavoritesCloudService: WeatherFavoritesCloudService
     private var cancellables = Set<AnyCancellable>()
     private var loadTask: Task<Void, Never>?
     
-    // MARK: - UI Helper Properties
-    var syncStatusIcon: String {
-        if isSyncing {
-            return "arrow.triangle.2.circlepath"
-        } else if syncErrorMessage != nil {
-            return "exclamationmark.triangle"
-        } else if lastSyncTime != nil {
-            return "checkmark.circle"
-        } else {
-            return "cloud"
-        }
-    }
-    
-    var syncStatusColor: Color {
-        if isSyncing {
-            return .blue
-        } else if syncErrorMessage != nil {
-            return .red
-        } else if lastSyncTime != nil {
-            return .green
-        } else {
-            return .gray
-        }
-    }
-    
     // MARK: - Initialization
-    func initialize(databaseService: WeatherDatabaseService?) {
-        self.databaseService = databaseService
+    init(weatherFavoritesCloudService: WeatherFavoritesCloudService) {
+        print("🏗️ WEATHER_FAVORITES_VM: Initializing WeatherFavoritesViewModel (CLOUD-ONLY)")
+        print("🏗️ WEATHER_FAVORITES_VM: Injecting WeatherFavoritesCloudService: \(type(of: weatherFavoritesCloudService))")
+        
+        self.weatherFavoritesCloudService = weatherFavoritesCloudService
+        
+        print("✅ WEATHER_FAVORITES_VM: WeatherFavoritesViewModel initialization complete (CLOUD-ONLY)")
     }
     
     deinit {
@@ -62,7 +44,9 @@ class WeatherFavoritesViewModel: ObservableObject {
     }
     
     // MARK: - Public Methods
-    func loadFavorites() {
+    func loadFavorites() async {
+        print("🔄 WEATHER_FAVORITES_VM: Starting loadFavorites (CLOUD-ONLY)")
+        
         // Cancel any existing task
         loadTask?.cancel()
         
@@ -73,29 +57,19 @@ class WeatherFavoritesViewModel: ObservableObject {
                 errorMessage = ""
             }
             
-            do {
-                if let databaseService = databaseService {
-                    let favoriteLocations = try await databaseService.getFavoriteWeatherLocationsAsync()
-                    
-                    if !Task.isCancelled {
-                        await MainActor.run {
-                            favorites = favoriteLocations
-                            isLoading = false
-                        }
-                    }
-                } else {
-                    if !Task.isCancelled {
-                        await MainActor.run {
-                            errorMessage = "Database service unavailable"
-                            isLoading = false
-                        }
-                    }
-                }
-            } catch {
-                if !Task.isCancelled {
-                    await MainActor.run {
-                        errorMessage = "Failed to load favorites: \(error.localizedDescription)"
-                        isLoading = false
+            let result = await weatherFavoritesCloudService.getFavorites()
+            
+            if !Task.isCancelled {
+                await MainActor.run {
+                    switch result {
+                    case .success(let favoriteLocations):
+                        print("✅ WEATHER_FAVORITES_VM: Loaded \(favoriteLocations.count) weather favorites from cloud")
+                        self.favorites = favoriteLocations
+                        self.isLoading = false
+                    case .failure(let error):
+                        print("❌ WEATHER_FAVORITES_VM: Failed to load favorites: \(error.localizedDescription)")
+                        self.errorMessage = "Failed to load favorites: \(error.localizedDescription)"
+                        self.isLoading = false
                     }
                 }
             }
@@ -107,158 +81,142 @@ class WeatherFavoritesViewModel: ObservableObject {
             for index in indexSet {
                 if index < favorites.count {
                     let favorite = favorites[index]
+                    let operationKey = "\(favorite.latitude),\(favorite.longitude)"
                     
-                    if let databaseService = databaseService {
-                        _ = await databaseService.toggleWeatherLocationFavoriteAsync(
-                            latitude: favorite.latitude,
-                            longitude: favorite.longitude,
-                            locationName: favorite.locationName
-                        )
-                        
-                        // Reload favorites to reflect the changes
-                        loadFavorites()
-                        
-                        // Sync after removal
-                        await performSyncAfterChange()
+                    // Prevent duplicate operations
+                    await MainActor.run {
+                        if operationInProgress.contains(operationKey) {
+                            print("⚠️ WEATHER_FAVORITES_VM: Operation already in progress for \(favorite.locationName), ignoring")
+                            return
+                        }
+                        operationInProgress.insert(operationKey)
+                    }
+                    
+                    print("🗑️ WEATHER_FAVORITES_VM: Removing favorite: \(favorite.locationName) (CLOUD-ONLY)")
+                    
+                    guard let remoteId = favorite.remoteId else {
+                        print("❌ WEATHER_FAVORITES_VM: Cannot remove favorite - no remote ID")
+                        return
+                    }
+                    
+                    let result = await weatherFavoritesCloudService.removeFavorite(
+                        id: remoteId
+                    )
+                    
+                    await MainActor.run {
+                        operationInProgress.remove(operationKey)
+                    }
+                    
+                    switch result {
+                    case .success():
+                        print("✅ WEATHER_FAVORITES_VM: Successfully removed favorite")
+                        // Optimistically remove from local array immediately
+                        await MainActor.run {
+                            if let removeIndex = self.favorites.firstIndex(where: { 
+                                $0.latitude == favorite.latitude && $0.longitude == favorite.longitude 
+                            }) {
+                                self.favorites.remove(at: removeIndex)
+                            }
+                        }
+                    case .failure(let error):
+                        print("❌ WEATHER_FAVORITES_VM: Failed to remove favorite: \(error.localizedDescription)")
+                        await MainActor.run {
+                            self.errorMessage = "Failed to remove favorite: \(error.localizedDescription)"
+                        }
                     }
                 }
             }
         }
     }
     
-    func cleanup() {
-        loadTask?.cancel()
-    }
-    
-    
-    
-    
-    
-    
-    // Add these properties to WeatherFavoritesViewModel
-    @Published var isEditingName = false
-    @Published var favoriteToEdit: WeatherLocationFavorite?
-    @Published var newLocationName = ""
-
-    // Add this method to WeatherFavoritesViewModel
+    // MARK: - Rename Functionality (UNIQUE TO WEATHER FAVORITES)
     func updateLocationName(favorite: WeatherLocationFavorite, newName: String) async {
         guard !newName.isEmpty else { return }
         
-        if let databaseService = databaseService {
-            let success = await databaseService.updateWeatherLocationNameAsync(
-                latitude: favorite.latitude,
-                longitude: favorite.longitude,
-                newName: newName
-            )
-            
-            if success {
-                // Reload favorites to reflect the changes
-                loadFavorites()
-                
-                // Sync after update
-                await performSyncAfterChange()
+        let operationKey = "\(favorite.latitude),\(favorite.longitude)"
+        
+        // Prevent duplicate operations
+        await MainActor.run {
+            if operationInProgress.contains(operationKey) {
+                print("⚠️ WEATHER_FAVORITES_VM: Rename operation already in progress for \(favorite.locationName), ignoring")
+                return
+            }
+            operationInProgress.insert(operationKey)
+        }
+        
+        print("✏️ WEATHER_FAVORITES_VM: Updating location name from '\(favorite.locationName)' to '\(newName)' (CLOUD-ONLY)")
+        
+        // Optimistic UI update
+        await MainActor.run {
+            if let index = self.favorites.firstIndex(where: { 
+                $0.latitude == favorite.latitude && $0.longitude == favorite.longitude 
+            }) {
+                var updatedFavorite = self.favorites[index]
+                updatedFavorite = WeatherLocationFavorite(
+                    id: updatedFavorite.id,
+                    latitude: updatedFavorite.latitude,
+                    longitude: updatedFavorite.longitude,
+                    locationName: newName,
+                    isFavorite: updatedFavorite.isFavorite,
+                    createdAt: updatedFavorite.createdAt,
+                    userId: updatedFavorite.userId,
+                    deviceId: updatedFavorite.deviceId,
+                    lastModified: updatedFavorite.lastModified,
+                    remoteId: updatedFavorite.remoteId
+                )
+                self.favorites[index] = updatedFavorite
+            }
+        }
+        
+        let result = await weatherFavoritesCloudService.updateLocationName(
+            latitude: favorite.latitude,
+            longitude: favorite.longitude,
+            newName: newName
+        )
+        
+        await MainActor.run {
+            operationInProgress.remove(operationKey)
+        }
+        
+        switch result {
+        case .success():
+            print("✅ WEATHER_FAVORITES_VM: Successfully updated location name")
+            // Optimistic update was successful, no need to reload
+        case .failure(let error):
+            print("❌ WEATHER_FAVORITES_VM: Failed to update location name: \(error.localizedDescription)")
+            // Revert optimistic update
+            await MainActor.run {
+                if let index = self.favorites.firstIndex(where: { 
+                    $0.latitude == favorite.latitude && $0.longitude == favorite.longitude 
+                }) {
+                    var revertedFavorite = self.favorites[index]
+                    revertedFavorite = WeatherLocationFavorite(
+                        id: revertedFavorite.id,
+                        latitude: revertedFavorite.latitude,
+                        longitude: revertedFavorite.longitude,
+                        locationName: favorite.locationName, // Revert to original name
+                        isFavorite: revertedFavorite.isFavorite,
+                        createdAt: revertedFavorite.createdAt,
+                        userId: revertedFavorite.userId,
+                        deviceId: revertedFavorite.deviceId,
+                        lastModified: revertedFavorite.lastModified,
+                        remoteId: revertedFavorite.remoteId
+                    )
+                    self.favorites[index] = revertedFavorite
+                }
+                self.errorMessage = "Failed to update location name: \(error.localizedDescription)"
             }
         }
     }
 
-    // Add this method to prepare for editing
+    // MARK: - UI Helper Methods
     func prepareForEditing(favorite: WeatherLocationFavorite) {
         favoriteToEdit = favorite
         newLocationName = favorite.locationName
         isEditingName = true
     }
-}
-
-// MARK: - Sync Integration Extension
-extension WeatherFavoritesViewModel {
-    /// Sync after user makes changes - always runs immediately
-    func performSyncAfterChange() async {
-        guard !isSyncing else { return }
-        
-        await MainActor.run {
-            isSyncing = true
-            syncErrorMessage = nil
-            syncSuccessMessage = nil
-        }
-        
-        print("🔄🌤️ WEATHER FAVORITES VIEWMODEL: Performing sync after favorite change")
-        
-        let result = await WeatherStationSyncService.shared.syncWeatherLocationFavorites()
-        
-        await MainActor.run {
-            isSyncing = false
-            
-            switch result {
-            case .success(let stats):
-                lastSyncTime = Date()
-                syncSuccessMessage = "Sync completed! \(stats.uploaded) uploaded, \(stats.downloaded) downloaded"
-                syncErrorMessage = nil
-                print("✅🌤️ WEATHER FAVORITES VIEWMODEL: Sync completed successfully")
-                print("✅🌤️ SYNC STATS: \(stats.totalOperations) operations in \(String(format: "%.3f", stats.duration))s")
-                
-                // Auto-dismiss success message after 3 seconds
-                Task {
-                    try? await Task.sleep(for: .seconds(3))
-                    await MainActor.run {
-                        if syncSuccessMessage == "Sync completed! \(stats.uploaded) uploaded, \(stats.downloaded) downloaded" {
-                            syncSuccessMessage = nil
-                        }
-                    }
-                }
-                
-            case .failure(let error):
-                syncErrorMessage = "Sync failed: \(error.localizedDescription)"
-                syncSuccessMessage = nil
-                print("❌🌤️ WEATHER FAVORITES VIEWMODEL: Sync failed - \(error.localizedDescription)")
-                
-                // Auto-dismiss error message after 5 seconds
-                Task {
-                    try? await Task.sleep(for: .seconds(5))
-                    await MainActor.run {
-                        if syncErrorMessage == "Sync failed: \(error.localizedDescription)" {
-                            syncErrorMessage = nil
-                        }
-                    }
-                }
-                
-            case .partialSuccess(let stats, let errors):
-                lastSyncTime = Date()
-                syncSuccessMessage = "Partial sync - \(stats.totalOperations) operations"
-                syncErrorMessage = "Some operations failed (\(errors.count) errors)"
-                print("⚠️🌤️ WEATHER FAVORITES VIEWMODEL: Partial sync - \(stats.totalOperations) operations, \(errors.count) errors")
-                
-                // Auto-dismiss messages after 4 seconds  
-                Task {
-                    try? await Task.sleep(for: .seconds(4))
-                    await MainActor.run {
-                        if syncSuccessMessage == "Partial sync - \(stats.totalOperations) operations" {
-                            syncSuccessMessage = nil
-                        }
-                        if syncErrorMessage == "Some operations failed (\(errors.count) errors)" {
-                            syncErrorMessage = nil
-                        }
-                    }
-                }
-            }
-        }
-    }
     
-    /// Perform manual sync (for refresh button)
-    func performManualSync() async {
-        print("🔄🌤️ WEATHER FAVORITES VIEWMODEL: Performing manual sync")
-        await performSyncAfterChange()
-        // Reload favorites after sync to show any new data
-        loadFavorites()
-    }
-    
-    /// Check if user can sync (authenticated)
-    func canSync() async -> Bool {
-        return await WeatherStationSyncService.shared.canSync()
-    }
-    
-    /// Clear sync messages (for UI dismiss)
-    func clearSyncMessages() {
-        syncErrorMessage = nil
-        syncSuccessMessage = nil
+    func cleanup() {
+        loadTask?.cancel()
     }
 }
