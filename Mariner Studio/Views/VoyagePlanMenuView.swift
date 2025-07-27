@@ -30,7 +30,7 @@ struct VoyagePlanMenuView: View {
                 }
                 
                 // All Routes
-                NavigationLink(destination: destinationPlaceholder("All Routes")) {
+                NavigationLink(destination: VoyagePlanRoutesView(allRoutesService: serviceProvider.allRoutesService)) {
                     VoyagePlanMenuButtonContent(
                         icon: "list.bullet",
                         title: "ALL ROUTES",
