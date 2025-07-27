@@ -81,6 +81,15 @@ struct MainView: View {
                             title: "ROUTES"
                         )
                     }
+                    
+                    // VOYAGE PLAN
+                    NavigationLink(destination: VoyagePlanMenuView()) {
+                        NavigationButtonContent(
+                            icon: "map",
+                            title: "VOYAGE PLAN",
+                            isSystemIcon: true
+                        )
+                    }
 
                     // TUGS
                     #if DEBUG
