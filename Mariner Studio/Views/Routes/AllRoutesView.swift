@@ -152,49 +152,13 @@ struct AllRoutesView: View {
         List(viewModel.filteredRoutes) { route in
             AllRouteRowView(
                 route: route,
-                isOperationInProgress: viewModel.operationsInProgress.contains(route.id)
+                isOperationInProgress: viewModel.operationsInProgress.contains(route.id),
+                onVoyagePlan: { loadRoute(route) },
+                onDetails: { showRouteDetails(route) },
+                onToggleFavorite: { viewModel.toggleFavorite(route) },
+                onDelete: { viewModel.deleteRoute(route) }
             )
             .listRowInsets(EdgeInsets(top: 8, leading: 8, bottom: 8, trailing: 8))
-            .swipeActions(edge: .leading) {
-                // Voyage Plan button (green) - rightmost on left side
-                Button {
-                    loadRoute(route)
-                } label: {
-                    Label("Voyage Plan", systemImage: "map")
-                }
-                .tint(.green)
-                .disabled(viewModel.operationsInProgress.contains(route.id))
-                
-                // Details button (blue) - leftmost on left side
-                Button {
-                    showRouteDetails(route)
-                } label: {
-                    Label("Details", systemImage: "info.circle")
-                }
-                .tint(.blue)
-                .disabled(viewModel.operationsInProgress.contains(route.id))
-            }
-            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                // Delete button
-                Button(role: .destructive) {
-                    viewModel.deleteRoute(route)
-                } label: {
-                    Label("Delete", systemImage: "trash")
-                }
-                .disabled(viewModel.operationsInProgress.contains(route.id))
-                
-                // Favorite button
-                Button {
-                    viewModel.toggleFavorite(route)
-                } label: {
-                    Label(
-                        route.isFavorite ? "Unfavorite" : "Favorite",
-                        systemImage: route.isFavorite ? "star.fill" : "star"
-                    )
-                }
-                .tint(.yellow)
-                .disabled(viewModel.operationsInProgress.contains(route.id))
-            }
         }
         .listStyle(InsetGroupedListStyle())
         .background(Color(.systemGroupedBackground))
@@ -328,6 +292,10 @@ struct AllRoutesView: View {
 struct AllRouteRowView: View {
     let route: AllRoute
     let isOperationInProgress: Bool
+    let onVoyagePlan: () -> Void
+    let onDetails: () -> Void
+    let onToggleFavorite: () -> Void
+    let onDelete: () -> Void
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -365,30 +333,8 @@ struct AllRouteRowView: View {
             // Route Stats
             routeStatsView
             
-            // Carets row at bottom
-            HStack {
-                // Left side - green and blue together
-                HStack(spacing: 8) {
-                    Image(systemName: "chevron.right")
-                        .font(.title2)
-                        .foregroundColor(.green)
-                    Image(systemName: "chevron.right")
-                        .font(.title2)
-                        .foregroundColor(.blue)
-                }
-                
-                Spacer()
-                
-                // Right side - yellow and red together
-                HStack(spacing: 8) {
-                    Image(systemName: "chevron.left")
-                        .font(.title2)
-                        .foregroundColor(.yellow)
-                    Image(systemName: "chevron.left")
-                        .font(.title2)
-                        .foregroundColor(.red)
-                }
-            }
+            // Action Bar
+            actionBarView
         }
         .padding()
         .background(Color(.systemBackground))
@@ -424,6 +370,73 @@ struct AllRouteRowView: View {
                 value: route.formattedDistance
             )
         }
+    }
+    
+    private var actionBarView: some View {
+        HStack(spacing: 8) {
+            // Voyage Plan Button
+            Button(action: onVoyagePlan) {
+                HStack(spacing: 4) {
+                    Image(systemName: "map")
+                        .font(.caption)
+                    Text("Voyage Plan")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(Color.green)
+                .foregroundColor(.white)
+                .cornerRadius(6)
+            }
+            .buttonStyle(.plain)
+            .disabled(isOperationInProgress)
+            
+            // Details Button
+            Button(action: onDetails) {
+                HStack(spacing: 4) {
+                    Image(systemName: "info.circle")
+                        .font(.caption)
+                    Text("Details")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(Color.blue)
+                .foregroundColor(.white)
+                .cornerRadius(6)
+            }
+            .buttonStyle(.plain)
+            .disabled(isOperationInProgress)
+            
+            Spacer()
+            
+            // Favorite Button
+            Button(action: onToggleFavorite) {
+                Image(systemName: route.isFavorite ? "star.fill" : "star")
+                    .font(.caption)
+                    .padding(8)
+                    .background(Color.yellow)
+                    .foregroundColor(.white)
+                    .cornerRadius(6)
+            }
+            .buttonStyle(.plain)
+            .disabled(isOperationInProgress)
+            
+            // Delete Button
+            Button(action: onDelete) {
+                Image(systemName: "trash")
+                    .font(.caption)
+                    .padding(8)
+                    .background(Color.red)
+                    .foregroundColor(.white)
+                    .cornerRadius(6)
+            }
+            .buttonStyle(.plain)
+            .disabled(isOperationInProgress)
+        }
+        .opacity(isOperationInProgress ? 0.6 : 1.0)
     }
     
     private func statItem(icon: String, label: String, value: String) -> some View {
@@ -489,7 +502,11 @@ struct AllRouteRowView: View {
         ForEach(mockRoutes) { route in
             AllRouteRowView(
                 route: route,
-                isOperationInProgress: false
+                isOperationInProgress: false,
+                onVoyagePlan: { print("Voyage Plan: \(route.name)") },
+                onDetails: { print("Details: \(route.name)") },
+                onToggleFavorite: { print("Toggle Favorite: \(route.name)") },
+                onDelete: { print("Delete: \(route.name)") }
             )
             .padding(.horizontal)
         }

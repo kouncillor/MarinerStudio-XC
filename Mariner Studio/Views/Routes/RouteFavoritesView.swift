@@ -61,67 +61,28 @@ struct RouteFavoritesView: View {
                         .padding(.horizontal)
                     
                     // Favorites list
-                    List {
-                        ForEach(filteredFavorites) { favorite in
-                            AllRouteFavoriteRow(
-                                route: favorite,
-                                onTap: {
-                                    // Do nothing when tapping the main card
-                                },
-                                onToggleFavorite: {
-                                    if favorite.isFavorite {
-                                        routeToUnfavorite = favorite
-                                        showingUnfavoriteConfirmation = true
-                                    } else {
-                                        toggleFavorite(favorite)
-                                    }
+                    List(filteredFavorites) { favorite in
+                        FavoriteRouteRowView(
+                            route: favorite,
+                            onVoyagePlan: { loadRoute(favorite) },
+                            onDetails: { showRouteDetails(favorite) },
+                            onToggleFavorite: {
+                                if favorite.isFavorite {
+                                    routeToUnfavorite = favorite
+                                    showingUnfavoriteConfirmation = true
+                                } else {
+                                    toggleFavorite(favorite)
                                 }
-                            )
-                            .swipeActions(edge: .leading) {
-                                // Voyage Plan button (green) - rightmost on left side
-                                Button {
-                                    loadRoute(favorite)
-                                } label: {
-                                    Label("Voyage Plan", systemImage: "map")
-                                }
-                                .tint(.green)
-                                
-                                // Details button (blue) - leftmost on left side
-                                Button {
-                                    showRouteDetails(favorite)
-                                } label: {
-                                    Label("Details", systemImage: "info.circle")
-                                }
-                                .tint(.blue)
+                            },
+                            onDelete: {
+                                routeToDelete = favorite
+                                showingDeleteConfirmation = true
                             }
-                            .swipeActions(edge: .trailing) {
-                                // Delete button (red) - rightmost
-                                Button(role: .destructive) {
-                                    routeToDelete = favorite
-                                    showingDeleteConfirmation = true
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
-                                }
-                                
-                                // Favorite button (yellow) - leftmost on right side
-                                Button {
-                                    if favorite.isFavorite {
-                                        routeToUnfavorite = favorite
-                                        showingUnfavoriteConfirmation = true
-                                    } else {
-                                        toggleFavorite(favorite)
-                                    }
-                                } label: {
-                                    Label(
-                                        favorite.isFavorite ? "Unfavorite" : "Favorite",
-                                        systemImage: favorite.isFavorite ? "star.fill" : "star"
-                                    )
-                                }
-                                .tint(.yellow)
-                            }
-                        }
+                        )
+                        .listRowInsets(EdgeInsets(top: 8, leading: 8, bottom: 8, trailing: 8))
                     }
-                    .listStyle(PlainListStyle())
+                    .listStyle(InsetGroupedListStyle())
+                    .background(Color(.systemGroupedBackground))
                 }
                 
                 // Error message
@@ -319,67 +280,56 @@ struct SearchBar: View {
     }
 }
 
-struct AllRouteFavoriteRow: View {
+// MARK: - Favorite Route Row View
+
+struct FavoriteRouteRowView: View {
     let route: AllRoute
-    let onTap: () -> Void
+    let onVoyagePlan: () -> Void
+    let onDetails: () -> Void
     let onToggleFavorite: () -> Void
-    @State private var showLeftChevron = false
-    @State private var showRightChevron = false
+    let onDelete: () -> Void
     
     var body: some View {
-        HStack {
-            // Left chevron indicator for swipe left (voyage plan)
-            SwipeIndicator(direction: .left, isVisible: showLeftChevron)
-            
-            VStack(alignment: .leading, spacing: 4) {
-                // Source type indicator - moved to its own row above the title
-                HStack(spacing: 4) {
-                    Image(systemName: route.sourceTypeIcon)
-                        .font(.caption2)
-                    Text(route.sourceTypeDisplayName)
-                        .font(.caption2)
-                }
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
-                .background(sourceTypeColor.opacity(0.2))
-                .foregroundColor(sourceTypeColor)
-                .cornerRadius(4)
-                
-                // Route name gets its own row
-                Text(route.name)
-                    .font(.headline)
-                    .fontWeight(.medium)
-                
-                HStack(spacing: 16) {
-                    Label(route.waypointCountText, systemImage: "point.3.connected.trianglepath.dotted")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+        VStack(alignment: .leading, spacing: 12) {
+            // Route Header
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(route.name)
+                        .font(.headline)
+                        .fontWeight(.semibold)
                     
-                    Label(route.formattedDistance, systemImage: "ruler")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    // Source type indicator
+                    HStack(spacing: 4) {
+                        Image(systemName: route.sourceTypeIcon)
+                            .font(.caption2)
+                        Text(route.sourceTypeDisplayName)
+                            .font(.caption2)
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(sourceTypeColor.opacity(0.2))
+                    .foregroundColor(sourceTypeColor)
+                    .cornerRadius(4)
                 }
-            }
-            
-            Spacer()
-            
-            Button(action: onToggleFavorite) {
-                Image(systemName: route.isFavorite ? "star.fill" : "star")
-                    .foregroundColor(route.isFavorite ? .yellow : .gray)
+                
+                Spacer()
+                
+                // Show favorite indicator (always filled since this is favorites view)
+                Image(systemName: "star.fill")
+                    .foregroundColor(.yellow)
                     .font(.title3)
             }
             
-            // Right chevron indicator for swipe right (actions)
-            SwipeIndicator(direction: .right, isVisible: showRightChevron)
+            // Route Stats
+            routeStatsView
+            
+            // Action Bar
+            actionBarView
         }
-        .padding(.vertical, 4)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            onTap()
-        }
-        .onAppear {
-            startPulsingAnimation()
-        }
+        .padding()
+        .background(Color(.systemBackground))
+        .cornerRadius(12)
+        .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
     }
     
     private var sourceTypeColor: Color {
@@ -395,33 +345,100 @@ struct AllRouteFavoriteRow: View {
         }
     }
     
-    private func startPulsingAnimation() {
-        // Start pulsing animation after a delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
-                showLeftChevron = true
-                showRightChevron = true
-            }
+    private var routeStatsView: some View {
+        HStack(spacing: 20) {
+            statItem(
+                icon: "point.3.connected.trianglepath.dotted",
+                label: "Waypoints",
+                value: "\(route.waypointCount)"
+            )
+            
+            statItem(
+                icon: "ruler",
+                label: "Distance",
+                value: route.formattedDistance
+            )
         }
     }
-}
-
-// MARK: - SwipeIndicator Component
-
-struct SwipeIndicator: View {
-    enum Direction {
-        case left, right
+    
+    private var actionBarView: some View {
+        HStack(spacing: 8) {
+            // Voyage Plan Button
+            Button(action: onVoyagePlan) {
+                HStack(spacing: 4) {
+                    Image(systemName: "map")
+                        .font(.caption)
+                    Text("Voyage Plan")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(Color.green)
+                .foregroundColor(.white)
+                .cornerRadius(6)
+            }
+            .buttonStyle(.plain)
+            
+            // Details Button
+            Button(action: onDetails) {
+                HStack(spacing: 4) {
+                    Image(systemName: "info.circle")
+                        .font(.caption)
+                    Text("Details")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(Color.blue)
+                .foregroundColor(.white)
+                .cornerRadius(6)
+            }
+            .buttonStyle(.plain)
+            
+            Spacer()
+            
+            // Remove from Favorites Button (since this is favorites view, change text to "Remove")
+            Button(action: onToggleFavorite) {
+                Image(systemName: "star.slash")
+                    .font(.caption)
+                    .padding(8)
+                    .background(Color.orange)
+                    .foregroundColor(.white)
+                    .cornerRadius(6)
+            }
+            .buttonStyle(.plain)
+            
+            // Delete Button
+            Button(action: onDelete) {
+                Image(systemName: "trash")
+                    .font(.caption)
+                    .padding(8)
+                    .background(Color.red)
+                    .foregroundColor(.white)
+                    .cornerRadius(6)
+            }
+            .buttonStyle(.plain)
+        }
     }
     
-    let direction: Direction
-    let isVisible: Bool
-    
-    var body: some View {
-        Image(systemName: direction == .left ? "chevron.left" : "chevron.right")
-            .font(.title3)
-            .foregroundColor(.secondary)
-            .opacity(isVisible ? 0.6 : 0.0)
-            .animation(.easeInOut(duration: 0.8), value: isVisible)
+    private func statItem(icon: String, label: String, value: String) -> some View {
+        VStack(spacing: 2) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.caption2)
+                    .foregroundColor(.blue)
+                
+                Text(label)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+            
+            Text(value)
+                .font(.caption)
+                .fontWeight(.medium)
+        }
     }
 }
 
