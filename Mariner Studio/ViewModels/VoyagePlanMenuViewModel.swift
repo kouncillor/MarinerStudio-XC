@@ -19,13 +19,13 @@ class VoyagePlanMenuViewModel: ObservableObject {
     /// Handle navigation to Favorite Routes
     func navigateToFavoriteRoutes() {
         print("📍 NAVIGATION: Navigating to Favorite Routes")
-        // TODO: Implement navigation to RouteFavoritesView
+        // Navigation handled by SwiftUI NavigationLink in VoyagePlanMenuView
     }
     
     /// Handle navigation to All Routes
     func navigateToAllRoutes() {
         print("📍 NAVIGATION: Navigating to All Routes")
-        // TODO: Implement navigation to AllRoutesView
+        // Navigation handled by SwiftUI NavigationLink in VoyagePlanMenuView
     }
     
     // MARK: - Helper Methods

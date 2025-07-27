@@ -85,9 +85,8 @@ struct MainView: View {
                     // VOYAGE PLAN
                     NavigationLink(destination: VoyagePlanMenuView()) {
                         NavigationButtonContent(
-                            icon: "map",
-                            title: "VOYAGE PLAN",
-                            isSystemIcon: true
+                            icon: "routeonehundred",
+                            title: "VOYAGE PLAN"
                         )
                     }
 
@@ -275,9 +274,13 @@ struct NavigationButtonContent: View {
     }
 }
 
+// MARK: - Previews
 
-
-
+#Preview {
+    MainView()
+        .environmentObject(AuthenticationViewModel())
+        .environmentObject(ServiceProvider())
+}
 
 
 

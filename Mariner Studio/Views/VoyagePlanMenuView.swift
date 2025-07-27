@@ -19,7 +19,7 @@ struct VoyagePlanMenuView: View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: 12) {
                 // Favorite Routes
-                NavigationLink(destination: destinationPlaceholder("Favorite Routes")) {
+                NavigationLink(destination: VoyagePlanFavoritesView()) {
                     VoyagePlanMenuButtonContent(
                         icon: "star.fill",
                         title: "FAVORITE ROUTES",
