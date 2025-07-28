@@ -82,49 +82,49 @@ struct MainView: View {
                         )
                     }
                     
-                    // VOYAGE PLAN
-                    NavigationLink(destination: VoyagePlanMenuView()) {
-                        NavigationButtonContent(
-                            icon: "routeonehundred",
-                            title: "VOYAGE PLAN"
-                        )
-                    }
-
-                    // TUGS
-                    #if DEBUG
-                    NavigationLink(destination: TugsView(
-                        vesselService: serviceProvider.vesselService
-                    )) {
-                        NavigationButtonContent(
-                            icon: "tugboatsixseven",
-                            title: "TUGS"
-                        )
-                    }
-                    #endif
-
-                    // BARGES
-                    #if DEBUG
-                    NavigationLink(destination: BargesView(
-                        vesselService: serviceProvider.vesselService
-                    )) {
-                        NavigationButtonContent(
-                            icon: "bargesixseventwo",
-                            title: "BARGES"
-                        )
-                    }
-                    #endif
-
-                    // DEV TOOLS
-                    #if DEBUG
-                    NavigationLink(destination: DevPageView()) {
-                        NavigationButtonContent(
-                            icon: "gear.badge",
-                            title: "DEV TOOLS",
-                            isSystemIcon: true,
-                            iconColor: .orange
-                        )
-                    }
-                    #endif
+//                    // VOYAGE PLAN
+//                    NavigationLink(destination: VoyagePlanMenuView()) {
+//                        NavigationButtonContent(
+//                            icon: "routeonehundred",
+//                            title: "VOYAGE PLAN"
+//                        )
+//                    }
+//
+//                    // TUGS
+//                    #if DEBUG
+//                    NavigationLink(destination: TugsView(
+//                        vesselService: serviceProvider.vesselService
+//                    )) {
+//                        NavigationButtonContent(
+//                            icon: "tugboatsixseven",
+//                            title: "TUGS"
+//                        )
+//                    }
+//                    #endif
+//
+//                    // BARGES
+//                    #if DEBUG
+//                    NavigationLink(destination: BargesView(
+//                        vesselService: serviceProvider.vesselService
+//                    )) {
+//                        NavigationButtonContent(
+//                            icon: "bargesixseventwo",
+//                            title: "BARGES"
+//                        )
+//                    }
+//                    #endif
+//
+//                    // DEV TOOLS
+//                    #if DEBUG
+//                    NavigationLink(destination: DevPageView()) {
+//                        NavigationButtonContent(
+//                            icon: "gear.badge",
+//                            title: "DEV TOOLS",
+//                            isSystemIcon: true,
+//                            iconColor: .orange
+//                        )
+//                    }
+//                    #endif
                 }
                 .padding()
             }

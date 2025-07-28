@@ -19,20 +19,29 @@ struct CreateRouteView: View {
             
             // Header
             VStack(spacing: 16) {
-                Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 80))
-                    .foregroundColor(.orange)
-                
-                Text("Create New Route")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
+                VStack(spacing: 16) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 80))
+                        .foregroundColor(.orange)
+                    
+                    Text("Create New Route")
+                        .font(.largeTitle)
+                        .fontWeight(.bold)
+                        .foregroundColor(.orange)
+                }
+                .padding()
+                .background(Color.white)
+                .cornerRadius(12)
+                .padding(.horizontal)
                 
                 Text("Plan your navigation route by selecting waypoints on an interactive nautical chart with heading and distance calculations.")
                     .font(.body)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.white.opacity(0.8))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
             }
+            .padding(.vertical)
+            .background(Color.white)
             
             Spacer()
             
@@ -122,6 +131,9 @@ struct CreateRouteView: View {
         }
         .navigationTitle("Create Route")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbarBackground(.orange, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .withHomeButton()
         .navigationDestination(isPresented: $showingMapView) {
             RouteCreationMapView(routeName: routeName, serviceProvider: serviceProvider)

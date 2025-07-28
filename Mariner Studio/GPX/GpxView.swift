@@ -255,7 +255,8 @@ struct GpxView: View {
         guard viewModel.hasRoute else { return }
         
         Task {
-            let isRouteAlreadyFavorite = await serviceProvider.routeFavoritesService.isRouteFavoriteAsync(
+            // Check if route exists in AllRoutes table and is favorited
+            let isRouteAlreadyFavorite = await serviceProvider.allRoutesService.isRouteFavoritedAsync(
                 name: viewModel.routeName,
                 waypointCount: viewModel.routePoints.count
             )
@@ -305,16 +306,18 @@ struct GpxView: View {
             // Calculate total distance
             let totalDistance = viewModel.routePoints.reduce(0.0) { $0 + $1.distanceToNext }
             
-            // Create route favorite
-            let routeFavorite = RouteFavorite(
+            // Create AllRoute with isFavorite = true
+            let allRoute = AllRoute(
                 name: viewModel.routeName,
                 gpxData: gpxString,
                 waypointCount: viewModel.routePoints.count,
-                totalDistance: totalDistance
+                totalDistance: totalDistance,
+                sourceType: "created", // User created this route
+                isFavorite: true // Mark as favorite
             )
             
-            // Save to database
-            _ = try await serviceProvider.routeFavoritesService.addRouteFavoriteAsync(favorite: routeFavorite)
+            // Save to AllRoutes database
+            _ = try await serviceProvider.allRoutesService.addRouteAsync(route: allRoute)
             
             await MainActor.run {
                 isFavorite = true

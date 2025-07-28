@@ -77,7 +77,7 @@ struct VoyagePlanFavoritesView: View {
         .navigationTitle("Voyage Plan Favorites")
         .navigationBarTitleDisplayMode(.large)
         .toolbarColorScheme(.dark, for: .navigationBar)
-        .toolbarBackground(.green, for: .navigationBar)
+        .toolbarBackground(.orange, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .withHomeButton()
         .onAppear {

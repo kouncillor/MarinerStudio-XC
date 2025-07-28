@@ -189,6 +189,22 @@ class AllRoutesDatabaseService {
         }
     }
     
+    // Check if a route exists and is favorited (by name and waypoint count)
+    func isRouteFavoritedAsync(name: String, waypointCount: Int) async -> Bool {
+        do {
+            let db = try databaseCore.ensureConnection()
+            
+            let query = allRoutes.filter(colName == name && colWaypointCount == waypointCount && colIsFavorite == true)
+            let isFavorited = try db.pluck(query) != nil
+            
+            print("📊 Route favorite check for '\(name)': \(isFavorited)")
+            return isFavorited
+        } catch {
+            print("❌ Error checking route favorite status: \(error.localizedDescription)")
+            return false
+        }
+    }
+    
     // Toggle favorite status
     func toggleFavoriteAsync(routeId: Int) async throws {
         do {

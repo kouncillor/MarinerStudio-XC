@@ -39,10 +39,6 @@ extension EnvironmentObject where ObjectType == ServiceProvider {
         wrappedValue.weatherService
     }
     
-    var routeFavoritesService: RouteFavoritesDatabaseService {
-        wrappedValue.routeFavoritesService
-    }
-    
     var locationService: LocationService {
         wrappedValue.locationService
     }

@@ -24,7 +24,6 @@ class ServiceProvider: ObservableObject {
     let buoyApiservice: BuoyApiService
     let weatherService: WeatherDatabaseService
     let mapOverlayService: MapOverlayDatabaseService
-    let routeFavoritesService: RouteFavoritesDatabaseService
     let allRoutesService: AllRoutesDatabaseService
     
     // MARK: - Weather Services
@@ -93,7 +92,6 @@ class ServiceProvider: ObservableObject {
         self.buoyDatabaseService = BuoyDatabaseService(databaseCore: databaseCore)
         self.weatherService = WeatherDatabaseService(databaseCore: databaseCore)
         self.mapOverlayService = MapOverlayDatabaseService(databaseCore: databaseCore)
-        self.routeFavoritesService = RouteFavoritesDatabaseService(databaseCore: databaseCore)
         self.allRoutesService = AllRoutesDatabaseService(databaseCore: databaseCore)
         DebugLogger.shared.log("📦 ServiceProvider: Initialized all database services.", category: "SERVICE_INIT")
         
@@ -154,9 +152,7 @@ class ServiceProvider: ObservableObject {
                 // Initialize tables
                 // Note: TidalCurrentStationFavorites table is manually managed
                 try await self.mapOverlayService.initializeMapOverlaySettingsTableAsync()
-                try await self.routeFavoritesService.initializeRouteFavoritesTableAsync()
-                
-                DebugLogger.shared.log("📊 Tables initialized including RouteFavorites", category: "SERVICE_ASYNC")
+                DebugLogger.shared.log("📊 Tables initialized", category: "SERVICE_ASYNC")
                 
                 // Test database operations to verify connection
                 try await self.databaseCore.checkConnectionWithTestQuery()

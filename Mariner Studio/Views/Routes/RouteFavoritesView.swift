@@ -26,6 +26,34 @@ struct RouteFavoritesView: View {
         }
     }
     
+    // MARK: - Header View
+    
+    private var headerView: some View {
+        VStack(spacing: 8) {
+            HStack {
+                Image(systemName: "star.fill")
+                    .font(.title2)
+                    .foregroundColor(.white)
+                
+                Text("Favorite Routes")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.white)
+                
+                Spacer()
+                
+                if !favoriteRoutes.isEmpty {
+                    Text("\(filteredFavorites.count) of \(favoriteRoutes.count) routes")
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.8))
+                }
+            }
+            .padding(.horizontal)
+            .padding(.top)
+        }
+        .background(Color.orange)
+    }
+    
     var body: some View {
         NavigationStack {
             VStack {
@@ -59,6 +87,7 @@ struct RouteFavoritesView: View {
                     // Search bar
                     SearchBar(text: $searchText)
                         .padding(.horizontal)
+                        .padding(.top, 8)
                     
                     // Favorites list
                     List(filteredFavorites) { favorite in
@@ -95,8 +124,12 @@ struct RouteFavoritesView: View {
                         .padding()
                 }
             }
+            .background(Color(.systemGroupedBackground))
             .navigationTitle("Favorite Routes")
             .navigationBarTitleDisplayMode(.large)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarBackground(.orange, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .withHomeButton()
             .onAppear {
                 Task {
@@ -264,19 +297,28 @@ struct SearchBar: View {
     
     var body: some View {
         HStack {
-            Image(systemName: "magnifyingglass")
-                .foregroundColor(.secondary)
-            
-            TextField("Search favorites...", text: $text)
-                .textFieldStyle(RoundedBorderTextFieldStyle())
-            
-            if !text.isEmpty {
-                Button("Clear") {
-                    text = ""
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(.secondary)
+                
+                TextField("Search favorites...", text: $text)
+                    .textFieldStyle(PlainTextFieldStyle())
+                
+                if !text.isEmpty {
+                    Button(action: {
+                        text = ""
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.secondary)
+                    }
                 }
-                .foregroundColor(.blue)
             }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 12)
+            .background(Color(.systemBackground))
+            .cornerRadius(10)
         }
+        .background(Color(.systemGroupedBackground))
     }
 }
 
@@ -442,42 +484,6 @@ struct FavoriteRouteRowView: View {
     }
 }
 
-// Legacy support for old RouteFavorite if needed elsewhere
-struct RouteFavoriteRow: View {
-    let favorite: RouteFavorite
-    let onTap: () -> Void
-    
-    var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(favorite.name)
-                    .font(.headline)
-                    .fontWeight(.medium)
-                
-                HStack(spacing: 16) {
-                    Label(favorite.waypointCountText, systemImage: "point.3.connected.trianglepath.dotted")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    
-                    Label(favorite.formattedDistance, systemImage: "ruler")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            }
-            
-            Spacer()
-            
-            Image(systemName: "chevron.right")
-                .foregroundColor(.secondary)
-                .font(.caption)
-        }
-        .padding(.vertical, 4)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            onTap()
-        }
-    }
-}
 
 // MARK: - Preview
 

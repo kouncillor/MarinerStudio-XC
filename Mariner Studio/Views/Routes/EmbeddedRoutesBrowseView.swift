@@ -17,8 +17,6 @@ struct EmbeddedRoutesBrowseView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // Header
-                headerView
                 
                 // Search Bar
                 searchBarView
@@ -39,12 +37,12 @@ struct EmbeddedRoutesBrowseView: View {
             }
             .navigationTitle("Browse Routes")
             .navigationBarTitleDisplayMode(.large)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarBackground(.orange, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    HStack {
-                        refreshButton
-                        HomeButton()
-                    }
+                    HomeButton()
                 }
             }
             .onAppear {
@@ -60,18 +58,19 @@ struct EmbeddedRoutesBrowseView: View {
             HStack {
                 Image(systemName: "map")
                     .font(.title2)
-                    .foregroundColor(.blue)
+                    .foregroundColor(.white)
                 
                 Text("Available Routes")
                     .font(.headline)
                     .fontWeight(.semibold)
+                    .foregroundColor(.white)
                 
                 Spacer()
                 
                 if !viewModel.routes.isEmpty {
                     Text("\(viewModel.filteredRoutes.count) of \(viewModel.routes.count) routes")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.white.opacity(0.8))
                 }
             }
             .padding(.horizontal)
@@ -80,10 +79,10 @@ struct EmbeddedRoutesBrowseView: View {
             if viewModel.isLoading && !viewModel.routes.isEmpty {
                 ProgressView("Refreshing...")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.white.opacity(0.8))
             }
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Color.orange)
     }
     
     // MARK: - Search Bar
@@ -112,6 +111,7 @@ struct EmbeddedRoutesBrowseView: View {
             .cornerRadius(10)
         }
         .padding(.horizontal)
+        .padding(.top, 8)
         .padding(.bottom, 8)
         .background(Color(.systemGroupedBackground))
     }

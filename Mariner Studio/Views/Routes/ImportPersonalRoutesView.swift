@@ -19,7 +19,7 @@ struct ImportPersonalRoutesView: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 20) {
                 // Header
                 headerView
@@ -38,8 +38,10 @@ struct ImportPersonalRoutesView: View {
                 messagesView
             }
             .padding()
-            .navigationTitle("Import Routes")
             .navigationBarTitleDisplayMode(.large)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarBackground(.orange, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .withHomeButton()
         }
     }
@@ -48,20 +50,28 @@ struct ImportPersonalRoutesView: View {
     
     private var headerView: some View {
         VStack(spacing: 12) {
-            Image(systemName: "folder.fill.badge.plus")
-                .font(.system(size: 60))
-                .foregroundColor(.purple)
-            
-            Text("Import Personal Routes")
-                .font(.title2)
-                .fontWeight(.semibold)
-            
-            Text("Import route files from your device, cloud storage, or other apps")
-                .font(.body)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
+            VStack(spacing: 12) {
+                Image(systemName: "folder.fill.badge.plus")
+                    .font(.system(size: 60))
+                    .foregroundColor(.orange)
+                
+                Text("Import Personal Routes")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.orange)
+                
+                Text("Import route files from your device, cloud storage, or other apps")
+                    .font(.body)
+                    .foregroundColor(.orange.opacity(0.8))
+                    .multilineTextAlignment(.center)
+            }
+            .padding()
+            .background(Color.white)
+            .cornerRadius(12)
+            .padding(.horizontal)
         }
         .padding(.vertical)
+        .background(Color.white)
     }
     
     // MARK: - Import Options
@@ -233,10 +243,4 @@ struct ImportPersonalRoutesView: View {
             }
         }
     }
-}
-
-// MARK: - Preview
-
-#Preview {
-    ImportPersonalRoutesView()
 }
