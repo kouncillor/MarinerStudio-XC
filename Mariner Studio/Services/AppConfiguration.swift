@@ -48,7 +48,8 @@ class AppConfiguration {
     
     /// Get RevenueCat API key (same key for all environments - RevenueCat handles sandbox/production automatically)
     var revenueCatAPIKey: String {
-        return getConfigurationValue(for: "REVENUECAT_API_KEY") ?? ""
+        // Use obfuscated key from SecureKeys instead of Info.plist
+        return SecureKeys.getRevenueCatKey()
     }
     
     /// Get RevenueCat log level for current environment
@@ -74,9 +75,8 @@ class AppConfiguration {
     
     /// Get Supabase anonymous key for current environment
     var supabaseAnonKey: String {
-        // For now, we'll use the same Supabase key for all environments
-        // You can create separate keys later if needed
-        return getConfigurationValue(for: "SUPABASE_ANON_KEY") ?? ""
+        // Use obfuscated key from SecureKeys instead of Info.plist
+        return SecureKeys.getSupabaseKey()
     }
     
     // MARK: - Logging Configuration
@@ -129,9 +129,9 @@ class AppConfiguration {
     func validateConfiguration() -> (isValid: Bool, missingKeys: [String]) {
         var missingKeys: [String] = []
         
-        // Check RevenueCat key
+        // Check RevenueCat key (now from SecureKeys)
         if revenueCatAPIKey.isEmpty {
-            missingKeys.append("REVENUECAT_API_KEY")
+            missingKeys.append("REVENUECAT_API_KEY (SecureKeys)")
         }
         
         // Check Supabase configuration
@@ -139,8 +139,9 @@ class AppConfiguration {
             missingKeys.append("SUPABASE_URL")
         }
         
+        // Check Supabase key (now from SecureKeys)
         if supabaseAnonKey.isEmpty {
-            missingKeys.append("SUPABASE_ANON_KEY")
+            missingKeys.append("SUPABASE_ANON_KEY (SecureKeys)")
         }
         
         return (missingKeys.isEmpty, missingKeys)

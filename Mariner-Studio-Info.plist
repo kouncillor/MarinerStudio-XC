@@ -22,14 +22,12 @@
 	<string>Mariner Studio needs permission to save photos to your photo library.</string>
 	
 	<!-- API Configuration Keys -->
-	<key>REVENUECAT_API_KEY</key>
-	<string>appl_owWBbZSrntrBRGfXiVahtAozFrk</string>
+	<!-- REMOVED: RevenueCat API key now stored securely in SecureKeys.swift -->
 	
 	<key>SUPABASE_URL</key>
 	<string>https://lgdsvefqqorvnvkiobth.supabase.co</string>
 	
-	<key>SUPABASE_ANON_KEY</key>
-	<string>eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxnZHN2ZWZxcW9ydm52a2lvYnRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAwOTQ1MjQsImV4cCI6MjA2NTY3MDUyNH0.rNc5QTtV4IQK5n-HvCEpOZDpVCwPpmKkjYVBEHOqnVI</string>
+	<!-- REMOVED: Supabase anon key now stored securely in SecureKeys.swift -->
 	
 </dict>
 </plist>
