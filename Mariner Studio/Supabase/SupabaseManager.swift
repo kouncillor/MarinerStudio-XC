@@ -34,13 +34,23 @@ final class SupabaseManager {
             DebugLogger.shared.log("🚀 SUPABASE MANAGER: Timestamp = \(Date())", category: "SUPABASE_INIT")
         }
         
-        guard let url = URL(string: "https://lgdsvefqqorvnvkiobth.supabase.co") else {
-            fatalError("❌ SUPABASE MANAGER: Invalid URL")
+        // Get secure configuration
+        let config = AppConfiguration.shared
+        
+        // Validate Supabase configuration
+        guard !config.supabaseURL.isEmpty else {
+            fatalError("❌ SUPABASE MANAGER: Missing SUPABASE_URL configuration")
         }
         
-        let key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxnZHN2ZWZxcW9ydm52a2lvYnRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAwOTQ1MjQsImV4cCI6MjA2NTY3MDUyNH0.rNc5QTtV4IQK5n-HvCEpOZDpVCwPpmKkjYVBEHOqnVI"
+        guard !config.supabaseAnonKey.isEmpty else {
+            fatalError("❌ SUPABASE MANAGER: Missing SUPABASE_ANON_KEY configuration")
+        }
         
-        self.client = SupabaseClient(supabaseURL: url, supabaseKey: key)
+        guard let url = URL(string: config.supabaseURL) else {
+            fatalError("❌ SUPABASE MANAGER: Invalid SUPABASE_URL: \(config.supabaseURL)")
+        }
+        
+        self.client = SupabaseClient(supabaseURL: url, supabaseKey: config.supabaseAnonKey)
         
         logQueue.async {
             DebugLogger.shared.log("✅ SUPABASE MANAGER: Client initialized successfully", category: "SUPABASE_INIT")
@@ -157,8 +167,11 @@ final class SupabaseManager {
                 DebugLogger.shared.log("   User ID: \(result.user.id)", category: "SUPABASE_AUTH")
                 DebugLogger.shared.log("   Email: \(result.user.email ?? "none")", category: "SUPABASE_AUTH")
                 DebugLogger.shared.log("   Session expires: \(Date(timeIntervalSince1970: TimeInterval(result.expiresAt)))", category: "SUPABASE_AUTH")
-                DebugLogger.shared.log("   Access token length: \(result.accessToken.count)", category: "SUPABASE_AUTH")
-                DebugLogger.shared.log("   Refresh token length: \(result.refreshToken.count)", category: "SUPABASE_AUTH")
+                // Only log token info in debug builds and if auth logging is enabled
+                if AppConfiguration.shared.enableAuthTokenLogging {
+                    DebugLogger.shared.log("   Access token present: \(!result.accessToken.isEmpty)", category: "SUPABASE_AUTH")
+                    DebugLogger.shared.log("   Refresh token present: \(!result.refreshToken.isEmpty)", category: "SUPABASE_AUTH")
+                }
             }
             
             endOperation(operationId, success: true)

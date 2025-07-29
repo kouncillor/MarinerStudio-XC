@@ -139,20 +139,19 @@ struct MainView: View {
                 )
             )
             .navigationTitle("Mariner Studio")
-            // .toolbar {
-            //     #if DEBUG
-            //     // 2. ADD THE SIGN OUT BUTTON
-            //     // This button will appear in the top-left for development builds.
-            //     ToolbarItem(placement: .topBarLeading) {
-            //         Button("Sign Out (Dev)") {
-            //             Task {
-            //                 await authViewModel.signOut()
-            //             }
-            //         }
-            //         .tint(.red)
-            //     }
-            //     #endif
-            // }
+            .toolbar {
+                #if DEBUG
+                // Sign out button for development builds only
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Sign Out (Dev)") {
+                        Task {
+                            await authViewModel.signOut()
+                        }
+                    }
+                    .tint(.red)
+                }
+                #endif
+            }
             // 3. REMOVE THE PAYWALL
             // The .presentPaywallIfNeeded modifier has been deleted from here.
             .onAppear {
