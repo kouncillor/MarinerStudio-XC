@@ -78,40 +78,10 @@ class DebugLogger {
         
         // Write to file
         writeToFile(logEntry)
-        
-        // Send to Logflare for real-time viewing
-        sendToLogflare(message: message, category: category)
         #endif
         // In release mode, do nothing - no logging at all
     }
     
-    private func sendToLogflare(message: String, category: String) {
-        guard let url = URL(string: "https://api.logflare.app/logs/json?source=cbbeb35e-1ddd-4ad5-8fe0-fb80e859351b") else { return }
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json; charset=utf-8", forHTTPHeaderField: "Content-Type")
-        request.setValue("6BeJRu7WWywv", forHTTPHeaderField: "X-API-KEY")
-        
-        let logEntry = [
-            "message": message,
-            "category": category,
-            "timestamp": ISO8601DateFormatter().string(from: Date()),
-            "app_version": Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown",
-            "device_name": UIDevice.current.name
-        ]
-        
-        do {
-            let jsonData = try JSONSerialization.data(withJSONObject: [logEntry])
-            request.httpBody = jsonData
-            
-            URLSession.shared.dataTask(with: request) { _, _, _ in
-                // Silently handle response to avoid logging loops
-            }.resume()
-        } catch {
-            // Silently fail to avoid logging loops
-        }
-    }
     
     private func writeToFile(_ message: String) {
         guard let data = message.data(using: .utf8) else { return }
@@ -151,11 +121,7 @@ class DebugLogger {
         #if DEBUG
         print("🗂️ DEBUG LOGGER: Writing logs to: \(logFileURL.path)")
         print("🗂️ DEBUG LOGGER: Directory exists: \(fileManager.fileExists(atPath: logDirectory.path))")
-        print("🌐 DEBUG LOGGER: Streaming logs to: https://logflare.app/sources/public/aRjXAXyUU10ZNVGL")
         #endif
     }
     
-    func sendTestLogToLogflare() {
-        log("🧪 TEST: Logflare integration test - app started at \(Date())", category: "LOGFLARE_TEST")
-    }
 }

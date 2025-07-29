@@ -192,18 +192,7 @@ grep -r "authentication\|auth\|login\|signin" "Mariner Studio" --include="*.swif
 
 ## Debug Logging System
 
-### Real-Time Log Streaming
-**Live application logs stream to:** https://logflare.app/sources/public/aRjXAXyUU10ZNVGL
-
-**Usage:** Tell Claude to "check the logs" and provide this URL for real-time debugging assistance.
-
-**How it works:**
-- Every `DebugLogger.shared.log()` call streams to Logflare automatically
-- No more copy-paste from Xcode console required
-- Claude can view logs directly via the URL
-- Logs include device name, app version, timestamps, and categories
-
-### Log File Locations (Local Files)
+### Log File Locations
 - **iOS Simulator**: App sandbox Documents directory (not project folder)
 - **Physical Device**: App sandbox Documents directory  
 - **Release Builds**: No logging (disabled)
@@ -227,7 +216,6 @@ grep -r "authentication\|auth\|login\|signin" "Mariner Studio" --include="*.swif
 - `DATABASE_*` - Database core operations
 - `LOCATION_*` - Location services
 - `SERVICE_*` - Service initialization
-- `LOGFLARE_TEST` - Real-time streaming tests
 
 ### Manual Log Location (if needed)
 ```bash
