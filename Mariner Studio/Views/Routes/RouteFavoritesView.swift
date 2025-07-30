@@ -15,7 +15,7 @@ struct RouteFavoritesView: View {
     @State private var routeToDelete: AllRoute?
     @State private var showingUnfavoriteConfirmation = false
     @State private var routeToUnfavorite: AllRoute?
-    
+
     var filteredFavorites: [AllRoute] {
         if searchText.isEmpty {
             return favoriteRoutes
@@ -25,23 +25,23 @@ struct RouteFavoritesView: View {
             }
         }
     }
-    
+
     // MARK: - Header View
-    
+
     private var headerView: some View {
         VStack(spacing: 8) {
             HStack {
                 Image(systemName: "star.fill")
                     .font(.title2)
                     .foregroundColor(.white)
-                
+
                 Text("Favorite Routes")
                     .font(.headline)
                     .fontWeight(.semibold)
                     .foregroundColor(.white)
-                
+
                 Spacer()
-                
+
                 if !favoriteRoutes.isEmpty {
                     Text("\(filteredFavorites.count) of \(favoriteRoutes.count) routes")
                         .font(.caption)
@@ -53,7 +53,7 @@ struct RouteFavoritesView: View {
         }
         .background(Color.orange)
     }
-    
+
     var body: some View {
         NavigationStack {
             VStack {
@@ -72,11 +72,11 @@ struct RouteFavoritesView: View {
                         Image(systemName: "star.slash")
                             .font(.system(size: 60))
                             .foregroundColor(.gray)
-                        
+
                         Text("No Favorite Routes")
                             .font(.title2)
                             .fontWeight(.semibold)
-                        
+
                         Text("Routes you mark as favorites will appear here.\nDownload or import routes and tap the star to add them.")
                             .multilineTextAlignment(.center)
                             .foregroundColor(.secondary)
@@ -88,7 +88,7 @@ struct RouteFavoritesView: View {
                     SearchBar(text: $searchText)
                         .padding(.horizontal)
                         .padding(.top, 8)
-                    
+
                     // Favorites list
                     List(filteredFavorites) { favorite in
                         FavoriteRouteRowView(
@@ -113,7 +113,7 @@ struct RouteFavoritesView: View {
                     .listStyle(InsetGroupedListStyle())
                     .background(Color(.systemGroupedBackground))
                 }
-                
+
                 // Error message
                 if !errorMessage.isEmpty {
                     Text(errorMessage)
@@ -185,18 +185,18 @@ struct RouteFavoritesView: View {
             }
         }
     }
-    
+
     // MARK: - Functions
-    
+
     private func loadFavorites() async {
         await MainActor.run {
             isLoading = true
             errorMessage = ""
         }
-        
+
         do {
             let favorites = try await serviceProvider.allRoutesService.getFavoriteRoutesAsync()
-            
+
             await MainActor.run {
                 favoriteRoutes = favorites
                 isLoading = false
@@ -209,23 +209,23 @@ struct RouteFavoritesView: View {
             }
         }
     }
-    
+
     private func loadRoute(_ favorite: AllRoute) {
         Task {
             do {
                 // Update last accessed time
                 try await serviceProvider.allRoutesService.updateLastAccessedAsync(routeId: favorite.id)
-                
+
                 // Parse GPX data from database
                 let gpxFile = try await serviceProvider.gpxService.loadGpxFile(from: favorite.gpxData)
-                
+
                 await MainActor.run {
                     // Set up navigation to GpxView with pre-loaded data
                     selectedGpxFile = gpxFile
                     selectedRouteName = favorite.name
                     showingGpxView = true
                 }
-                
+
             } catch {
                 await MainActor.run {
                     errorMessage = "Failed to load route: \(error.localizedDescription)"
@@ -233,14 +233,14 @@ struct RouteFavoritesView: View {
             }
         }
     }
-    
+
     private func deleteFavorites(offsets: IndexSet) {
         Task {
             for index in offsets {
                 let favorite = filteredFavorites[index]
                 do {
                     try await serviceProvider.allRoutesService.deleteRouteAsync(routeId: favorite.id)
-                    
+
                     await MainActor.run {
                         favoriteRoutes.removeAll { $0.id == favorite.id }
                         print("⭐ FAVORITES: Deleted route '\(favorite.name)'")
@@ -253,7 +253,7 @@ struct RouteFavoritesView: View {
             }
         }
     }
-    
+
     private func toggleFavorite(_ route: AllRoute) {
         Task {
             do {
@@ -268,16 +268,16 @@ struct RouteFavoritesView: View {
             }
         }
     }
-    
+
     private func showRouteDetails(_ route: AllRoute) {
         selectedRouteForDetails = route
         showingRouteDetails = true
     }
-    
+
     private func deleteFavorite(_ route: AllRoute) async {
         do {
             try await serviceProvider.allRoutesService.deleteRouteAsync(routeId: route.id)
-            
+
             await MainActor.run {
                 favoriteRoutes.removeAll { $0.id == route.id }
                 print("⭐ FAVORITES: Deleted route '\(route.name)'")
@@ -294,16 +294,16 @@ struct RouteFavoritesView: View {
 
 struct SearchBar: View {
     @Binding var text: String
-    
+
     var body: some View {
         HStack {
             HStack {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(.secondary)
-                
+
                 TextField("Search favorites...", text: $text)
                     .textFieldStyle(PlainTextFieldStyle())
-                
+
                 if !text.isEmpty {
                     Button(action: {
                         text = ""
@@ -330,7 +330,7 @@ struct FavoriteRouteRowView: View {
     let onDetails: () -> Void
     let onToggleFavorite: () -> Void
     let onDelete: () -> Void
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Route Header
@@ -339,7 +339,7 @@ struct FavoriteRouteRowView: View {
                     Text(route.name)
                         .font(.headline)
                         .fontWeight(.semibold)
-                    
+
                     // Source type indicator
                     HStack(spacing: 4) {
                         Image(systemName: route.sourceTypeIcon)
@@ -353,18 +353,18 @@ struct FavoriteRouteRowView: View {
                     .foregroundColor(sourceTypeColor)
                     .cornerRadius(4)
                 }
-                
+
                 Spacer()
-                
+
                 // Show favorite indicator (always filled since this is favorites view)
                 Image(systemName: "star.fill")
                     .foregroundColor(.yellow)
                     .font(.title3)
             }
-            
+
             // Route Stats
             routeStatsView
-            
+
             // Action Bar
             actionBarView
         }
@@ -373,7 +373,7 @@ struct FavoriteRouteRowView: View {
         .cornerRadius(12)
         .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
     }
-    
+
     private var sourceTypeColor: Color {
         switch route.sourceType {
         case "public":
@@ -386,7 +386,7 @@ struct FavoriteRouteRowView: View {
             return .gray
         }
     }
-    
+
     private var routeStatsView: some View {
         HStack(spacing: 20) {
             statItem(
@@ -394,7 +394,7 @@ struct FavoriteRouteRowView: View {
                 label: "Waypoints",
                 value: "\(route.waypointCount)"
             )
-            
+
             statItem(
                 icon: "ruler",
                 label: "Distance",
@@ -402,7 +402,7 @@ struct FavoriteRouteRowView: View {
             )
         }
     }
-    
+
     private var actionBarView: some View {
         HStack(spacing: 8) {
             // Voyage Plan Button
@@ -421,7 +421,7 @@ struct FavoriteRouteRowView: View {
                 .cornerRadius(6)
             }
             .buttonStyle(.plain)
-            
+
             // Details Button
             Button(action: onDetails) {
                 HStack(spacing: 4) {
@@ -438,9 +438,9 @@ struct FavoriteRouteRowView: View {
                 .cornerRadius(6)
             }
             .buttonStyle(.plain)
-            
+
             Spacer()
-            
+
             // Remove from Favorites Button (since this is favorites view, change text to "Remove")
             Button(action: onToggleFavorite) {
                 Image(systemName: "star.slash")
@@ -451,7 +451,7 @@ struct FavoriteRouteRowView: View {
                     .cornerRadius(6)
             }
             .buttonStyle(.plain)
-            
+
             // Delete Button
             Button(action: onDelete) {
                 Image(systemName: "trash")
@@ -464,19 +464,19 @@ struct FavoriteRouteRowView: View {
             .buttonStyle(.plain)
         }
     }
-    
+
     private func statItem(icon: String, label: String, value: String) -> some View {
         VStack(spacing: 2) {
             HStack(spacing: 4) {
                 Image(systemName: icon)
                     .font(.caption2)
                     .foregroundColor(.blue)
-                
+
                 Text(label)
                     .font(.caption2)
                     .foregroundColor(.secondary)
             }
-            
+
             Text(value)
                 .font(.caption)
                 .fontWeight(.medium)
@@ -484,13 +484,12 @@ struct FavoriteRouteRowView: View {
     }
 }
 
-
 // MARK: - Preview
 
 #Preview {
     // Create mock service provider for preview
     let mockServiceProvider = ServiceProvider()
-    
+
     RouteFavoritesView()
         .environmentObject(mockServiceProvider)
 }

@@ -1,4 +1,3 @@
-
 import Foundation
 import SwiftUI
 
@@ -11,7 +10,7 @@ class TidalHeightPredictionViewModel: ObservableObject {
     @Published var selectedDate = Date()
     @Published var formattedSelectedDate = ""
     @Published var isFavorite = false
-    
+
     // MARK: - Properties
     let stationId: String
     let stationName: String
@@ -19,14 +18,14 @@ class TidalHeightPredictionViewModel: ObservableObject {
     let longitude: Double?
     private let predictionService: TidalHeightPredictionService
     private let tideFavoritesCloudService: TideFavoritesCloudService
-    
+
     // MARK: - Private Properties
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "EEEE, MMMM d, yyyy"
         return formatter
     }()
-    
+
     // MARK: - Initialization
     init(
         stationId: String,
@@ -42,29 +41,29 @@ class TidalHeightPredictionViewModel: ObservableObject {
         self.longitude = longitude
         self.predictionService = predictionService
         self.tideFavoritesCloudService = tideFavoritesCloudService
-        
+
         updateFormattedDate()
-        
+
         Task {
             await updateFavoriteStatus()
         }
     }
-    
+
     // MARK: - Methods
     func loadPredictions() async {
         await MainActor.run {
             isLoading = true
             errorMessage = ""
         }
-        
+
         do {
             let response = try await predictionService.getPredictions(
                 stationId: stationId,
                 date: selectedDate
             )
-            
+
             let predictions = response.predictions
-            
+
             await MainActor.run {
                 self.predictions = predictions
                 print("🌊 Loaded \(predictions.count) predictions")
@@ -84,7 +83,7 @@ class TidalHeightPredictionViewModel: ObservableObject {
             }
         }
     }
-    
+
     func toggleFavorite() async {
         let result = await tideFavoritesCloudService.toggleFavorite(
             stationId: stationId,
@@ -92,7 +91,7 @@ class TidalHeightPredictionViewModel: ObservableObject {
             latitude: latitude,
             longitude: longitude
         )
-        
+
         switch result {
         case .success(let newValue):
             await MainActor.run {
@@ -103,25 +102,25 @@ class TidalHeightPredictionViewModel: ObservableObject {
             // Keep current state if toggle fails
         }
     }
-    
+
     func nextDay() async {
         await MainActor.run {
             selectedDate = Calendar.current.date(byAdding: .day, value: 1, to: selectedDate) ?? selectedDate
             updateFormattedDate()
         }
-        
+
         await loadPredictions()
     }
-    
+
     func previousDay() async {
         await MainActor.run {
             selectedDate = Calendar.current.date(byAdding: .day, value: -1, to: selectedDate) ?? selectedDate
             updateFormattedDate()
         }
-        
+
         await loadPredictions()
     }
-    
+
     func viewStationWebsite() {
         let urlString = "https://tidesandcurrents.noaa.gov/stationhome.html?id=\(stationId)"
         if let url = URL(string: urlString) {
@@ -132,11 +131,11 @@ class TidalHeightPredictionViewModel: ObservableObject {
             #endif
         }
     }
-    
+
     // MARK: - Private Methods
     private func updateFavoriteStatus() async {
         let result = await tideFavoritesCloudService.isFavorite(stationId: stationId)
-        
+
         switch result {
         case .success(let isFavorite):
             await MainActor.run {
@@ -149,7 +148,7 @@ class TidalHeightPredictionViewModel: ObservableObject {
             }
         }
     }
-    
+
     private func updateFormattedDate() {
         formattedSelectedDate = dateFormatter.string(from: selectedDate)
     }

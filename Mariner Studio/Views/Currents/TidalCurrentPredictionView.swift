@@ -3,7 +3,7 @@ import SwiftUI
 struct TidalCurrentPredictionView: View {
     // MARK: - Properties
     @StateObject private var viewModel: TidalCurrentPredictionViewModel
-    
+
     // MARK: - Initialization
     init(
             stationId: String,
@@ -27,7 +27,7 @@ struct TidalCurrentPredictionView: View {
                 currentFavoritesCloudService: currentFavoritesCloudService
             ))
         }
-    
+
     // MARK: - Body
     var body: some View {
         ScrollView {
@@ -38,10 +38,10 @@ struct TidalCurrentPredictionView: View {
                         .foregroundColor(.red)
                         .padding()
                 }
-                
+
                 // Date Selection
                 dateSelectionView
-                
+
                 // Graph
                 TidalCurrentGraphView(
                     predictions: viewModel.allPredictions,
@@ -52,13 +52,13 @@ struct TidalCurrentPredictionView: View {
                     RoundedRectangle(cornerRadius: 10)
                         .strokeBorder(Color(.lightGray), lineWidth: 1)
                 )
-                
+
                 // Current Data
                 currentDataView
-                
+
                 // Extremes Table
                 extremesTableView
-                
+
                 // Web View Button
                 webViewButton
             }
@@ -66,8 +66,7 @@ struct TidalCurrentPredictionView: View {
         }
         .navigationTitle("Current Predictions")
         .withHomeButton()
-        
-        
+
         .overlay {
             if viewModel.isLoading {
                 ProgressView()
@@ -81,7 +80,7 @@ struct TidalCurrentPredictionView: View {
             }
         }
     }
-    
+
     // MARK: - View Components
     private var dateSelectionView: some View {
         HStack {
@@ -95,14 +94,14 @@ struct TidalCurrentPredictionView: View {
                     .frame(width: 40, height: 40)
                     .foregroundColor(.red)
             }
-            
+
             Spacer()
-            
+
             Text(viewModel.formattedSelectedDate)
                 .font(.title2)
-            
+
             Spacer()
-            
+
             Button(action: {
                 Task {
                     await viewModel.nextDay()
@@ -116,7 +115,7 @@ struct TidalCurrentPredictionView: View {
         }
         .padding(.horizontal)
     }
-    
+
     private var currentDataView: some View {
         VStack(spacing: 10) {
             // Station name and favorite button
@@ -126,9 +125,9 @@ struct TidalCurrentPredictionView: View {
                     .fontWeight(.bold)
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
-                
+
                 Spacer()
-                
+
                 Button(action: {
                     Task {
                         await viewModel.toggleFavorite()
@@ -140,7 +139,7 @@ struct TidalCurrentPredictionView: View {
                         .foregroundColor(viewModel.isFavorite ? .yellow : .gray)
                 }
             }
-            
+
             // Navigation buttons
             HStack {
                 Button(action: {
@@ -152,9 +151,9 @@ struct TidalCurrentPredictionView: View {
                         .foregroundColor(viewModel.canGoBackward ? .red : .gray.opacity(0.5))
                 }
                 .disabled(!viewModel.canGoBackward)
-                
+
                 Spacer()
-                
+
                 Button(action: {
                     viewModel.nextPrediction()
                 }) {
@@ -165,16 +164,16 @@ struct TidalCurrentPredictionView: View {
                 }
                 .disabled(!viewModel.canGoForward)
             }
-            
+
             if let prediction = viewModel.currentPrediction {
                 // Time
                 Text(prediction.formattedTime)
                     .font(.system(size: 36))
-                
+
                 // Speed and Flow Direction
                 Text("\(prediction.formattedVelocity) kts \(prediction.flowDirection)")
                     .font(.title2)
-                
+
                 // Direction
                 Text("Direction \(prediction.directionDisplay)")
                     .font(.title3)
@@ -191,35 +190,35 @@ struct TidalCurrentPredictionView: View {
                 .background(RoundedRectangle(cornerRadius: 10).fill(Color(.systemBackground)))
         )
     }
-    
+
     private var extremesTableView: some View {
         VStack(spacing: 10) {
             Text("Today's Currents")
                 .font(.headline)
                 .padding(.top, 5)
-            
+
             // Header row
             HStack {
                 Text("Time")
                     .font(.subheadline)
                     .fontWeight(.bold)
                     .frame(width: 80, alignment: .leading)
-                
+
                 Text("Event")
                     .font(.subheadline)
                     .fontWeight(.bold)
                     .frame(maxWidth: .infinity, alignment: .center)
-                
+
                 Text("Speed")
                     .font(.subheadline)
                     .fontWeight(.bold)
                     .frame(width: 80, alignment: .trailing)
             }
             .padding(.horizontal)
-            
+
             // Divider
             Divider()
-            
+
             // Data rows
             ScrollView {
                 VStack(spacing: 5) {
@@ -229,12 +228,12 @@ struct TidalCurrentPredictionView: View {
                                 .font(.subheadline)
                                 .foregroundColor(extreme.isNextEvent ? .green : (extreme.isMostRecentPast ? .orange : .primary))
                                 .frame(width: 80, alignment: .leading)
-                            
+
                             Text(extreme.event)
                                 .font(.subheadline)
                                 .foregroundColor(extreme.isNextEvent ? .green : (extreme.isMostRecentPast ? .orange : .primary))
                                 .frame(maxWidth: .infinity, alignment: .center)
-                            
+
                             Text(String(format: "%.1f kts", extreme.speed))
                                 .font(.subheadline)
                                 .foregroundColor(extreme.isNextEvent ? .green : (extreme.isMostRecentPast ? .orange : .primary))
@@ -242,7 +241,7 @@ struct TidalCurrentPredictionView: View {
                         }
                         .padding(.horizontal)
                         .padding(.vertical, 5)
-                        
+
                         Divider()
                     }
                 }
@@ -256,7 +255,7 @@ struct TidalCurrentPredictionView: View {
                 .background(RoundedRectangle(cornerRadius: 10).fill(Color(.systemBackground)))
         )
     }
-    
+
     private var webViewButton: some View {
         Button(action: {
             viewModel.viewStationWebsite()

@@ -4,26 +4,26 @@ import Supabase
 
 /// Cloud-only weather favorites service - eliminates local storage and sync complexity
 class WeatherFavoritesCloudService {
-    
+
     // MARK: - Dependencies
     private let supabaseManager: SupabaseManager
-    
+
     // MARK: - Initialization
     init(supabaseManager: SupabaseManager = SupabaseManager.shared) {
         self.supabaseManager = supabaseManager
     }
-    
+
     // MARK: - Core Operations
-    
+
     /// Add a weather location to favorites (cloud-only)
     func addFavorite(latitude: Double, longitude: Double, locationName: String) async -> Result<Void, Error> {
-        
+
         guard let session = try? await supabaseManager.getSession() else {
             return .failure(WeatherFavoritesError.notAuthenticated)
         }
-        
+
         let deviceId = await UIDevice.current.identifierForVendor?.uuidString ?? "unknown"
-        
+
         let favorite = RemoteWeatherFavorite(
             id: nil,
             userId: session.user.id,
@@ -36,9 +36,9 @@ class WeatherFavoritesCloudService {
             createdAt: nil,
             updatedAt: nil
         )
-        
-        print("🗄️ WEATHER_FAVORITES_CLOUD: Adding favorite with user_id: \(session.user.id) (UUID), lat: \(latitude), lng: \(longitude)")
-        
+
+        print("🗄️ WEATHER_FAVORITES_CLOUD: Adding user favorite location")
+
         do {
             let _: PostgrestResponse<[RemoteWeatherFavorite]> = try await supabaseManager
                 .from("user_weather_favorites")
@@ -50,60 +50,60 @@ class WeatherFavoritesCloudService {
             return .failure(error)
         }
     }
-    
+
     /// Remove a weather location from favorites by ID (cloud-only)
     func removeFavorite(id: String) async -> Result<Void, Error> {
-        
+
         guard let session = try? await supabaseManager.getSession() else {
             return .failure(WeatherFavoritesError.notAuthenticated)
         }
-        
+
         do {
             print("🗄️ WEATHER_FAVORITES_CLOUD: Attempting DELETE with id: \(id)")
-            
+
             // First, let's check if the record exists
             let checkResponse: PostgrestResponse<[RemoteWeatherFavorite]> = try await supabaseManager
                 .from("user_weather_favorites")
                 .select("*")
                 .eq("id", value: id)
                 .execute()
-            
+
             print("🗄️ WEATHER_FAVORITES_CLOUD: Found \(checkResponse.value.count) records with id: \(id)")
             if let record = checkResponse.value.first {
                 print("🗄️ WEATHER_FAVORITES_CLOUD: Record found - name: \(record.locationName), user: \(record.userId)")
             }
-            
+
             // Delete by primary key ID - most reliable and precise
             let response = try await supabaseManager
                 .from("user_weather_favorites")
                 .delete()
                 .eq("id", value: id)
                 .execute()
-            
+
             print("🗄️ WEATHER_FAVORITES_CLOUD: DELETE response status: \(response.response.statusCode)")
             print("🗄️ WEATHER_FAVORITES_CLOUD: DELETE response data: \(String(data: response.data, encoding: .utf8) ?? "No data")")
-            
+
             return .success(())
         } catch {
             print("❌ WEATHER_FAVORITES_CLOUD: DELETE failed with error: \(error)")
             return .failure(error)
         }
     }
-    
+
     /// Get all weather location favorites (cloud-only)
     func getFavorites() async -> Result<[WeatherLocationFavorite], Error> {
-        
+
         guard let session = try? await supabaseManager.getSession() else {
             return .failure(WeatherFavoritesError.notAuthenticated)
         }
-        
+
         do {
             let response: PostgrestResponse<[RemoteWeatherFavorite]> = try await supabaseManager
                 .from("user_weather_favorites")
                 .select("*")
                 .eq("user_id", value: session.user.id)
                 .execute()
-            
+
             let favorites = response.value.map { remoteFavorite in
                 WeatherLocationFavorite(
                     id: Int64(remoteFavorite.id?.uuidString.hashValue ?? 0), // Convert UUID to Int64 for compatibility
@@ -118,20 +118,20 @@ class WeatherFavoritesCloudService {
                     remoteId: remoteFavorite.id?.uuidString
                 )
             }
-            
+
             return .success(favorites)
         } catch {
             return .failure(error)
         }
     }
-    
+
     /// Check if a weather location is favorited (cloud-only)
     func isFavorite(latitude: Double, longitude: Double) async -> Result<Bool, Error> {
-        
+
         guard let session = try? await supabaseManager.getSession() else {
             return .failure(WeatherFavoritesError.notAuthenticated)
         }
-        
+
         do {
             let response: PostgrestResponse<[RemoteWeatherFavorite]> = try await supabaseManager
                 .from("user_weather_favorites")
@@ -140,19 +140,19 @@ class WeatherFavoritesCloudService {
                 .eq("latitude", value: latitude)
                 .eq("longitude", value: longitude)
                 .execute()
-            
+
             return .success(!response.value.isEmpty)
         } catch {
             return .failure(error)
         }
     }
-    
+
     /// Toggle favorite status for a weather location (cloud-only)
     func toggleFavorite(latitude: Double, longitude: Double, locationName: String) async -> Result<Bool, Error> {
-        
+
         // First check current status
         let currentStatusResult = await isFavorite(latitude: latitude, longitude: longitude)
-        
+
         switch currentStatusResult {
         case .success(let isCurrentlyFavorited):
             if isCurrentlyFavorited {
@@ -168,14 +168,14 @@ class WeatherFavoritesCloudService {
             return .failure(error)
         }
     }
-    
+
     /// Update location name for a weather favorite (cloud-only) - UNIQUE TO WEATHER FAVORITES
     func updateLocationName(latitude: Double, longitude: Double, newName: String) async -> Result<Void, Error> {
-        
+
         guard let session = try? await supabaseManager.getSession() else {
             return .failure(WeatherFavoritesError.notAuthenticated)
         }
-        
+
         do {
             let _: PostgrestResponse<[RemoteWeatherFavorite]> = try await supabaseManager
                 .from("user_weather_favorites")
@@ -201,7 +201,7 @@ enum WeatherFavoritesError: LocalizedError {
     case notAuthenticated
     case invalidData
     case networkError
-    
+
     var errorDescription: String? {
         switch self {
         case .notAuthenticated:
@@ -213,4 +213,3 @@ enum WeatherFavoritesError: LocalizedError {
         }
     }
 }
-

@@ -5,7 +5,6 @@
 //  Created by Timothy Russell on 5/10/25.
 //
 
-
 import Foundation
 import CoreLocation
 import SwiftUI
@@ -78,7 +77,7 @@ class BuoyStationsViewModel: ObservableObject {
             let favoriteIdsResult = await buoyFavoritesCloudService.getFavoriteStationIds()
             let favoriteIds = (try? favoriteIdsResult.get()) ?? Set<String>()
             print("⏰ ViewModel (Buoys): Loaded \(favoriteIds.count) favorites from cloud at \(Date())")
-            
+
             for i in 0..<stations.count {
                 stations[i].isFavorite = favoriteIds.contains(stations[i].id)
             }
@@ -168,15 +167,15 @@ class BuoyStationsViewModel: ObservableObject {
 
     func toggleStationFavorite(stationId: String) async {
         print("⭐ ViewModel (Buoys): Toggling favorite status for \(stationId) (CLOUD-ONLY)")
-        
+
         // Find the station to get its details for the cloud service
         guard let index = allStations.firstIndex(where: { $0.station.id == stationId }) else {
             print("❌ ViewModel (Buoys): Station \(stationId) not found in allStations")
             return
         }
-        
+
         let station = allStations[index].station
-        
+
         let result = await buoyFavoritesCloudService.toggleFavorite(
             stationId: stationId,
             stationName: station.name,
@@ -186,7 +185,7 @@ class BuoyStationsViewModel: ObservableObject {
             meteorological: station.meteorological,
             currents: station.currents
         )
-        
+
         switch result {
         case .success(let newFavoriteStatus):
             await MainActor.run {

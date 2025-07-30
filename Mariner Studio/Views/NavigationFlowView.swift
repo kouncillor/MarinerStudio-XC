@@ -1,5 +1,3 @@
-
-
 //
 //  NavigationFlowView.swift
 //  Mariner Studio
@@ -15,29 +13,29 @@ struct NavigationFlowView: View {
     @State private var offset: CGSize = .zero
     @State private var lastOffset: CGSize = .zero
     @State private var showViewDetails: Bool = false
-    @State private var selectedView: NavigationNode? = nil
+    @State private var selectedView: NavigationNode?
     @State private var searchText: String = ""
-    
+
     // Get all categories from the flow data
     private var categories: [String] {
         var allCategories = ["All"]
         allCategories.append(contentsOf: navigationFlowData.map { $0.category })
         return allCategories
     }
-    
+
     // Filter flow data based on selected category and search text
     private var filteredFlowData: [NavigationFlowSection] {
         if selectedSection == "All" && searchText.isEmpty {
             return navigationFlowData
         }
-        
+
         var filtered = navigationFlowData
-        
+
         // Filter by category if needed
         if selectedSection != "All" {
             filtered = filtered.filter { $0.category == selectedSection }
         }
-        
+
         // Filter by search text if present
         if !searchText.isEmpty {
             filtered = filtered.map { section in
@@ -48,7 +46,7 @@ struct NavigationFlowView: View {
                 return newSection
             }.filter { !$0.nodes.isEmpty }
         }
-        
+
         return filtered
     }
 
@@ -60,9 +58,9 @@ struct NavigationFlowView: View {
                 HStack {
                     Image(systemName: "magnifyingglass")
                         .foregroundColor(.gray)
-                    
+
                     TextField("Search views...", text: $searchText)
-                    
+
                     if !searchText.isEmpty {
                         Button(action: {
                             searchText = ""
@@ -76,7 +74,7 @@ struct NavigationFlowView: View {
                 .background(Color(.systemBackground))
                 .cornerRadius(10)
                 .padding(.trailing, 8)
-                
+
                 // Category picker
                 Picker("Section", selection: $selectedSection) {
                     ForEach(categories, id: \.self) { category in
@@ -88,7 +86,7 @@ struct NavigationFlowView: View {
             }
             .padding(.horizontal)
             .padding(.top)
-            
+
             // Flow visualization
             ScrollView([.horizontal, .vertical], showsIndicators: true) {
                 ZStack {
@@ -100,7 +98,7 @@ struct NavigationFlowView: View {
                                     .font(.title2)
                                     .fontWeight(.bold)
                                     .padding(.bottom, 10)
-                                
+
                                 FlowSection(section: section, onViewSelected: { node in
                                     selectedView = node
                                     showViewDetails = true
@@ -125,12 +123,12 @@ struct NavigationFlowView: View {
                                 height: lastOffset.height + value.translation.height
                             )
                         }
-                        .onEnded { value in
+                        .onEnded { _ in
                             lastOffset = offset
                         }
                 )
             }
-            
+
             // Zoom controls
             HStack {
                 Button(action: {
@@ -144,7 +142,7 @@ struct NavigationFlowView: View {
                         .clipShape(Circle())
                         .shadow(radius: 1)
                 }
-                
+
                 Button(action: {
                     zoomScale = 1.0
                     offset = .zero
@@ -157,7 +155,7 @@ struct NavigationFlowView: View {
                         .cornerRadius(8)
                         .shadow(radius: 1)
                 }
-                
+
                 Button(action: {
                     if zoomScale < 3.0 {
                         zoomScale += 0.25
@@ -185,35 +183,35 @@ struct NavigationFlowView: View {
 struct FlowSection: View {
     let section: NavigationFlowSection
     let onViewSelected: (NavigationNode) -> Void
-    
+
     private let nodeWidth: CGFloat = 160  // Increased width for better readability
     private let nodeHeight: CGFloat = 80  // Increased height
     private let horizontalSpacing: CGFloat = 100  // Increased spacing
     private let verticalSpacing: CGFloat = 120    // Increased spacing
-    
+
     var body: some View {
         ZStack {
             // Connections between nodes
             ForEach(section.connections, id: \.id) { connection in
                 if let fromNode = section.nodes.first(where: { $0.id == connection.from }),
                    let toNode = section.nodes.first(where: { $0.id == connection.to }) {
-                    
+
                     let fromPos = nodePosition(fromNode)
                     let toPos = nodePosition(toNode)
-                    
+
                     Path { path in
                         let startX = fromPos.x + nodeWidth
                         let startY = fromPos.y + nodeHeight/2
                         let endX = toPos.x
                         let endY = toPos.y + nodeHeight/2
-                        
+
                         path.move(to: CGPoint(x: startX, y: startY))
-                        
+
                         // Create smooth bezier curve for connections
                         let controlPointOffset = horizontalSpacing * 0.6
                         let control1X = startX + controlPointOffset
                         let control2X = endX - controlPointOffset
-                        
+
                         path.addCurve(
                             to: CGPoint(x: endX, y: endY),
                             control1: CGPoint(x: control1X, y: startY),
@@ -228,7 +226,7 @@ struct FlowSection: View {
                         ),
                         style: StrokeStyle(lineWidth: 2.5, lineCap: .round)
                     )
-                    
+
                     // Arrow at the end of the connection
                     let arrowSize: CGFloat = 8
                     Path { path in
@@ -240,11 +238,11 @@ struct FlowSection: View {
                     .fill(Color.purple.opacity(0.7))
                 }
             }
-            
+
             // Nodes
             ForEach(section.nodes) { node in
                 let position = nodePosition(node)
-                
+
                 ZStack {
                     RoundedRectangle(cornerRadius: 12)
                         .fill(nodeColor(for: node))
@@ -254,14 +252,14 @@ struct FlowSection: View {
                             RoundedRectangle(cornerRadius: 12)
                                 .stroke(nodeBorderColor(for: node), lineWidth: 2)
                         )
-                    
+
                     VStack(spacing: 4) {
                         Text(node.name)
                             .font(.system(size: 12, weight: .semibold))
                             .multilineTextAlignment(.center)
                             .lineLimit(2)
                             .padding(.horizontal, 6)
-                        
+
                         if !node.description.isEmpty {
                             Text(node.description)
                                 .font(.system(size: 10))
@@ -270,7 +268,7 @@ struct FlowSection: View {
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal, 4)
                         }
-                        
+
                         // Node type indicator
                         Text(node.type.rawValue.uppercased())
                             .font(.system(size: 8, weight: .medium))
@@ -291,14 +289,14 @@ struct FlowSection: View {
         }
         .frame(width: calculateWidth(), height: calculateHeight())
     }
-    
+
     // Calculate position for a node based on its level and position
     private func nodePosition(_ node: NavigationNode) -> CGPoint {
         let x = CGFloat(node.level) * (nodeWidth + horizontalSpacing)
         let y = CGFloat(node.position) * (nodeHeight + verticalSpacing)
         return CGPoint(x: x, y: y)
     }
-    
+
     // Determine background color based on node type
     private func nodeColor(for node: NavigationNode) -> Color {
         switch node.type {
@@ -314,7 +312,7 @@ struct FlowSection: View {
             return Color.red.opacity(0.15)
         }
     }
-    
+
     // Determine border color based on node type
     private func nodeBorderColor(for node: NavigationNode) -> Color {
         switch node.type {
@@ -330,23 +328,23 @@ struct FlowSection: View {
             return Color.red
         }
     }
-    
+
     // Calculate the total width needed for this section
     private func calculateWidth() -> CGFloat {
         if section.nodes.isEmpty {
             return nodeWidth
         }
-        
+
         let maxLevel = section.nodes.map { $0.level }.max() ?? 0
         return CGFloat(maxLevel + 1) * (nodeWidth + horizontalSpacing)
     }
-    
+
     // Calculate the total height needed for this section
     private func calculateHeight() -> CGFloat {
         if section.nodes.isEmpty {
             return nodeHeight
         }
-        
+
         let maxPosition = section.nodes.map { $0.position }.max() ?? 0
         return CGFloat(maxPosition + 1) * (nodeHeight + verticalSpacing)
     }
@@ -356,7 +354,7 @@ struct FlowSection: View {
 struct ViewDetailSheet: View {
     let node: NavigationNode
     @Environment(\.presentationMode) var presentationMode
-    
+
     var body: some View {
         NavigationView {
             VStack(alignment: .leading, spacing: 20) {
@@ -364,9 +362,9 @@ struct ViewDetailSheet: View {
                 Text(node.name)
                     .font(.title)
                     .fontWeight(.bold)
-                
+
                 Divider()
-                
+
                 // View type with colored indicator
                 HStack {
                     Text("Type:")
@@ -381,7 +379,7 @@ struct ViewDetailSheet: View {
                         .foregroundColor(typeColor(for: node.type))
                         .fontWeight(.medium)
                 }
-                
+
                 // View description
                 if !node.description.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
@@ -393,7 +391,7 @@ struct ViewDetailSheet: View {
                             .cornerRadius(8)
                     }
                 }
-                
+
                 // Position in flow
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Position in Flow:")
@@ -408,7 +406,7 @@ struct ViewDetailSheet: View {
                         .cornerRadius(8)
                     }
                 }
-                
+
                 // File path
                 VStack(alignment: .leading, spacing: 8) {
                     Text("File Path:")
@@ -419,7 +417,7 @@ struct ViewDetailSheet: View {
                         .background(Color(.systemGray6))
                         .cornerRadius(8)
                 }
-                
+
                 Spacer()
             }
             .padding()
@@ -429,7 +427,7 @@ struct ViewDetailSheet: View {
             })
         }
     }
-    
+
     private func typeColor(for type: NodeType) -> Color {
         switch type {
         case .mainCategory:
@@ -454,7 +452,3 @@ struct NavigationFlowView_Previews: PreviewProvider {
         }
     }
 }
-
-
-
-

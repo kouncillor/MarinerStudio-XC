@@ -1,14 +1,13 @@
-
 import SwiftUI
 
 struct HourlyForecastView: View {
     @StateObject private var viewModel: HourlyForecastViewModel
     @Environment(\.presentationMode) var presentationMode
-    
+
     init(viewModel: HourlyForecastViewModel) {
         _viewModel = StateObject(wrappedValue: viewModel)
     }
-    
+
     var body: some View {
         VStack(spacing: 0) {
             // Location and Day Navigation
@@ -16,7 +15,7 @@ struct HourlyForecastView: View {
                 Text(viewModel.locationDisplay)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
-                
+
                 HStack {
                     Button(action: {
                         viewModel.previousDay()
@@ -27,14 +26,14 @@ struct HourlyForecastView: View {
                     }
                     .disabled(!viewModel.canGoToPreviousDay)
                     .padding(.horizontal)
-                    
+
                     Text(viewModel.currentDayDisplay)
                         .font(.headline)
                         .fontWeight(.bold)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
                         .id("day-\(viewModel.currentDayIndex)") // Add ID to force refresh when day changes
-                    
+
                     Button(action: {
                         viewModel.nextDay()
                     }) {
@@ -49,7 +48,7 @@ struct HourlyForecastView: View {
             }
             .padding(.top, 8)
             .background(Color(UIColor.systemGroupedBackground))
-            
+
             // Column Headers
             HStack(spacing: 0) {
                 HeaderColumn(iconSource: .system("clock", .orange), title: "Time")
@@ -61,7 +60,7 @@ struct HourlyForecastView: View {
             }
             .padding(.vertical, 8)
             .background(Color(UIColor.systemBlue).opacity(0.1))
-            
+
             // Hourly Data
             ScrollView {
                 if viewModel.isLoading {
@@ -82,7 +81,7 @@ struct HourlyForecastView: View {
                                 forecast: forecast,
                                 isEvenRow: index % 2 == 0
                             )
-                            
+
                             Divider()
                                 .padding(.leading)
                         }
@@ -95,8 +94,7 @@ struct HourlyForecastView: View {
         .toolbarBackground(Color(red: 0.53, green: 0.81, blue: 0.98), for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .withHomeButton()
-        
-        
+
         .navigationBarBackButtonHidden(false)
         .background(Color(UIColor.systemGroupedBackground))
         .onAppear {
@@ -117,7 +115,7 @@ struct HourlyForecastView: View {
 struct HeaderColumn: View {
     let iconSource: IconSource
     let title: String
-    
+
     var body: some View {
         VStack(spacing: 4) {
             // Display either SF Symbol or custom image based on iconSource
@@ -135,7 +133,7 @@ struct HeaderColumn: View {
                         .foregroundColor(color ?? .primary)
                 }
             }
-            
+
             Text(title)
                 .font(.caption)
                 .fontWeight(.medium)
@@ -147,7 +145,7 @@ struct HeaderColumn: View {
 struct HourlyForecastRow: View {
     let forecast: HourlyForecastItem
     let isEvenRow: Bool
-    
+
     var body: some View {
         HStack(alignment: .center, spacing: 0) {
             // Time Column
@@ -156,54 +154,54 @@ struct HourlyForecastRow: View {
                     .font(.system(size: 14, weight: .medium))
             }
             .frame(maxWidth: .infinity)
-            
+
             // Temperature Column
             VStack(alignment: .center, spacing: 2) {
                 Text("\(Int(forecast.temperature.rounded()))°")
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.red)
-                
+
                 Text("\(Int(forecast.dewPoint.rounded()))° DP")
                     .font(.system(size: 12))
                     .foregroundColor(.blue)
-                
+
                 Text("\(forecast.humidity)% RH")
                     .font(.system(size: 12))
                     .foregroundColor(.green)
             }
             .frame(maxWidth: .infinity)
-            
+
             // Wind Column
             VStack(alignment: .center, spacing: 2) {
                 Text("\(forecast.cardinalDirection)")
                     .font(.system(size: 14, weight: .medium))
-                
+
                 Text("\(Int(forecast.windSpeed.rounded()))")
                     .font(.system(size: 14))
-                
+
                 Text("\(Int(forecast.windGusts.rounded()))")
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
             }
             .frame(maxWidth: .infinity)
-            
+
             // Visibility Column
             VStack(alignment: .center, spacing: 4) {
                 Text(forecast.visibility)
                     .font(.system(size: 14))
-                
+
                 // Weather icon
                 Image(systemName: weatherIconForCode(forecast.weatherCode, isNight: forecast.isNightTime))
                     .font(.system(size: 16))
                     .foregroundColor(colorForWeatherCode(forecast.weatherCode))
             }
             .frame(maxWidth: .infinity)
-            
+
             // Pressure Column
             VStack(alignment: .center, spacing: 4) {
                 Text(String(format: "%.2f", forecast.pressure))
                     .font(.system(size: 14))
-                
+
                 if let _ = forecast.previousPressure {
                     Image(systemName: forecast.pressureTrendIcon)
                         .font(.system(size: 14))
@@ -212,12 +210,12 @@ struct HourlyForecastRow: View {
                 }
             }
             .frame(maxWidth: .infinity)
-            
+
             // Precipitation Column
             VStack(alignment: .center, spacing: 4) {
                 Text("\(Int(forecast.precipitationChance.rounded()))%")
                     .font(.system(size: 14))
-                
+
                 Text(String(format: "%.2f\"", forecast.precipitation))
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
@@ -231,12 +229,12 @@ struct HourlyForecastRow: View {
                 Color(UIColor.systemBackground)
         )
     }
-    
+
     // Helper functions to map weather codes to SF Symbols
     private func weatherIconForCode(_ code: Int, isNight: Bool) -> String {
         return WeatherIconMapper.mapWeatherCode(code, isNight: isNight)
     }
-    
+
     private func colorForWeatherCode(_ code: Int) -> Color {
         return WeatherIconMapper.colorForWeatherCode(code)
     }

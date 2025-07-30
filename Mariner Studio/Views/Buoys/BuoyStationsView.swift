@@ -1,12 +1,9 @@
-
-
-
 import SwiftUI
 
 struct BuoyStationsView: View {
     // MARK: - Properties
     @StateObject private var viewModel: BuoyStationsViewModel
-    
+
     // MARK: - Initialization
     init(
         buoyService: BuoyApiService = BuoyServiceImpl(),
@@ -19,13 +16,13 @@ struct BuoyStationsView: View {
             buoyFavoritesCloudService: buoyFavoritesCloudService
         ))
     }
-    
+
     // MARK: - Body
     var body: some View {
         VStack(spacing: 0) {
             // Search Bar and Filters
             searchAndFilterBar
-            
+
             // Main Content
             ZStack {
                 if viewModel.isLoading {
@@ -46,24 +43,24 @@ struct BuoyStationsView: View {
         .toolbarBackground(.purple, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .withHomeButton()
-        
+
         .task {
             await viewModel.loadStations()
         }
     }
-    
+
     // MARK: - View Components
     private var searchAndFilterBar: some View {
         HStack {
             HStack {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(.gray)
-                
+
                 TextField("Search stations...", text: $viewModel.searchText)
                     .onChange(of: viewModel.searchText) {
                         viewModel.filterStations()
                     }
-                
+
                 if !viewModel.searchText.isEmpty {
                     Button(action: {
                         viewModel.clearSearch()
@@ -81,7 +78,7 @@ struct BuoyStationsView: View {
                     .stroke(Color(.systemGray4), lineWidth: 1)
             )
             .padding(.trailing, 8)
-            
+
             Button(action: {
                 viewModel.toggleFavorites()
             }) {
@@ -93,7 +90,7 @@ struct BuoyStationsView: View {
         .padding([.horizontal, .top])
         .background(Color(.systemGroupedBackground))
     }
-    
+
     private var stationsList: some View {
         List {
             ForEach(viewModel.stations) { stationWithDistance in
@@ -122,7 +119,7 @@ struct BuoyStationsView: View {
 struct BuoyStationRow: View {
     let stationWithDistance: StationWithDistance<BuoyStation>
     let onToggleFavorite: () -> Void
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             // First Row: Station Name
@@ -134,7 +131,7 @@ struct BuoyStationRow: View {
                     : (stationWithDistance.station.name.contains("-")
                         ? stationWithDistance.station.name.components(separatedBy: "-").dropFirst().joined(separator: "-").trimmingCharacters(in: .whitespaces)
                         : stationWithDistance.station.name)
-                
+
                 Text(displayName)
                     .font(.headline)
                 Spacer()
@@ -143,7 +140,7 @@ struct BuoyStationRow: View {
                         .foregroundColor(stationWithDistance.station.isFavorite ? .yellow : .gray)
                 }
             }
-            
+
             // Second Row: Distance
             if !stationWithDistance.distanceDisplay.isEmpty {
                 Text(stationWithDistance.distanceDisplay)
@@ -151,14 +148,14 @@ struct BuoyStationRow: View {
                     .foregroundColor(.blue)
                     .fontWeight(.medium)
             }
-            
+
             // Third Row: Meteorological
             if let met = stationWithDistance.station.meteorological, met == "y" {
                 Text("Meteorological: Yes")
                     .font(.caption)
                     .foregroundColor(.green)
             }
-            
+
             // Fourth Row: Coordinates
             if let latitude = stationWithDistance.station.latitude,
                let longitude = stationWithDistance.station.longitude {

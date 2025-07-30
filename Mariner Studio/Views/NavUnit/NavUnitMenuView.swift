@@ -1,4 +1,3 @@
-
 import SwiftUI
 
 struct NavUnitMenuView: View {
@@ -16,7 +15,7 @@ struct NavUnitMenuView: View {
                         color: .yellow
                     )
                 }
-                
+
                 // Local NavUnits - System Icon
                 // Local NavUnits - System Icon
                 NavigationLink(destination: NavUnitsView(
@@ -29,8 +28,7 @@ struct NavUnitMenuView: View {
                         color: .green
                     )
                 }
-                
-    
+
             }
             .padding()
         }
@@ -40,7 +38,7 @@ struct NavUnitMenuView: View {
         .toolbarBackground(.blue, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .withHomeButton()
-        
+
     }
 }
 
@@ -95,4 +93,3 @@ struct MenuButtonContentNavUnit: View {
         )
     }
 }
-

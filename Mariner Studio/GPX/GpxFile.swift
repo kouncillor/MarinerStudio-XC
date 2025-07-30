@@ -5,13 +5,12 @@
 //  Created by Timothy Russell on 5/10/25.
 //
 
-
 import Foundation
 
 /// Main GPX file container model
 struct GpxFile: Codable {
     var route: GpxRoute
-    
+
     enum CodingKeys: String, CodingKey {
         case route = "rte"
     }
@@ -23,7 +22,7 @@ struct GpxRoute: Codable {
     var routePoints: [GpxRoutePoint]
     var totalDistance: Double = 0.0
     var averageSpeed: Double = 0.0
-    
+
     enum CodingKeys: String, CodingKey {
         case name
         case routePoints = "rtept"
@@ -39,7 +38,7 @@ struct GpxRoutePoint: Codable, Identifiable {
     var eta: Date = Date()
     var distanceToNext: Double = 0.0
     var bearingToNext: Double = 0.0
-    
+
     enum CodingKeys: String, CodingKey {
         case latitude = "lat"
         case longitude = "lon"

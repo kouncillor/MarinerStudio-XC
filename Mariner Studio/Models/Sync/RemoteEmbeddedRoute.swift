@@ -31,7 +31,7 @@ struct RemoteEmbeddedRoute: Codable, Identifiable, Hashable {
     let bboxSouth: Float?
     let bboxEast: Float?
     let bboxWest: Float?
-    
+
     enum CodingKeys: String, CodingKey {
         case id
         case name

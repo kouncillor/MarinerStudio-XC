@@ -1,4 +1,3 @@
-
 import MapKit
 import CoreLocation
 
@@ -8,14 +7,13 @@ struct MarinerMapData: Decodable {
     let centerLongitude: CLLocationDegrees
     let latitudeDelta: CLLocationDegrees
     let longitudeDelta: CLLocationDegrees
-    
+
     var region: MKCoordinateRegion {
         let center = CLLocationCoordinate2D(latitude: centerLatitude, longitude: centerLongitude)
         let span = MKCoordinateSpan(latitudeDelta: latitudeDelta, longitudeDelta: longitudeDelta)
         return MKCoordinateRegion(center: center, span: span)
     }
 }
-
 
 class NavObject: NSObject, Decodable, MKAnnotation {
     enum NavObjectType: Int, Decodable {
@@ -24,15 +22,15 @@ class NavObject: NSObject, Decodable, MKAnnotation {
         case tidalcurrentstation
         case buoystation
     }
-    
+
     var type: NavObjectType = .navunit
     var name: String = "" // Added name property
     var objectId: String = "" // Added objectId to store the original identifier
-    var currentBin: Int? = nil // Added currentBin for tidal current stations
-    
+    var currentBin: Int? // Added currentBin for tidal current stations
+
     private var latitude: CLLocationDegrees = 0
     private var longitude: CLLocationDegrees = 0
-    
+
     @objc dynamic var coordinate: CLLocationCoordinate2D {
         get {
             return CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
@@ -42,13 +40,9 @@ class NavObject: NSObject, Decodable, MKAnnotation {
             longitude = newValue.longitude
         }
     }
-    
+
     // MARK: - Title for annotation callout
     @objc var title: String? {
         return name
     }
 }
-
-
-
-

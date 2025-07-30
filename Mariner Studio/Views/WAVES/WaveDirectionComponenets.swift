@@ -37,13 +37,13 @@ struct VesselHeadingArrowView: View {
                 Image(systemName: "arrowtriangle.up.fill")
                     .font(.system(size: 16))
                     .foregroundColor(.green)
-                
+
                 // Arrow Shaft
                 Rectangle()
                     .frame(width: 3, height: 58)
                     .foregroundColor(.green)
             }
-            
+
             // Course Steered True label
             Text("CST°")
                 .font(.title3)
@@ -117,25 +117,25 @@ struct CompassMarkerView: View {
         }
         .rotationEffect(Angle(degrees: marker.degrees))
     }
-    
+
     // MARK: - Private Helper Methods
-    
+
     private func capsuleWidth() -> CGFloat {
         // Make cardinal direction markers slightly wider
         return marker.label.isEmpty ? 2 : 3
     }
-    
+
     private func capsuleHeight() -> CGFloat {
         // Make North marker taller, other cardinals slightly taller
         if marker.degrees == 0 { return 40 }
         if !marker.label.isEmpty { return 30 }
         return 20
     }
-    
+
     private func capsuleColor() -> Color {
         return marker.degrees == 0 ? .red : .gray
     }
-    
+
     // Counter-rotate text to keep it level with horizon
     private func textAngle() -> Angle {
         return Angle(degrees: compassDegrees - marker.degrees)

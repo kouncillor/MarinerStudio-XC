@@ -4,25 +4,25 @@ struct WeatherFavoritesView: View {
     @StateObject private var viewModel: WeatherFavoritesViewModel
     @EnvironmentObject var serviceProvider: ServiceProvider
     @Environment(\.colorScheme) var colorScheme
-    
+
     init(weatherFavoritesCloudService: WeatherFavoritesCloudService) {
         print("🏗️ VIEW: Initializing WeatherFavoritesView (CLOUD-ONLY)")
         print("🏗️ VIEW: Injecting WeatherFavoritesCloudService: \(type(of: weatherFavoritesCloudService))")
-        
+
         _viewModel = StateObject(wrappedValue: WeatherFavoritesViewModel(
             weatherFavoritesCloudService: weatherFavoritesCloudService
         ))
-        
+
         print("✅ VIEW: WeatherFavoritesView initialization complete (CLOUD-ONLY)")
     }
-    
+
     // State for navigation
     @State private var selectedFavorite: WeatherLocationFavorite?
     @State private var showWeatherDetail = false
-    
+
     var body: some View {
         VStack(spacing: 0) {
-            
+
             Group {
                 if viewModel.isLoading {
                     ProgressView("Loading favorites...")
@@ -33,7 +33,7 @@ struct WeatherFavoritesView: View {
                             .font(.largeTitle)
                             .foregroundColor(.orange)
                             .padding()
-                        
+
                         Text(viewModel.errorMessage)
                             .multilineTextAlignment(.center)
                             .padding()
@@ -45,17 +45,17 @@ struct WeatherFavoritesView: View {
                             .font(.system(size: 60))
                             .foregroundColor(.gray)
                             .padding()
-                        
+
                         Text("No Favorite Locations")
                             .font(.title2)
                             .fontWeight(.semibold)
-                        
+
                         Text("Locations you mark as favorites will appear here.")
                             .multilineTextAlignment(.center)
                             .foregroundColor(.secondary)
-                        
+
                         Spacer().frame(height: 20)
-                        
+
                         NavigationLink(destination: WeatherMapView()) {
                             HStack {
                                 Image(systemName: "map")
@@ -66,7 +66,7 @@ struct WeatherFavoritesView: View {
                             .foregroundColor(.white)
                             .cornerRadius(10)
                         }
-                        
+
                         NavigationLink(destination: CurrentLocalWeatherView()) {
                             HStack {
                                 Image(systemName: "location")
@@ -166,7 +166,7 @@ struct WeatherFavoritesView: View {
             viewModel.cleanup()
         }
     }
-    
+
 }
 
 // MARK: - RenameLocationView
@@ -174,7 +174,7 @@ struct RenameLocationView: View {
     @Binding var locationName: String
     @Binding var isPresented: Bool
     var onSave: () -> Void
-    
+
     var body: some View {
         NavigationView {
             Form {
@@ -201,7 +201,7 @@ struct RenameLocationView: View {
 // MARK: - FavoriteLocationRow
 struct FavoriteLocationRow: View {
     let favorite: WeatherLocationFavorite
-    
+
     var body: some View {
         HStack(spacing: 16) {
             // Location icon
@@ -212,30 +212,30 @@ struct FavoriteLocationRow: View {
                 .padding(8)
                 .background(Color.white.opacity(0.1))
                 .clipShape(Circle())
-            
+
             // Location info
             VStack(alignment: .leading, spacing: 4) {
                 Text(favorite.locationName)
                     .font(.headline)
-                
+
                 Text("Lat: \(String(format: "%.4f", favorite.latitude)), Lon: \(String(format: "%.4f", favorite.longitude))")
                     .font(.caption)
                     .foregroundColor(.secondary)
-                
+
                 Text("Added: \(formatDate(favorite.createdAt))")
                     .font(.caption2)
                     .foregroundColor(.secondary)
             }
-            
+
             Spacer()
-            
+
             // Navigate icon
             Image(systemName: "chevron.right")
                 .foregroundColor(.secondary)
         }
         .padding(.vertical, 8)
     }
-    
+
     private func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium

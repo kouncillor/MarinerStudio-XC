@@ -4,7 +4,7 @@ struct CurrentFavoritesView: View {
     @StateObject private var viewModel = CurrentFavoritesViewModel()
     @EnvironmentObject var serviceProvider: ServiceProvider
     @Environment(\.colorScheme) var colorScheme
-    
+
     var body: some View {
         ZStack {
             // Main content
@@ -16,27 +16,27 @@ struct CurrentFavoritesView: View {
         .toolbarBackground(.red, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .withHomeButton()
-        
+
         .onAppear {
             print("🌊 VIEW: CurrentFavoritesView appeared (CLOUD-ONLY)")
-            
+
             // Initialize location service
             viewModel.initialize(locationService: serviceProvider.locationService)
-            
+
             // Load favorites from cloud
             Task {
                 await viewModel.loadFavorites()
             }
         }
-        
+
         .onDisappear {
             print("🌊 VIEW: CurrentFavoritesView disappeared")
             viewModel.cleanup()
         }
     }
-    
+
     // MARK: - Main Content View
-    
+
     @ViewBuilder
     private var mainContentView: some View {
         Group {
@@ -51,14 +51,14 @@ struct CurrentFavoritesView: View {
             }
         }
     }
-    
+
     // MARK: - Loading View
-    
+
     private var loadingView: some View {
         VStack(spacing: 16) {
             ProgressView()
                 .scaleEffect(1.2)
-            
+
             Text("Loading favorites...")
                 .font(.headline)
         }
@@ -67,25 +67,25 @@ struct CurrentFavoritesView: View {
             print("🎨 VIEW: Loading view appeared")
         }
     }
-    
+
     // MARK: - Error View
-    
+
     private var errorView: some View {
         VStack(spacing: 16) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.largeTitle)
                 .foregroundColor(.orange)
                 .padding()
-            
+
             Text("Error Loading Favorites")
                 .font(.title2)
                 .fontWeight(.semibold)
-            
+
             Text(viewModel.errorMessage)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
                 .foregroundColor(.secondary)
-            
+
             Button("Retry") {
                 print("🔄 VIEW: Retry button tapped")
                 Task {
@@ -102,26 +102,26 @@ struct CurrentFavoritesView: View {
             print("🎨 VIEW: Error view appeared with message: \(viewModel.errorMessage)")
         }
     }
-    
+
     // MARK: - Empty State View
-    
+
     private var emptyStateView: some View {
         VStack(spacing: 16) {
             Image(systemName: "star.slash")
                 .font(.system(size: 60))
                 .foregroundColor(.gray)
                 .padding()
-            
+
             Text("No Favorite Stations")
                 .font(.title2)
                 .fontWeight(.semibold)
-            
+
             Text("Current stations you mark as favorites will appear here.")
                 .multilineTextAlignment(.center)
                 .foregroundColor(.secondary)
-            
+
             Spacer().frame(height: 20)
-            
+
             NavigationLink(destination: TidalCurrentStationsView(
                 tidalCurrentService: TidalCurrentServiceImpl(),
                 locationService: serviceProvider.locationService,
@@ -143,9 +143,9 @@ struct CurrentFavoritesView: View {
             print("🎨 VIEW: Empty state view appeared")
         }
     }
-    
+
     // MARK: - Favorites List View
-    
+
     private var favoritesListView: some View {
         VStack(spacing: 0) {
             List {
@@ -176,7 +176,7 @@ struct CurrentFavoritesView: View {
                     }
                 }
             }
-            
+
             .listStyle(InsetGroupedListStyle())
             .refreshable {
                 print("🔄 VIEW: Pull-to-refresh triggered (CLOUD-ONLY)")
@@ -191,19 +191,19 @@ struct CurrentFavoritesView: View {
 
 struct FavoriteCurrentStationRow: View {
     let station: TidalCurrentStation
-    
+
     var body: some View {
         HStack(spacing: 16) {
             Image(systemName: "arrow.left.arrow.right")
                 .resizable().frame(width: 28, height: 28).foregroundColor(.red)
                 .padding(8).background(Color.red.opacity(0.1)).clipShape(Circle())
-            
+
             VStack(alignment: .leading, spacing: 4) {
                 // Station name
                 Text(station.name)
                     .font(.headline)
                     .foregroundColor(.primary)
-                
+
                 // Depth - show actual depth or surface/n/a
                 if let depth = station.depth {
                     Text("Depth: \(String(format: "%.0f", depth)) ft")
@@ -214,7 +214,7 @@ struct FavoriteCurrentStationRow: View {
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
-                
+
                 // Distance from user
                 if let distance = station.distanceFromUser {
                     Text("\(String(format: "%.1f", distance)) mi")
@@ -222,7 +222,7 @@ struct FavoriteCurrentStationRow: View {
                         .foregroundColor(.blue)
                         .fontWeight(.medium)
                 }
-                
+
                 // Coordinates if available
                 if let latitude = station.latitude, let longitude = station.longitude {
                     Text("Coordinates: \(String(format: "%.4f", latitude)), \(String(format: "%.4f", longitude))")
@@ -230,9 +230,9 @@ struct FavoriteCurrentStationRow: View {
                         .foregroundColor(.gray)
                 }
             }
-            
+
             Spacer()
-            
+
             Image(systemName: "star.fill")
                 .foregroundColor(.yellow)
                 .font(.system(size: 16))

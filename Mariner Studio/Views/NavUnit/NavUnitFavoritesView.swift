@@ -1,4 +1,3 @@
-
 //
 //  NavUnitFavoritesView.swift
 //  Mariner Studio
@@ -14,7 +13,7 @@ struct NavUnitFavoritesView: View {
     @StateObject private var viewModel = NavUnitFavoritesViewModel()
     @EnvironmentObject var serviceProvider: ServiceProvider
     @Environment(\.colorScheme) var colorScheme
-    
+
     var body: some View {
         Group {
             if viewModel.isLoading && viewModel.favorites.isEmpty {
@@ -55,9 +54,9 @@ struct NavUnitFavoritesView: View {
             }
         }
     }
-    
+
     // MARK: - Sync Button
-    
+
     @ViewBuilder
     private func SyncButton() -> some View {
         if viewModel.isSyncing {
@@ -79,26 +78,26 @@ struct NavUnitFavoritesView: View {
             .disabled(viewModel.isLoading) // Disable while initial load is happening
         }
     }
-    
+
     // MARK: - Sync Icon State
-    
+
     private var syncIconName: String {
         return "arrow.clockwise"
     }
-    
+
     private var syncIconColor: Color {
         return .white
     }
-    
+
     // MARK: - Loading View
-    
+
     @ViewBuilder
     private func LoadingView() -> some View {
         VStack(spacing: 20) {
             ProgressView()
                 .scaleEffect(1.5)
                 .padding()
-            
+
             Text("Loading favorites...")
                 .font(.headline)
                 .foregroundColor(.secondary)
@@ -106,25 +105,25 @@ struct NavUnitFavoritesView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(.systemBackground))
     }
-    
+
     // MARK: - Error View
-    
+
     @ViewBuilder
     private func ErrorView(errorMessage: String, onRetry: @escaping () -> Void) -> some View {
         VStack(spacing: 20) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 60))
                 .foregroundColor(.orange)
-            
+
             Text("Error Loading Favorites")
                 .font(.title2)
                 .fontWeight(.semibold)
-            
+
             Text(errorMessage)
                 .multilineTextAlignment(.center)
                 .foregroundColor(.secondary)
                 .padding(.horizontal)
-            
+
             Button(action: onRetry) {
                 HStack {
                     Image(systemName: "arrow.clockwise")
@@ -140,26 +139,26 @@ struct NavUnitFavoritesView: View {
         .padding()
         .background(Color(.systemBackground))
     }
-    
+
     // MARK: - Empty State View
-    
+
     @ViewBuilder
     private func EmptyFavoritesView() -> some View {
         VStack(spacing: 20) {
             Image(systemName: "star.slash")
                 .font(.system(size: 60))
                 .foregroundColor(.gray)
-            
+
             Text("No Favorite Nav Units")
                 .font(.title2)
                 .fontWeight(.semibold)
-            
+
             Text("Add navigation units to your favorites from the nav units list or map view.")
                 .multilineTextAlignment(.center)
                 .foregroundColor(.secondary)
                 .font(.caption)
                 .padding(.horizontal, 40)
-            
+
             NavigationLink(destination: NavUnitsView(
                 navUnitService: serviceProvider.navUnitService,
                 locationService: serviceProvider.locationService
@@ -178,16 +177,15 @@ struct NavUnitFavoritesView: View {
         .padding()
         .background(Color(.systemBackground))
     }
-    
+
     // MARK: - Favorites List View
-    
+
     @ViewBuilder
     private func FavoritesListView() -> some View {
         VStack(spacing: 0) {
             // NEW: Sync Status View (like CurrentFavoritesView)
             SyncStatusView()
-            
-            
+
             // List of favorites
             List {
                 ForEach(viewModel.favorites) { navUnitWithDistance in
@@ -199,7 +197,7 @@ struct NavUnitFavoritesView: View {
                             favoritesService: serviceProvider.favoritesService,
                             noaaChartService: serviceProvider.noaaChartService
                         )
-                        
+
                         NavUnitDetailsView(viewModel: detailsViewModel)
                     } label: {
                         FavoriteNavUnitRow(navUnitWithDistance: navUnitWithDistance)
@@ -222,9 +220,9 @@ struct NavUnitFavoritesView: View {
             }
         }
     }
-    
+
     // MARK: - Sync Status View
-    
+
     @ViewBuilder
     private func SyncStatusView() -> some View {
         if viewModel.isSyncing {
@@ -249,7 +247,7 @@ struct NavUnitFavoritesView: View {
                     .font(.caption)
                     .foregroundColor(.red)
                 Spacer()
-                
+
                 Button("Retry") {
                     Task {
                         await viewModel.performManualSync()
@@ -289,7 +287,7 @@ struct NavUnitFavoritesView: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
                 Spacer()
-                
+
                 Button("Sync") {
                     Task {
                         await viewModel.performManualSync()
@@ -309,14 +307,14 @@ struct NavUnitFavoritesView: View {
 
 struct FavoriteNavUnitRow: View {
     let navUnitWithDistance: StationWithDistance<NavUnit>
-    
+
     private var navUnit: NavUnit {
         navUnitWithDistance.station
     }
-    
+
     private var distanceText: String {
         let distance = navUnitWithDistance.distanceFromUser
-        
+
         if distance == Double.greatestFiniteMagnitude {
             return "Location unknown"
         } else if distance < 1.0 {
@@ -325,7 +323,7 @@ struct FavoriteNavUnitRow: View {
             return String(format: "%.0f mi", distance)
         }
     }
-    
+
     private var coordinatesText: String {
         if let latitude = navUnit.latitude, let longitude = navUnit.longitude {
             return "Coordinates: \(String(format: "%.4f", latitude)), \(String(format: "%.4f", longitude))"
@@ -333,14 +331,14 @@ struct FavoriteNavUnitRow: View {
             return "Coordinates: Not available"
         }
     }
-    
+
     var body: some View {
         HStack(spacing: 12) {
             // Nav unit icon (consistent with NavUnitsView)
             Image("portfoureight")
                 .resizable()
                 .frame(width: 45, height: 45)
-            
+
             // Nav unit info
             VStack(alignment: .leading, spacing: 4) {
                 // Nav unit name
@@ -348,13 +346,13 @@ struct FavoriteNavUnitRow: View {
                     .font(.headline)
                     .fontWeight(.medium)
                     .lineLimit(2)
-                
+
                 // Distance
                 Text(distanceText)
                     .font(.subheadline)
                     .foregroundColor(.blue)
                     .fontWeight(.medium)
-                
+
                 // Facility type
                 if let facilityType = navUnit.facilityType, !facilityType.isEmpty {
                     Text(facilityType)
@@ -362,15 +360,15 @@ struct FavoriteNavUnitRow: View {
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                 }
-                
+
                 // Coordinates
                 Text(coordinatesText)
                     .font(.caption)
                     .foregroundColor(.gray)
             }
-            
+
             Spacer()
-            
+
             // Favorite star icon (moved to right side)
             Image(systemName: "star.fill")
                 .foregroundColor(.yellow)

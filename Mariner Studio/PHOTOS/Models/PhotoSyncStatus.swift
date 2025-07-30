@@ -15,47 +15,47 @@ struct PhotoSyncStatus {
     let cloudPhotos: Int
     let isAtLimit: Bool
     let lastSyncDate: Date?
-    
+
     // MARK: - Computed Properties
-    
+
     /// Photos available for upload
     var photosToUpload: Int {
         return pendingUploads
     }
-    
+
     /// Photos available for download
     var photosToDownload: Int {
         return cloudPhotos - downloadedPhotos
     }
-    
+
     /// Sync completion percentage (0.0 to 1.0)
     var syncProgress: Double {
         guard totalPhotos > 0 else { return 1.0 }
         return Double(uploadedPhotos) / Double(totalPhotos)
     }
-    
+
     /// Check if sync is in progress
     var isSyncing: Bool {
         return pendingUploads > 0
     }
-    
+
     /// Check if all local photos are uploaded
     var isFullyUploaded: Bool {
         return pendingUploads == 0 && totalPhotos > 0
     }
-    
+
     /// Check if all cloud photos are downloaded
     var isFullyDownloaded: Bool {
         return photosToDownload == 0 && cloudPhotos > 0
     }
-    
+
     /// Remaining photo slots before hitting the 10 photo limit
     var remainingSlots: Int {
         return max(0, 10 - totalPhotos)
     }
-    
+
     // MARK: - Initializers
-    
+
     init(
         totalPhotos: Int = 0,
         uploadedPhotos: Int = 0,
@@ -73,14 +73,14 @@ struct PhotoSyncStatus {
         self.isAtLimit = isAtLimit
         self.lastSyncDate = lastSyncDate
     }
-    
+
     // MARK: - Factory Methods
-    
+
     /// Empty status for nav units with no photos
     static var empty: PhotoSyncStatus {
         return PhotoSyncStatus()
     }
-    
+
     /// Status for nav units at the 10 photo limit
     static func atLimit(totalPhotos: Int, uploadedPhotos: Int) -> PhotoSyncStatus {
         return PhotoSyncStatus(
@@ -113,7 +113,7 @@ enum PhotoSyncError: Error, LocalizedError {
     case invalidImageData
     case supabaseError(String)
     case storageQuotaExceeded
-    
+
     var errorDescription: String? {
         switch self {
         case .noInternetConnection:
@@ -152,7 +152,7 @@ struct RemotePhoto: Codable {
     let mimeType: String?
     let createdAt: Date
     let updatedAt: Date
-    
+
     enum CodingKeys: String, CodingKey {
         case id
         case navUnitId = "nav_unit_id"

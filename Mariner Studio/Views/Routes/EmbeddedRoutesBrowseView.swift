@@ -9,18 +9,18 @@ import SwiftUI
 
 struct EmbeddedRoutesBrowseView: View {
     @StateObject private var viewModel: EmbeddedRoutesBrowseViewModel
-    
+
     init(allRoutesService: AllRoutesDatabaseService? = nil, routeCalculationService: RouteCalculationService? = nil) {
         _viewModel = StateObject(wrappedValue: EmbeddedRoutesBrowseViewModel(allRoutesService: allRoutesService, routeCalculationService: routeCalculationService))
     }
-    
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                
+
                 // Search Bar
                 searchBarView
-                
+
                 // Content
                 if viewModel.isLoading && viewModel.routes.isEmpty {
                     loadingView
@@ -29,7 +29,7 @@ struct EmbeddedRoutesBrowseView: View {
                 } else {
                     routesListView
                 }
-                
+
                 // Error message
                 if !viewModel.errorMessage.isEmpty {
                     errorView
@@ -50,23 +50,23 @@ struct EmbeddedRoutesBrowseView: View {
             }
         }
     }
-    
+
     // MARK: - Header View
-    
+
     private var headerView: some View {
         VStack(spacing: 8) {
             HStack {
                 Image(systemName: "map")
                     .font(.title2)
                     .foregroundColor(.white)
-                
+
                 Text("Available Routes")
                     .font(.headline)
                     .fontWeight(.semibold)
                     .foregroundColor(.white)
-                
+
                 Spacer()
-                
+
                 if !viewModel.routes.isEmpty {
                     Text("\(viewModel.filteredRoutes.count) of \(viewModel.routes.count) routes")
                         .font(.caption)
@@ -75,7 +75,7 @@ struct EmbeddedRoutesBrowseView: View {
             }
             .padding(.horizontal)
             .padding(.top)
-            
+
             if viewModel.isLoading && !viewModel.routes.isEmpty {
                 ProgressView("Refreshing...")
                     .font(.caption)
@@ -84,18 +84,18 @@ struct EmbeddedRoutesBrowseView: View {
         }
         .background(Color.orange)
     }
-    
+
     // MARK: - Search Bar
-    
+
     private var searchBarView: some View {
         HStack {
             HStack {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(.secondary)
-                
+
                 TextField("Search routes...", text: $viewModel.searchText)
                     .textFieldStyle(PlainTextFieldStyle())
-                
+
                 if !viewModel.searchText.isEmpty {
                     Button(action: {
                         viewModel.searchText = ""
@@ -115,9 +115,9 @@ struct EmbeddedRoutesBrowseView: View {
         .padding(.bottom, 8)
         .background(Color(.systemGroupedBackground))
     }
-    
+
     // MARK: - Routes List
-    
+
     private var routesListView: some View {
         List(viewModel.filteredRoutes) { route in
             RouteRowView(
@@ -135,14 +135,14 @@ struct EmbeddedRoutesBrowseView: View {
             viewModel.refresh()
         }
     }
-    
+
     // MARK: - Loading View
-    
+
     private var loadingView: some View {
         VStack(spacing: 16) {
             ProgressView()
                 .scaleEffect(1.2)
-            
+
             Text("Loading routes...")
                 .font(.headline)
                 .foregroundColor(.secondary)
@@ -150,27 +150,27 @@ struct EmbeddedRoutesBrowseView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(.systemGroupedBackground))
     }
-    
+
     // MARK: - Empty State
-    
+
     private var emptyStateView: some View {
         VStack(spacing: 20) {
             Image(systemName: viewModel.routes.isEmpty ? "map.circle" : "magnifyingglass.circle")
                 .font(.system(size: 60))
                 .foregroundColor(.gray)
-            
+
             Text(viewModel.routes.isEmpty ? "No Routes Available" : "No Results Found")
                 .font(.title2)
                 .fontWeight(.semibold)
-            
-            Text(viewModel.routes.isEmpty ? 
+
+            Text(viewModel.routes.isEmpty ?
                  "No embedded routes have been uploaded yet. Use the dev tools to upload some GPX files to get started." :
                  "No routes match your search criteria. Try adjusting your search terms.")
                 .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
-            
+
             if viewModel.routes.isEmpty {
                 Button("Refresh") {
                     viewModel.refresh()
@@ -186,21 +186,21 @@ struct EmbeddedRoutesBrowseView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(.systemGroupedBackground))
     }
-    
+
     // MARK: - Error View
-    
+
     private var errorView: some View {
         VStack(spacing: 8) {
             HStack {
                 Image(systemName: "exclamationmark.triangle")
                     .foregroundColor(.red)
-                
+
                 Text(viewModel.errorMessage)
                     .font(.caption)
                     .foregroundColor(.red)
-                
+
                 Spacer()
-                
+
                 Button("Dismiss") {
                     viewModel.errorMessage = ""
                 }
@@ -213,9 +213,9 @@ struct EmbeddedRoutesBrowseView: View {
             .padding(.horizontal)
         }
     }
-    
+
     // MARK: - Refresh Button
-    
+
     private var refreshButton: some View {
         Button(action: {
             viewModel.refresh()
@@ -233,17 +233,17 @@ struct RouteRowView: View {
     let isDownloading: Bool
     let isDownloaded: Bool
     let onDownload: () -> Void
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Route Header
             Text(route.name)
                 .font(.headline)
                 .fontWeight(.semibold)
-            
+
             // Route Stats
             routeStatsView
-            
+
             // Download Button at bottom
             downloadButton
         }
@@ -253,7 +253,7 @@ struct RouteRowView: View {
         .cornerRadius(12)
         .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
     }
-    
+
     private var downloadButton: some View {
         Button(action: onDownload) {
             HStack(spacing: 6) {
@@ -265,7 +265,7 @@ struct RouteRowView: View {
                 } else {
                     Image(systemName: "icloud.and.arrow.down")
                 }
-                
+
                 Text(buttonText)
                     .font(.caption)
                     .fontWeight(.medium)
@@ -278,7 +278,7 @@ struct RouteRowView: View {
         }
         .disabled(isDownloading || isDownloaded)
     }
-    
+
     private var buttonText: String {
         if isDownloading {
             return "Downloading..."
@@ -288,7 +288,7 @@ struct RouteRowView: View {
             return "Download"
         }
     }
-    
+
     private var buttonBackgroundColor: Color {
         if isDownloading {
             return Color.gray
@@ -298,7 +298,7 @@ struct RouteRowView: View {
             return Color.blue
         }
     }
-    
+
     private var routeDetailsView: some View {
         HStack(spacing: 16) {
             Label {
@@ -308,7 +308,7 @@ struct RouteRowView: View {
                 Image(systemName: "tag")
                     .foregroundColor(.orange)
             }
-            
+
             if let difficulty = route.difficulty {
                 Label {
                     Text(difficulty)
@@ -318,7 +318,7 @@ struct RouteRowView: View {
                         .foregroundColor(.red)
                 }
             }
-            
+
             if let region = route.region {
                 Label {
                     Text(region)
@@ -330,7 +330,7 @@ struct RouteRowView: View {
             }
         }
     }
-    
+
     private var routeStatsView: some View {
         HStack(spacing: 20) {
             statItem(
@@ -338,13 +338,13 @@ struct RouteRowView: View {
                 label: "Points",
                 value: "\(route.waypointCount)"
             )
-            
+
             statItem(
                 icon: "ruler",
                 label: "Distance",
                 value: formatDistance(route.totalDistance)
             )
-            
+
             if let duration = route.estimatedDurationHours {
                 statItem(
                     icon: "clock",
@@ -354,25 +354,25 @@ struct RouteRowView: View {
             }
         }
     }
-    
+
     private func statItem(icon: String, label: String, value: String) -> some View {
         VStack(spacing: 2) {
             HStack(spacing: 4) {
                 Image(systemName: icon)
                     .font(.caption2)
                     .foregroundColor(.blue)
-                
+
                 Text(label)
                     .font(.caption2)
                     .foregroundColor(.secondary)
             }
-            
+
             Text(value)
                 .font(.caption)
                 .fontWeight(.medium)
         }
     }
-    
+
     private func formatDistance(_ distance: Float) -> String {
         if distance < 1.0 {
             return String(format: "%.0f m", distance * 1000)
@@ -380,7 +380,7 @@ struct RouteRowView: View {
             return String(format: "%.1f km", distance)
         }
     }
-    
+
     private func formatDuration(_ hours: Float) -> String {
         if hours < 1.0 {
             return String(format: "%.0f min", hours * 60)
@@ -471,7 +471,7 @@ struct RouteRowView: View {
             bboxWest: -70.67
         )
     ]
-    
+
     // Create preview with mock route cards
     NavigationStack {
         List(mockRoutes) { route in

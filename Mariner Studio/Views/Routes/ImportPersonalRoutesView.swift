@@ -9,7 +9,7 @@ import SwiftUI
 
 struct ImportPersonalRoutesView: View {
     @StateObject private var viewModel: ImportPersonalRoutesViewModel
-    
+
     init(allRoutesService: AllRoutesDatabaseService? = nil, gpxService: ExtendedGpxServiceProtocol? = nil, routeCalculationService: RouteCalculationService? = nil) {
         _viewModel = StateObject(wrappedValue: ImportPersonalRoutesViewModel(
             allRoutesService: allRoutesService,
@@ -17,23 +17,23 @@ struct ImportPersonalRoutesView: View {
             routeCalculationService: routeCalculationService
         ))
     }
-    
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 20) {
                 // Header
                 headerView
-                
+
                 // Import Options
                 importOptionsView
-                
+
                 // Recent Imports
                 if !viewModel.importedRoutes.isEmpty {
                     recentImportsView
                 }
-                
+
                 Spacer()
-                
+
                 // Messages
                 messagesView
             }
@@ -45,21 +45,21 @@ struct ImportPersonalRoutesView: View {
             .withHomeButton()
         }
     }
-    
+
     // MARK: - Header
-    
+
     private var headerView: some View {
         VStack(spacing: 12) {
             VStack(spacing: 12) {
                 Image(systemName: "folder.fill.badge.plus")
                     .font(.system(size: 60))
                     .foregroundColor(.orange)
-                
+
                 Text("Import Personal Routes")
                     .font(.title2)
                     .fontWeight(.semibold)
                     .foregroundColor(.orange)
-                
+
                 Text("Import route files from your device, cloud storage, or other apps")
                     .font(.body)
                     .foregroundColor(.orange.opacity(0.8))
@@ -73,15 +73,15 @@ struct ImportPersonalRoutesView: View {
         .padding(.vertical)
         .background(Color.white)
     }
-    
+
     // MARK: - Import Options
-    
+
     private var importOptionsView: some View {
         VStack(spacing: 16) {
             Text("Import Sources")
                 .font(.headline)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            
+
             // File Picker Option
             importOptionCard(
                 icon: "doc.fill",
@@ -92,12 +92,12 @@ struct ImportPersonalRoutesView: View {
                     viewModel.importRouteFromFilePicker()
                 }
             )
-            
+
             // Future import options can be added here
             // For example: URL import, QR code import, etc.
         }
     }
-    
+
     private func importOptionCard(icon: String, title: String, subtitle: String, iconColor: Color, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 16) {
@@ -107,20 +107,20 @@ struct ImportPersonalRoutesView: View {
                     .frame(width: 40, height: 40)
                     .background(iconColor.opacity(0.1))
                     .cornerRadius(8)
-                
+
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
                         .font(.headline)
                         .foregroundColor(.primary)
-                    
+
                     Text(subtitle)
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.leading)
                 }
-                
+
                 Spacer()
-                
+
                 if viewModel.isImporting {
                     ProgressView()
                         .scaleEffect(0.8)
@@ -137,33 +137,33 @@ struct ImportPersonalRoutesView: View {
         }
         .disabled(viewModel.isImporting)
     }
-    
+
     // MARK: - Recent Imports
-    
+
     private var recentImportsView: some View {
         VStack(spacing: 12) {
             HStack {
                 Text("Recent Imports")
                     .font(.headline)
-                
+
                 Spacer()
-                
+
                 Text("\(viewModel.importedRoutes.count) imported")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
-            
+
             VStack(spacing: 8) {
                 ForEach(viewModel.importedRoutes.reversed(), id: \.self) { routeName in
                     HStack {
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundColor(.green)
-                        
+
                         Text(routeName)
                             .font(.caption)
-                        
+
                         Spacer()
-                        
+
                         Text("Imported")
                             .font(.caption2)
                             .foregroundColor(.secondary)
@@ -176,9 +176,9 @@ struct ImportPersonalRoutesView: View {
             }
         }
     }
-    
+
     // MARK: - Messages
-    
+
     private var messagesView: some View {
         VStack(spacing: 8) {
             // Success message
@@ -186,13 +186,13 @@ struct ImportPersonalRoutesView: View {
                 HStack {
                     Image(systemName: "checkmark.circle")
                         .foregroundColor(.green)
-                    
+
                     Text(viewModel.successMessage)
                         .font(.caption)
                         .foregroundColor(.green)
-                    
+
                     Spacer()
-                    
+
                     Button("Dismiss") {
                         viewModel.clearMessages()
                     }
@@ -203,19 +203,19 @@ struct ImportPersonalRoutesView: View {
                 .background(Color.green.opacity(0.1))
                 .cornerRadius(8)
             }
-            
+
             // Error message
             if !viewModel.errorMessage.isEmpty {
                 HStack {
                     Image(systemName: "exclamationmark.triangle")
                         .foregroundColor(.red)
-                    
+
                     Text(viewModel.errorMessage)
                         .font(.caption)
                         .foregroundColor(.red)
-                    
+
                     Spacer()
-                    
+
                     Button("Dismiss") {
                         viewModel.clearMessages()
                     }
@@ -226,13 +226,13 @@ struct ImportPersonalRoutesView: View {
                 .background(Color.red.opacity(0.1))
                 .cornerRadius(8)
             }
-            
+
             // Loading indicator
             if viewModel.isImporting {
                 HStack {
                     ProgressView()
                         .scaleEffect(0.8)
-                    
+
                     Text("Importing route...")
                         .font(.caption)
                         .foregroundColor(.secondary)

@@ -5,7 +5,6 @@
 //  Created by Timothy Russell on 5/10/25.
 //
 
-
 import Foundation
 
 struct WeatherConditionHelper {
@@ -37,7 +36,7 @@ struct WeatherConditionHelper {
             return "Snow showers"
         case 95, 96, 99: // Thunderstorm
             return "Thunderstorm"
-            
+
         // Classic OpenWeatherMap codes
         case 200...232: // Thunderstorm
             return "Thunderstorm"
@@ -71,7 +70,7 @@ struct WeatherConditionHelper {
             return "Unknown"
         }
     }
-    
+
     /// Gets the appropriate image name for a weather code
     static func getWeatherImage(_ code: Int) -> String {
         switch code {
@@ -100,7 +99,7 @@ struct WeatherConditionHelper {
             return "snowsixseven"
         case 95, 96, 99: // Thunderstorm
             return "thunderstormsixseven"
-            
+
         // Classic OpenWeatherMap codes
         case 200...232: // Thunderstorm
             return "thunderstormsixseven"

@@ -9,17 +9,17 @@ enum NetworkError: Error {
     case parsingError
     case dataError
     case timeoutError
-    
+
     // MARK: - Initialization
-    
+
     // Custom initializer for easier creation of network errors
     init(_ code: Int, _ message: String) {
         // Using serverError as a fallback for all custom error cases
         self = .serverError(statusCode: code)
     }
-    
+
     // MARK: - Properties
-    
+
     // User-friendly error descriptions
     var localizedDescription: String {
         switch self {
@@ -39,7 +39,7 @@ enum NetworkError: Error {
             return "Request timed out"
         }
     }
-    
+
     // More detailed user-friendly description
     var userFriendlyDescription: String {
         switch self {

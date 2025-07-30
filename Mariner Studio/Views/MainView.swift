@@ -1,4 +1,3 @@
-
 import SwiftUI
 import RevenueCat
 import RevenueCatUI
@@ -7,12 +6,12 @@ struct MainView: View {
     // 1. ACCESS THE VIEWMODEL
     // We get the authViewModel from the environment to call signOut()
     @EnvironmentObject var authViewModel: AuthenticationViewModel
-    
+
     @EnvironmentObject var serviceProvider: ServiceProvider
     @State private var navigationPath = NavigationPath()
-    
+
     let shouldClearNavigation: Bool
-    
+
     init(shouldClearNavigation: Bool = false) {
         self.shouldClearNavigation = shouldClearNavigation
     }
@@ -49,7 +48,7 @@ struct MainView: View {
                             title: "TIDES"
                         )
                     }
-                    
+
                     // CURRENTS
                     NavigationLink(destination: CurrentMenuView()) {
                         NavigationButtonContent(
@@ -57,7 +56,7 @@ struct MainView: View {
                             title: "CURRENTS"
                         )
                     }
-                    
+
                     // DOCKS
                     NavigationLink(destination: NavUnitMenuView()) {
                         NavigationButtonContent(
@@ -65,7 +64,7 @@ struct MainView: View {
                             title: "NAV UNITS"
                         )
                     }
-                    
+
                     // BUOYS
                     NavigationLink(destination: BuoyMenuView()) {
                         NavigationButtonContent(
@@ -81,7 +80,7 @@ struct MainView: View {
                             title: "ROUTES"
                         )
                     }
-                    
+
 //                    // VOYAGE PLAN
 //                    NavigationLink(destination: VoyagePlanMenuView()) {
 //                        NavigationButtonContent(
@@ -161,40 +160,39 @@ struct MainView: View {
             }
         }
     }
-    
+
     private func navigateToHome() {
         navigationPath = NavigationPath()
     }
-    
-    
+
     private func clearNavigationStack() {
          // Small delay to ensure view is fully loaded
          DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
              // Reset the navigation path
              navigationPath = NavigationPath()
-            
+
              // Try to clear the broader navigation context
              if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
                 let window = windowScene.windows.first,
                 let rootViewController = window.rootViewController {
-                
+
                  clearNavigationHierarchy(from: rootViewController)
              }
          }
      }
-    
+
      private func clearNavigationHierarchy(from viewController: UIViewController) {
          // If it's a navigation controller, pop to root
          if let navController = viewController as? UINavigationController {
              navController.popToRootViewController(animated: false)
          }
-        
+
          // Check for tab bar controllers
          if let tabBarController = viewController as? UITabBarController,
             let selectedNavController = tabBarController.selectedViewController as? UINavigationController {
              selectedNavController.popToRootViewController(animated: false)
          }
-        
+
          // Recursively check child view controllers
          for child in viewController.children {
              clearNavigationHierarchy(from: child)
@@ -259,7 +257,7 @@ struct NavigationButtonContent: View {
             Text(title)
                 .font(.largeTitle)
                 .multilineTextAlignment(.leading)
-            
+
             Spacer()
         }
         .frame(maxWidth: .infinity)
@@ -280,6 +278,3 @@ struct NavigationButtonContent: View {
         .environmentObject(AuthenticationViewModel())
         .environmentObject(ServiceProvider())
 }
-
-
-

@@ -3,7 +3,7 @@ import Foundation
 // MARK: - Error Handling
 struct ApiError: Error, LocalizedError {
     let message: String
-    
+
     var errorDescription: String? {
         return message
     }
@@ -18,21 +18,21 @@ protocol TidalHeightPredictionService {
 class TidalHeightPredictionServiceImpl: TidalHeightPredictionService {
     // MARK: - Constants
     private let baseUrl = "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter"
-    
+
     // MARK: - Properties
     private let urlSession: URLSession
-    
+
     // MARK: - Initialization
     init(urlSession: URLSession = .shared) {
         self.urlSession = urlSession
     }
-    
+
     // MARK: - Methods
     func getPredictions(stationId: String, date: Date) async throws -> TidalHeightPredictionResponse {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyyMMdd"
         let dateString = dateFormatter.string(from: date)
-        
+
         // Build URL exactly as in MAUI version
         let urlString = "\(baseUrl)?station=\(stationId)" +
                       "&begin_date=\(dateString)" +
@@ -43,30 +43,30 @@ class TidalHeightPredictionServiceImpl: TidalHeightPredictionService {
                       "&units=english" +
                       "&interval=hilo" +
                       "&format=json"
-        
+
         guard let url = URL(string: urlString) else {
             print("❌ Invalid URL: \(urlString)")
             throw URLError(.badURL)
         }
-        
+
         print("🌊 Fetching predictions from: \(url.absoluteString)")
-        
+
         do {
             let (data, response) = try await urlSession.data(from: url)
-            
+
             if let httpResponse = response as? HTTPURLResponse {
                 print("🌊 Response status code: \(httpResponse.statusCode)")
-                
+
                 guard httpResponse.statusCode == 200 else {
                     print("❌ Server error: \(httpResponse.statusCode)")
                     throw URLError(.badServerResponse)
                 }
             }
-            
+
             // Debug: Print response data
             if let jsonString = String(data: data, encoding: .utf8) {
                 print("🌊 Response data: \(jsonString.prefix(200))...")
-                
+
                 // Check for error response which would be in a different format
                 if jsonString.contains("\"error\"") {
                     if let errorMessage = extractErrorMessage(from: jsonString) {
@@ -75,7 +75,7 @@ class TidalHeightPredictionServiceImpl: TidalHeightPredictionService {
                     }
                 }
             }
-            
+
             // Decode JSON response
             let decoder = JSONDecoder()
             do {
@@ -91,7 +91,7 @@ class TidalHeightPredictionServiceImpl: TidalHeightPredictionService {
             throw error
         }
     }
-    
+
     // Helper method to extract error message from JSON string
     private func extractErrorMessage(from jsonString: String) -> String? {
         // Simple parsing to extract error message

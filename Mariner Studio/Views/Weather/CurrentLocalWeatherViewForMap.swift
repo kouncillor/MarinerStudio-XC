@@ -6,15 +6,15 @@ struct CurrentLocalWeatherViewForMap: View {
     @EnvironmentObject var serviceProvider: ServiceProvider
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.presentationMode) var presentationMode
-    
+
     // Input parameters
     let latitude: Double
     let longitude: Double
-    
+
     // State for hourly forecast navigation
     @State private var hourlyViewModel: HourlyForecastViewModel?
     @State private var showHourlyForecast = false
-    
+
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
@@ -28,13 +28,13 @@ struct CurrentLocalWeatherViewForMap: View {
                         .font(.title)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
-                    
+
                     // Favorite toggle button
                     FavoriteButtonForMap(
                         isFavorite: viewModel.isFavorite,
                         action: { viewModel.toggleFavorite() }
                     )
-                    
+
                     // Main weather info
                     WeatherHeaderView(
                         temperature: viewModel.temperature,
@@ -42,7 +42,7 @@ struct CurrentLocalWeatherViewForMap: View {
                         weatherDescription: viewModel.weatherDescription,
                         weatherImage: viewModel.weatherImage
                     )
-                    
+
                     // Current weather details
                     WeatherDetailsForMapView(
                         windSpeed: viewModel.windSpeed,
@@ -54,19 +54,19 @@ struct CurrentLocalWeatherViewForMap: View {
                         dewPoint: viewModel.dewPoint,
                         precipitation: viewModel.precipitation
                     )
-                    
+
                     // 7-Day forecast with navigation to hourly view
                     DailyForecastViewForMap(
                         forecasts: viewModel.forecastPeriods,
                         onForecastSelected: { forecast in
                             print("🕐 Selected forecast for date: \(forecast.date), isToday: \(forecast.isToday)")
-                            
+
                             // Always force navigation to close first (if open)
                             showHourlyForecast = false
-                            
+
                             // Reset the view model reference
                             hourlyViewModel = nil
-                            
+
                             // Create delay to ensure proper state reset
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                                 // Create a brand new hourly forecast view model each time
@@ -74,7 +74,7 @@ struct CurrentLocalWeatherViewForMap: View {
                                     weatherService: serviceProvider.openMeteoService,
                                     databaseService: serviceProvider.weatherService
                                 )
-                                
+
                                 // Initialize with the selected forecast date
                                 hourlyViewModel?.initialize(
                                     selectedDate: forecast.date,
@@ -83,7 +83,7 @@ struct CurrentLocalWeatherViewForMap: View {
                                     longitude: viewModel.longitude,
                                     locationName: viewModel.locationDisplay
                                 )
-                                
+
                                 // Trigger navigation
                                 showHourlyForecast = true
                             }
@@ -100,7 +100,7 @@ struct CurrentLocalWeatherViewForMap: View {
                             label: { EmptyView() }
                         )
                     )
-                    
+
                     // Attribution
                     Text(viewModel.attribution)
                         .font(.caption)
@@ -117,7 +117,7 @@ struct CurrentLocalWeatherViewForMap: View {
         .toolbarBackground(Color(red: 0.53, green: 0.81, blue: 0.98), for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .withHomeButton()
-        
+
         .onAppear {
             // Initialize with services and location coordinates, including the new cloud service
             viewModel.initialize(
@@ -129,7 +129,7 @@ struct CurrentLocalWeatherViewForMap: View {
                 databaseService: serviceProvider.weatherService,
                 weatherFavoritesCloudService: serviceProvider.weatherFavoritesCloudService
             )
-            
+
             viewModel.loadWeatherData()
         }
         .onDisappear {
@@ -150,7 +150,7 @@ struct CurrentLocalWeatherViewForMap: View {
 struct FavoriteButtonForMap: View {
     let isFavorite: Bool
     let action: () -> Void
-    
+
     var body: some View {
         Button(action: {
             let impactGenerator = UIImpactFeedbackGenerator(style: .medium)
@@ -176,7 +176,7 @@ struct LoadingViewForMap: View {
         VStack(spacing: 20) {
             ProgressView()
                 .scaleEffect(1.5)
-            
+
             Text("Loading weather data...")
                 .font(.headline)
                 .foregroundColor(.secondary)
@@ -188,7 +188,7 @@ struct LoadingViewForMap: View {
 
 struct ErrorViewForMap: View {
     let errorMessage: String
-    
+
     var body: some View {
         VStack(spacing: 16) {
             Image(systemName: "exclamationmark.triangle")
@@ -196,11 +196,11 @@ struct ErrorViewForMap: View {
                 .aspectRatio(contentMode: .fit)
                 .frame(width: 60, height: 60)
                 .foregroundColor(.orange)
-            
+
             Text("Error")
                 .font(.title)
                 .foregroundColor(.primary)
-            
+
             Text(errorMessage)
                 .font(.body)
                 .foregroundColor(.secondary)
@@ -224,15 +224,15 @@ struct WeatherDetailsForMapView: View {
     let humidity: String
     let dewPoint: String
     let precipitation: String
-    
+
     var body: some View {
         VStack(spacing: 12) {
             Text("Current Conditions")
                 .font(.headline)
                 .padding(.top, 8)
-            
+
             Divider()
-            
+
             // Weather detail grid
             VStack(spacing: 25) {
                 // Wind - using SF Symbol with blue color
@@ -242,42 +242,42 @@ struct WeatherDetailsForMapView: View {
                     subtitle: windDirection,
                     value: windSpeed
                 )
-                
+
                 // Gusts - using SF Symbol with red color
                 DetailRowForMap(
                     iconSource: .system("wind", .red),
                     title: "Gusts",
                     value: windGusts
                 )
-                
+
                 // Visibility - using custom image
                 DetailRowForMap(
                     iconSource: .custom("visibilitysixseven"),
                     title: "Visibility",
                     value: visibility
                 )
-                
+
                 // Pressure - using custom image with purple color
                 DetailRowForMap(
                     iconSource: .custom("pressuresixseven", .purple),
                     title: "Pressure",
                     value: "\(pressure)\""
                 )
-                
+
                 // Humidity - using SF Symbol with cyan color
                 DetailRowForMap(
                     iconSource: .system("humidity", .cyan),
                     title: "Humidity",
                     value: "\(humidity)%"
                 )
-                
+
                 // Dew Point - using SF Symbol with orange color
                 DetailRowForMap(
                     iconSource: .system("drop", .orange),
                     title: "Dew Point",
                     value: "\(dewPoint)°"
                 )
-                
+
                 // Precipitation - using SF Symbol with default color
                 DetailRowForMap(
                     iconSource: .system("cloud.rain"),
@@ -299,9 +299,9 @@ struct WeatherDetailsForMapView: View {
 struct DetailRowForMap: View {
     let iconSource: IconSourceForMap
     let title: String
-    var subtitle: String? = nil
+    var subtitle: String?
     let value: String
-    
+
     var body: some View {
         HStack {
             // Display either SF Symbol or custom image based on iconSource
@@ -321,21 +321,21 @@ struct DetailRowForMap: View {
             }
             .frame(width: 24, height: 24)
             .padding(.trailing, 16)
-            
+
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
                     .font(.body)
                     .foregroundColor(.primary)
-                
+
                 if let subtitle = subtitle {
                     Text(subtitle)
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
-            
+
             Spacer()
-            
+
             Text(value)
                 .font(.body)
                 .fontWeight(.medium)
@@ -353,9 +353,9 @@ enum IconSourceForMap {
 struct DailyForecastViewForMap: View {
     let forecasts: [DailyForecastItem]
     let onForecastSelected: (DailyForecastItem) -> Void
-    
-    @State private var expandedForecastId: UUID? = nil
-    
+
+    @State private var expandedForecastId: UUID?
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Section header
@@ -363,10 +363,10 @@ struct DailyForecastViewForMap: View {
                 .font(.headline)
                 .fontWeight(.semibold)
                 .padding(.vertical, 4)
-            
+
             // Forecast header row
             ForecastHeaderRowForMap()
-            
+
             // Forecast items
             if forecasts.isEmpty {
                 Text("No forecast data available")
@@ -390,11 +390,11 @@ struct DailyForecastViewForMap: View {
                                 expandedForecastId = forecast.id
                             }
                         }
-                        
+
                         // Also trigger the navigation callback
                         onForecastSelected(forecast)
                     }
-                    
+
                     if forecast.id != forecasts.last?.id {
                         Divider()
                             .padding(.leading)
@@ -416,23 +416,23 @@ struct ForecastHeaderRowForMap: View {
         HStack {
             Text("Date")
                 .frame(width: 60, alignment: .leading)
-            
+
             Image(systemName: "thermometer")
                 .frame(width: 60)
                 .foregroundColor(.orange)
-            
+
             Image(systemName: "moon.stars")
                 .frame(width: 40)
                 .foregroundColor(.yellow)
-            
+
             Image(systemName: "wind")
                 .frame(width: 40)
                 .foregroundColor(.blue)
-            
+
             Image(systemName: "eye")
                 .frame(width: 40)
                 .foregroundColor(.green)
-            
+
             Image(systemName: "arrow.down.to.line")
                 .frame(width: 40)
                 .foregroundColor(.purple)
@@ -449,7 +449,7 @@ struct DailyForecastRowViewForMap: View {
     let forecast: DailyForecastItem
     let isExpanded: Bool
     let isToday: Bool
-    
+
     var body: some View {
         VStack(spacing: 0) {
             // Main row content
@@ -459,11 +459,11 @@ struct DailyForecastRowViewForMap: View {
                     Text(forecast.dayOfWeek)
                         .font(.headline)
                         .fontWeight(.bold)
-                    
+
                     Text(forecast.dateDisplay)
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    
+
                     if isToday {
                         Text("TODAY")
                             .font(.caption2)
@@ -472,61 +472,61 @@ struct DailyForecastRowViewForMap: View {
                     }
                 }
                 .frame(width: 60, alignment: .leading)
-                
+
                 // Temperature column
                 VStack(spacing: 4) {
                     TemperaturePillForMap(
                         temperature: Int(forecast.high.rounded()),
                         isHigh: true
                     )
-                    
+
                     TemperaturePillForMap(
                         temperature: Int(forecast.low.rounded()),
                         isHigh: false
                     )
                 }
                 .frame(width: 60)
-                
+
                 // Moon phase column
                 VStack(spacing: 6) {
                     moonPhaseIconForMap
                         .frame(width: 24, height: 24)
-                    
+
                     Image(systemName: forecast.isWaxingMoon ? "arrow.up" : "arrow.down")
                         .foregroundColor(forecast.isWaxingMoon ? .green : .red)
                         .font(.caption)
                 }
                 .frame(width: 40)
-                
+
                 // Wind column
                 VStack(alignment: .center, spacing: 2) {
                     Text(forecast.windDirection)
                         .font(.caption)
-                    
+
                     Text("\(Int(forecast.windSpeed))")
                         .font(.caption)
-                    
+
                     Text("\(Int(forecast.windGusts))")
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }
                 .frame(width: 40)
-                
+
                 // Visibility column
                 VStack(alignment: .center, spacing: 4) {
                     Text(forecast.visibility)
                         .font(.caption)
-                    
+
                     weatherIconForMap
                         .frame(width: 24, height: 24)
                 }
                 .frame(width: 40)
-                
+
                 // Pressure column
                 VStack(alignment: .center, spacing: 2) {
                     Text(String(format: "%.1f", forecast.pressure))
                         .font(.caption)
-                    
+
                     Text("inHg")
                         .font(.caption2)
                         .foregroundColor(.secondary)
@@ -541,7 +541,7 @@ struct DailyForecastRowViewForMap: View {
                         Color(UIColor.secondarySystemBackground) :
                         Color.clear)
             )
-            
+
             // Expanded details
             if isExpanded {
                 VStack(alignment: .leading, spacing: 8) {
@@ -549,7 +549,7 @@ struct DailyForecastRowViewForMap: View {
                         .font(.callout)
                         .foregroundColor(.secondary)
                         .padding(.top, 4)
-                    
+
                     if !forecast.description.isEmpty {
                         Text(forecast.description)
                             .font(.callout)
@@ -564,7 +564,7 @@ struct DailyForecastRowViewForMap: View {
         }
         .cornerRadius(8)
     }
-    
+
     // Dynamic weather icon based on weather code
     private var weatherIconForMap: some View {
         Group {
@@ -595,7 +595,7 @@ struct DailyForecastRowViewForMap: View {
             }
         }
     }
-    
+
     // Dynamic moon phase icon
     private var moonPhaseIconForMap: some View {
         Group {
@@ -634,7 +634,7 @@ struct DailyForecastRowViewForMap: View {
 struct TemperaturePillForMap: View {
     let temperature: Int
     let isHigh: Bool
-    
+
     var body: some View {
         Text("\(temperature)°")
             .font(.caption)
@@ -659,6 +659,3 @@ struct TemperaturePillForMap: View {
         .environmentObject(ServiceProvider())
     }
 }
-
-
-

@@ -1,4 +1,3 @@
-
 //
 //  NauticalMapView.swift
 //  Mariner Studio
@@ -19,12 +18,12 @@ struct NauticalMapView: View {
     @State private var errorMessage = ""
     @State private var showingChartInfo = false
     @State private var selectedLayers: Set<Int> = [0, 1, 2, 6] // Start with basic layers
-    
+
     private let maxAllowedLayers = 15
     private let minAllowedLayers = 1
-    
+
     var body: some View {
-        GeometryReader { geometry in
+        GeometryReader { _ in
             ZStack {
                 // Main Map View
                 NauticalChartMapView(
@@ -36,7 +35,7 @@ struct NauticalMapView: View {
                     userLocation: $userLocation
                 )
                 .ignoresSafeArea(edges: .all)
-                
+
                 // Loading Overlay
                 if isLoading {
                     VStack {
@@ -51,7 +50,7 @@ struct NauticalMapView: View {
                     .background(Color(UIColor.systemBackground).opacity(0.9))
                     .cornerRadius(10)
                 }
-                
+
                 // Error Message
                 if !errorMessage.isEmpty {
                     VStack {
@@ -67,7 +66,7 @@ struct NauticalMapView: View {
                     .cornerRadius(10)
                     .transition(.opacity)
                 }
-                
+
                 // Chart Controls
                 VStack {
                     HStack {
@@ -88,9 +87,9 @@ struct NauticalMapView: View {
                         }
                         .padding()
                     }
-                    
+
                     Spacer()
-                    
+
                     // Layer Control Section
                     HStack {
                         VStack(alignment: .leading, spacing: 8) {
@@ -103,7 +102,7 @@ struct NauticalMapView: View {
                                     .font(.caption2)
                                     .foregroundColor(.secondary)
                             }
-                            
+
                             // Layer Control Buttons
                             HStack(spacing: 12) {
                                 // Minus Button
@@ -115,13 +114,13 @@ struct NauticalMapView: View {
                                         .foregroundColor(selectedLayers.count > minAllowedLayers ? .red : .gray)
                                 }
                                 .disabled(selectedLayers.count <= minAllowedLayers)
-                                
+
                                 // Current Layer Count
                                 Text("\(selectedLayers.count)")
                                     .font(.headline)
                                     .fontWeight(.bold)
                                     .frame(minWidth: 30)
-                                
+
                                 // Plus Button
                                 Button(action: {
                                     increaseLayerCount()
@@ -138,7 +137,7 @@ struct NauticalMapView: View {
                         .background(Color.white.opacity(0.9))
                         .cornerRadius(10)
                         .shadow(radius: 2)
-                        
+
                         Spacer()
                     }
                     .padding()
@@ -155,12 +154,12 @@ struct NauticalMapView: View {
             Text("NOAA Official Charts\n\nDisplaying official NOAA Electronic Navigational Charts (ENCs) with official marine chart symbology.\n\nData Source: NOAA Chart Display Service\n\nCurrently showing \(selectedLayers.count) chart layers. Use +/- buttons to add or remove detail levels.")
         }
     }
-    
+
     // MARK: - Layer Control Methods
-    
+
     private func increaseLayerCount() {
         guard selectedLayers.count < maxAllowedLayers else { return }
-        
+
         // Add the next layer in sequence (0, 1, 2, 3, etc.)
         for layerId in 0..<maxAllowedLayers {
             if !selectedLayers.contains(layerId) {
@@ -168,67 +167,67 @@ struct NauticalMapView: View {
                 break
             }
         }
-        
+
         updateChartOverlay()
-        
+
         // Provide haptic feedback
         let impactGenerator = UIImpactFeedbackGenerator(style: .light)
         impactGenerator.impactOccurred()
-        
+
         print("➕ NauticalMapView: Increased layers to \(selectedLayers.sorted())")
     }
-    
+
     private func decreaseLayerCount() {
         guard selectedLayers.count > minAllowedLayers else { return }
-        
+
         // Remove the highest numbered layer
         if let maxLayer = selectedLayers.max() {
             selectedLayers.remove(maxLayer)
         }
-        
+
         updateChartOverlay()
-        
+
         // Provide haptic feedback
         let impactGenerator = UIImpactFeedbackGenerator(style: .light)
         impactGenerator.impactOccurred()
-        
+
         print("➖ NauticalMapView: Decreased layers to \(selectedLayers.sorted())")
     }
-    
+
     private func updateChartOverlay() {
         // Create new overlay with selected layers
         let newOverlay = serviceProvider.noaaChartService.createChartTileOverlay(selectedLayers: selectedLayers)
         chartOverlay = newOverlay
-        
+
         print("🔄 NauticalMapView: Updated chart overlay with layers: \(selectedLayers.sorted())")
     }
-    
+
     // MARK: - Chart Setup Methods
-    
+
     private func setupChartDisplay() {
         print("🗺️ NauticalMapView: Setting up chart display")
-        
+
         // Setup location first
         setupUserLocation()
-        
+
         // Create NOAA chart overlay with current settings
         let overlay = serviceProvider.noaaChartService.createChartTileOverlay(selectedLayers: selectedLayers)
         chartOverlay = overlay
-        
+
         // Simulate loading time and remove loading indicator
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             withAnimation {
                 isLoading = false
             }
         }
-        
+
         print("✅ NauticalMapView: Chart overlay configured with layers: \(selectedLayers.sorted())")
     }
-    
+
     private func setupUserLocation() {
         // Use existing location service from ServiceProvider
         let locationService = serviceProvider.locationService
-        
+
         // Check if we already have a location
         if let currentLocation = getCurrentLocation() {
             userLocation = currentLocation
@@ -238,12 +237,12 @@ struct NauticalMapView: View {
             // Request location permission and start updates
             Task {
                 let authorized = await locationService.requestLocationPermission()
-                
+
                 await MainActor.run {
                     if authorized {
                         locationService.startUpdatingLocation()
                         print("✅ NauticalMapView: Location permission granted, starting updates")
-                        
+
                         // Try to get location again after a short delay
                         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
                             if let location = getCurrentLocation() {
@@ -263,7 +262,7 @@ struct NauticalMapView: View {
             }
         }
     }
-    
+
     private func getCurrentLocation() -> CLLocation? {
         // Try to get location from the existing location service
         if let locationService = serviceProvider.locationService as? LocationServiceImpl {
@@ -271,36 +270,36 @@ struct NauticalMapView: View {
         }
         return nil
     }
-    
+
     private func centerMapOnLocation(_ location: CLLocation) {
         let coordinate = location.coordinate
-        
+
         // Set region with appropriate zoom level for nautical charts
         mapRegion = MKCoordinateRegion(
             center: coordinate,
             span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
         )
-        
+
         userLocation = location
         print("🗺️ NauticalMapView: Centered map on location: \(coordinate)")
     }
-    
+
     private func useDefaultLocation() {
         // Default to Chesapeake Bay - good area for nautical charts
         let defaultCoordinate = CLLocationCoordinate2D(latitude: 38.9784, longitude: -76.4951)
         let defaultLocation = CLLocation(latitude: defaultCoordinate.latitude, longitude: defaultCoordinate.longitude)
-        
+
         centerMapOnLocation(defaultLocation)
-        
+
         errorMessage = "Using default location (Chesapeake Bay). Enable location services for your current position."
-        
+
         // Clear error message after 5 seconds
         DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
             withAnimation {
                 errorMessage = ""
             }
         }
-        
+
         print("📍 NauticalMapView: Using default location: Chesapeake Bay")
     }
 }
@@ -311,7 +310,7 @@ struct NauticalChartMapView: UIViewRepresentable {
     @Binding var region: MKCoordinateRegion
     @Binding var chartOverlay: MKTileOverlay?
     @Binding var userLocation: CLLocation?
-    
+
     func makeUIView(context: Context) -> MKMapView {
         let mapView = MKMapView()
         mapView.delegate = context.coordinator
@@ -320,29 +319,29 @@ struct NauticalChartMapView: UIViewRepresentable {
         mapView.mapType = .standard
         mapView.showsCompass = true
         mapView.showsScale = true
-        
+
         print("🗺️ NauticalChartMapView: Created MapKit view")
         return mapView
     }
-    
+
     func updateUIView(_ mapView: MKMapView, context: Context) {
         // Update region if needed
         if !mapView.region.center.isEqual(to: region.center) {
             mapView.setRegion(region, animated: true)
         }
-        
+
         // Remove existing NOAA chart overlays
         let existingNOAAOverlays = mapView.overlays.compactMap { $0 as? NOAAChartTileOverlay }
         if !existingNOAAOverlays.isEmpty {
             mapView.removeOverlays(existingNOAAOverlays)
             print("🗺️ NauticalChartMapView: Removed existing NOAA chart overlays")
         }
-        
+
         // Add new chart overlay if available
         if let overlay = chartOverlay {
             mapView.addOverlay(overlay, level: .aboveLabels)
             print("🗺️ NauticalChartMapView: Added NOAA chart overlay")
-            
+
             // Force a refresh by slightly adjusting the map region
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 let currentRegion = mapView.region
@@ -357,18 +356,18 @@ struct NauticalChartMapView: UIViewRepresentable {
             }
         }
     }
-    
+
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
     }
-    
+
     class Coordinator: NSObject, MKMapViewDelegate {
         var parent: NauticalChartMapView
-        
+
         init(_ parent: NauticalChartMapView) {
             self.parent = parent
         }
-        
+
         func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
             if let tileOverlay = overlay as? NOAAChartTileOverlay {
                 let renderer = MKTileOverlayRenderer(tileOverlay: tileOverlay)
@@ -376,30 +375,30 @@ struct NauticalChartMapView: UIViewRepresentable {
                 print("🎨 NauticalChartMapView: Created NOAA tile overlay renderer with alpha 0.8")
                 return renderer
             }
-            
+
             if let tileOverlay = overlay as? MKTileOverlay {
                 let renderer = MKTileOverlayRenderer(tileOverlay: tileOverlay)
                 renderer.alpha = 0.8
                 print("🎨 NauticalChartMapView: Created generic tile overlay renderer")
                 return renderer
             }
-            
+
             return MKOverlayRenderer(overlay: overlay)
         }
-        
+
         func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
             DispatchQueue.main.async {
                 self.parent.region = mapView.region
             }
-            
+
             let zoomLevel = log2(360 / mapView.region.span.longitudeDelta)
             print("🔍 NauticalChartMapView: Map region changed, zoom level: \(Int(zoomLevel))")
         }
-        
+
         func mapViewDidFinishLoadingMap(_ mapView: MKMapView) {
             print("✅ NauticalChartMapView: Map finished loading")
         }
-        
+
         func mapView(_ mapView: MKMapView, didAdd renderers: [MKOverlayRenderer]) {
             print("➕ NauticalChartMapView: Added \(renderers.count) overlay renderer(s)")
         }

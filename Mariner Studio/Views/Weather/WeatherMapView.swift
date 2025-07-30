@@ -1,15 +1,14 @@
-
 import SwiftUI
 import MapKit
 
 struct WeatherMapView: View {
     @EnvironmentObject var serviceProvider: ServiceProvider
     @StateObject private var viewModel = WeatherMapViewModel()
-    
+
     // State variables for managing selected location and navigation
     @State private var selectedLocation: CLLocationCoordinate2D?
     @State private var showWeatherDetail = false
-    
+
     var body: some View {
         ZStack {
             Map(coordinateRegion: $viewModel.region,
@@ -29,11 +28,11 @@ struct WeatherMapView: View {
                                         point: drag.location,
                                         in: viewModel.region
                                     )
-                                    
+
                                     // Store the location and trigger the sheet presentation
                                     selectedLocation = location
                                     showWeatherDetail = true
-                                    
+
                                     // Provide haptic feedback
                                     let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
                                     impactFeedback.impactOccurred()
@@ -43,7 +42,7 @@ struct WeatherMapView: View {
                             }
                         }
                 )
-            
+
             // Location button in the bottom-right corner
             VStack {
                 Spacer()
@@ -61,7 +60,7 @@ struct WeatherMapView: View {
                     .padding()
                 }
             }
-            
+
             // Long press hint overlay (only shown initially)
             VStack {
                 Text("Long press on map to check weather at that location")
@@ -73,7 +72,7 @@ struct WeatherMapView: View {
                     .padding(.top, 8)
                 Spacer()
             }
-            
+
             // Error message display
             if !viewModel.errorMessage.isEmpty {
                 VStack {
@@ -86,7 +85,7 @@ struct WeatherMapView: View {
                     Spacer()
                 }
             }
-            
+
             // Loading indicator
             if viewModel.isLoading {
                 ProgressView()
@@ -129,17 +128,17 @@ struct MapHelpers {
     static func convertPointToCoordinate(point: CGPoint, in region: MKCoordinateRegion) -> CLLocationCoordinate2D {
         // Calculate the map size in degrees
         let mapSizeInDegrees = region.span
-        
+
         // Calculate relative position of tap point from center of screen (-0.5 to 0.5)
         let relativeTapPoint = CGPoint(
             x: (point.x / UIScreen.main.bounds.width) - 0.5,
             y: (point.y / UIScreen.main.bounds.height) - 0.5
         )
-        
+
         // Convert relative position to degrees
         let latitudeDelta = relativeTapPoint.y * mapSizeInDegrees.latitudeDelta
         let longitudeDelta = relativeTapPoint.x * mapSizeInDegrees.longitudeDelta
-        
+
         // Calculate actual lat/long by adding the delta to the center
         return CLLocationCoordinate2D(
             latitude: region.center.latitude - latitudeDelta,

@@ -8,7 +8,7 @@ enum RecommendationCategory: String, CaseIterable {
     case operatingStatus = "operating_status"
     case accessNavigation = "access_navigation"
     case generalInfo = "general_info"
-    
+
     var displayName: String {
         switch self {
         case .contactInfo:
@@ -23,7 +23,7 @@ enum RecommendationCategory: String, CaseIterable {
             return "General Information"
         }
     }
-    
+
     var description: String {
         switch self {
         case .contactInfo:
@@ -38,7 +38,7 @@ enum RecommendationCategory: String, CaseIterable {
             return "Other information updates"
         }
     }
-    
+
     var iconName: String {
         switch self {
         case .contactInfo:
@@ -71,7 +71,7 @@ struct RemoteRecommendation: Codable, Identifiable {
     let updatedAt: Date?
     let lastModified: Date
     let deviceId: String
-    
+
     // MARK: - Coding Keys
     enum CodingKeys: String, CodingKey {
         case id
@@ -89,9 +89,9 @@ struct RemoteRecommendation: Codable, Identifiable {
         case lastModified = "last_modified"
         case deviceId = "device_id"
     }
-    
+
     // MARK: - Initializers
-    
+
     // Initialize for new recommendation
     init(
         userId: UUID,
@@ -116,7 +116,7 @@ struct RemoteRecommendation: Codable, Identifiable {
         self.lastModified = Date()
         self.deviceId = UIDevice.current.identifierForVendor?.uuidString ?? "unknown"
     }
-    
+
     // Initialize from existing data (for updates)
     init(
         id: UUID?,
@@ -149,19 +149,19 @@ struct RemoteRecommendation: Codable, Identifiable {
         self.lastModified = lastModified
         self.deviceId = deviceId
     }
-    
+
     // MARK: - Computed Properties
-    
+
     var recommendationCategory: RecommendationCategory {
         return RecommendationCategory(rawValue: category) ?? .generalInfo
     }
-    
+
     var recommendationStatus: RecommendationStatus {
         return RecommendationStatus(rawValue: status) ?? .pending
     }
-    
+
     // MARK: - Helper Methods
-    
+
     func withUpdatedStatus(_ newStatus: RecommendationStatus, adminNotes: String? = nil) -> RemoteRecommendation {
         return RemoteRecommendation(
             id: self.id,
@@ -180,7 +180,7 @@ struct RemoteRecommendation: Codable, Identifiable {
             deviceId: self.deviceId
         )
     }
-    
+
     // Convert to the CloudRecommendation interface for ViewModels
     func toCloudRecommendation() -> CloudRecommendation {
         return CloudRecommendation(
@@ -211,7 +211,7 @@ struct CloudRecommendation: Identifiable {
     let createdAt: Date
     let reviewedAt: Date?
     let adminNotes: String?
-    
+
     // Initialize from new recommendation
     init(
         navUnitId: String,
@@ -231,7 +231,7 @@ struct CloudRecommendation: Identifiable {
         self.reviewedAt = nil
         self.adminNotes = nil
     }
-    
+
     // Initialize from existing data
     init(
         id: UUID,
@@ -256,7 +256,7 @@ struct CloudRecommendation: Identifiable {
         self.reviewedAt = reviewedAt
         self.adminNotes = adminNotes
     }
-    
+
     // Helper method to create updated recommendation with new status
     func withStatus(_ newStatus: RecommendationStatus, adminNotes: String? = nil) -> CloudRecommendation {
         return CloudRecommendation(
@@ -272,7 +272,7 @@ struct CloudRecommendation: Identifiable {
             adminNotes: adminNotes
         )
     }
-    
+
     // Convert to RemoteRecommendation for database operations
     func toRemoteRecommendation() -> RemoteRecommendation {
         return RemoteRecommendation(

@@ -49,14 +49,14 @@ struct AuthenticationView: View {
                         .cornerRadius(10)
                 }
             }
-            
+
             Button(action: {
                 isSigningUp.toggle()
             }) {
                 Text(isSigningUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up")
             }
             .padding(.top)
-            
+
             if let errorMessage = viewModel.errorMessage {
                 Text(errorMessage)
                     .foregroundColor(.red)

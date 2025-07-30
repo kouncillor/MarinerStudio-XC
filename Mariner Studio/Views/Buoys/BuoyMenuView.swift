@@ -5,7 +5,6 @@
 //  Created by Timothy Russell on 5/15/25.
 //
 
-
 import SwiftUI
 
 struct BuoyMenuView: View {
@@ -25,7 +24,7 @@ struct BuoyMenuView: View {
                         color: .yellow
                     )
                 }
-                
+
                 // Local Buoys - System Icon
                 NavigationLink(destination: BuoyStationsView(
                     buoyService: BuoyServiceImpl(),
@@ -47,7 +46,7 @@ struct BuoyMenuView: View {
         .toolbarBackground(.purple, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .withHomeButton()
-        
+
     }
 }
 
@@ -59,7 +58,7 @@ struct MenuButtonContentBuoy: View {
         case custom(String) // Holds custom Asset name
     }
 
-    let iconType: IconType 
+    let iconType: IconType
     let title: String
     let color: Color
 

@@ -4,7 +4,7 @@ struct TideFavoritesView: View {
     @StateObject private var viewModel = TideFavoritesViewModel()
     @EnvironmentObject var serviceProvider: ServiceProvider
     @Environment(\.colorScheme) var colorScheme
-    
+
     var body: some View {
         ZStack {
             // Main content
@@ -17,27 +17,27 @@ struct TideFavoritesView: View {
         .toolbarBackground(.visible, for: .navigationBar)
         .withHomeButton()
         // ❌ REMOVED: Sync button - no longer needed with cloud-only approach
-        
+
         .onAppear {
             print("🌊 VIEW: TideFavoritesView appeared (CLOUD-ONLY)")
-            
+
             // Initialize location service
             viewModel.initialize(locationService: serviceProvider.locationService)
-            
+
             // Load favorites from cloud
             Task {
                 await viewModel.loadFavorites()
             }
         }
-        
+
         .onDisappear {
             print("🌊 VIEW: TideFavoritesView disappeared")
             viewModel.cleanup()
         }
     }
-    
+
     // MARK: - Main Content View
-    
+
     @ViewBuilder
     private var mainContentView: some View {
         Group {
@@ -52,43 +52,42 @@ struct TideFavoritesView: View {
             }
         }
     }
-    
+
     // MARK: - Loading View
-    
+
     private var loadingView: some View {
         VStack(spacing: 16) {
             ProgressView()
                 .scaleEffect(1.2)
-            
+
             Text("Loading favorites...")
                 .font(.headline)
-            
+
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
             print("🎨 VIEW: Loading view appeared")
         }
     }
-    
+
     // MARK: - Error View
-    
+
     private var errorView: some View {
         VStack(spacing: 16) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.largeTitle)
                 .foregroundColor(.orange)
                 .padding()
-            
+
             Text("Error Loading Favorites")
                 .font(.title2)
                 .fontWeight(.semibold)
-            
+
             Text(viewModel.errorMessage)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
                 .foregroundColor(.secondary)
-            
-            
+
             Button("Retry") {
                 print("🔄 VIEW: Retry button tapped")
                 Task {
@@ -105,26 +104,26 @@ struct TideFavoritesView: View {
             print("🎨 VIEW: Error view appeared with message: \(viewModel.errorMessage)")
         }
     }
-    
+
     // MARK: - Empty State View
-    
+
     private var emptyStateView: some View {
         VStack(spacing: 16) {
             Image(systemName: "star.slash")
                 .font(.system(size: 60))
                 .foregroundColor(.gray)
                 .padding()
-            
+
             Text("No Favorite Stations")
                 .font(.title2)
                 .fontWeight(.semibold)
-            
+
             Text("Tide stations you mark as favorites will appear here.")
                 .multilineTextAlignment(.center)
                 .foregroundColor(.secondary)
-            
+
             Spacer().frame(height: 20)
-            
+
             NavigationLink(destination: TidalHeightStationsView(
                 tidalHeightService: TidalHeightServiceImpl(),
                 locationService: serviceProvider.locationService,
@@ -139,7 +138,7 @@ struct TideFavoritesView: View {
                 .foregroundColor(.white)
                 .cornerRadius(10)
             }
-            
+
         }
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -147,13 +146,13 @@ struct TideFavoritesView: View {
             print("🎨 VIEW: Empty state view appeared")
         }
     }
-    
+
     // MARK: - Favorites List View
-    
+
     private var favoritesListView: some View {
         VStack(spacing: 0) {
             // ❌ REMOVED: Sync Status View - no longer needed with cloud-only approach
-            
+
             List {
                 ForEach(viewModel.favorites) { station in
                     NavigationLink {
@@ -183,7 +182,7 @@ struct TideFavoritesView: View {
                     }
                 }
             }
-            
+
             .listStyle(InsetGroupedListStyle())
             .refreshable {
                 print("🔄 VIEW: Pull-to-refresh triggered (CLOUD-ONLY)")
@@ -200,35 +199,21 @@ struct TideFavoritesView: View {
 
 // ❌ REMOVED: All sync-related UI components
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 struct FavoriteStationRow: View {
     let station: TidalHeightStation
-    
+
     var body: some View {
         HStack(spacing: 16) {
             Image(systemName: "arrow.up.arrow.down")
                 .resizable().frame(width: 28, height: 28).foregroundColor(.green)
                 .padding(8).background(Color.green.opacity(0.1)).clipShape(Circle())
-            
+
             VStack(alignment: .leading, spacing: 4) {
                 // Station name
                 Text(station.name)
                     .font(.headline)
                     .foregroundColor(.primary)
-                
+
                 // Distance from user
                 if let distance = station.distanceFromUser {
                     Text("\(String(format: "%.1f", distance)) mi")
@@ -236,7 +221,7 @@ struct FavoriteStationRow: View {
                         .foregroundColor(.blue)
                         .fontWeight(.medium)
                 }
-                
+
                 // Coordinates if available
                 if let latitude = station.latitude, let longitude = station.longitude {
                     Text("Coordinates: \(String(format: "%.4f", latitude)), \(String(format: "%.4f", longitude))")
@@ -244,9 +229,9 @@ struct FavoriteStationRow: View {
                         .foregroundColor(.gray)
                 }
             }
-            
+
             Spacer()
-            
+
             Image(systemName: "star.fill")
                 .foregroundColor(.yellow)
                 .font(.system(size: 16))
@@ -264,4 +249,3 @@ extension DateFormatter {
         return formatter
     }()
 }
-

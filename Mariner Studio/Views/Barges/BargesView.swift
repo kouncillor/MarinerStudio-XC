@@ -1,24 +1,23 @@
-
 import SwiftUI
 
 struct BargesView: View {
     // MARK: - Properties
     @StateObject private var viewModel: BargesViewModel
     @State private var isRefreshing = false
-    
+
     // MARK: - Initialization
     init(vesselService: VesselDatabaseService) {
         _viewModel = StateObject(wrappedValue: BargesViewModel(
             vesselService: vesselService
         ))
     }
-    
+
     // MARK: - Body
     var body: some View {
         VStack(spacing: 0) {
             // Search Bar
             searchBar
-            
+
             // Main Content
             ZStack {
                 if viewModel.isLoading {
@@ -39,24 +38,24 @@ struct BargesView: View {
         .toolbarBackground(Color(red: 0.53, green: 0.81, blue: 0.98), for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .withHomeButton()
-        
+
         .task {
             await viewModel.loadBarges()
         }
     }
-    
+
     // MARK: - View Components
     private var searchBar: some View {
         HStack {
             HStack {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(.gray)
-                
+
                 TextField("Search barges...", text: $viewModel.searchText)
                     .onChange(of: viewModel.searchText) {
                         viewModel.filterBarges()
                     }
-                
+
                 if !viewModel.searchText.isEmpty {
                     Button(action: {
                         viewModel.clearSearch()
@@ -73,7 +72,7 @@ struct BargesView: View {
         }
         .padding([.horizontal, .top])
     }
-    
+
     private var bargesList: some View {
         List {
             ForEach(viewModel.barges) { barge in
@@ -94,7 +93,7 @@ struct BargesView: View {
 
 struct BargeRow: View {
     let barge: Barge
-    
+
     // Computed property to format the vessel name with number
     var formattedVesselName: String {
         if let vesselNumber = barge.vesselNumber, !vesselNumber.isEmpty {
@@ -103,12 +102,12 @@ struct BargeRow: View {
             return barge.vesselName
         }
     }
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             Text(formattedVesselName)
                 .font(.headline)
-            
+
             Text("Barge ID: \(barge.bargeId)")
                 .font(.caption)
                 .foregroundColor(.gray)

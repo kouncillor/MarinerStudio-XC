@@ -1,4 +1,3 @@
-
 //
 //  RouteDetailsView.swift
 //  Mariner Studio
@@ -13,9 +12,9 @@ struct RouteDetailsView: View {
     @State private var scrollToWaypointIndex: Int?
     @State private var emphasizedWaypointIndex: Int?
     @EnvironmentObject var serviceProvider: ServiceProvider
-    
+
     var body: some View {
-        GeometryReader { geometry in
+        GeometryReader { _ in
             ZStack {
                 VStack(spacing: 0) {
                     // Top Section (Summary)
@@ -29,7 +28,7 @@ struct RouteDetailsView: View {
                                     .foregroundColor(.orange)
                                     .multilineTextAlignment(.center)
                                     .padding(.bottom, 5)
-                                
+
                                 // Route details grid
                                 VStack(spacing: 10) {
                                     RouteDetailRow(label: "Departure:", value: viewModel.departureTime)
@@ -43,24 +42,24 @@ struct RouteDetailsView: View {
                             .background(Color(UIColor.systemBackground))
                             .cornerRadius(10)
                             .shadow(color: Color.blue.opacity(0.3), radius: 4, x: 0, y: 2)
-                            
+
                             // Condition Summary
                             VStack(spacing: 8) {
                                 ConditionSummaryRow(
                                     text: "Max Wind Speed: \(viewModel.maxWindSpeed) at \(viewModel.maxWindWaypoint?.name ?? "Unknown")",
                                     action: { scrollToWaypoint(viewModel.maxWindWaypoint) }
                                 )
-                                
+
                                 ConditionSummaryRow(
                                     text: "Max Wave Height: \(viewModel.maxWaveHeight) at \(viewModel.maxWaveWaypoint?.name ?? "Unknown")",
                                     action: { scrollToWaypoint(viewModel.maxWaveWaypoint) }
                                 )
-                                
+
                                 ConditionSummaryRow(
                                     text: "Max Humidity: \(viewModel.maxHumidity) at \(viewModel.maxHumidityWaypoint?.name ?? "Unknown")",
                                     action: { scrollToWaypoint(viewModel.maxHumidityWaypoint) }
                                 )
-                                
+
                                 ConditionSummaryRow(
                                     text: "Lowest Visibility: \(viewModel.lowestVisibility) at \(viewModel.minVisibilityWaypoint?.name ?? "Unknown")",
                                     action: { scrollToWaypoint(viewModel.minVisibilityWaypoint) }
@@ -74,7 +73,7 @@ struct RouteDetailsView: View {
                         .padding(.horizontal)
                         .padding(.bottom, 20)
                     }
-                    
+
                     // Waypoints List with ScrollViewReader
                     ScrollViewReader { proxy in
                         ScrollView {
@@ -94,27 +93,27 @@ struct RouteDetailsView: View {
                                 withAnimation(.easeInOut(duration: 0.5)) {
                                     proxy.scrollTo(index, anchor: .center)
                                 }
-                                
+
                                 // Emphasize the waypoint
                                 emphasizedWaypointIndex = index
-                                
+
                                 // Remove emphasis after 2 seconds
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
                                     emphasizedWaypointIndex = nil
                                 }
-                                
+
                                 // Reset scroll target
                                 scrollToWaypointIndex = nil
                             }
                         }
                     }
                 }
-                
+
                 // Loading overlay
                 if viewModel.isLoading {
                     Color.black.opacity(0.3)
                         .ignoresSafeArea()
-                    
+
                     VStack {
                         ProgressView()
                             .scaleEffect(1.5)
@@ -141,13 +140,13 @@ struct RouteDetailsView: View {
             }
         )
     }
-    
+
     private func scrollToWaypoint(_ waypoint: WaypointItem?) {
         guard let waypoint = waypoint else { return }
-        
+
         // Set the target waypoint index for scrolling
         scrollToWaypointIndex = waypoint.index
-        
+
         // If summary is visible, hide it to make more room for the waypoint details
         if viewModel.isSummaryVisible {
             viewModel.toggleSummary()
@@ -158,7 +157,7 @@ struct RouteDetailsView: View {
 // MARK: - Waypoint Emphasis Modifier
 struct WaypointEmphasisModifier: ViewModifier {
     let isEmphasized: Bool
-    
+
     func body(content: Content) -> some View {
         content
             .scaleEffect(isEmphasized ? 1.02 : 1.0)
@@ -178,15 +177,15 @@ struct WaypointEmphasisModifier: ViewModifier {
 struct RouteDetailRow: View {
     let label: String
     let value: String
-    
+
     var body: some View {
         HStack {
             Text(label)
                 .font(.headline)
                 .foregroundColor(.primary)
-            
+
             Spacer()
-            
+
             Text(value)
                 .font(.body)
                 .foregroundColor(.secondary)
@@ -197,7 +196,7 @@ struct RouteDetailRow: View {
 struct ConditionSummaryRow: View {
     let text: String
     let action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
             HStack {
@@ -205,9 +204,9 @@ struct ConditionSummaryRow: View {
                     .font(.subheadline)
                     .foregroundColor(.primary)
                     .multilineTextAlignment(.leading)
-                
+
                 Spacer()
-                
+
                 Image(systemName: "chevron.right")
                     .foregroundColor(.secondary)
                     .font(.caption)
@@ -219,7 +218,7 @@ struct ConditionSummaryRow: View {
 
 struct WaypointView: View {
     @ObservedObject var waypoint: WaypointItem
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             // Header
@@ -227,18 +226,18 @@ struct WaypointView: View {
                 Text("#\(waypoint.index)")
                     .font(.headline)
                     .foregroundColor(.primary)
-                
+
                 Text(waypoint.name)
                     .font(.headline)
                     .foregroundColor(.primary)
-                
+
                 Spacer()
-                
+
                 Text(formatDate(waypoint.eta))
                     .font(.subheadline)
                     .foregroundColor(.blue)
             }
-            
+
             // Weather condition
             if waypoint.weatherDataAvailable {
                 HStack {
@@ -246,17 +245,17 @@ struct WaypointView: View {
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .frame(width: 30, height: 30)
-                    
+
                     Text(waypoint.weatherCondition)
                         .font(.body)
-                    
+
                     Spacer()
-                    
+
                     Text(waypoint.visibilityDisplay)
                         .font(.caption)
                 }
                 .padding(.vertical, 5)
-                
+
                 // Weather data
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 5) {
@@ -270,9 +269,9 @@ struct WaypointView: View {
                             .font(.title3)
                             .foregroundColor(.white)
                     }
-                    
+
                     Spacer()
-                    
+
                     VStack(alignment: .trailing, spacing: 5) {
                         Text("Wind: " + waypoint.windSpeedDisplay)
                             .font(.title)
@@ -305,7 +304,7 @@ struct WaypointView: View {
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, 5)
             }
-            
+
             // Marine data
             if waypoint.marineDataAvailable {
                 VStack(spacing: 12) {
@@ -315,7 +314,7 @@ struct WaypointView: View {
                         direction: waypoint.waveDirectionCardinal,
                         period: "\(Int(waypoint.wavePeriod))s period"
                     )
-                    
+
                     // Swell Card
                     MarineDataCard(
                         title: "Swell",
@@ -326,7 +325,7 @@ struct WaypointView: View {
                         cardColor: Color.blue.opacity(0.5),
                         accentColor: Color.blue
                     )
-                    
+
                     // Wind Wave Card
                     MarineDataCard(
                         title: "Wind Wave",
@@ -337,7 +336,7 @@ struct WaypointView: View {
                         cardColor: Color.cyan.opacity(0.5),
                         accentColor: Color.cyan
                     )
-                    
+
                     // ENHANCED Navigation Data with Wave Direction Compass
                     VStack(spacing: 12) {
                         // Header
@@ -351,14 +350,14 @@ struct WaypointView: View {
                                 .foregroundColor(.primary)
                             Spacer()
                         }
-                        
+
                         // Wave Direction Compass
                         WaveDirectionCompass(
                             vesselCourse: waypoint.bearingToNext,
                             waveDirection: waypoint.waveDirection,
                             compassSize: 300
                         )
-                        
+
                         // Navigation Labels (color-coded to match arrows)
                         VStack(alignment: .leading, spacing: 6) {
                             // Course - ALL GREEN (matches vessel heading arrow)
@@ -373,7 +372,7 @@ struct WaypointView: View {
                                     .fontWeight(.bold)
                                     .foregroundColor(.green)
                             }
-                            
+
                             // Wave From - ALL BLUE (matches wave arrow)
                             HStack {
                                 Text("Wave From:")
@@ -386,7 +385,7 @@ struct WaypointView: View {
                                     .fontWeight(.bold)
                                     .foregroundColor(.blue)
                             }
-                            
+
                             // Relative Wave - ALL ORANGE
                             HStack {
                                 Text("Relative Wave:")
@@ -423,7 +422,7 @@ struct WaypointView: View {
                             .foregroundColor(.primary)
                         Spacer()
                     }
-                    
+
                     // Course only (no wave data)
                     HStack {
                         Text("Course:")
@@ -451,7 +450,7 @@ struct WaypointView: View {
         .cornerRadius(12)
         .shadow(radius: 2)
     }
-    
+
     private func formatDate(_ date: Date?) -> String {
         guard let date = date else { return "Unknown" }
         let formatter = DateFormatter()
@@ -466,7 +465,7 @@ struct TotalWaveCard: View {
     let height: String
     let direction: String
     let period: String
-    
+
     var body: some View {
         VStack(spacing: 12) {
             // Header with title and icon
@@ -474,19 +473,19 @@ struct TotalWaveCard: View {
                 Image(systemName: "waveform.path")
                     .font(.title2)
                     .foregroundColor(.white)
-                
+
                 Text("Total Wave Height")
                     .font(.headline)
                     .fontWeight(.bold)
                     .foregroundColor(.white)
-                
+
                 Spacer()
-                
+
                 Image(systemName: "chart.line.uptrend.xyaxis")
                     .font(.caption)
                     .foregroundColor(.white.opacity(0.8))
             }
-            
+
             // Main content
             HStack(spacing: 16) {
                 // Height - Primary value
@@ -495,15 +494,15 @@ struct TotalWaveCard: View {
                         .font(.caption)
                         .fontWeight(.medium)
                         .foregroundColor(.white.opacity(0.8))
-                    
+
                     Text(height)
                         .font(.largeTitle)
                         .fontWeight(.bold)
                         .foregroundColor(.white)
                 }
-                
+
                 Spacer()
-                
+
                 // Direction and Period
                 VStack(alignment: .trailing, spacing: 8) {
                     VStack(alignment: .trailing, spacing: 2) {
@@ -517,7 +516,7 @@ struct TotalWaveCard: View {
                                 .foregroundColor(.white)
                         }
                     }
-                    
+
                     VStack(alignment: .trailing, spacing: 2) {
                         HStack(spacing: 4) {
                             Image(systemName: "clock")
@@ -557,7 +556,7 @@ struct MarineDataCard: View {
     let period: String?
     let cardColor: Color
     let accentColor: Color
-    
+
     var body: some View {
         HStack(spacing: 12) {
             // Icon section
@@ -567,7 +566,7 @@ struct MarineDataCard: View {
                     .foregroundColor(accentColor)
                     .frame(width: 30, height: 30)
             }
-            
+
             // Content section
             VStack(alignment: .leading, spacing: 4) {
                 // Title
@@ -575,13 +574,13 @@ struct MarineDataCard: View {
                     .font(.headline)
                     .fontWeight(.semibold)
                     .foregroundColor(.primary)
-                
+
                 // Height (main value)
                 Text(height)
                     .font(.title3)
                     .fontWeight(.bold)
                     .foregroundColor(accentColor)
-                
+
                 // Direction
                 HStack(spacing: 4) {
                     Image(systemName: "arrow.up.circle.fill")
@@ -591,7 +590,7 @@ struct MarineDataCard: View {
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
-                
+
                 // Period (if available)
                 if let period = period {
                     HStack(spacing: 4) {
@@ -604,7 +603,7 @@ struct MarineDataCard: View {
                     }
                 }
             }
-            
+
             Spacer()
         }
         .padding()

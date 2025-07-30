@@ -14,7 +14,7 @@ struct VoyagePlanFavoritesView: View {
     @State private var showingGpxView = false
     @State private var selectedGpxFile: GpxFile?
     @State private var selectedRouteName: String = ""
-    
+
     var body: some View {
         VStack {
             if isLoading {
@@ -33,7 +33,7 @@ struct VoyagePlanFavoritesView: View {
                                 .font(.headline)
                                 .fontWeight(.semibold)
                                 .foregroundColor(.primary)
-                            
+
                             // Route Stats
                             HStack(spacing: 16) {
                                 HStack(spacing: 4) {
@@ -44,7 +44,7 @@ struct VoyagePlanFavoritesView: View {
                                         .font(.caption)
                                         .foregroundColor(.secondary)
                                 }
-                                
+
                                 HStack(spacing: 4) {
                                     Image(systemName: "ruler")
                                         .font(.caption2)
@@ -54,7 +54,7 @@ struct VoyagePlanFavoritesView: View {
                                         .foregroundColor(.secondary)
                                 }
                             }
-                            
+
                             // Source Type Badge
                             HStack(spacing: 4) {
                                 Image(systemName: route.sourceTypeIcon)
@@ -95,7 +95,7 @@ struct VoyagePlanFavoritesView: View {
             }
         }
     }
-    
+
     private func sourceTypeColor(for sourceType: String) -> Color {
         switch sourceType {
         case "public":
@@ -108,27 +108,27 @@ struct VoyagePlanFavoritesView: View {
             return .gray
         }
     }
-    
+
     private func loadRoute(_ route: AllRoute) {
         Task {
             do {
                 // Parse GPX data from database
                 let gpxFile = try await serviceProvider.gpxService.loadGpxFile(from: route.gpxData)
-                
+
                 await MainActor.run {
                     // Set up navigation to GpxView with pre-loaded data
                     selectedGpxFile = gpxFile
                     selectedRouteName = route.name
                     showingGpxView = true
                 }
-                
+
             } catch {
                 // Handle error - could show an alert or error message
                 print("Failed to load route: \(error.localizedDescription)")
             }
         }
     }
-    
+
     private func loadFavoriteRoutes() async {
         do {
             let favorites = try await serviceProvider.allRoutesService.getFavoriteRoutesAsync()

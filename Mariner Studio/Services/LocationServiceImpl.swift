@@ -1,14 +1,13 @@
 import Foundation
 import CoreLocation
 
-
 class LocationServiceImpl: NSObject, LocationService, CLLocationManagerDelegate {
     // MARK: - Properties
     private let locationManager = CLLocationManager()
     var locationUpdateHandler: ((CLLocation) -> Void)?
 
     private(set) var currentLocation: CLLocation? // Can be read publicly, but only set privately
-    
+
     // Store the last known location, even if it's not the most accurate
     private var lastKnownLocation: CLLocation? {
         didSet {
@@ -50,8 +49,6 @@ class LocationServiceImpl: NSObject, LocationService, CLLocationManagerDelegate 
         locationManager.distanceFilter = 10 // Update if device moves by 10 meters - changed from kCLDistanceFilterNone
     }
 
-    
-    
     func requestLocationPermission() async -> Bool {
         DebugLogger.shared.log("📍 LocationServiceImpl: requestLocationPermission called. Current status: \(permissionStatus.description)", category: "LOCATION_PERMISSION")
 
@@ -61,7 +58,7 @@ class LocationServiceImpl: NSObject, LocationService, CLLocationManagerDelegate 
                 continuation.resume(returning: false)
                 return
             }
-            
+
             // Move to the main thread if needed
             Task { @MainActor in
                 switch self.locationManager.authorizationStatus {
@@ -87,13 +84,7 @@ class LocationServiceImpl: NSObject, LocationService, CLLocationManagerDelegate 
             }
         }
     }
-    
-    
-    
-    
-    
-    
-    
+
     func startUpdatingLocation() {
         DebugLogger.shared.log("📍 LocationServiceImpl: startUpdatingLocation() called.", category: "LOCATION_UPDATES")
         locationManager.startUpdatingLocation()
@@ -131,7 +122,7 @@ class LocationServiceImpl: NSObject, LocationService, CLLocationManagerDelegate 
 
         // Always update lastKnownLocation with the latest reading
         lastKnownLocation = location
-        
+
         // Apply a simpler filtering approach - negative accuracy is invalid
         guard location.horizontalAccuracy >= 0 else {
             DebugLogger.shared.log("📍 LocationServiceImpl (didUpdateLocations): Ignoring location with negative accuracy.", category: "LOCATION_UPDATES")
@@ -140,7 +131,7 @@ class LocationServiceImpl: NSObject, LocationService, CLLocationManagerDelegate 
 
         // Prioritize recent locations with good accuracy
         let locationAge = -location.timestamp.timeIntervalSinceNow
-        
+
         // If we don't have any location yet, use this one regardless of accuracy
         if currentLocation == nil {
             DebugLogger.shared.log("📍 LocationServiceImpl: First location received, using it.", category: "LOCATION_UPDATES")
@@ -148,7 +139,7 @@ class LocationServiceImpl: NSObject, LocationService, CLLocationManagerDelegate 
             locationUpdateHandler?(location)
             return
         }
-        
+
         // If the location is recent and accurate, update our current location
         if locationAge < 60 && location.horizontalAccuracy <= 100 {
             // Check if this is better than our current location
@@ -182,7 +173,6 @@ class LocationServiceImpl: NSObject, LocationService, CLLocationManagerDelegate 
         // Call the temporary handler if it exists (used by requestLocationPermission)
         onAuthorizationStatusChanged?(status)
     }
-
 
     // MARK: - Callback Handlers (For requestLocationPermission continuation)
     private var onAuthorizationStatusChanged: ((CLAuthorizationStatus) -> Void)?

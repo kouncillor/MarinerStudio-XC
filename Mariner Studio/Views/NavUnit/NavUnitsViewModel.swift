@@ -8,7 +8,7 @@
 import Foundation
 import SwiftUI
 //
-//class NavUnitsViewModel: ObservableObject {
+// class NavUnitsViewModel: ObservableObject {
 //    @Published var navUnits: [StationWithDistance<NavUnit>] = []
 //    @Published var isLoading = false
 //    
@@ -139,59 +139,59 @@ import SwiftUI
 //    
 //    
 //    
-//}
+// }
 class NavUnitsViewModel: ObservableObject {
     @Published var navUnitListItems: [NavUnitListItem] = []  // Changed from navUnits
     @Published var isLoading = false
     @Published var searchText = ""
     @Published var showOnlyFavorites = false
-    
+
     private let navUnitService: NavUnitDatabaseService
     private let locationService: LocationService
     private var allNavUnitListItems: [NavUnitListItem] = []
-    
+
     init(navUnitService: NavUnitDatabaseService, locationService: LocationService) {
         self.navUnitService = navUnitService
         self.locationService = locationService
     }
-    
+
     func loadNavUnits() async {
         await MainActor.run {
             isLoading = true
         }
-        
+
         do {
             // Get current location
             let currentLocation = locationService.currentLocation
-            
+
             if let location = currentLocation {
                 print("📍 Using user location for minimal database loading: \(location.coordinate.latitude), \(location.coordinate.longitude)")
-                
+
                 // Use NEW minimal database method
                 let navUnitItems = try await navUnitService.getNavUnitListItemsWithDistanceAsync(
                     userLatitude: location.coordinate.latitude,
                     userLongitude: location.coordinate.longitude
                 )
-                
+
                 await MainActor.run {
                     allNavUnitListItems = navUnitItems
                     isLoading = false
                 }
-                
+
             } else {
                 print("⚠️ No user location available - loading minimal items without distance")
-                
+
                 // Fallback: get minimal items without distance calculation
                 let navUnitItems = try await navUnitService.getNavUnitListItemsAsync()
-                
+
                 await MainActor.run {
                     allNavUnitListItems = navUnitItems
                     isLoading = false
                 }
             }
-            
+
             filterNavUnits()
-            
+
         } catch {
             print("Error loading nav unit list items: \(error)")
             await MainActor.run {
@@ -199,18 +199,18 @@ class NavUnitsViewModel: ObservableObject {
             }
         }
     }
-    
+
     func filterNavUnits() {
         let filtered = allNavUnitListItems.filter { navUnit in
             let matchesSearch = searchText.isEmpty ||
                 navUnit.name.localizedCaseInsensitiveContains(searchText) ||
                 navUnit.id.localizedCaseInsensitiveContains(searchText)
-            
+
             let matchesFavorites = !showOnlyFavorites || navUnit.isFavorite
-            
+
             return matchesSearch && matchesFavorites
         }
-        
+
         let sorted = filtered.sorted { first, second in
             if first.distanceFromUser != Double.greatestFiniteMagnitude && second.distanceFromUser == Double.greatestFiniteMagnitude {
                 return true
@@ -222,17 +222,17 @@ class NavUnitsViewModel: ObservableObject {
                 return first.name.localizedCompare(second.name) == .orderedAscending
             }
         }
-        
+
         DispatchQueue.main.async {
             self.navUnitListItems = sorted
         }
     }
-    
+
     func clearSearch() {
         searchText = ""
         filterNavUnits()
     }
-    
+
     func toggleFavorites() {
         showOnlyFavorites.toggle()
         filterNavUnits()

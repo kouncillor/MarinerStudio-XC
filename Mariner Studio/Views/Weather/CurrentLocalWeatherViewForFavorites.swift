@@ -1,4 +1,3 @@
-
 import SwiftUI
 import CoreLocation
 
@@ -7,15 +6,15 @@ struct CurrentLocalWeatherViewForFavorites: View {
     @EnvironmentObject var serviceProvider: ServiceProvider
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.presentationMode) var presentationMode
-    
+
     // Input parameters
     let latitude: Double
     let longitude: Double
-    
+
     // State for hourly forecast navigation
     @State private var hourlyViewModel: HourlyForecastViewModel?
     @State private var showHourlyForecast = false
-    
+
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
@@ -29,13 +28,13 @@ struct CurrentLocalWeatherViewForFavorites: View {
                         .font(.title)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
-                    
+
                     // Favorite toggle button
                     FavoriteButtonForFavorites(
                         isFavorite: viewModel.isFavorite,
                         action: { viewModel.toggleFavorite() }
                     )
-                    
+
                     // Main weather info
                     WeatherHeaderView(
                         temperature: viewModel.temperature,
@@ -43,7 +42,7 @@ struct CurrentLocalWeatherViewForFavorites: View {
                         weatherDescription: viewModel.weatherDescription,
                         weatherImage: viewModel.weatherImage
                     )
-                    
+
                     // Current weather details
                     WeatherDetailsForFavoritesView(
                         windSpeed: viewModel.windSpeed,
@@ -55,19 +54,19 @@ struct CurrentLocalWeatherViewForFavorites: View {
                         dewPoint: viewModel.dewPoint,
                         precipitation: viewModel.precipitation
                     )
-                    
+
                     // 7-Day forecast with navigation to hourly view
                     DailyForecastViewForFavorites(
                         forecasts: viewModel.forecastPeriods,
                         onForecastSelected: { forecast in
                             print("🕐 Selected forecast for date: \(forecast.date), isToday: \(forecast.isToday)")
-                            
+
                             // Always force navigation to close first (if open)
                             showHourlyForecast = false
-                            
+
                             // Reset the view model reference
                             hourlyViewModel = nil
-                            
+
                             // Create delay to ensure proper state reset
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                                 // Create a brand new hourly forecast view model each time
@@ -75,7 +74,7 @@ struct CurrentLocalWeatherViewForFavorites: View {
                                     weatherService: serviceProvider.openMeteoService,
                                     databaseService: serviceProvider.weatherService
                                 )
-                                
+
                                 // Initialize with the selected forecast date
                                 hourlyViewModel?.initialize(
                                     selectedDate: forecast.date,
@@ -84,7 +83,7 @@ struct CurrentLocalWeatherViewForFavorites: View {
                                     longitude: viewModel.longitude,
                                     locationName: viewModel.locationDisplay
                                 )
-                                
+
                                 // Trigger navigation
                                 showHourlyForecast = true
                             }
@@ -101,7 +100,7 @@ struct CurrentLocalWeatherViewForFavorites: View {
                             label: { EmptyView() }
                         )
                     )
-                    
+
                     // Attribution
                     Text(viewModel.attribution)
                         .font(.caption)
@@ -114,8 +113,7 @@ struct CurrentLocalWeatherViewForFavorites: View {
         }
         .navigationTitle("Current Weather")
         .withHomeButton()
-        
-        
+
         .onAppear {
             // Initialize with services and location coordinates
             viewModel.initialize(
@@ -126,7 +124,7 @@ struct CurrentLocalWeatherViewForFavorites: View {
                 geocodingService: serviceProvider.geocodingService,
                 databaseService: serviceProvider.weatherService
             )
-            
+
             viewModel.loadWeatherData()
         }
         .onDisappear {
@@ -147,7 +145,7 @@ struct CurrentLocalWeatherViewForFavorites: View {
 struct FavoriteButtonForFavorites: View {
     let isFavorite: Bool
     let action: () -> Void
-    
+
     var body: some View {
         Button(action: {
             let impactGenerator = UIImpactFeedbackGenerator(style: .medium)
@@ -173,7 +171,7 @@ struct LoadingViewForFavorites: View {
         VStack(spacing: 20) {
             ProgressView()
                 .scaleEffect(1.5)
-            
+
             Text("Loading weather data...")
                 .font(.headline)
                 .foregroundColor(.secondary)
@@ -185,7 +183,7 @@ struct LoadingViewForFavorites: View {
 
 struct ErrorViewForFavorites: View {
     let errorMessage: String
-    
+
     var body: some View {
         VStack(spacing: 16) {
             Image(systemName: "exclamationmark.triangle")
@@ -193,11 +191,11 @@ struct ErrorViewForFavorites: View {
                 .aspectRatio(contentMode: .fit)
                 .frame(width: 60, height: 60)
                 .foregroundColor(.orange)
-            
+
             Text("Error")
                 .font(.title)
                 .foregroundColor(.primary)
-            
+
             Text(errorMessage)
                 .font(.body)
                 .foregroundColor(.secondary)
@@ -221,15 +219,15 @@ struct WeatherDetailsForFavoritesView: View {
     let humidity: String
     let dewPoint: String
     let precipitation: String
-    
+
     var body: some View {
         VStack(spacing: 12) {
             Text("Current Conditions")
                 .font(.headline)
                 .padding(.top, 8)
-            
+
             Divider()
-            
+
             // Weather detail grid
             VStack(spacing: 25) {
                 // Wind - using SF Symbol with blue color
@@ -239,42 +237,42 @@ struct WeatherDetailsForFavoritesView: View {
                     subtitle: windDirection,
                     value: windSpeed
                 )
-                
+
                 // Gusts - using custom image with red color
                 DetailRowForFavorites(
                     iconSource: .system("wind", .red),
                     title: "Gusts",
                     value: windGusts
                 )
-                
+
                 // Visibility - using SF Symbol with green color
                 DetailRowForFavorites(
                     iconSource: .custom("visibilitysixseven"),
                     title: "Visibility",
                     value: visibility
                 )
-                
+
                 // Pressure - using SF Symbol with purple color
                 DetailRowForFavorites(
                     iconSource: .custom("pressuresixseven", .purple),
                     title: "Pressure",
                     value: "\(pressure)\""
                 )
-                
+
                 // Humidity - using SF Symbol with cyan color
                 DetailRowForFavorites(
                     iconSource: .system("humidity", .cyan),
                     title: "Humidity",
                     value: "\(humidity)%"
                 )
-                
+
                 // Dew Point - using SF Symbol with orange color
                 DetailRowForFavorites(
                     iconSource: .system("drop", .orange),
                     title: "Dew Point",
                     value: "\(dewPoint)°"
                 )
-                
+
                 // Precipitation - using SF Symbol with default color
                 DetailRowForFavorites(
                     iconSource: .system("cloud.rain"),
@@ -296,9 +294,9 @@ struct WeatherDetailsForFavoritesView: View {
 struct DetailRowForFavorites: View {
     let iconSource: IconSourceForFavorites
     let title: String
-    var subtitle: String? = nil
+    var subtitle: String?
     let value: String
-    
+
     var body: some View {
         HStack {
             // Display either SF Symbol or custom image based on iconSource
@@ -318,21 +316,21 @@ struct DetailRowForFavorites: View {
             }
             .frame(width: 24, height: 24)
             .padding(.trailing, 16)
-            
+
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
                     .font(.body)
                     .foregroundColor(.primary)
-                
+
                 if let subtitle = subtitle {
                     Text(subtitle)
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
-            
+
             Spacer()
-            
+
             Text(value)
                 .font(.body)
                 .fontWeight(.medium)
@@ -350,9 +348,9 @@ enum IconSourceForFavorites {
 struct DailyForecastViewForFavorites: View {
     let forecasts: [DailyForecastItem]
     let onForecastSelected: (DailyForecastItem) -> Void
-    
-    @State private var expandedForecastId: UUID? = nil
-    
+
+    @State private var expandedForecastId: UUID?
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Section header
@@ -360,10 +358,10 @@ struct DailyForecastViewForFavorites: View {
                 .font(.headline)
                 .fontWeight(.semibold)
                 .padding(.vertical, 4)
-            
+
             // Forecast header row
             ForecastHeaderRowForFavorites()
-            
+
             // Forecast items
             if forecasts.isEmpty {
                 Text("No forecast data available")
@@ -387,11 +385,11 @@ struct DailyForecastViewForFavorites: View {
                                 expandedForecastId = forecast.id
                             }
                         }
-                        
+
                         // Also trigger the navigation callback
                         onForecastSelected(forecast)
                     }
-                    
+
                     if forecast.id != forecasts.last?.id {
                         Divider()
                             .padding(.leading)
@@ -413,23 +411,23 @@ struct ForecastHeaderRowForFavorites: View {
         HStack {
             Text("Date")
                 .frame(width: 60, alignment: .leading)
-            
+
             Image(systemName: "thermometer")
                 .frame(width: 60)
                 .foregroundColor(.orange)
-            
+
             Image(systemName: "moon.stars")
                 .frame(width: 40)
                 .foregroundColor(.yellow)
-            
+
             Image(systemName: "wind")
                 .frame(width: 40)
                 .foregroundColor(.blue)
-            
+
             Image(systemName: "eye")
                 .frame(width: 40)
                 .foregroundColor(.green)
-            
+
             Image(systemName: "arrow.down.to.line")
                 .frame(width: 40)
                 .foregroundColor(.purple)
@@ -446,7 +444,7 @@ struct DailyForecastRowViewForFavorites: View {
     let forecast: DailyForecastItem
     let isExpanded: Bool
     let isToday: Bool
-    
+
     var body: some View {
         VStack(spacing: 0) {
             // Main row content
@@ -456,11 +454,11 @@ struct DailyForecastRowViewForFavorites: View {
                     Text(forecast.dayOfWeek)
                         .font(.headline)
                         .fontWeight(.bold)
-                    
+
                     Text(forecast.dateDisplay)
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    
+
                     if isToday {
                         Text("TODAY")
                             .font(.caption2)
@@ -469,61 +467,61 @@ struct DailyForecastRowViewForFavorites: View {
                     }
                 }
                 .frame(width: 60, alignment: .leading)
-                
+
                 // Temperature column
                 VStack(spacing: 4) {
                     TemperaturePillForFavorites(
                         temperature: Int(forecast.high.rounded()),
                         isHigh: true
                     )
-                    
+
                     TemperaturePillForFavorites(
                         temperature: Int(forecast.low.rounded()),
                         isHigh: false
                     )
                 }
                 .frame(width: 60)
-                
+
                 // Moon phase column
                 VStack(spacing: 6) {
                     moonPhaseIconForFavorites
                         .frame(width: 24, height: 24)
-                    
+
                     Image(systemName: forecast.isWaxingMoon ? "arrow.up" : "arrow.down")
                         .foregroundColor(forecast.isWaxingMoon ? .green : .red)
                         .font(.caption)
                 }
                 .frame(width: 40)
-                
+
                 // Wind column
                 VStack(alignment: .center, spacing: 2) {
                     Text(forecast.windDirection)
                         .font(.caption)
-                    
+
                     Text("\(Int(forecast.windSpeed))")
                         .font(.caption)
-                    
+
                     Text("\(Int(forecast.windGusts))")
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }
                 .frame(width: 40)
-                
+
                 // Visibility column
                 VStack(alignment: .center, spacing: 4) {
                     Text(forecast.visibility)
                         .font(.caption)
-                    
+
                     weatherIconForFavorites
                         .frame(width: 24, height: 24)
                 }
                 .frame(width: 40)
-                
+
                 // Pressure column
                 VStack(alignment: .center, spacing: 2) {
                     Text(String(format: "%.1f", forecast.pressure))
                         .font(.caption)
-                    
+
                     Text("inHg")
                         .font(.caption2)
                         .foregroundColor(.secondary)
@@ -538,7 +536,7 @@ struct DailyForecastRowViewForFavorites: View {
                         Color(UIColor.secondarySystemBackground) :
                         Color.clear)
             )
-            
+
             // Expanded details
             if isExpanded {
                 VStack(alignment: .leading, spacing: 8) {
@@ -546,7 +544,7 @@ struct DailyForecastRowViewForFavorites: View {
                         .font(.callout)
                         .foregroundColor(.secondary)
                         .padding(.top, 4)
-                    
+
                     if !forecast.description.isEmpty {
                         Text(forecast.description)
                             .font(.callout)
@@ -561,7 +559,7 @@ struct DailyForecastRowViewForFavorites: View {
         }
         .cornerRadius(8)
     }
-    
+
     // Dynamic weather icon based on weather code
     private var weatherIconForFavorites: some View {
         Group {
@@ -592,7 +590,7 @@ struct DailyForecastRowViewForFavorites: View {
             }
         }
     }
-    
+
     // Dynamic moon phase icon
     private var moonPhaseIconForFavorites: some View {
         Group {
@@ -631,7 +629,7 @@ struct DailyForecastRowViewForFavorites: View {
 struct TemperaturePillForFavorites: View {
     let temperature: Int
     let isHigh: Bool
-    
+
     var body: some View {
         Text("\(temperature)°")
             .font(.caption)

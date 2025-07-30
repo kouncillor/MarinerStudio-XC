@@ -1,4 +1,3 @@
-
 import Foundation
 import CoreLocation
 import SwiftUI
@@ -164,22 +163,22 @@ class TidalHeightStationsViewModel: ObservableObject {
 
     func toggleStationFavorite(stationId: String) async {
         print("⭐ ViewModel: Starting toggle for station \(stationId)")
-        
+
         // Find the station object first to get the name and coordinates
         guard let stationWithDistance = allStations.first(where: { $0.station.id == stationId }) else {
             print("❌ ViewModel: Could not find station \(stationId) in allStations")
             return
         }
-        
+
         let currentStation = stationWithDistance.station
-        
+
         let toggleResult = await tideFavoritesCloudService.toggleFavorite(
             stationId: stationId,
             stationName: currentStation.name,
             latitude: currentStation.latitude,
             longitude: currentStation.longitude
         )
-        
+
         let newFavoriteStatus: Bool
         switch toggleResult {
         case .success(let status):
@@ -188,7 +187,7 @@ class TidalHeightStationsViewModel: ObservableObject {
             print("❌ ViewModel: Failed to toggle favorite for station \(stationId): \(error)")
             return // Exit early if toggle failed
         }
-        
+
         print("⭐ ViewModel: Toggle completed for station \(stationId), new status: \(newFavoriteStatus)")
 
         if let index = allStations.firstIndex(where: { $0.station.id == stationId }) {
@@ -198,28 +197,18 @@ class TidalHeightStationsViewModel: ObservableObject {
                 station: updatedStation,
                 distanceFromUser: allStations[index].distanceFromUser
             )
-            
+
             await MainActor.run {
                 filterStations()
             }
-            
+
             print("⭐ ViewModel: Updated station \(stationId) in allStations array")
         }
-        
+
         // No sync needed - cloud service is the single source of truth
     }
-    
-    
-    
-    
-    
-    
-    
-    
+
 }
 
 // MARK: - Cloud-Only Implementation
 // No sync extension needed - cloud service is the single source of truth
-
-
-

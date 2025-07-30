@@ -1,11 +1,10 @@
-
 import Foundation
 import SQLite
 
 struct NavUnit: Identifiable {
     // Primary key
     var id: String { navUnitId }
-    
+
     // Core Navigation Unit Properties
     let navUnitId: String
     var unloCode: String?
@@ -47,44 +46,44 @@ struct NavUnit: Identifiable {
     var serviceInitiationDate: String?
     var serviceTerminationDate: String?
     var isFavorite: Bool
-    
+
     // MARK: - NEW: Sync Properties
     /// User ID who favorited this nav unit - matches Supabase user.id
     /// Used for sync operations to identify ownership of favorites
     var userId: String?
-    
+
     /// Device ID that last modified the favorite status
     /// Used for conflict resolution and tracking device-specific changes
     var deviceId: String?
-    
+
     /// Timestamp when the favorite status was last modified
     /// Critical for last-write-wins conflict resolution during sync
     var lastModified: Date?
-    
+
     // MARK: - Computed Properties
-    
+
     /// Computed property for phone numbers extracted from text fields
     var phoneNumbers: [String] {
         var numbers: [String] = []
-        
+
         func extractFromText(_ text: String?) {
             guard let text = text, !text.isEmpty else { return }
-            
+
             // Regular expression to match phone numbers
             let regex = try? NSRegularExpression(
                 pattern: "(?:Phone:?\\s*)((?:\\d{3}/?\\d{3}-\\d{4}(?:\\s*-\\d{4})?)|(?:\\d{3}-\\d{3}-\\d{4}))",
                 options: []
             )
-            
+
             if let regex = regex {
                 let nsString = text as NSString
                 let matches = regex.matches(in: text, options: [], range: NSRange(location: 0, length: nsString.length))
-                
+
                 for match in matches {
                     if match.numberOfRanges > 1 {
                         let phoneNumsStr = nsString.substring(with: match.range(at: 1))
                         let phoneNums = phoneNumsStr.components(separatedBy: "/")
-                        
+
                         for num in phoneNums {
                             let cleanNum = num.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: "-", with: "")
                             if cleanNum.count >= 10 {
@@ -95,20 +94,20 @@ struct NavUnit: Identifiable {
                 }
             }
         }
-        
+
         extractFromText(operators)
         extractFromText(owners)
         extractFromText(remarks)
-        
+
         // Return unique values
         return Array(Set(numbers))
     }
-    
+
     /// Additional computed property for phone number availability
     var hasPhoneNumbers: Bool {
         return !phoneNumbers.isEmpty
     }
-    
+
     // MARK: - Coding Keys for Database Mapping
     /// Coding keys for database mapping - includes new sync columns
     enum CodingKeys: String, CodingKey {
@@ -152,13 +151,13 @@ struct NavUnit: Identifiable {
         case serviceInitiationDate = "SERVICE_INITIATION_DATE"
         case serviceTerminationDate = "SERVICE_TERMINATION_DATE"
         case isFavorite = "is_favorite"
-        
+
         // NEW: Sync-related coding keys
         case userId = "USER_ID"
         case deviceId = "DEVICE_ID"
         case lastModified = "LAST_MODIFIED"
     }
-    
+
     // MARK: - Initializer with Default Values
     /// Initializer with default values - includes new sync properties
     init(
@@ -247,7 +246,7 @@ struct NavUnit: Identifiable {
         self.serviceInitiationDate = serviceInitiationDate
         self.serviceTerminationDate = serviceTerminationDate
         self.isFavorite = isFavorite
-        
+
         // NEW: Assign sync properties
         self.userId = userId
         self.deviceId = deviceId

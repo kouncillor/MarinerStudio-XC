@@ -15,20 +15,20 @@ struct AllRoutesView: View {
     @State private var selectedRouteName: String = ""
     @State private var showingRouteDetails = false
     @State private var selectedRouteForDetails: AllRoute?
-    
+
     init(allRoutesService: AllRoutesDatabaseService? = nil) {
         _viewModel = StateObject(wrappedValue: AllRoutesViewModel(allRoutesService: allRoutesService))
     }
-    
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
                 // Header with filters
                 headerView
-                
+
                 // Search Bar
                 searchBarView
-                
+
                 // Content
                 if viewModel.isLoading && viewModel.routes.isEmpty {
                     loadingView
@@ -37,7 +37,7 @@ struct AllRoutesView: View {
                 } else {
                     routesListView
                 }
-                
+
                 // Error message
                 if !viewModel.errorMessage.isEmpty {
                     errorView
@@ -69,9 +69,9 @@ struct AllRoutesView: View {
             }
         }
     }
-    
+
     // MARK: - Header View
-    
+
     private var headerView: some View {
         VStack(spacing: 12) {
             if viewModel.isLoading && !viewModel.routes.isEmpty {
@@ -82,7 +82,7 @@ struct AllRoutesView: View {
         }
         .background(Color(.systemGroupedBackground))
     }
-    
+
     private var filterButtonsView: some View {
         HStack(spacing: 8) {
             ForEach(["all", "public", "imported", "created"], id: \.self) { filter in
@@ -104,7 +104,7 @@ struct AllRoutesView: View {
         }
         .padding(.horizontal)
     }
-    
+
     private func filterDisplayName(_ filter: String) -> String {
         switch filter {
         case "all": return "All"
@@ -114,18 +114,18 @@ struct AllRoutesView: View {
         default: return filter.capitalized
         }
     }
-    
+
     // MARK: - Search Bar
-    
+
     private var searchBarView: some View {
         HStack {
             HStack {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(.secondary)
-                
+
                 TextField("Search routes...", text: $viewModel.searchText)
                     .textFieldStyle(PlainTextFieldStyle())
-                
+
                 if !viewModel.searchText.isEmpty {
                     Button(action: {
                         viewModel.searchText = ""
@@ -145,9 +145,9 @@ struct AllRoutesView: View {
         .padding(.bottom, 8)
         .background(Color(.systemGroupedBackground))
     }
-    
+
     // MARK: - Routes List
-    
+
     private var routesListView: some View {
         List(viewModel.filteredRoutes) { route in
             AllRouteRowView(
@@ -166,14 +166,14 @@ struct AllRoutesView: View {
             viewModel.refresh()
         }
     }
-    
+
     // MARK: - Loading View
-    
+
     private var loadingView: some View {
         VStack(spacing: 16) {
             ProgressView()
                 .scaleEffect(1.2)
-            
+
             Text("Loading routes...")
                 .font(.headline)
                 .foregroundColor(.secondary)
@@ -181,27 +181,27 @@ struct AllRoutesView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(.systemGroupedBackground))
     }
-    
+
     // MARK: - Empty State
-    
+
     private var emptyStateView: some View {
         VStack(spacing: 20) {
             Image(systemName: viewModel.routes.isEmpty ? "list.bullet.circle" : "magnifyingglass.circle")
                 .font(.system(size: 60))
                 .foregroundColor(.gray)
-            
+
             Text(viewModel.routes.isEmpty ? "No Routes Available" : "No Results Found")
                 .font(.title2)
                 .fontWeight(.semibold)
-            
-            Text(viewModel.routes.isEmpty ? 
+
+            Text(viewModel.routes.isEmpty ?
                  "Download public routes, import your own files, or create new routes to get started." :
                  "No routes match your current filter and search criteria. Try adjusting your search terms or changing the filter.")
                 .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
-            
+
             if viewModel.routes.isEmpty {
                 Button("Refresh") {
                     viewModel.refresh()
@@ -215,7 +215,7 @@ struct AllRoutesView: View {
                         }
                         .buttonStyle(.borderedProminent)
                     }
-                    
+
                     if viewModel.selectedFilter != "all" {
                         Button("Show All") {
                             viewModel.selectedFilter = "all"
@@ -229,21 +229,21 @@ struct AllRoutesView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(.systemGroupedBackground))
     }
-    
+
     // MARK: - Error View
-    
+
     private var errorView: some View {
         VStack(spacing: 8) {
             HStack {
                 Image(systemName: "exclamationmark.triangle")
                     .foregroundColor(.red)
-                
+
                 Text(viewModel.errorMessage)
                     .font(.caption)
                     .foregroundColor(.red)
-                
+
                 Spacer()
-                
+
                 Button("Dismiss") {
                     viewModel.errorMessage = ""
                 }
@@ -256,22 +256,22 @@ struct AllRoutesView: View {
             .padding(.horizontal)
         }
     }
-    
+
     // MARK: - Helper Functions
-    
+
     private func loadRoute(_ route: AllRoute) {
         Task {
             do {
                 // Parse GPX data from database
                 let gpxFile = try await serviceProvider.gpxService.loadGpxFile(from: route.gpxData)
-                
+
                 await MainActor.run {
                     // Set up navigation to GpxView with pre-loaded data
                     selectedGpxFile = gpxFile
                     selectedRouteName = route.name
                     showingGpxView = true
                 }
-                
+
             } catch {
                 await MainActor.run {
                     viewModel.errorMessage = "Failed to load route: \(error.localizedDescription)"
@@ -279,12 +279,12 @@ struct AllRoutesView: View {
             }
         }
     }
-    
+
     private func showRouteDetails(_ route: AllRoute) {
         selectedRouteForDetails = route
         showingRouteDetails = true
     }
-    
+
 }
 
 // MARK: - All Route Row View
@@ -296,7 +296,7 @@ struct AllRouteRowView: View {
     let onDetails: () -> Void
     let onToggleFavorite: () -> Void
     let onDelete: () -> Void
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Route Header
@@ -305,7 +305,7 @@ struct AllRouteRowView: View {
                     Text(route.name)
                         .font(.headline)
                         .fontWeight(.semibold)
-                    
+
                     // Source type indicator
                     HStack(spacing: 4) {
                         Image(systemName: route.sourceTypeIcon)
@@ -319,9 +319,9 @@ struct AllRouteRowView: View {
                     .foregroundColor(sourceTypeColor)
                     .cornerRadius(4)
                 }
-                
+
                 Spacer()
-                
+
                 // Show favorite indicator if favorited
                 if route.isFavorite {
                     Image(systemName: "star.fill")
@@ -329,10 +329,10 @@ struct AllRouteRowView: View {
                         .font(.title3)
                 }
             }
-            
+
             // Route Stats
             routeStatsView
-            
+
             // Action Bar
             actionBarView
         }
@@ -341,8 +341,7 @@ struct AllRouteRowView: View {
         .cornerRadius(12)
         .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
     }
-    
-    
+
     private var sourceTypeColor: Color {
         switch route.sourceType {
         case "public":
@@ -355,7 +354,7 @@ struct AllRouteRowView: View {
             return .gray
         }
     }
-    
+
     private var routeStatsView: some View {
         HStack(spacing: 20) {
             statItem(
@@ -363,7 +362,7 @@ struct AllRouteRowView: View {
                 label: "Waypoints",
                 value: "\(route.waypointCount)"
             )
-            
+
             statItem(
                 icon: "ruler",
                 label: "Distance",
@@ -371,7 +370,7 @@ struct AllRouteRowView: View {
             )
         }
     }
-    
+
     private var actionBarView: some View {
         HStack(spacing: 8) {
             // Voyage Plan Button
@@ -391,7 +390,7 @@ struct AllRouteRowView: View {
             }
             .buttonStyle(.plain)
             .disabled(isOperationInProgress)
-            
+
             // Details Button
             Button(action: onDetails) {
                 HStack(spacing: 4) {
@@ -409,9 +408,9 @@ struct AllRouteRowView: View {
             }
             .buttonStyle(.plain)
             .disabled(isOperationInProgress)
-            
+
             Spacer()
-            
+
             // Favorite Button
             Button(action: onToggleFavorite) {
                 Image(systemName: route.isFavorite ? "star.fill" : "star")
@@ -423,7 +422,7 @@ struct AllRouteRowView: View {
             }
             .buttonStyle(.plain)
             .disabled(isOperationInProgress)
-            
+
             // Delete Button
             Button(action: onDelete) {
                 Image(systemName: "trash")
@@ -438,19 +437,19 @@ struct AllRouteRowView: View {
         }
         .opacity(isOperationInProgress ? 0.6 : 1.0)
     }
-    
+
     private func statItem(icon: String, label: String, value: String) -> some View {
         VStack(spacing: 2) {
             HStack(spacing: 4) {
                 Image(systemName: icon)
                     .font(.caption2)
                     .foregroundColor(.blue)
-                
+
                 Text(label)
                     .font(.caption2)
                     .foregroundColor(.secondary)
             }
-            
+
             Text(value)
                 .font(.caption)
                 .fontWeight(.medium)
@@ -496,7 +495,7 @@ struct AllRouteRowView: View {
             notes: "Local harbor navigation"
         )
     ]
-    
+
     // Create preview with mock data
     VStack(spacing: 16) {
         ForEach(mockRoutes) { route in

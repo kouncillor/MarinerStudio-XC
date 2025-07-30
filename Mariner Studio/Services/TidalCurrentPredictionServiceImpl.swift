@@ -5,21 +5,21 @@ import Foundation
 class TidalCurrentPredictionServiceImpl: TidalCurrentPredictionService {
     // MARK: - Constants
     private let baseUrl = "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter"
-    
+
     // MARK: - Properties
     private let urlSession: URLSession
-    
+
     // MARK: - Initialization
     init(urlSession: URLSession = .shared) {
         self.urlSession = urlSession
     }
-    
+
     // MARK: - TidalCurrentPredictionService Methods
     func getPredictions(stationId: String, bin: Int, date: Date) async throws -> TidalCurrentPredictionResponse {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyyMMdd"
         let dateString = dateFormatter.string(from: date)
-        
+
         let urlString = "\(baseUrl)?begin_date=\(dateString)" +
                         "&end_date=\(dateString)" +
                         "&station=\(stationId)" +
@@ -29,27 +29,27 @@ class TidalCurrentPredictionServiceImpl: TidalCurrentPredictionService {
                         "&time_zone=lst_ldt" +
                         "&units=english" +
                         "&format=xml"
-        
+
         guard let url = URL(string: urlString) else {
             throw NetworkError.invalidURL
         }
-        
+
         let (data, response) = try await urlSession.data(from: url)
-        
+
         guard let httpResponse = response as? HTTPURLResponse else {
             throw NetworkError.invalidResponse
         }
-        
+
         guard httpResponse.statusCode == 200 else {
             throw NetworkError.serverError(statusCode: httpResponse.statusCode)
         }
-        
+
         let content = String(data: data, encoding: .utf8) ?? ""
-        
+
         if content.contains("Error") {
             throw NetworkError.serverError(statusCode: 0)
         }
-        
+
         do {
             let parser = XMLParser(data: data)
             let xmlParser = XMLParserHelper()
@@ -64,12 +64,12 @@ class TidalCurrentPredictionServiceImpl: TidalCurrentPredictionService {
             throw NetworkError.decodingError(error)
         }
     }
-    
+
     func getExtremes(stationId: String, bin: Int, date: Date) async throws -> TidalCurrentPredictionResponse {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyyMMdd"
         let dateString = dateFormatter.string(from: date)
-        
+
         let urlString = "\(baseUrl)?begin_date=\(dateString)" +
                         "&end_date=\(dateString)" +
                         "&station=\(stationId)" +
@@ -79,27 +79,27 @@ class TidalCurrentPredictionServiceImpl: TidalCurrentPredictionService {
                         "&interval=MAX_SLACK" +
                         "&units=english" +
                         "&format=xml"
-        
+
         guard let url = URL(string: urlString) else {
             throw NetworkError.invalidURL
         }
-        
+
         let (data, response) = try await urlSession.data(from: url)
-        
+
         guard let httpResponse = response as? HTTPURLResponse else {
             throw NetworkError.invalidResponse
         }
-        
+
         guard httpResponse.statusCode == 200 else {
             throw NetworkError.serverError(statusCode: httpResponse.statusCode)
         }
-        
+
         let content = String(data: data, encoding: .utf8) ?? ""
-        
+
         if content.contains("Error") {
             throw NetworkError.serverError(statusCode: 0)
         }
-        
+
         do {
             let parser = XMLParser(data: data)
             let xmlParser = XMLParserHelper()
@@ -114,7 +114,7 @@ class TidalCurrentPredictionServiceImpl: TidalCurrentPredictionService {
             throw NetworkError.decodingError(error)
         }
     }
-    
+
     func getStationType(stationId: String, bin: Int) async throws -> TidalCurrentStationType {
         let urlString = "\(baseUrl)?begin_date=today" +
                         "&end_date=today" +
@@ -125,27 +125,27 @@ class TidalCurrentPredictionServiceImpl: TidalCurrentPredictionService {
                         "&units=english" +
                         "&time_zone=lst_ldt" +
                         "&format=xml"
-        
+
         guard let url = URL(string: urlString) else {
             throw NetworkError.invalidURL
         }
-        
+
         let (data, response) = try await urlSession.data(from: url)
-        
+
         guard let httpResponse = response as? HTTPURLResponse else {
             throw NetworkError.invalidResponse
         }
-        
+
         guard httpResponse.statusCode == 200 else {
             throw NetworkError.serverError(statusCode: httpResponse.statusCode)
         }
-        
+
         let content = String(data: data, encoding: .utf8) ?? ""
-        
+
         if content.contains("Error") {
             return .unknown
         }
-        
+
         return .maxSlackMin
     }
 }
@@ -153,11 +153,11 @@ class TidalCurrentPredictionServiceImpl: TidalCurrentPredictionService {
 // MARK: - XML Parser Helper
 class XMLParserHelper: NSObject, XMLParserDelegate {
     var currentPredictionResponse: TidalCurrentPredictionResponse?
-    
+
     private var currentElement = ""
     private var units = ""
     private var predictions: [TidalCurrentPrediction] = []
-    
+
     private var currentRegularSpeed: Double?
     private var currentVelocityMajor: Double?
     private var currentBin: Int = 0
@@ -167,10 +167,10 @@ class XMLParserHelper: NSObject, XMLParserDelegate {
     private var currentMeanEbbDirection: Double = 0
     private var currentDepth: Double = 0
     private var currentType: String?
-    
+
     func parser(_ parser: XMLParser, didStartElement elementName: String, namespaceURI: String?, qualifiedName qName: String?, attributes attributeDict: [String: String] = [:]) {
         currentElement = elementName
-        
+
         if elementName == "cp" {
             // Reset current prediction values
             currentRegularSpeed = nil
@@ -184,10 +184,10 @@ class XMLParserHelper: NSObject, XMLParserDelegate {
             currentType = nil
         }
     }
-    
+
     func parser(_ parser: XMLParser, foundCharacters string: String) {
         let data = string.trimmingCharacters(in: .whitespacesAndNewlines)
-        
+
         if !data.isEmpty {
             switch currentElement {
             case "units":
@@ -215,7 +215,7 @@ class XMLParserHelper: NSObject, XMLParserDelegate {
             }
         }
     }
-    
+
     func parser(_ parser: XMLParser, didEndElement elementName: String, namespaceURI: String?, qualifiedName qName: String?) {
         if elementName == "cp" {
             let prediction = TidalCurrentPrediction(

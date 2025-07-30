@@ -5,9 +5,9 @@ struct WeatherHeaderView: View {
     let feelsLike: String
     let weatherDescription: String
     let weatherImage: String
-    
+
     @Environment(\.colorScheme) var colorScheme
-    
+
     var body: some View {
         VStack(spacing: 16) {
             // Main weather display with temperature and icon
@@ -16,12 +16,12 @@ struct WeatherHeaderView: View {
                 weatherIcon
                     .frame(width: 80, height: 80)
                     .padding(.leading, 20)
-                
+
                 // Temperature display
                 Text("\(temperature)°")
                     .font(.system(size: 72, weight: .medium))
                     .foregroundColor(.orange)
-                
+
                 // Temperature symbol icon
                 Image(systemName: "thermometer")
                     .resizable()
@@ -30,12 +30,12 @@ struct WeatherHeaderView: View {
                     .foregroundColor(.orange.opacity(0.8))
                     .padding(.horizontal, 5)
             }
-            
+
             // Feels like temperature
             Text("FEELS LIKE \(feelsLike)°")
                 .font(.headline)
                 .foregroundColor(.secondary)
-            
+
             // Weather description
             Text(weatherDescription)
                 .font(.title2)
@@ -51,7 +51,7 @@ struct WeatherHeaderView: View {
                 .shadow(radius: 2)
         )
     }
-    
+
     // Dynamically generate weather icon based on the image name
     private var weatherIcon: some View {
         Group {
@@ -110,7 +110,7 @@ struct WeatherHeaderView: View {
             weatherImage: "fewcloudssixseven"
         )
         .padding()
-        
+
         WeatherHeaderView(
             temperature: "32",
             feelsLike: "28",

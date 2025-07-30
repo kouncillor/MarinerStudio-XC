@@ -10,10 +10,10 @@ class VoyagePlanRoutesViewModel: ObservableObject {
     @Published var searchText: String = ""
     @Published var isLoading = false
     @Published var errorMessage: String = ""
-    
+
     // MARK: - Dependencies
     private let allRoutesService: AllRoutesDatabaseService
-    
+
     init(allRoutesService: AllRoutesDatabaseService? = nil) {
         // Use provided service or create a new one with shared DatabaseCore
         if let service = allRoutesService {
@@ -25,7 +25,7 @@ class VoyagePlanRoutesViewModel: ObservableObject {
             self.allRoutesService = AllRoutesDatabaseService(databaseCore: databaseCore)
             print("🗺️ VOYAGE_PLAN_ROUTES: ⚠️ Creating fallback AllRoutesDatabaseService")
         }
-        
+
         // Monitor search text changes to trigger filtering
         $searchText
             .sink { [weak self] _ in
@@ -33,20 +33,20 @@ class VoyagePlanRoutesViewModel: ObservableObject {
             }
             .store(in: &cancellables)
     }
-    
+
     private var cancellables = Set<AnyCancellable>()
-    
+
     // MARK: - Route Loading
-    
+
     func loadRoutes() {
         print("🗺️ VOYAGE_PLAN_ROUTES: Starting route loading")
         isLoading = true
         errorMessage = ""
-        
+
         Task {
             do {
                 let loadedRoutes = try await allRoutesService.getAllRoutesAsync()
-                
+
                 await MainActor.run {
                     routes = loadedRoutes
                     applyFilter()
@@ -62,9 +62,9 @@ class VoyagePlanRoutesViewModel: ObservableObject {
             }
         }
     }
-    
+
     // MARK: - Filtering
-    
+
     func applyFilter() {
         if searchText.isEmpty {
             filteredRoutes = routes
@@ -77,16 +77,16 @@ class VoyagePlanRoutesViewModel: ObservableObject {
         }
         print("🗺️ VOYAGE_PLAN_ROUTES: Filtered to \(filteredRoutes.count) routes")
     }
-    
+
     // MARK: - Route Actions
-    
+
     func refresh() {
         print("🗺️ VOYAGE_PLAN_ROUTES: Refreshing routes")
         loadRoutes()
     }
-    
+
     // MARK: - Helper Methods
-    
+
     /// Clear any error messages
     func clearError() {
         errorMessage = ""

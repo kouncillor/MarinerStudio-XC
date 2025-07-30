@@ -13,21 +13,21 @@ extension Date {
 
 /// Singleton service for syncing weather location favorites between local SQLite and Supabase
 final class WeatherStationSyncService {
-    
+
     // MARK: - Shared Instance
     static let shared = WeatherStationSyncService()
-    
+
     // MARK: - Private Properties
     private let syncQueue = DispatchQueue(label: "weatherSync.operations", qos: .utility)
     private let logQueue = DispatchQueue(label: "weatherSync.logging", qos: .background)
     private var activeSyncOperations: [String: Date] = [:]
     private let operationsLock = NSLock()
     private var syncCounter: Int = 0
-    
+
     // MARK: - Performance Tracking
     private var operationStats: [String: TideSyncOperationStats] = [:]
     private let statsLock = NSLock()
-    
+
     // MARK: - Initialization
     private init() {
         logQueue.async {
@@ -37,29 +37,27 @@ final class WeatherStationSyncService {
             print("🌤️ WEATHER SYNC SERVICE: Ready for sync operations\n")
         }
     }
-    
+
     // MARK: - Public Sync Methods
-    
+
     /// Main bidirectional sync method with HEAVY LOGGING
     func syncWeatherLocationFavorites() async -> TideSyncResult {
         let operationId = startSyncOperation("fullSync")
         let startTime = Date()
-        
+
         logQueue.async {
-            print("\n🟢🌤️ FULL SYNC START: ===================================================")
-            print("🟢🌤️ FULL SYNC: Operation ID = \(operationId)")
             print("🟢🌤️ FULL SYNC: Start timestamp = \(startTime)")
             print("🟢🌤️ FULL SYNC: Thread = \(Thread.current)")
             print("🟢🌤️ FULL SYNC: Process ID = \(ProcessInfo.processInfo.processIdentifier)")
         }
-        
+
         do {
             // STEP 1: Authentication Check with heavy logging
             logQueue.async {
                 print("\n🔐🌤️ AUTH CHECK: Starting authentication verification...")
                 print("🔐🌤️ AUTH CHECK: Using SupabaseManager.shared for session retrieval")
             }
-            
+
             guard let session = try? await SupabaseManager.shared.getSession() else {
                 logQueue.async {
                     print("\n❌🔐🌤️ AUTH FAILED: No valid session found")
@@ -69,20 +67,20 @@ final class WeatherStationSyncService {
                 endSyncOperation(operationId, success: false, error: TideSyncError.authenticationRequired)
                 return .failure(.authenticationRequired)
             }
-            
+
             logQueue.async {
                 print("\n✅🔐🌤️ AUTH SUCCESS: Session retrieved successfully")
-                print("✅🔐🌤️ AUTH SUCCESS: User ID = \(session.user.id)")
-                print("✅🔐🌤️ AUTH SUCCESS: User email = \(session.user.email ?? "NO EMAIL")")
+                print("✅🔐🌤️ AUTH SUCCESS: User authenticated")
+                print("✅🔐🌤️ AUTH SUCCESS: User credentials verified")
                 print("✅🔐🌤️ AUTH SUCCESS: Session expires at = \(Date(timeIntervalSince1970: TimeInterval(session.expiresAt)))")
             }
-            
+
             // STEP 2: Database Service Access with heavy logging
             logQueue.async {
                 print("\n💾🌤️ DATABASE: Attempting to get database service...")
                 print("💾🌤️ DATABASE: Using ServiceProvider pattern")
             }
-            
+
             guard let databaseService = getWeatherDatabaseService() else {
                 logQueue.async {
                     print("\n❌💾🌤️ DATABASE FAILED: Could not access WeatherDatabaseService")
@@ -93,53 +91,53 @@ final class WeatherStationSyncService {
                 endSyncOperation(operationId, success: false, error: error)
                 return .failure(error)
             }
-            
+
             logQueue.async {
                 print("\n✅💾🌤️ DATABASE SUCCESS: WeatherDatabaseService acquired")
                 print("✅💾🌤️ DATABASE SUCCESS: Ready for local data operations")
             }
-            
+
             // STEP 3: Get Local Favorites with heavy logging
             logQueue.async {
                 print("\n📱🌤️ LOCAL DATA: Starting local favorites retrieval...")
                 print("📱🌤️ LOCAL DATA: Calling getFavoriteWeatherLocationsForSync()")
                 print("📱🌤️ LOCAL DATA: Timestamp = \(Date())")
             }
-            
+
             let localStartTime = Date()
             let localFavorites = await getLocalFavorites(databaseService: databaseService, userId: session.user.id)
             let localDuration = Date().timeIntervalSince(localStartTime)
-            
+
             logQueue.async {
                 print("\n✅📱🌤️ LOCAL DATA SUCCESS: Retrieved local favorites")
                 print("✅📱🌤️ LOCAL DATA: Count = \(localFavorites.count)")
                 print("✅📱🌤️ LOCAL DATA: Duration = \(String(format: "%.3f", localDuration))s")
-                
+
                 if localFavorites.isEmpty {
                     print("⚠️📱🌤️ LOCAL DATA WARNING: No local favorites found")
                 } else {
                     print("📱🌤️ LOCAL DATA: First 5 locations = \(localFavorites.prefix(5).map { "\($0.latitude),\($0.longitude)" })")
                 }
             }
-            
+
             // STEP 4: Get Remote Favorites with heavy logging
             logQueue.async {
                 print("\n☁️🌤️ REMOTE DATA: Starting remote favorites retrieval...")
                 print("☁️🌤️ REMOTE DATA: Querying user_weather_favorites table")
-                print("☁️🌤️ REMOTE DATA: User ID filter = \(session.user.id)")
+                print("☁️🌤️ REMOTE DATA: Filtering for user favorites")
                 print("☁️🌤️ REMOTE DATA: Using SupabaseManager.shared")
                 print("☁️🌤️ REMOTE DATA: Timestamp = \(Date())")
             }
-            
+
             let remoteStartTime = Date()
             let remoteFavorites = await getRemoteFavorites(userId: session.user.id)
             let remoteDuration = Date().timeIntervalSince(remoteStartTime)
-            
+
             logQueue.async {
                 print("\n✅☁️🌤️ REMOTE DATA SUCCESS: Retrieved remote favorites")
                 print("✅☁️🌤️ REMOTE DATA: Count = \(remoteFavorites.count)")
                 print("✅☁️🌤️ REMOTE DATA: Duration = \(String(format: "%.3f", remoteDuration))s")
-                
+
                 if remoteFavorites.isEmpty {
                     print("⚠️☁️🌤️ REMOTE DATA WARNING: No remote favorites found")
                 } else {
@@ -148,17 +146,17 @@ final class WeatherStationSyncService {
                     let unfavoriteRemotes = remoteFavorites.filter { !$0.isFavorite }
                     print("☁️🌤️ REMOTE DATA: - Favorites (true): \(favoriteRemotes.count)")
                     print("☁️🌤️ REMOTE DATA: - Unfavorites (false): \(unfavoriteRemotes.count)")
-                    
+
                     for (index, remote) in remoteFavorites.prefix(5).enumerated() {
                         print("☁️🌤️ REMOTE DATA: [\(index)] Location: \(remote.latitude),\(remote.longitude), Favorite: \(remote.isFavorite), Modified: \(remote.lastModified), Device: \(remote.deviceId)")
                     }
-                    
+
                     if remoteFavorites.count > 5 {
                         print("☁️🌤️ REMOTE DATA: ... and \(remoteFavorites.count - 5) more")
                     }
                 }
             }
-            
+
             // STEP 5: ID-Based Analysis Phase with heavy logging
             logQueue.async {
                 print("\n🔍🌤️ ANALYSIS: Starting ID-based sync analysis...")
@@ -166,11 +164,11 @@ final class WeatherStationSyncService {
                 print("🔍🌤️ ANALYSIS: Remote records count = \(remoteFavorites.count)")
                 print("🔍🌤️ ANALYSIS: Timestamp = \(Date())")
             }
-            
+
             // Create ID sets for tracking what needs syncing
             let localRemoteIds = Set(localFavorites.compactMap { $0.remoteId }) // remoteId is String?
             let remoteIds = Set(remoteFavorites.compactMap { $0.id?.uuidString })
-            
+
             logQueue.async {
                 print("\n🔍🌤️ ID-BASED ANALYSIS:")
                 print("🔍🌤️ ANALYSIS: Local remote IDs count = \(localRemoteIds.count)")
@@ -178,25 +176,25 @@ final class WeatherStationSyncService {
                 print("🔍🌤️ ANALYSIS: Local remote IDs = \(Array(localRemoteIds).prefix(5))")
                 print("🔍🌤️ ANALYSIS: Remote IDs = \(Array(remoteIds).prefix(5))")
             }
-            
+
             // Find records that need uploading (local records without remote IDs)
             let localRecordsToUpload = localFavorites.filter { local in
                 return local.remoteId == nil // Upload if no remote ID
             }
-            
+
             // Find records that need downloading (remote records not in local)
             let remoteRecordsToDownload = remoteFavorites.filter { remote in
                 guard let remoteId = remote.id?.uuidString else { return false }
                 return !localRemoteIds.contains(remoteId)
             }
-            
+
             // Find records that exist in both but may need updating
             let recordsToUpdate = localFavorites.compactMap { local -> (WeatherLocationFavorite, RemoteWeatherFavorite)? in
                 guard let localRemoteId = local.remoteId,
                       let remote = remoteFavorites.first(where: { $0.id?.uuidString == localRemoteId }) else {
                     return nil
                 }
-                
+
                 // Check if they differ (last_modified, is_favorite, location_name)
                 if local.lastModified != remote.lastModified ||
                    local.isFavorite != remote.isFavorite ||
@@ -205,37 +203,37 @@ final class WeatherStationSyncService {
                 }
                 return nil
             }
-            
+
             logQueue.async {
                 print("\n🔍🌤️ SYNC OPERATIONS NEEDED:")
                 print("🔍🌤️ UPLOAD (new local records): \(localRecordsToUpload.count) records")
                 print("🔍🌤️ DOWNLOAD (new remote records): \(remoteRecordsToDownload.count) records")
                 print("🔍🌤️ UPDATE (conflicting records): \(recordsToUpdate.count) records")
             }
-            
+
             // STEP 6: Perform Sync Operations with heavy logging
             var uploadCount = 0
             var downloadCount = 0
             var conflictCount = 0
             var errors: [TideSyncError] = []
-            
+
             // UPLOAD PHASE
             logQueue.async {
                 print("\n📤🌤️ UPLOAD PHASE: Starting upload of new local records...")
                 print("📤🌤️ UPLOAD PHASE: Records to upload = \(localRecordsToUpload.count)")
                 print("📤🌤️ UPLOAD PHASE: Timestamp = \(Date())")
             }
-            
+
             let uploadStartTime = Date()
             let (uploaded, uploadErrors) = await uploadNewLocalRecords(
                 localRecords: localRecordsToUpload,
                 userId: session.user.id
             )
             let uploadDuration = Date().timeIntervalSince(uploadStartTime)
-            
+
             uploadCount = uploaded
             errors.append(contentsOf: uploadErrors)
-            
+
             logQueue.async {
                 print("\n✅📤🌤️ UPLOAD PHASE COMPLETE:")
                 print("✅📤🌤️ UPLOAD: Successfully uploaded = \(uploadCount)")
@@ -247,24 +245,24 @@ final class WeatherStationSyncService {
                     }
                 }
             }
-            
+
             // DOWNLOAD PHASE
             logQueue.async {
                 print("\n📥🌤️ DOWNLOAD PHASE: Starting download of new remote records...")
                 print("📥🌤️ DOWNLOAD PHASE: Records to download = \(remoteRecordsToDownload.count)")
                 print("📥🌤️ DOWNLOAD PHASE: Timestamp = \(Date())")
             }
-            
+
             let downloadStartTime = Date()
             let (downloaded, downloadErrors) = await downloadNewRemoteRecords(
                 remoteRecords: remoteRecordsToDownload,
                 databaseService: databaseService
             )
             let downloadDuration = Date().timeIntervalSince(downloadStartTime)
-            
+
             downloadCount = downloaded
             errors.append(contentsOf: downloadErrors)
-            
+
             logQueue.async {
                 print("\n✅📥🌤️ DOWNLOAD PHASE COMPLETE:")
                 print("✅📥🌤️ DOWNLOAD: Successfully downloaded = \(downloadCount)")
@@ -276,7 +274,7 @@ final class WeatherStationSyncService {
                     }
                 }
             }
-            
+
             // UPDATE PHASE
             logQueue.async {
                 print("\n🔧🌤️ UPDATE PHASE: Starting record updates...")
@@ -284,17 +282,17 @@ final class WeatherStationSyncService {
                 print("🔧🌤️ UPDATE PHASE: Strategy = last_modified wins")
                 print("🔧🌤️ UPDATE PHASE: Timestamp = \(Date())")
             }
-            
+
             let updateStartTime = Date()
             let (updated, updateErrors) = await updateConflictingRecords(
                 recordsToUpdate: recordsToUpdate,
                 databaseService: databaseService
             )
             let updateDuration = Date().timeIntervalSince(updateStartTime)
-            
+
             conflictCount = updated
             errors.append(contentsOf: updateErrors)
-            
+
             logQueue.async {
                 print("\n✅🔧🌤️ UPDATE PHASE COMPLETE:")
                 print("✅🔧🌤️ UPDATE: Successfully updated = \(conflictCount)")
@@ -306,10 +304,10 @@ final class WeatherStationSyncService {
                     }
                 }
             }
-            
+
             // Note: No longer need unfavorite sync phase since we're using ID-based tracking
             // Each record is independent and managed by its own ID
-            
+
             // STEP 7: Create Final Result with heavy logging
             let endTime = Date()
             let stats = TideSyncStats(
@@ -323,9 +321,9 @@ final class WeatherStationSyncService {
                 conflictsResolved: conflictCount,
                 errors: errors.count
             )
-            
+
             endSyncOperation(operationId, success: errors.isEmpty)
-            
+
             logQueue.async {
                 print("\n🏁🌤️ SYNC COMPLETE: ===================================================")
                 print("🏁🌤️ SYNC RESULT: Operation ID = \(operationId)")
@@ -339,13 +337,13 @@ final class WeatherStationSyncService {
                 print("🏁🌤️ SYNC RESULT: End timestamp = \(endTime)")
                 print("🏁🌤️ SYNC COMPLETE: ===================================================\n")
             }
-            
+
             if errors.isEmpty {
                 return .success(stats)
             } else {
                 return .partialSuccess(stats, errors)
             }
-            
+
         } catch {
             logQueue.async {
                 print("\n💥🌤️ SYNC CATASTROPHIC ERROR: ===================================")
@@ -356,13 +354,13 @@ final class WeatherStationSyncService {
                 print("💥🌤️ TIMESTAMP: \(Date())")
                 print("💥🌤️ SYNC CATASTROPHIC ERROR: ===================================\n")
             }
-            
+
             let syncError = TideSyncError.unknownError(error.localizedDescription)
             endSyncOperation(operationId, success: false, error: syncError)
             return .failure(syncError)
         }
     }
-    
+
     // MARK: - Private Sync Implementation Methods
     private func getLocalFavorites(databaseService: WeatherDatabaseService, userId: UUID) async -> [WeatherLocationFavorite] {
         do {
@@ -375,21 +373,21 @@ final class WeatherStationSyncService {
             return []
         }
     }
-    
+
     private func uploadNewLocalRecords(
         localRecords: [WeatherLocationFavorite],
         userId: UUID
     ) async -> (uploaded: Int, errors: [TideSyncError]) {
-        
+
         logQueue.async {
             print("\n📤🌤️ UPLOAD IMPLEMENTATION: Starting upload of new local records...")
             print("📤🌤️ UPLOAD: Records to upload = \(localRecords.count)")
-            print("📤🌤️ UPLOAD: User ID = \(userId)")
+            print("📤🌤️ UPLOAD: Processing user favorites")
         }
-        
+
         var uploaded = 0
         var errors: [TideSyncError] = []
-        
+
         for (index, localRecord) in localRecords.enumerated() {
             logQueue.async {
                 print("\n📤🌤️ UPLOAD RECORD [\(index + 1)/\(localRecords.count)]: Processing record")
@@ -398,10 +396,10 @@ final class WeatherStationSyncService {
                 print("📤🌤️ UPLOAD: - Longitude: \(localRecord.longitude)")
                 print("📤🌤️ UPLOAD: - Is Favorite: \(localRecord.isFavorite)")
             }
-            
+
             do {
                 let insertStartTime = Date()
-                
+
                 // Create a new record without local ID so Supabase generates new UUID
                 let deviceId = localRecord.deviceId ?? UIDevice.current.identifierForVendor?.uuidString ?? "unknown"
                 let uploadRecord = RemoteWeatherFavorite(
@@ -412,30 +410,30 @@ final class WeatherStationSyncService {
                     isFavorite: localRecord.isFavorite,
                     deviceId: deviceId
                 )
-                
+
                 let response: PostgrestResponse<[RemoteWeatherFavorite]> = try await SupabaseManager.shared
                     .from("user_weather_favorites")
                     .insert(uploadRecord)
                     .select()
                     .execute()
-                
+
                 let insertDuration = Date().timeIntervalSince(insertStartTime)
-                
+
                 // CRITICAL: Update local record with the new remote ID
                 if let newRemoteRecord = response.value.first,
                    let remoteId = newRemoteRecord.id?.uuidString,
                    let databaseService = getWeatherDatabaseService() {
-                    
+
                     logQueue.async {
                         print("🔄📤🌤️ UPLOAD: Updating local record with remote ID \(remoteId)")
                     }
-                    
+
                     // Update the local record with the remote ID using the local record's ID
                     let updateSuccess = await databaseService.updateLocalRecordWithRemoteId(
                         localId: localRecord.id,
                         remoteId: remoteId
                     )
-                    
+
                     if !updateSuccess {
                         logQueue.async {
                             print("⚠️📤🌤️ UPLOAD WARNING: Failed to update local record with remote ID")
@@ -446,9 +444,9 @@ final class WeatherStationSyncService {
                         }
                     }
                 }
-                
+
                 uploaded += 1
-                
+
                 logQueue.async {
                     print("✅📤🌤️ UPLOAD SUCCESS: Record uploaded")
                     print("✅📤🌤️ UPLOAD SUCCESS: Duration = \(String(format: "%.3f", insertDuration))s")
@@ -458,11 +456,11 @@ final class WeatherStationSyncService {
                     }
                     print("✅📤🌤️ UPLOAD SUCCESS: Total uploaded so far = \(uploaded)")
                 }
-                
+
             } catch {
                 let syncError = TideSyncError.supabaseError("Failed to upload record: \(error.localizedDescription)")
                 errors.append(syncError)
-                
+
                 logQueue.async {
                     print("❌📤🌤️ UPLOAD FAILED: Record upload failed")
                     print("❌📤🌤️ UPLOAD FAILED: Error = \(error)")
@@ -471,7 +469,7 @@ final class WeatherStationSyncService {
                 }
             }
         }
-        
+
         logQueue.async {
             print("\n📤🌤️ UPLOAD SUMMARY:")
             print("📤🌤️ UPLOAD: Processed \(localRecords.count) records")
@@ -481,23 +479,23 @@ final class WeatherStationSyncService {
                 print("📤🌤️ UPLOAD: Success rate = \(String(format: "%.1f", Double(uploaded) / Double(localRecords.count) * 100))%")
             }
         }
-        
+
         return (uploaded, errors)
     }
-    
+
     private func downloadNewRemoteRecords(
         remoteRecords: [RemoteWeatherFavorite],
         databaseService: WeatherDatabaseService
     ) async -> (downloaded: Int, errors: [TideSyncError]) {
-        
+
         logQueue.async {
             print("\n📥🌤️ DOWNLOAD IMPLEMENTATION: Starting download of new remote records...")
             print("📥🌤️ DOWNLOAD: Records to download = \(remoteRecords.count)")
         }
-        
+
         var downloaded = 0
         var errors: [TideSyncError] = []
-        
+
         for (index, remoteRecord) in remoteRecords.enumerated() {
             logQueue.async {
                 print("\n📥🌤️ DOWNLOAD RECORD [\(index + 1)/\(remoteRecords.count)]: Processing record")
@@ -509,7 +507,7 @@ final class WeatherStationSyncService {
                 print("📥🌤️ DOWNLOAD: - Last Modified: \(remoteRecord.lastModified)")
                 print("📥🌤️ DOWNLOAD: - Device ID: \(remoteRecord.deviceId)")
             }
-            
+
             let setStartTime = Date()
             let success = await databaseService.setWeatherLocationFavoriteWithSyncData(
                 latitude: remoteRecord.latitude,
@@ -522,7 +520,7 @@ final class WeatherStationSyncService {
                 remoteId: remoteRecord.id?.uuidString // Pass the remote ID to store locally
             )
             let setDuration = Date().timeIntervalSince(setStartTime)
-            
+
             if success {
                 downloaded += 1
                 logQueue.async {
@@ -542,7 +540,7 @@ final class WeatherStationSyncService {
                 }
             }
         }
-        
+
         logQueue.async {
             print("\n📥🌤️ DOWNLOAD SUMMARY:")
             print("📥🌤️ DOWNLOAD: Processed \(remoteRecords.count) records")
@@ -552,24 +550,24 @@ final class WeatherStationSyncService {
                 print("📥🌤️ DOWNLOAD: Success rate = \(String(format: "%.1f", Double(downloaded) / Double(remoteRecords.count) * 100))%")
             }
         }
-        
+
         return (downloaded, errors)
     }
-    
+
     private func updateConflictingRecords(
         recordsToUpdate: [(WeatherLocationFavorite, RemoteWeatherFavorite)],
         databaseService: WeatherDatabaseService
     ) async -> (updated: Int, errors: [TideSyncError]) {
-        
+
         logQueue.async {
             print("\n🔧🌤️ UPDATE IMPLEMENTATION: Starting record updates...")
             print("🔧🌤️ UPDATE: Records to update = \(recordsToUpdate.count)")
             print("🔧🌤️ UPDATE: Strategy = last_modified wins")
         }
-        
+
         var updated = 0
         var errors: [TideSyncError] = []
-        
+
         for (index, (localRecord, remoteRecord)) in recordsToUpdate.enumerated() {
             logQueue.async {
                 print("\n🔧🌤️ UPDATE RECORD [\(index + 1)/\(recordsToUpdate.count)]: Processing record")
@@ -577,18 +575,18 @@ final class WeatherStationSyncService {
                 print("🔧🌤️ UPDATE: - Local: favorite=\(localRecord.isFavorite), modified=\(localRecord.lastModified?.description ?? "nil")")
                 print("🔧🌤️ UPDATE: - Remote: favorite=\(remoteRecord.isFavorite), modified=\(remoteRecord.lastModified)")
             }
-            
+
             // Use last-write-wins to determine which version to keep
             let localLastModified = localRecord.lastModified ?? Date.distantPast
             let localWins = localLastModified > remoteRecord.lastModified
-            
+
             logQueue.async {
                 print("🔧🌤️ UPDATE: Winner = \(localWins ? "LOCAL" : "REMOTE")")
                 print("🔧🌤️ UPDATE: Applying winning state...")
             }
-            
+
             let updateStartTime = Date()
-            
+
             if localWins {
                 // Local wins - update remote record
                 do {
@@ -596,7 +594,7 @@ final class WeatherStationSyncService {
                         print("🔧🌤️ UPDATE: BEFORE remote update - Local timestamp: \(localLastModified)")
                         print("🔧🌤️ UPDATE: About to set remote record to local timestamp: \(localLastModified)")
                     }
-                    
+
                     // Create update record with local winning data
                     let updateRecord = RemoteWeatherFavorite(
                         id: remoteRecord.id,
@@ -610,15 +608,15 @@ final class WeatherStationSyncService {
                         createdAt: remoteRecord.createdAt,
                         updatedAt: Date()
                     )
-                    
-                    let _ = try await SupabaseManager.shared
+
+                    _ = try await SupabaseManager.shared
                         .from("user_weather_favorites")
                         .update(updateRecord)
                         .eq("id", value: remoteRecord.id!.uuidString)
                         .execute()
-                    
+
                     updated += 1
-                    
+
                     logQueue.async {
                         print("✅🔧🌤️ UPDATE SUCCESS: Remote record updated with local data")
                         print("🔍🔧🌤️ UPDATE: Local timestamp was: \(localLastModified)")
@@ -628,7 +626,7 @@ final class WeatherStationSyncService {
                 } catch {
                     let syncError = TideSyncError.supabaseError("Failed to update remote record: \(error.localizedDescription)")
                     errors.append(syncError)
-                    
+
                     logQueue.async {
                         print("❌🔧🌤️ UPDATE FAILED: Could not update remote record")
                         print("❌🔧🌤️ UPDATE FAILED: \(error.localizedDescription)")
@@ -640,7 +638,7 @@ final class WeatherStationSyncService {
                     print("🔧🌤️ UPDATE: BEFORE local update - Remote timestamp: \(remoteRecord.lastModified)")
                     print("🔧🌤️ UPDATE: About to set local record to remote timestamp: \(remoteRecord.lastModified)")
                 }
-                
+
                 let success = await databaseService.setWeatherLocationFavoriteWithSyncData(
                     latitude: remoteRecord.latitude,
                     longitude: remoteRecord.longitude,
@@ -651,10 +649,10 @@ final class WeatherStationSyncService {
                     lastModified: remoteRecord.lastModified,
                     remoteId: remoteRecord.id?.uuidString
                 )
-                
+
                 if success {
                     updated += 1
-                    
+
                     // CRITICAL: Verify the local record timestamp after update
                     if let databaseService = getWeatherDatabaseService() {
                         do {
@@ -664,7 +662,7 @@ final class WeatherStationSyncService {
                                     print("✅🔧🌤️ UPDATE SUCCESS: Local record updated with remote data")
                                     print("🔍🔧🌤️ UPDATE VERIFICATION: Remote timestamp was: \(remoteRecord.lastModified)")
                                     print("🔍🔧🌤️ UPDATE VERIFICATION: Local timestamp now is: \(updatedRecord.lastModified?.description ?? "nil")")
-                                    
+
                                     if let localTimestamp = updatedRecord.lastModified {
                                         let timeDifference = abs(localTimestamp.timeIntervalSince(remoteRecord.lastModified))
                                         if timeDifference < 1.0 {
@@ -689,21 +687,21 @@ final class WeatherStationSyncService {
                 } else {
                     let error = TideSyncError.databaseError("Could not update local record")
                     errors.append(error)
-                    
+
                     logQueue.async {
                         print("❌🔧🌤️ UPDATE FAILED: Could not update local record")
                     }
                 }
             }
-            
+
             let updateDuration = Date().timeIntervalSince(updateStartTime)
-            
+
             logQueue.async {
                 print("🔧🌤️ UPDATE: Duration = \(String(format: "%.3f", updateDuration))s")
                 print("🔧🌤️ UPDATE: Total updated so far = \(updated)")
             }
         }
-        
+
         logQueue.async {
             print("\n🔧🌤️ UPDATE SUMMARY:")
             print("🔧🌤️ UPDATE: Processed \(recordsToUpdate.count) records")
@@ -713,20 +711,19 @@ final class WeatherStationSyncService {
                 print("🔧🌤️ UPDATE: Success rate = \(String(format: "%.1f", Double(updated) / Double(recordsToUpdate.count) * 100))%")
             }
         }
-        
+
         return (updated, errors)
     }
-    
-    
+
     // MARK: - Helper Methods
-    
+
     private func getRemoteFavorites(userId: UUID) async -> [RemoteWeatherFavorite] {
         logQueue.async {
             print("\n☁️🌤️ REMOTE FETCH: Starting Supabase query...")
             print("☁️🌤️ REMOTE FETCH: Table = user_weather_favorites")
             print("☁️🌤️ REMOTE FETCH: Filter = user_id eq \(userId)")
         }
-        
+
         do {
             let queryStartTime = Date()
             let response: PostgrestResponse<[RemoteWeatherFavorite]> = try await SupabaseManager.shared
@@ -735,13 +732,13 @@ final class WeatherStationSyncService {
                 .eq("user_id", value: userId.uuidString)
                 .execute()
             let queryDuration = Date().timeIntervalSince(queryStartTime)
-            
+
             logQueue.async {
                 print("\n✅☁️🌤️ REMOTE FETCH SUCCESS: Query completed")
                 print("✅☁️🌤️ REMOTE FETCH: Retrieved \(response.value.count) records")
                 print("✅☁️🌤️ REMOTE FETCH: Duration = \(String(format: "%.3f", queryDuration))s")
                 print("✅☁️🌤️ REMOTE FETCH: Response status = success")
-                
+
                 if response.value.isEmpty {
                     print("⚠️☁️🌤️ REMOTE FETCH: No remote favorites found for user")
                 } else {
@@ -751,7 +748,7 @@ final class WeatherStationSyncService {
                     }
                 }
             }
-            
+
             return response.value
         } catch {
             logQueue.async {
@@ -764,16 +761,16 @@ final class WeatherStationSyncService {
             return []
         }
     }
-    
+
     private func getWeatherDatabaseService() -> WeatherDatabaseService? {
         logQueue.async {
             print("\n💾🌤️ SERVICE PROVIDER: Attempting to get WeatherDatabaseService...")
             print("💾🌤️ SERVICE PROVIDER: Creating ServiceProvider instance")
         }
-        
+
         let serviceProvider = ServiceProvider()
         let service = serviceProvider.weatherService
-        
+
         logQueue.async {
             if service != nil {
                 print("✅💾🌤️ SERVICE PROVIDER: Successfully obtained WeatherDatabaseService")
@@ -782,54 +779,54 @@ final class WeatherStationSyncService {
                 print("❌💾🌤️ SERVICE PROVIDER: ServiceProvider may not be properly initialized")
             }
         }
-        
+
         return service
     }
-    
+
     /// Check if user is authenticated for sync operations
     func canSync() async -> Bool {
         let operationId = startSyncOperation("authCheck")
-        
+
         logQueue.async {
             print("\n🔐🌤️ AUTH CHECK: Starting authentication verification...")
             print("🔐🌤️ AUTH CHECK: Operation ID = \(operationId)")
         }
-        
+
         do {
             let session = try await SupabaseManager.shared.getSession()
             endSyncOperation(operationId, success: true)
-            
+
             logQueue.async {
                 print("✅🔐🌤️ AUTH CHECK SUCCESS: User is authenticated")
-                print("✅🔐🌤️ AUTH CHECK: User ID = \(session.user.id)")
-                print("✅🔐🌤️ AUTH CHECK: User email = \(session.user.email ?? "NO EMAIL")")
+                print("✅🔐🌤️ AUTH CHECK: User authenticated")
+                print("✅🔐🌤️ AUTH CHECK: User credentials valid")
             }
-            
+
             return true
         } catch {
             endSyncOperation(operationId, success: false, error: TideSyncError.authenticationRequired)
-            
+
             logQueue.async {
                 print("❌🔐🌤️ AUTH CHECK FAILED: User not authenticated")
                 print("❌🔐🌤️ AUTH CHECK FAILED: Error = \(error)")
                 print("❌🔐🌤️ AUTH CHECK FAILED: Description = \(error.localizedDescription)")
             }
-            
+
             return false
         }
     }
-    
+
     // MARK: - Operation Tracking (Matches TideStationSyncService Pattern)
-    
+
     private func startSyncOperation(_ operation: String, details: String = "") -> String {
         operationsLock.lock()
         defer { operationsLock.unlock() }
-        
+
         syncCounter += 1
         let operationId = "\(operation)_\(syncCounter)"
         let startTime = Date()
         activeSyncOperations[operationId] = startTime
-        
+
         logQueue.async {
             print("\n🟢🌤️ OPERATION START: ============================================")
             print("🟢🌤️ OPERATION: \(operation)")
@@ -842,7 +839,7 @@ final class WeatherStationSyncService {
             print("🟢🌤️ PROCESS ID: \(ProcessInfo.processInfo.processIdentifier)")
             print("🟢🌤️ ACTIVE SYNC OPS: \(self.activeSyncOperations.count)")
             print("🟢🌤️ CONCURRENT SYNC OPS: \(Array(self.activeSyncOperations.keys))")
-            
+
             if self.activeSyncOperations.count > 1 {
                 print("⚠️🌤️ RACE CONDITION WARNING: Multiple sync operations active!")
                 for (opId, opStartTime) in self.activeSyncOperations {
@@ -850,29 +847,29 @@ final class WeatherStationSyncService {
                     print("⚠️🌤️ ACTIVE OP: \(opId) running for \(String(format: "%.3f", opDuration))s")
                 }
             }
-            
+
             print("🟢🌤️ OPERATION START: ============================================")
         }
-        
+
         return operationId
     }
-    
+
     private func endSyncOperation(_ operationId: String, success: Bool, error: TideSyncError? = nil) {
         operationsLock.lock()
         let startTime = activeSyncOperations.removeValue(forKey: operationId)
         operationsLock.unlock()
-        
+
         let duration = startTime.map { Date().timeIntervalSince($0) } ?? 0
-        
+
         // Update operation statistics
         updateOperationStats(operationId: operationId, success: success, duration: duration)
-        
+
         logQueue.async {
             print("\n🔚🌤️ OPERATION END: ============================================")
             print("🔚🌤️ OPERATION ID: \(operationId)")
             print("🔚🌤️ DURATION: \(String(format: "%.3f", duration))s")
             print("🔚🌤️ END TIME: \(Date())")
-            
+
             if success {
                 print("✅🔚🌤️ RESULT: SUCCESS")
             } else {
@@ -882,7 +879,7 @@ final class WeatherStationSyncService {
                     print("❌🔚🌤️ ERROR TYPE: \(type(of: error))")
                 }
             }
-            
+
             print("🔚🌤️ REMAINING SYNC OPS: \(self.activeSyncOperations.count)")
             if !self.activeSyncOperations.isEmpty {
                 print("🔚🌤️ STILL ACTIVE: \(Array(self.activeSyncOperations.keys))")
@@ -890,30 +887,30 @@ final class WeatherStationSyncService {
             print("🔚🌤️ OPERATION END: ============================================\n")
         }
     }
-    
+
     private func updateOperationStats(operationId: String, success: Bool, duration: TimeInterval) {
         statsLock.lock()
         defer { statsLock.unlock() }
-        
+
         let operationType = String(operationId.split(separator: "_").first ?? "unknown")
-        
+
         logQueue.async {
             print("📊🌤️ STATS UPDATE: Updating statistics for \(operationType)")
             print("📊🌤️ STATS UPDATE: Success = \(success), Duration = \(String(format: "%.3f", duration))s")
         }
-        
+
         if var stats = operationStats[operationType] {
             stats.totalCalls += 1
             stats.totalDuration += duration
             stats.minDuration = min(stats.minDuration, duration)
             stats.maxDuration = max(stats.maxDuration, duration)
-            
+
             if success {
                 stats.successCount += 1
             } else {
                 stats.failureCount += 1
             }
-            
+
             operationStats[operationType] = stats
         } else {
             operationStats[operationType] = TideSyncOperationStats(
@@ -925,7 +922,7 @@ final class WeatherStationSyncService {
                 maxDuration: duration
             )
         }
-        
+
         logQueue.async {
             if let stats = self.operationStats[operationType] {
                 let avgDuration = stats.totalDuration / Double(stats.totalCalls)
@@ -934,31 +931,31 @@ final class WeatherStationSyncService {
             }
         }
     }
-    
+
     // MARK: - Public Monitoring (Matches TideStationSyncService Pattern)
-    
+
     func getCurrentSyncOperations() -> [String] {
         operationsLock.lock()
         defer { operationsLock.unlock() }
         return Array(activeSyncOperations.keys)
     }
-    
+
     func printSyncStats() {
         statsLock.lock()
         let stats = operationStats
         statsLock.unlock()
-        
+
         logQueue.async {
             print("\n📊🌤️ WEATHER SYNC SERVICE STATISTICS: ========================================")
             print("📊🌤️ STATISTICS TIMESTAMP: \(Date())")
-            
+
             if stats.isEmpty {
                 print("📊🌤️ No sync operations performed yet")
             } else {
                 for (operation, stat) in stats.sorted(by: { $0.key < $1.key }) {
                     let avgDuration = stat.totalDuration / Double(stat.totalCalls)
                     let successRate = Double(stat.successCount) / Double(stat.totalCalls) * 100
-                    
+
                     print("📊🌤️ \(operation.uppercased()):")
                     print("   Total calls: \(stat.totalCalls)")
                     print("   Success rate: \(String(format: "%.1f", successRate))%")
@@ -971,7 +968,7 @@ final class WeatherStationSyncService {
                     print("")
                 }
             }
-            
+
             print("📊🌤️ Current active operations: \(self.activeSyncOperations.count)")
             if !self.activeSyncOperations.isEmpty {
                 for (opId, startTime) in self.activeSyncOperations {
@@ -982,17 +979,17 @@ final class WeatherStationSyncService {
             print("📊🌤️ STATISTICS END: ========================================\n")
         }
     }
-    
+
     func enableVerboseLogging() {
         logQueue.async {
             print("🔍🌤️ WEATHER SYNC SERVICE: Verbose logging ENABLED")
             print("🔍🌤️ Note: This service already has comprehensive logging by default")
         }
     }
-    
+
     func logCurrentState() {
         let operations = getCurrentSyncOperations()
-        
+
         logQueue.async {
             print("\n🔍🌤️ WEATHER SYNC SERVICE STATE: =====================================")
             print("🔍🌤️ STATE TIMESTAMP: \(Date())")
@@ -1001,7 +998,7 @@ final class WeatherStationSyncService {
             print("🔍🌤️ Thread: \(Thread.current)")
             print("🔍🌤️ Process ID: \(ProcessInfo.processInfo.processIdentifier)")
             print("🔍🌤️ Memory usage: \(ProcessInfo.processInfo.physicalMemory / 1024 / 1024) MB")
-            
+
             // Print operation details
             if !operations.isEmpty {
                 for opId in operations {
@@ -1011,7 +1008,7 @@ final class WeatherStationSyncService {
                     }
                 }
             }
-            
+
             print("🔍🌤️ STATE END: =====================================\n")
         }
     }

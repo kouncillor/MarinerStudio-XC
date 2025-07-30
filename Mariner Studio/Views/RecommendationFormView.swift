@@ -5,14 +5,13 @@
 //  Created by Timothy Russell on 5/31/25.
 //
 
-
 import SwiftUI
 
 struct RecommendationFormView: View {
     // MARK: - Properties
     @ObservedObject var viewModel: RecommendationFormViewModel
     @Binding var isPresented: Bool
-    
+
     // MARK: - State
     @State private var selectedCategory: RecommendationCategory = .generalInfo
     @State private var description: String = ""
@@ -20,10 +19,10 @@ struct RecommendationFormView: View {
     @State private var showingSuccessAlert = false
     @State private var showingErrorAlert = false
     @State private var isSubmitting = false
-    
+
     // MARK: - Constants
     private let maxDescriptionLength = 500
-    
+
     var body: some View {
         NavigationView {
             Form {
@@ -33,11 +32,11 @@ struct RecommendationFormView: View {
                         Text(viewModel.navUnit.navUnitName)
                             .font(.headline)
                             .foregroundColor(.primary)
-                        
+
                         Text("ID: \(viewModel.navUnit.navUnitId)")
                             .font(.caption)
                             .foregroundColor(.secondary)
-                        
+
                         if let facilityType = viewModel.navUnit.facilityType, !facilityType.isEmpty {
                             Text(facilityType)
                                 .font(.caption)
@@ -46,7 +45,7 @@ struct RecommendationFormView: View {
                     }
                     .padding(.vertical, 4)
                 }
-                
+
                 // Category Selection
                 Section(header: Text("What type of update?")) {
                     ForEach(RecommendationCategory.allCases, id: \.self) { category in
@@ -58,7 +57,7 @@ struct RecommendationFormView: View {
                         }
                     }
                 }
-                
+
                 // Description Section
                 Section(
                     header: Text("Description"),
@@ -84,7 +83,7 @@ struct RecommendationFormView: View {
                                 }
                                 .allowsHitTesting(false)
                             )
-                        
+
                         // Character count
                         HStack {
                             Spacer()
@@ -94,7 +93,7 @@ struct RecommendationFormView: View {
                         }
                     }
                 }
-                
+
                 // Optional Contact Info
                 Section(
                     header: Text("Contact Information (Optional)"),
@@ -105,7 +104,7 @@ struct RecommendationFormView: View {
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
                 }
-                
+
                 // Submission Status
                 if isSubmitting {
                     Section {
@@ -128,7 +127,7 @@ struct RecommendationFormView: View {
                     }
                     .disabled(isSubmitting)
                 }
-                
+
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Submit") {
                         submitRecommendation()
@@ -159,30 +158,30 @@ struct RecommendationFormView: View {
             }
         }
     }
-    
+
     // MARK: - Computed Properties
-    
+
     private var canSubmit: Bool {
         return !description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
                description.count <= maxDescriptionLength &&
                !isSubmitting
     }
-    
+
     // MARK: - Methods
-    
+
     private func submitRecommendation() {
         let trimmedDescription = description.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedEmail = userEmail.trimmingCharacters(in: .whitespacesAndNewlines)
-        
+
         guard !trimmedDescription.isEmpty else { return }
-        
+
         Task {
             let success = await viewModel.submitRecommendation(
                 category: selectedCategory,
                 description: trimmedDescription,
                 userEmail: trimmedEmail.isEmpty ? nil : trimmedEmail
             )
-            
+
             await MainActor.run {
                 if success {
                     showingSuccessAlert = true
@@ -198,7 +197,7 @@ struct CategoryRow: View {
     let category: RecommendationCategory
     let isSelected: Bool
     let onTap: () -> Void
-    
+
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 16) {
@@ -211,21 +210,21 @@ struct CategoryRow: View {
                         Circle()
                             .fill(isSelected ? Color.blue : Color.blue.opacity(0.1))
                     )
-                
+
                 // Category info
                 VStack(alignment: .leading, spacing: 4) {
                     Text(category.displayName)
                         .font(.headline)
                         .foregroundColor(.primary)
-                    
+
                     Text(category.description)
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.leading)
                 }
-                
+
                 Spacer()
-                
+
                 // Selection indicator
                 if isSelected {
                     Image(systemName: "checkmark.circle.fill")

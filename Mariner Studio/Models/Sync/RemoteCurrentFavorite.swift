@@ -1,4 +1,3 @@
-
 //
 //  RemoteCurrentFavorite.swift
 //  Mariner
@@ -17,7 +16,7 @@ struct RemoteCurrentFavorite: Codable, Identifiable {
     let isFavorite: Bool
     let lastModified: Date
     let deviceId: String
-    
+
     // Optional station metadata that can be synced
     let stationName: String?
     let latitude: Double?

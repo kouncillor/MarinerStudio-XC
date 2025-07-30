@@ -1,4 +1,3 @@
-
 import Foundation
 import CoreLocation
 import SwiftUI
@@ -72,15 +71,15 @@ class TidalCurrentStationsViewModel: ObservableObject {
         do {
             print("🌐 VIEWMODEL: Starting NOAA API call for tidal current stations")
             print("⏰ VIEWMODEL: API call start time: \(Date())")
-            
+
             let response = try await tidalCurrentService.getTidalCurrentStations()
-            
+
             print("✅ VIEWMODEL: API call completed successfully")
             print("⏰ VIEWMODEL: API call end time: \(Date())")
             print("📊 VIEWMODEL: Received \(response.stations.count) stations from NOAA API")
 
             let stations = response.stations
-            
+
             let stationsWithDistance = await processStationsWithDistance(stations)
             print("✅ VIEWMODEL: Distance calculation and favorite status checking completed for \(stationsWithDistance.count) stations")
 
@@ -88,21 +87,21 @@ class TidalCurrentStationsViewModel: ObservableObject {
             await MainActor.run {
                 print("📱 VIEWMODEL: Setting allStations array with \(stationsWithDistance.count) items")
                 allStations = stationsWithDistance
-                
+
                 print("🔍 VIEWMODEL: Calling filterStations() to apply search filters")
                 filterStations()
-                
+
                 print("📱 VIEWMODEL: Setting loading state to false")
                 isLoading = false
-                
+
                 print("✅ VIEWMODEL: UI state update complete - stations count: \(self.stations.count)")
             }
-            
+
         } catch {
             print("❌ VIEWMODEL: Error in loadStations() at \(Date())")
             print("❌ VIEWMODEL: Error details: \(error.localizedDescription)")
             print("❌ VIEWMODEL: Error type: \(type(of: error))")
-            
+
             await MainActor.run {
                 errorMessage = "Failed to load stations: \(error.localizedDescription)"
                 allStations = []
@@ -112,7 +111,7 @@ class TidalCurrentStationsViewModel: ObservableObject {
                 print("❌ VIEWMODEL: Error state set - UI updated with empty data")
             }
         }
-        
+
         print("🏁 VIEWMODEL: loadStations() finished at \(Date())")
         print("🚀 VIEWMODEL: ===== LOAD STATIONS END =====\n")
     }
@@ -120,14 +119,14 @@ class TidalCurrentStationsViewModel: ObservableObject {
     func refreshStations() async {
         print("\n🔄 VIEWMODEL: ===== REFRESH STATIONS START =====")
         print("🔄 VIEWMODEL: refreshStations() called at \(Date())")
-        
+
         await MainActor.run {
             print("🗑️ VIEWMODEL: Clearing existing station data")
             self.stations = []
             self.allStations = []
             self.totalStations = 0
         }
-        
+
         print("🔄 VIEWMODEL: Calling loadStations() for refresh")
         await loadStations()
         print("🔄 VIEWMODEL: ===== REFRESH STATIONS END =====\n")
@@ -138,40 +137,40 @@ class TidalCurrentStationsViewModel: ObservableObject {
         print("🔍 VIEWMODEL: filterStations() called at \(Date())")
         print("🔍 VIEWMODEL: Search text: '\(searchText)'")
         print("🔍 VIEWMODEL: Total stations to filter: \(allStations.count)")
-        
+
         let filtered = allStations.filter { station in
             let matchesSearch = searchText.isEmpty ||
                 station.station.name.localizedCaseInsensitiveContains(searchText) ||
                 (station.station.state?.localizedCaseInsensitiveContains(searchText) ?? false) ||
                 station.station.id.localizedCaseInsensitiveContains(searchText)
-            
+
             let matchesFavorites = !showOnlyFavorites || station.station.isFavorite
-            
+
             return matchesSearch && matchesFavorites
         }
-        
+
         print("✅ VIEWMODEL: Filtering complete")
         print("📊 VIEWMODEL: Filtered results: \(filtered.count) stations")
-        
+
         // Sort strictly by distance (closest first)
         print("🔄 VIEWMODEL: Starting sort by distance (closest first)")
         let sorted = filtered.sorted { first, second in
             return first.distanceFromUser < second.distanceFromUser
         }
-        
+
         print("✅ VIEWMODEL: Distance sorting complete")
         print("📊 VIEWMODEL: Filter efficiency: \(sorted.count)/\(allStations.count) stations shown")
-        
+
         // Log first few stations to verify distance sorting
         print("🔍 VIEWMODEL: Top 5 closest stations:")
         for (index, station) in sorted.prefix(5).enumerated() {
             let distanceText = station.distanceFromUser == Double.greatestFiniteMagnitude ? "No location" : String(format: "%.1f mi", station.distanceFromUser * 0.621371)
             print("🔍 VIEWMODEL: \(index + 1). \(station.station.name) - \(distanceText)")
         }
-        
+
         stations = sorted
         totalStations = sorted.count
-        
+
         print("📱 VIEWMODEL: Published properties updated")
         print("🔍 VIEWMODEL: ===== FILTER STATIONS END =====\n")
     }
@@ -184,28 +183,28 @@ class TidalCurrentStationsViewModel: ObservableObject {
         filterStations()
         print("🗑️ VIEWMODEL: ===== CLEAR SEARCH END =====\n")
     }
-    
+
     // MARK: - Private Helper Methods
     private func processStationsWithDistance(_ stations: [TidalCurrentStation]) async -> [StationWithDistance<TidalCurrentStation>] {
         let userLocation = locationService.currentLocation
-        
+
         await MainActor.run {
             if let location = userLocation {
                 self.userLatitude = String(format: "%.6f", location.coordinate.latitude)
                 self.userLongitude = String(format: "%.6f", location.coordinate.longitude)
             }
         }
-        
+
         // Get all favorites at once (much more efficient than individual calls)
         let favoritesResult = await currentFavoritesCloudService.getFavorites()
         let favoriteStations = (try? favoritesResult.get()) ?? []
-        
+
         // Create a set of favorite station+bin combinations for fast lookup
         let favoriteKeys = Set(favoriteStations.map { "\($0.id)_\($0.currentBin ?? 0)" })
         print("📍 VIEWMODEL: Retrieved \(favoriteKeys.count) favorite station+bin combinations for checking")
-        
+
         var stationsWithDistance: [StationWithDistance<TidalCurrentStation>] = []
-        
+
         for station in stations {
             let distance: Double
             if let userLoc = userLocation,
@@ -216,21 +215,21 @@ class TidalCurrentStationsViewModel: ObservableObject {
             } else {
                 distance = Double.greatestFiniteMagnitude
             }
-            
+
             // Check if this station+bin combination is in favorites using Set lookup (O(1))
             let favoriteKey = "\(station.id)_\(station.currentBin ?? 0)"
             var updatedStation = station
             updatedStation.isFavorite = favoriteKeys.contains(favoriteKey)
-            
+
             stationsWithDistance.append(StationWithDistance(
                 station: updatedStation,
                 distanceFromUser: distance
             ))
         }
-        
+
         return stationsWithDistance
     }
-    
+
     func toggleFavorites() {
         print("\n⭐ VIEWMODEL: ===== TOGGLE FAVORITES START =====")
         print("⭐ VIEWMODEL: Current showOnlyFavorites: \(showOnlyFavorites)")
@@ -240,19 +239,19 @@ class TidalCurrentStationsViewModel: ObservableObject {
         filterStations()
         print("⭐ VIEWMODEL: ===== TOGGLE FAVORITES END =====\n")
     }
-    
+
     func toggleStationFavorite(stationId: String) async {
         print("\n⭐ VIEWMODEL: ===== TOGGLE STATION FAVORITE START (CLOUD-ONLY) =====")
         print("⭐ VIEWMODEL: Toggling favorite for station: \(stationId)")
-        
+
         // Find the station object first to get the metadata
         guard let stationWithDistance = allStations.first(where: { $0.station.id == stationId }) else {
             print("❌ VIEWMODEL: Could not find station \(stationId) in allStations")
             return
         }
-        
+
         let currentStation = stationWithDistance.station
-        
+
         let toggleResult = await currentFavoritesCloudService.toggleFavorite(
             stationId: stationId,
             currentBin: currentStation.currentBin ?? 0,
@@ -262,7 +261,7 @@ class TidalCurrentStationsViewModel: ObservableObject {
             depth: currentStation.depth,
             depthType: currentStation.depthType
         )
-        
+
         switch toggleResult {
         case .success(let newFavoriteStatus):
             print("⭐ VIEWMODEL: Toggle completed for station \(stationId), new status: \(newFavoriteStatus)")
@@ -274,11 +273,11 @@ class TidalCurrentStationsViewModel: ObservableObject {
                     station: updatedStation,
                     distanceFromUser: allStations[index].distanceFromUser
                 )
-                
+
                 await MainActor.run {
                     filterStations()
                 }
-                
+
                 print("⭐ VIEWMODEL: Updated station \(stationId) in allStations array")
             }
         case .failure(let error):
@@ -287,7 +286,7 @@ class TidalCurrentStationsViewModel: ObservableObject {
                 errorMessage = "Failed to update favorite: \(error.localizedDescription)"
             }
         }
-        
+
         print("⭐ VIEWMODEL: ===== TOGGLE STATION FAVORITE END =====\n")
     }
 }

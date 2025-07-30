@@ -1,5 +1,3 @@
-
-
 import Foundation
 import CoreLocation
 import SwiftUI
@@ -7,16 +5,16 @@ import Combine
 
 class CurrentLocalWeatherViewModelForMap: ObservableObject {
     // MARK: - Published Properties
-    
+
     // Loading and error states
     @Published var isLoading = false
     @Published var errorMessage = ""
-    
+
     // Location information
     @Published var latitude: Double = 0.0
     @Published var longitude: Double = 0.0
     @Published var locationDisplay = "--"
-    
+
     // Current weather conditions
     @Published var temperature = "--"
     @Published var feelsLike = "--"
@@ -30,33 +28,33 @@ class CurrentLocalWeatherViewModelForMap: ObservableObject {
     @Published var pressure = "--"
     @Published var dewPoint = "--"
     @Published var weatherImage = "sun.max.fill"
-    
+
     // Forecast data
     @Published var forecastPeriods: [DailyForecastItem] = []
-    
+
     // Favorite state
     @Published var isFavorite = false
     @Published var favoriteIcon = "heart"
-    
+
     // Other UI properties
     @Published var attribution = "Weather data provided by Open-Meteo.com"
-    
+
     // Navigation to hourly forecast
     @Published var selectedForecastDate: Date?
     @Published var selectedForecastData: [Date] = []
     @Published var shouldNavigateToHourlyForecast = false
-    
+
     // MARK: - Private Properties
     private var weatherService: CurrentLocalWeatherServiceForMap?
     private var geocodingService: GeocodingService?
     private var databaseService: WeatherDatabaseService?
     private var weatherFavoritesCloudService: WeatherFavoritesCloudService?
-    
+
     private var cancellables = Set<AnyCancellable>()
     private var weatherTask: Task<Void, Never>?
-    
+
     // MARK: - Initialization
-    
+
     // This initializer accepts latitude and longitude directly
     func initialize(
         latitude: Double,
@@ -72,31 +70,31 @@ class CurrentLocalWeatherViewModelForMap: ObservableObject {
         self.geocodingService = geocodingService
         self.databaseService = databaseService
         self.weatherFavoritesCloudService = weatherFavoritesCloudService
-        
+
         print("🚀 CurrentLocalWeatherViewModelForMap: Initialized with location (\(latitude), \(longitude))")
         print("🚀 CurrentLocalWeatherViewModelForMap: WeatherFavoritesCloudService injected: \(weatherFavoritesCloudService != nil)")
     }
-    
+
     deinit {
         // Cancel any ongoing weather task
         weatherTask?.cancel()
     }
-    
+
     // MARK: - Public Methods
-    
+
     func loadWeatherData() {
         // Cancel any existing weather task
         weatherTask?.cancel()
-        
+
         // Start a new task for fetching weather data
         weatherTask = Task {
             if Task.isCancelled { return }
-            
+
             await MainActor.run {
                 isLoading = true
                 errorMessage = ""
             }
-            
+
             // Get location name through geocoding
             if let geocodingService = geocodingService {
                 do {
@@ -104,7 +102,7 @@ class CurrentLocalWeatherViewModelForMap: ObservableObject {
                         latitude: latitude,
                         longitude: longitude
                     )
-                    
+
                     if let locationResult = geocodingResult.results.first {
                         await MainActor.run {
                             locationDisplay = "\(locationResult.name), \(locationResult.state)"
@@ -121,7 +119,7 @@ class CurrentLocalWeatherViewModelForMap: ObservableObject {
                     }
                 }
             }
-            
+
             // Get weather data using our dedicated weather service
             if let weatherService = weatherService {
                 do {
@@ -130,12 +128,12 @@ class CurrentLocalWeatherViewModelForMap: ObservableObject {
                         latitude: latitude,
                         longitude: longitude
                     )
-                    
+
                     if Task.isCancelled { return }
-                    
+
                     print("✅ CurrentLocalWeatherViewModelForMap: Weather data received, processing...")
                     await processWeatherData(weather)
-                    
+
                     // Check if location is a favorite
                     await updateFavoriteStatus()
                 } catch {
@@ -155,7 +153,7 @@ class CurrentLocalWeatherViewModelForMap: ObservableObject {
                     }
                 }
             }
-            
+
             if !Task.isCancelled {
                 await MainActor.run {
                     isLoading = false
@@ -163,38 +161,38 @@ class CurrentLocalWeatherViewModelForMap: ObservableObject {
             }
         }
     }
-    
+
     // MARK: - Lifecycle Methods
-    
+
     /// Call when view disappears to cancel tasks
     func cleanup() {
         // Cancel any ongoing weather task
         weatherTask?.cancel()
         weatherTask = nil
     }
-    
+
     func toggleFavorite() {
         Task {
-            guard latitude != 0 && longitude != 0 else { 
+            guard latitude != 0 && longitude != 0 else {
                 print("❌ CURRENT_LOCAL_WEATHER_VM_MAP: Cannot toggle favorite - invalid coordinates")
-                return 
+                return
             }
-            
+
             guard !locationDisplay.isEmpty && locationDisplay != "--" else {
                 print("❌ CURRENT_LOCAL_WEATHER_VM_MAP: Cannot toggle favorite - invalid location name")
                 return
             }
-            
+
             print("⭐ CURRENT_LOCAL_WEATHER_VM_MAP: Toggling favorite for \(locationDisplay) at (\(latitude), \(longitude))")
             print("⭐ CURRENT_LOCAL_WEATHER_VM_MAP: Current favorite status: \(isFavorite)")
-            
+
             if let weatherFavoritesCloudService = weatherFavoritesCloudService {
                 let result = await weatherFavoritesCloudService.toggleFavorite(
                     latitude: latitude,
                     longitude: longitude,
                     locationName: locationDisplay
                 )
-                
+
                 switch result {
                 case .success(let newFavoriteStatus):
                     print("✅ CURRENT_LOCAL_WEATHER_VM_MAP: Successfully toggled favorite to: \(newFavoriteStatus)")
@@ -210,7 +208,7 @@ class CurrentLocalWeatherViewModelForMap: ObservableObject {
             }
         }
     }
-    
+
     func navigateToHourlyForecast(forecast: DailyForecastItem) {
         Task {
             await MainActor.run {
@@ -220,15 +218,15 @@ class CurrentLocalWeatherViewModelForMap: ObservableObject {
             }
         }
     }
-    
+
     // MARK: - Private Methods
-    
+
     private func processWeatherData(_ weather: OpenMeteoResponse) async {
         await MainActor.run {
             // Current conditions
             temperature = "\(Int(weather.currentWeather.temperature.rounded()))"
             weatherDescription = getWeatherDescription(weather.currentWeather.weatherCode)
-            
+
             // Check if it's night and the sky is clear for moon phase
             if weather.currentWeather.isDay == 0 && weather.currentWeather.weatherCode == 0 {
                 Task {
@@ -265,41 +263,41 @@ class CurrentLocalWeatherViewModelForMap: ObservableObject {
                     isNight: weather.currentWeather.isDay == 0
                 )
             }
-            
+
             // Get current hour index - handle potential out of bounds
             let currentHourIndex = min(Calendar.current.component(.hour, from: Date()), weather.hourly.temperature.count - 1)
-            
+
             // Current conditions from hourly data - with bound checking
             if currentHourIndex < weather.hourly.temperature.count {
                 feelsLike = "\(Int(weather.hourly.temperature[currentHourIndex].rounded()))"
                 windSpeed = "\(weather.hourly.windSpeed[currentHourIndex].rounded(.toNearestOrAwayFromZero)) mph"
                 windDirection = getWindDirection(weather.hourly.windDirection[currentHourIndex])
-                
+
                 if let humidityValues = weather.hourly.relativeHumidity,
                    currentHourIndex < humidityValues.count {
                     humidity = "\(humidityValues[currentHourIndex])"
                 }
-                
+
                 if currentHourIndex < weather.hourly.windGusts.count {
                     windGusts = "\(weather.hourly.windGusts[currentHourIndex].rounded(.toNearestOrAwayFromZero)) mph"
                 }
-                
+
                 // Visibility (convert meters to miles)
                 if currentHourIndex < weather.hourly.visibility.count {
                     let visibilityMiles = weather.hourly.visibility[currentHourIndex] / 1609.34
                     visibility = visibilityMiles >= 15.0 ? "15+ mi" : "\(String(format: "%.1f", visibilityMiles)) mi"
                 }
-                
+
                 // Pressure (convert hPa to inHg)
                 if currentHourIndex < weather.hourly.pressure.count {
                     pressure = String(format: "%.2f", weather.hourly.pressure[currentHourIndex] * 0.02953)
                 }
-                
+
                 if let dewPointValues = weather.hourly.dewPoint,
                    currentHourIndex < dewPointValues.count {
                     dewPoint = "\(dewPointValues[currentHourIndex].rounded(.toNearestOrAwayFromZero))"
                 }
-                
+
                 // Calculate 24-hour precipitation - safely
                 let precipCount = weather.hourly.precipitation.count
                 let last24HoursPrecip = weather.hourly.precipitation
@@ -307,25 +305,25 @@ class CurrentLocalWeatherViewModelForMap: ObservableObject {
                     .reduce(0, +)
                 precipitation = String(format: "%.2f", last24HoursPrecip)
             }
-            
+
             // Process forecast data
             processForecastData(weather)
         }
     }
-    
+
     private func processForecastData(_ weather: OpenMeteoResponse) {
         Task {
             var forecastItems: [DailyForecastItem] = []
-            
+
             for i in 0..<min(7, weather.daily.time.count) {
                 guard let forecastDate = ISO8601DateFormatter().date(from: weather.daily.time[i] + "T12:00:00Z") else {
                     continue
                 }
-                
+
                 // Get moon phase from database
                 let moonPhaseIcon = "moonphase.new.moon"
                 let isWaxingMoon = true
-                
+
                 if let databaseService = databaseService {
                     let dateString = forecastDate.formatted(.iso8601.year().month().day())
                     // Use boolean check instead of unused variable
@@ -334,24 +332,24 @@ class CurrentLocalWeatherViewModelForMap: ObservableObject {
                         // For now, keeping defaults
                     }
                 }
-                
+
                 // Get visibility for noon of this day
                 var visibilityMeters = 10000.0 // Default 10km if not available
                 let noonIndex = i * 24 + 12
                 if noonIndex < weather.hourly.visibility.count {
                     visibilityMeters = weather.hourly.visibility[noonIndex]
                 }
-                
+
                 // Format visibility as string
                 let visibilityMiles = visibilityMeters / 1609.34
                 let visibilityString = visibilityMiles >= 15.0 ? "15+ mi" : "\(String(format: "%.1f", visibilityMiles)) mi"
-                
+
                 // Get cardinal wind direction
                 let windDirection = getCardinalDirection(weather.daily.windDirectionDominant[i])
-                
+
                 // Get weather icon name
                 let weatherIcon = WeatherIconMapper.mapWeatherCode(weather.daily.weatherCode[i], isNight: false)
-                
+
                 let item = DailyForecastItem(
                     date: forecastDate,
                     high: weather.daily.temperatureMax[i],
@@ -370,28 +368,28 @@ class CurrentLocalWeatherViewModelForMap: ObservableObject {
                     weatherCode: weather.daily.weatherCode[i],
                     isToday: Calendar.current.isDateInToday(forecastDate)
                 )
-                
+
                 forecastItems.append(item)
             }
-            
+
             // Fix for concurrent access warning - capture the array locally
             let items = forecastItems
-            
+
             await MainActor.run {
                 self.forecastPeriods = items
             }
         }
     }
-    
+
     private func updateFavoriteStatus() async {
         print("🔍 CURRENT_LOCAL_WEATHER_VM_MAP: Checking favorite status for \(locationDisplay)")
-        
+
         if let weatherFavoritesCloudService = weatherFavoritesCloudService {
             let result = await weatherFavoritesCloudService.isFavorite(
                 latitude: latitude,
                 longitude: longitude
             )
-            
+
             switch result {
             case .success(let favoriteStatus):
                 print("✅ CURRENT_LOCAL_WEATHER_VM_MAP: Favorite status check result: \(favoriteStatus)")
@@ -410,13 +408,13 @@ class CurrentLocalWeatherViewModelForMap: ObservableObject {
             print("❌ CURRENT_LOCAL_WEATHER_VM_MAP: WeatherFavoritesCloudService not available for favorite status check")
         }
     }
-    
+
     private func getWeatherDescription(_ code: Int) -> String {
         // Map to condition enum
         if let condition = WeatherCondition(rawValue: code) {
             return condition.getDescription()
         }
-        
+
         // Handle Open-Meteo codes that don't match the enum raw values
         switch code {
         case 0:
@@ -471,14 +469,14 @@ class CurrentLocalWeatherViewModelForMap: ObservableObject {
             return "Unknown weather condition"
         }
     }
-    
+
     private func getWindDirection(_ degrees: Double) -> String {
         let directions = ["from N", "from NNE", "from NE", "from ENE", "from E", "from ESE", "from SE", "from SSE",
                          "from S", "from SSW", "from SW", "from WSW", "from W", "from WNW", "from NW", "from NNW"]
         let index = Int(((degrees + 11.25) / 22.5).truncatingRemainder(dividingBy: 16))
         return directions[index]
     }
-    
+
     private func getCardinalDirection(_ degrees: Double) -> String {
         let directions = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
                          "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]

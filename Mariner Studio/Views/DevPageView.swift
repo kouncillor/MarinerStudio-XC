@@ -11,7 +11,7 @@ import SwiftUI
 struct DevPageView: View {
     @EnvironmentObject var authViewModel: AuthenticationViewModel
     @StateObject private var viewModel = DevPageViewModel()
-    
+
     var body: some View {
         NavigationView {
             ScrollView {
@@ -21,21 +21,21 @@ struct DevPageView: View {
                         Image(systemName: "gear.badge")
                             .font(.system(size: 60))
                             .foregroundColor(.orange)
-                        
+
                         Text("Development Tools")
                             .font(.largeTitle)
                             .fontWeight(.bold)
-                        
+
                         Text("Debug utilities and development features")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
                     }
                     .padding(.top, 20)
-                    
+
                     Divider()
                         .padding(.horizontal)
-                    
+
                     // Development Actions
                     VStack(spacing: 16) {
                         // Admin Dashboard Navigation Link
@@ -62,7 +62,7 @@ struct DevPageView: View {
                             )
                         }
                         .buttonStyle(PlainButtonStyle())
-                        
+
                         // Sign Out Button
                         Button(action: {
                             Task {
@@ -91,7 +91,7 @@ struct DevPageView: View {
                             )
                         }
                         .buttonStyle(PlainButtonStyle())
-                        
+
                         // Upload GPX to Supabase Button
                         Button(action: {
                             viewModel.uploadGPXToSupabase()
@@ -126,14 +126,14 @@ struct DevPageView: View {
                         .disabled(viewModel.isUploading)
                     }
                     .padding(.horizontal)
-                    
+
                     // Status/Result Section
                     if !viewModel.statusMessage.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Status")
                                 .font(.headline)
                                 .foregroundColor(.primary)
-                            
+
                             Text(viewModel.statusMessage)
                                 .font(.body)
                                 .foregroundColor(.secondary)
@@ -145,7 +145,7 @@ struct DevPageView: View {
                         }
                         .padding(.horizontal)
                     }
-                    
+
                     Spacer()
                 }
                 .padding()

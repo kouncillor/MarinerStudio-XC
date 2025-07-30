@@ -1,4 +1,3 @@
-
 import SwiftUI
 
 struct CurrentMenuView: View {
@@ -16,7 +15,7 @@ struct CurrentMenuView: View {
                         color: .yellow
                     )
                 }
-                
+
                 // Local Currents - System Icon
                 NavigationLink(destination: TidalCurrentStationsView(
                     tidalCurrentService: TidalCurrentServiceImpl(),
@@ -29,8 +28,7 @@ struct CurrentMenuView: View {
                         color: .green
                     )
                 }
-                
-                
+
             }
             .padding()
         }

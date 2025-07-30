@@ -12,9 +12,9 @@ import AVFoundation
 struct CameraView: UIViewControllerRepresentable {
     @Binding var capturedImage: UIImage?
     @Binding var isPresented: Bool
-    
+
     // MARK: - UIViewControllerRepresentable
-    
+
     func makeUIViewController(context: Context) -> UIImagePickerController {
         let picker = UIImagePickerController()
         picker.delegate = context.coordinator
@@ -22,29 +22,29 @@ struct CameraView: UIViewControllerRepresentable {
         picker.sourceType = .camera
         picker.cameraDevice = .rear
         picker.cameraCaptureMode = .photo
-        
+
         return picker
     }
-    
+
     func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {
         // No updates needed
     }
-    
+
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
     }
-    
+
     // MARK: - Coordinator
-    
+
     class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
         let parent: CameraView
-        
+
         init(_ parent: CameraView) {
             self.parent = parent
         }
-        
-        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
-            
+
+        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+
             // Try to get edited image first, then original
             if let editedImage = info[.editedImage] as? UIImage {
                 parent.capturedImage = editedImage
@@ -53,10 +53,10 @@ struct CameraView: UIViewControllerRepresentable {
                 parent.capturedImage = originalImage
                 print("📸 CameraView: Captured original image")
             }
-            
+
             parent.isPresented = false
         }
-        
+
         func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
             print("📸 CameraView: Camera cancelled")
             parent.isPresented = false
@@ -69,29 +69,29 @@ struct CameraView: UIViewControllerRepresentable {
 struct CameraPermissionView: View {
     @Binding var isPresented: Bool
     @State private var showingSettings = false
-    
+
     var body: some View {
         VStack(spacing: 20) {
             Image(systemName: "camera.fill")
                 .font(.system(size: 60))
                 .foregroundColor(.gray)
-            
+
             Text("Camera Access Required")
                 .font(.title2)
                 .fontWeight(.semibold)
-            
+
             Text("To take photos of navigation units, please allow camera access in Settings.")
                 .font(.body)
                 .multilineTextAlignment(.center)
                 .foregroundColor(.secondary)
                 .padding(.horizontal)
-            
+
             VStack(spacing: 12) {
                 Button("Open Settings") {
                     showingSettings = true
                 }
                 .buttonStyle(.borderedProminent)
-                
+
                 Button("Cancel") {
                     isPresented = false
                 }
@@ -112,10 +112,10 @@ struct CameraPermissionView: View {
             Text("Go to Settings > Privacy & Security > Camera to enable camera access for Mariner Studio.")
         }
     }
-    
+
     private func checkCameraPermission() {
         let status = AVCaptureDevice.authorizationStatus(for: .video)
-        
+
         switch status {
         case .authorized:
             // Permission granted, close this view
@@ -136,7 +136,7 @@ struct CameraPermissionView: View {
             break
         }
     }
-    
+
     private func openSettings() {
         if let settingsUrl = URL(string: UIApplication.openSettingsURLString) {
             UIApplication.shared.open(settingsUrl)
@@ -150,11 +150,11 @@ struct CameraAvailabilityCheck {
     static func isCameraAvailable() -> Bool {
         return UIImagePickerController.isSourceTypeAvailable(.camera)
     }
-    
+
     static func getCameraAuthorizationStatus() -> AVAuthorizationStatus {
         return AVCaptureDevice.authorizationStatus(for: .video)
     }
-    
+
     static func requestCameraPermission() async -> Bool {
         return await withCheckedContinuation { continuation in
             AVCaptureDevice.requestAccess(for: .video) { granted in
@@ -169,7 +169,7 @@ struct CameraAvailabilityCheck {
 struct CameraButton: View {
     let action: () -> Void
     let isEnabled: Bool
-    
+
     var body: some View {
         Button(action: action) {
             Image(systemName: "camera.fill")
@@ -181,7 +181,6 @@ struct CameraButton: View {
     }
 }
 
-
 // MARK: - Preview
 
 #Preview {
@@ -189,7 +188,7 @@ struct CameraButton: View {
         @State private var capturedImage: UIImage?
         @State private var showingCamera = false
         @State private var showingPermission = false
-        
+
         var body: some View {
             VStack(spacing: 20) {
                 if let image = capturedImage {
@@ -199,7 +198,7 @@ struct CameraButton: View {
                         .frame(maxHeight: 300)
                         .cornerRadius(10)
                 }
-                
+
                 Button("Take Photo") {
                     if CameraAvailabilityCheck.isCameraAvailable() {
                         let status = CameraAvailabilityCheck.getCameraAuthorizationStatus()
@@ -221,6 +220,6 @@ struct CameraButton: View {
             }
         }
     }
-    
+
     return CameraPreview()
 }

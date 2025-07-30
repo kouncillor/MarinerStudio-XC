@@ -1,22 +1,21 @@
-
 import SwiftUI
 
 struct BuoyFavoritesView: View {
     @StateObject private var viewModel: BuoyFavoritesViewModel
     @EnvironmentObject var serviceProvider: ServiceProvider
     @Environment(\.colorScheme) var colorScheme
-    
+
     init(buoyFavoritesCloudService: BuoyFavoritesCloudService) {
         print("🏗️ VIEW: Initializing BuoyFavoritesView (CLOUD-ONLY)")
         print("🏗️ VIEW: Injecting BuoyFavoritesCloudService: \(type(of: buoyFavoritesCloudService))")
-        
+
         _viewModel = StateObject(wrappedValue: BuoyFavoritesViewModel(
             cloudService: buoyFavoritesCloudService
         ))
-        
+
         print("✅ VIEW: BuoyFavoritesView initialization complete (CLOUD-ONLY)")
     }
-    
+
     var body: some View {
         VStack(spacing: 0) {
             Group {
@@ -29,7 +28,7 @@ struct BuoyFavoritesView: View {
                             .font(.largeTitle)
                             .foregroundColor(.orange)
                             .padding()
-                        
+
                         Text(viewModel.errorMessage)
                             .multilineTextAlignment(.center)
                             .padding()
@@ -41,17 +40,17 @@ struct BuoyFavoritesView: View {
                             .font(.system(size: 60))
                             .foregroundColor(.gray)
                             .padding()
-                        
+
                         Text("No Favorite Buoys")
                             .font(.title2)
                             .fontWeight(.semibold)
-                        
+
                         Text("Buoy stations you mark as favorites will appear here.")
                             .multilineTextAlignment(.center)
                             .foregroundColor(.secondary)
-                        
+
                         Spacer().frame(height: 20)
-                        
+
                         NavigationLink(destination: BuoyStationsView(
                             buoyService: serviceProvider.buoyApiservice,
                             locationService: serviceProvider.locationService,
@@ -108,7 +107,7 @@ struct BuoyFavoritesView: View {
         .toolbarBackground(.purple, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .withHomeButton()
-        
+
         .onAppear {
             viewModel.initialize(
                 buoyFavoritesCloudService: serviceProvider.buoyFavoritesCloudService,
@@ -126,7 +125,7 @@ struct BuoyFavoritesView: View {
 
 struct FavoriteBuoyStationRow: View {
     let station: BuoyStation
-    
+
     var body: some View {
         HStack(spacing: 16) {
             // Buoy icon - using the custom image from MainView
@@ -137,7 +136,7 @@ struct FavoriteBuoyStationRow: View {
                 .padding(6)
                 .background(Color.blue.opacity(0.1))
                 .clipShape(Circle())
-            
+
             // Station info
             VStack(alignment: .leading, spacing: 4) {
                 // Process the name to remove any ID prefix if present
@@ -146,18 +145,18 @@ struct FavoriteBuoyStationRow: View {
                     : (station.name.contains("-")
                         ? station.name.components(separatedBy: "-").dropFirst().joined(separator: "-").trimmingCharacters(in: .whitespaces)
                         : station.name)
-                
+
                 Text(displayName)
                     .font(.headline)
-                
+
                 Text("Type: \(station.type)")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
-                
+
                 Text("Station ID: \(station.id)")
                     .font(.caption)
                     .foregroundColor(.secondary)
-                
+
                 // Handle optional latitude and longitude
                 if let latitude = station.latitude,
                    let longitude = station.longitude {
@@ -165,21 +164,21 @@ struct FavoriteBuoyStationRow: View {
                         .font(.caption)
                         .foregroundColor(.gray)
                 }
-                
+
                 // Show additional properties if available
                 if let met = station.meteorological, met == "y" {
                     Text("Meteorological: Yes")
                         .font(.caption)
                         .foregroundColor(.green)
                 }
-                
+
                 if let currents = station.currents, currents == "y" {
                     Text("Current Data: Yes")
                         .font(.caption)
                         .foregroundColor(.green)
                 }
             }
-            
+
             Spacer()
         }
         .padding(.vertical, 8)

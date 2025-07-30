@@ -13,17 +13,17 @@ struct VoyagePlanRoutesView: View {
     @State private var showingGpxView = false
     @State private var selectedGpxFile: GpxFile?
     @State private var selectedRouteName: String = ""
-    
+
     init(allRoutesService: AllRoutesDatabaseService? = nil) {
         _viewModel = StateObject(wrappedValue: VoyagePlanRoutesViewModel(allRoutesService: allRoutesService))
     }
-    
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
                 // Search Bar
                 searchBarView
-                
+
                 // Content
                 if viewModel.isLoading && viewModel.routes.isEmpty {
                     loadingView
@@ -32,7 +32,7 @@ struct VoyagePlanRoutesView: View {
                 } else {
                     routesListView
                 }
-                
+
                 // Error message
                 if !viewModel.errorMessage.isEmpty {
                     errorView
@@ -58,18 +58,18 @@ struct VoyagePlanRoutesView: View {
             }
         }
     }
-    
+
     // MARK: - Search Bar
-    
+
     private var searchBarView: some View {
         HStack {
             HStack {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(.secondary)
-                
+
                 TextField("Search routes...", text: $viewModel.searchText)
                     .textFieldStyle(PlainTextFieldStyle())
-                
+
                 if !viewModel.searchText.isEmpty {
                     Button(action: {
                         viewModel.searchText = ""
@@ -89,9 +89,9 @@ struct VoyagePlanRoutesView: View {
         .padding(.bottom, 8)
         .background(Color(.systemGroupedBackground))
     }
-    
+
     // MARK: - Routes List
-    
+
     private var routesListView: some View {
         List(viewModel.filteredRoutes) { route in
             VoyagePlanRouteRowView(
@@ -106,14 +106,14 @@ struct VoyagePlanRoutesView: View {
             viewModel.refresh()
         }
     }
-    
+
     // MARK: - Loading View
-    
+
     private var loadingView: some View {
         VStack(spacing: 16) {
             ProgressView()
                 .scaleEffect(1.2)
-            
+
             Text("Loading routes...")
                 .font(.headline)
                 .foregroundColor(.secondary)
@@ -121,27 +121,27 @@ struct VoyagePlanRoutesView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(.systemGroupedBackground))
     }
-    
+
     // MARK: - Empty State
-    
+
     private var emptyStateView: some View {
         VStack(spacing: 20) {
             Image(systemName: viewModel.routes.isEmpty ? "map" : "magnifyingglass.circle")
                 .font(.system(size: 60))
                 .foregroundColor(.gray)
-            
+
             Text(viewModel.routes.isEmpty ? "No Routes Available" : "No Results Found")
                 .font(.title2)
                 .fontWeight(.semibold)
-            
-            Text(viewModel.routes.isEmpty ? 
+
+            Text(viewModel.routes.isEmpty ?
                  "Download or import routes to get started with voyage planning." :
                  "No routes match your current search criteria. Try adjusting your search terms.")
                 .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
-            
+
             if viewModel.routes.isEmpty {
                 Button("Refresh") {
                     viewModel.refresh()
@@ -157,21 +157,21 @@ struct VoyagePlanRoutesView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(.systemGroupedBackground))
     }
-    
+
     // MARK: - Error View
-    
+
     private var errorView: some View {
         VStack(spacing: 8) {
             HStack {
                 Image(systemName: "exclamationmark.triangle")
                     .foregroundColor(.red)
-                
+
                 Text(viewModel.errorMessage)
                     .font(.caption)
                     .foregroundColor(.red)
-                
+
                 Spacer()
-                
+
                 Button("Dismiss") {
                     viewModel.errorMessage = ""
                 }
@@ -184,22 +184,22 @@ struct VoyagePlanRoutesView: View {
             .padding(.horizontal)
         }
     }
-    
+
     // MARK: - Helper Functions
-    
+
     private func loadRoute(_ route: AllRoute) {
         Task {
             do {
                 // Parse GPX data from database
                 let gpxFile = try await serviceProvider.gpxService.loadGpxFile(from: route.gpxData)
-                
+
                 await MainActor.run {
                     // Set up navigation to GpxView with pre-loaded data
                     selectedGpxFile = gpxFile
                     selectedRouteName = route.name
                     showingGpxView = true
                 }
-                
+
             } catch {
                 await MainActor.run {
                     viewModel.errorMessage = "Failed to load route: \(error.localizedDescription)"
@@ -214,7 +214,7 @@ struct VoyagePlanRoutesView: View {
 struct VoyagePlanRouteRowView: View {
     let route: AllRoute
     let onTap: () -> Void
-    
+
     var body: some View {
         Button(action: onTap) {
             HStack(alignment: .top, spacing: 12) {
@@ -225,7 +225,7 @@ struct VoyagePlanRouteRowView: View {
                         .fontWeight(.semibold)
                         .foregroundColor(.primary)
                         .multilineTextAlignment(.leading)
-                    
+
                     // Route Stats
                     HStack(spacing: 16) {
                         HStack(spacing: 4) {
@@ -236,7 +236,7 @@ struct VoyagePlanRouteRowView: View {
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
-                        
+
                         HStack(spacing: 4) {
                             Image(systemName: "ruler")
                                 .font(.caption2)
@@ -246,7 +246,7 @@ struct VoyagePlanRouteRowView: View {
                                 .foregroundColor(.secondary)
                         }
                     }
-                    
+
                     // Source Type Badge
                     HStack(spacing: 4) {
                         Image(systemName: route.sourceTypeIcon)
@@ -260,9 +260,9 @@ struct VoyagePlanRouteRowView: View {
                     .foregroundColor(sourceTypeColor)
                     .cornerRadius(6)
                 }
-                
+
                 Spacer()
-                
+
                 // Tap indicator
                 Image(systemName: "chevron.right")
                     .font(.caption)
@@ -272,7 +272,7 @@ struct VoyagePlanRouteRowView: View {
         }
         .buttonStyle(.plain)
     }
-    
+
     private var sourceTypeColor: Color {
         switch route.sourceType {
         case "public":

@@ -16,17 +16,17 @@ struct NavUnitPhotoGalleryView: View {
     @State private var capturedImage: UIImage?
     @State private var showingDeleteAlert = false
     @State private var photoToDelete: NavUnitPhoto?
-    
+
     // MARK: - Grid Configuration
-    
+
     private let columns = [
         GridItem(.flexible(), spacing: 8),
         GridItem(.flexible(), spacing: 8),
         GridItem(.flexible(), spacing: 8)
     ]
-    
+
     // MARK: - Initialization
-    
+
     init(navUnitId: String, photoService: PhotoService) {
         self.navUnitId = navUnitId
         self._viewModel = StateObject(wrappedValue: PhotoGalleryViewModel(
@@ -34,9 +34,9 @@ struct NavUnitPhotoGalleryView: View {
             photoService: photoService
         ))
     }
-    
+
     // MARK: - Body
-    
+
     var body: some View {
         NavigationView {
             ZStack {
@@ -45,7 +45,7 @@ struct NavUnitPhotoGalleryView: View {
                 } else {
                     mainContentView
                 }
-                
+
                 if viewModel.isLoading {
                     loadingOverlay
                 }
@@ -87,7 +87,7 @@ struct NavUnitPhotoGalleryView: View {
                     )
                 }
             }
-            .onChange(of: capturedImage) { oldValue, newValue in
+            .onChange(of: capturedImage) { _, newValue in
                 if let image = newValue {
                     Task {
                         await viewModel.takePhoto(image)
@@ -97,20 +97,20 @@ struct NavUnitPhotoGalleryView: View {
             }
         }
     }
-    
+
     // MARK: - View Components
-    
+
     private var emptyStateView: some View {
         VStack(spacing: 20) {
             // Show different icons based on whether photos are available for download
             Image(systemName: viewModel.syncStatus.photosToDownload > 0 ? "icloud.and.arrow.down" : "camera.fill")
                 .font(.system(size: 60))
                 .foregroundColor(viewModel.syncStatus.photosToDownload > 0 ? .blue : .gray)
-            
+
             Text(viewModel.syncStatus.photosToDownload > 0 ? "Photos Available" : "No Photos Yet")
                 .font(.title2)
                 .fontWeight(.semibold)
-            
+
             // Show different messages based on sync status
             if viewModel.syncStatus.photosToDownload > 0 {
                 Text("You have \(viewModel.syncStatus.photosToDownload) photo\(viewModel.syncStatus.photosToDownload == 1 ? "" : "s") stored in the cloud for this navigation unit. Tap download to sync them to this device.")
@@ -118,7 +118,7 @@ struct NavUnitPhotoGalleryView: View {
                     .multilineTextAlignment(.center)
                     .foregroundColor(.secondary)
                     .padding(.horizontal)
-                
+
                 Button(action: {
                     Task {
                         await viewModel.downloadPhotos()
@@ -136,14 +136,14 @@ struct NavUnitPhotoGalleryView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(viewModel.isDownloading)
-                
+
             } else {
                 Text("Take your first photo of this navigation unit to get started.")
                     .font(.body)
                     .multilineTextAlignment(.center)
                     .foregroundColor(.secondary)
                     .padding(.horizontal)
-                
+
                 Button("Take Photo") {
                     showingCamera = true
                 }
@@ -153,18 +153,18 @@ struct NavUnitPhotoGalleryView: View {
         }
         .padding()
     }
-    
+
     private var mainContentView: some View {
         VStack(spacing: 0) {
             // Status and sync controls
             statusHeaderView
-            
+
             // Photo grid
             ScrollView {
                 LazyVGrid(columns: columns, spacing: 8) {
                     // Take new photo button
                     takePhotoButton
-                    
+
                     // Photo thumbnails
                     ForEach(viewModel.photos, id: \.id) { photo in
                         PhotoThumbnailView(
@@ -185,21 +185,21 @@ struct NavUnitPhotoGalleryView: View {
             }
         }
     }
-    
+
     private var statusHeaderView: some View {
         VStack(spacing: 12) {
             // Photo count and status
             HStack {
                 Text(viewModel.photoCountText)
                     .font(.headline)
-                
+
                 Spacer()
-                
+
                 Text(viewModel.syncStatusText)
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
-            
+
             // Sync buttons
             if viewModel.showUploadButton || viewModel.showDownloadButton {
                 HStack(spacing: 12) {
@@ -222,7 +222,7 @@ struct NavUnitPhotoGalleryView: View {
                         .buttonStyle(.bordered)
                         .disabled(viewModel.isUploading)
                     }
-                    
+
                     if viewModel.showDownloadButton {
                         Button(action: {
                             Task {
@@ -244,7 +244,7 @@ struct NavUnitPhotoGalleryView: View {
                     }
                 }
             }
-            
+
             // Messages
             if !viewModel.errorMessage.isEmpty {
                 Text(viewModel.errorMessage)
@@ -252,7 +252,7 @@ struct NavUnitPhotoGalleryView: View {
                     .foregroundColor(.red)
                     .padding(.horizontal)
             }
-            
+
             if !viewModel.successMessage.isEmpty {
                 Text(viewModel.successMessage)
                     .font(.caption)
@@ -263,7 +263,7 @@ struct NavUnitPhotoGalleryView: View {
         .padding()
         .background(Color(.systemGray6))
     }
-    
+
     private var takePhotoButton: some View {
         Button(action: {
             showingCamera = true
@@ -272,7 +272,7 @@ struct NavUnitPhotoGalleryView: View {
                 Image(systemName: "camera.fill")
                     .font(.title)
                     .foregroundColor(viewModel.canTakePhoto ? .blue : .gray)
-                
+
                 Text("Take Photo")
                     .font(.caption)
                     .foregroundColor(viewModel.canTakePhoto ? .blue : .gray)
@@ -290,7 +290,7 @@ struct NavUnitPhotoGalleryView: View {
         }
         .disabled(!viewModel.canTakePhoto)
     }
-    
+
     private var cameraButton: some View {
         Button(action: {
             showingCamera = true
@@ -299,16 +299,16 @@ struct NavUnitPhotoGalleryView: View {
         }
         .disabled(!viewModel.canTakePhoto)
     }
-    
+
     private var loadingOverlay: some View {
         ZStack {
             Color.black.opacity(0.3)
                 .ignoresSafeArea()
-            
+
             VStack(spacing: 12) {
                 ProgressView()
                     .scaleEffect(1.2)
-                
+
                 Text("Loading...")
                     .font(.caption)
                     .foregroundColor(.secondary)
@@ -329,10 +329,10 @@ struct PhotoThumbnailView: View {
     let viewModel: PhotoGalleryViewModel
     let onTap: () -> Void
     let onDelete: () -> Void
-    
+
     @State private var thumbnailImage: UIImage?
     @State private var isLoading = true
-    
+
     var body: some View {
         ZStack {
             // Image or placeholder
@@ -352,12 +352,12 @@ struct PhotoThumbnailView: View {
             }
             .frame(height: 120)
             .clipped()
-            
+
             // Status overlay
             VStack {
                 HStack {
                     Spacer()
-                    
+
                     Image(systemName: viewModel.getPhotoStatusIcon(photo))
                         .font(.caption)
                         .foregroundColor(Color(viewModel.getPhotoStatusColor(photo)))
@@ -367,7 +367,7 @@ struct PhotoThumbnailView: View {
                                 .fill(Color.white.opacity(0.8))
                         )
                 }
-                
+
                 Spacer()
             }
             .padding(6)
@@ -386,7 +386,7 @@ struct PhotoThumbnailView: View {
             await loadThumbnail()
         }
     }
-    
+
     private func loadThumbnail() async {
         isLoading = true
         thumbnailImage = await viewModel.loadThumbnail(for: photo)
@@ -411,39 +411,39 @@ private class PreviewMockPhotoService: PhotoService {
     func getPhotos(for navUnitId: String) async throws -> [NavUnitPhoto] {
         return []
     }
-    
+
     func takePhoto(for navUnitId: String, image: UIImage) async throws -> NavUnitPhoto {
         return NavUnitPhoto(navUnitId: navUnitId, localFileName: "test.jpg")
     }
-    
+
     func deletePhoto(_ photo: NavUnitPhoto) async throws {
         // Mock implementation
     }
-    
+
     func getPhotoCount(for navUnitId: String) async throws -> Int {
         return 0
     }
-    
+
     func uploadPhotos(for navUnitId: String) async throws -> PhotoSyncStatus {
         return .empty
     }
-    
+
     func downloadPhotos(for navUnitId: String) async throws -> PhotoSyncStatus {
         return .empty
     }
-    
+
     func getSyncStatus(for navUnitId: String) async throws -> PhotoSyncStatus {
         return .empty
     }
-    
+
     func loadPhotoImage(_ photo: NavUnitPhoto) async throws -> UIImage {
         return UIImage(systemName: "photo") ?? UIImage()
     }
-    
+
     func loadThumbnailImage(_ photo: NavUnitPhoto) async throws -> UIImage {
         return UIImage(systemName: "photo") ?? UIImage()
     }
-    
+
     func isAtPhotoLimit(for navUnitId: String) async throws -> Bool {
         return false
     }

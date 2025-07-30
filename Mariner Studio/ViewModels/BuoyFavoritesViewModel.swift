@@ -5,45 +5,45 @@ import CoreLocation
 
 /// Cloud-only Buoy Favorites ViewModel - NO sync complexity!
 class BuoyFavoritesViewModel: ObservableObject {
-    
+
     // MARK: - Published Properties
     @Published var favorites: [BuoyStation] = []
     @Published var isLoading = false
     @Published var errorMessage = ""
-    
+
     // MARK: - Dependencies  
     private let cloudService: BuoyFavoritesCloudService
     private var locationService: LocationService?
-    
+
     // MARK: - Initialization
     init(cloudService: BuoyFavoritesCloudService = BuoyFavoritesCloudService(),
          locationService: LocationService? = nil) {
         self.cloudService = cloudService
         self.locationService = locationService
-        
+
         print("🎯 INIT: BuoyFavoritesViewModel (CLOUD-ONLY) created at \(Date())")
     }
-    
+
     // MARK: - Core Operations
-    
+
     /// Load favorites from cloud (single source of truth)
     @MainActor
     func loadFavorites() async {
         print("🚀 LOAD_FAVORITES: Starting cloud-only load")
         isLoading = true
         errorMessage = ""
-        
+
         let result = await cloudService.getFavorites()
-        
+
         switch result {
         case .success(let stations):
             print("✅ LOAD_FAVORITES: Retrieved \(stations.count) stations from cloud")
-            
+
             // Calculate distances if location available
             var stationsWithDistance = stations
             if let locationService = locationService,
                let userLocation = locationService.currentLocation {
-                
+
                 for i in 0..<stationsWithDistance.count {
                     if let lat = stationsWithDistance[i].latitude,
                        let lon = stationsWithDistance[i].longitude {
@@ -54,7 +54,7 @@ class BuoyFavoritesViewModel: ObservableObject {
                     }
                 }
             }
-            
+
             // Sort by distance, then alphabetically
             favorites = stationsWithDistance.sorted { station1, station2 in
                 if let distance1 = station1.distanceFromUser,
@@ -68,38 +68,38 @@ class BuoyFavoritesViewModel: ObservableObject {
                     return station1.name < station2.name
                 }
             }
-            
+
             print("✅ LOAD_FAVORITES: Loaded and sorted \(favorites.count) favorites")
-            
+
         case .failure(let error):
             print("❌ LOAD_FAVORITES: Failed - \(error.localizedDescription)")
             errorMessage = "Failed to load favorites: \(error.localizedDescription)"
             favorites = []
         }
-        
+
         isLoading = false
     }
-    
+
     /// Remove favorite from cloud (single operation, no sync needed!)
     @MainActor
     func removeFavorite(stationId: String) async {
         print("🗑️ REMOVE_FAVORITE: Removing station \(stationId) from cloud")
-        
+
         let result = await cloudService.removeFavorite(stationId: stationId)
-        
+
         switch result {
-        case .success():
+        case .success:
             print("✅ REMOVE_FAVORITE: Successfully removed from cloud")
             // Immediately update UI by removing from local array
             favorites.removeAll { $0.id == stationId }
             print("✅ REMOVE_FAVORITE: Updated local UI, station removed")
-            
+
         case .failure(let error):
             print("❌ REMOVE_FAVORITE: Failed - \(error.localizedDescription)")
             errorMessage = "Failed to remove favorite: \(error.localizedDescription)"
         }
     }
-    
+
     /// Remove favorite by index (for swipe actions)
     func removeFavorite(at offsets: IndexSet) {
         print("🗑️ REMOVE_FAVORITE: Removing favorites at offsets \(Array(offsets))")
@@ -112,7 +112,7 @@ class BuoyFavoritesViewModel: ObservableObject {
             }
         }
     }
-    
+
     /// Initialize with services (for dependency injection from ServiceProvider)
     func initialize(
         buoyFavoritesCloudService: BuoyFavoritesCloudService,
@@ -121,7 +121,7 @@ class BuoyFavoritesViewModel: ObservableObject {
         print("🔧 INITIALIZE: Setting cloud service and location service")
         self.locationService = locationService
     }
-    
+
     /// Cleanup method (much simpler now)
     func cleanup() {
         print("🧹 CLEANUP: Cloud-only cleanup (minimal)")

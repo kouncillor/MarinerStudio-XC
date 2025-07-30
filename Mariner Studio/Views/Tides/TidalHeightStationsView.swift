@@ -1,11 +1,10 @@
-
 import SwiftUI
 
 struct TidalHeightStationsView: View {
     // MARK: - Properties
     @StateObject private var viewModel: TidalHeightStationsViewModel
     @State private var isRefreshing = false
-    
+
     // MARK: - Initialization
     init(
         tidalHeightService: TidalHeightService = TidalHeightServiceImpl(),
@@ -18,13 +17,13 @@ struct TidalHeightStationsView: View {
             tideFavoritesCloudService: tideFavoritesCloudService
         ))
     }
-    
+
     // MARK: - Body
     var body: some View {
         VStack(spacing: 0) {
             // Search Bar and Filters
             searchAndFilterBar
-            
+
             // Main Content
             ZStack {
                 if viewModel.isLoading {
@@ -45,26 +44,24 @@ struct TidalHeightStationsView: View {
         .toolbarBackground(.green, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .withHomeButton()
-        
-        
-        
+
         .task {
             await viewModel.loadStations()
         }
     }
-    
+
     // MARK: - View Components
     private var searchAndFilterBar: some View {
         HStack {
             HStack {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(.gray)
-                
+
                 TextField("Search stations...", text: $viewModel.searchText)
                     .onChange(of: viewModel.searchText) {
                         viewModel.filterStations()
                     }
-                
+
                 if !viewModel.searchText.isEmpty {
                     Button(action: {
                         viewModel.clearSearch()
@@ -82,7 +79,7 @@ struct TidalHeightStationsView: View {
                     .stroke(Color(.systemGray4), lineWidth: 1)
             )
             .padding(.trailing, 8)
-            
+
             Button(action: {
                 viewModel.toggleFavorites()
             }) {
@@ -125,17 +122,13 @@ struct TidalHeightStationsView: View {
             await viewModel.loadStations()
         }
     }
-    
-    
-    
-    
-    
+
 }
 
 struct StationRow: View {
     let stationWithDistance: StationWithDistance<TidalHeightStation>
     let onToggleFavorite: () -> Void
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             HStack {
@@ -147,8 +140,7 @@ struct StationRow: View {
                         .foregroundColor(stationWithDistance.station.isFavorite ? .yellow : .gray)
                 }
             }
-            
-            
+
             // Distance from user (matching favorites view style)
             if !stationWithDistance.distanceDisplay.isEmpty {
                 Text(stationWithDistance.distanceDisplay)
@@ -156,7 +148,7 @@ struct StationRow: View {
                     .foregroundColor(.blue)
                     .fontWeight(.medium)
             }
-            
+
             // Coordinates (matching favorites view format)
             if let latitude = stationWithDistance.station.latitude,
                let longitude = stationWithDistance.station.longitude {

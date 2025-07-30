@@ -5,7 +5,6 @@
 //  Created by Timothy Russell on 5/11/25.
 //
 
-
 import Foundation
 
 protocol WeatherMapViewService {

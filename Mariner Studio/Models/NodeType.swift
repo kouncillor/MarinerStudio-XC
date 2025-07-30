@@ -1,5 +1,3 @@
-
-
 import Foundation
 
 // Types of navigation nodes
@@ -66,7 +64,7 @@ let navigationFlowData: [NavigationFlowSection] = [
             NodeConnection(from: "main_map", to: "map_clustering")
         ]
     ),
-    
+
     // WEATHER section
     NavigationFlowSection(
         category: "WEATHER",
@@ -156,7 +154,7 @@ let navigationFlowData: [NavigationFlowSection] = [
             NodeConnection(from: "weather_detail_for_map", to: "hourly_forecast")
         ]
     ),
-    
+
     // TIDES section
     NavigationFlowSection(
         category: "TIDES",
@@ -215,7 +213,7 @@ let navigationFlowData: [NavigationFlowSection] = [
             NodeConnection(from: "tide_favorites", to: "tide_predictions")
         ]
     ),
-    
+
     // CURRENTS section
     NavigationFlowSection(
         category: "CURRENTS",
@@ -294,7 +292,7 @@ let navigationFlowData: [NavigationFlowSection] = [
             NodeConnection(from: "current_predictions", to: "current_graph")
         ]
     ),
-    
+
     // NAV UNITS section
     NavigationFlowSection(
         category: "NAV UNITS",
@@ -353,7 +351,7 @@ let navigationFlowData: [NavigationFlowSection] = [
             NodeConnection(from: "navunit_favorites", to: "navunit_details")
         ]
     ),
-    
+
     // BUOYS section
     NavigationFlowSection(
         category: "BUOYS",
@@ -412,7 +410,7 @@ let navigationFlowData: [NavigationFlowSection] = [
             NodeConnection(from: "buoy_favorites", to: "buoy_web")
         ]
     ),
-    
+
     // TUGS section
     NavigationFlowSection(
         category: "TUGS",
@@ -450,7 +448,7 @@ let navigationFlowData: [NavigationFlowSection] = [
             NodeConnection(from: "tugs_list", to: "tug_details")
         ]
     ),
-    
+
     // BARGES section
     NavigationFlowSection(
         category: "BARGES",
@@ -488,7 +486,7 @@ let navigationFlowData: [NavigationFlowSection] = [
             NodeConnection(from: "barges_list", to: "barge_details")
         ]
     ),
-    
+
     // ROUTE section
     NavigationFlowSection(
         category: "ROUTE",

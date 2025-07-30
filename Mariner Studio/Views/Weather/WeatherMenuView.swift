@@ -1,4 +1,3 @@
-
 import SwiftUI
 
 struct WeatherMenuView: View {
@@ -18,7 +17,7 @@ struct WeatherMenuView: View {
                         color: .yellow
                     )
                 }
-                
+
                 // Local Weather - System Icon
                 NavigationLink(destination: CurrentLocalWeatherView()) {
                     MenuButtonContent(
@@ -27,7 +26,7 @@ struct WeatherMenuView: View {
                         color: .green
                     )
                 }
-                
+
                 // Weather Map - System Icon
                 NavigationLink(destination: WeatherMapView()) {
                     MenuButtonContent(

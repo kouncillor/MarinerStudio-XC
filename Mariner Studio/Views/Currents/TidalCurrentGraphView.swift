@@ -6,24 +6,24 @@ struct TidalCurrentGraphView: View {
     let predictions: [TidalCurrentPrediction]
     let selectedTime: Date?
     let stationName: String
-    
+
     // MARK: - Computed Properties
     private var maxVelocity: Double {
         // Cache the max velocity calculation
         let maxValue = predictions.map { abs($0.speed) }.max() ?? 3.0
         return ceil(maxValue)
     }
-    
+
     private var sortedPredictions: [TidalCurrentPrediction] {
         // Sort predictions once, not in every subview
         return predictions.sorted { $0.timestamp < $1.timestamp }
     }
-    
+
     private var startOfDay: Date? {
         guard let firstPrediction = sortedPredictions.first else { return nil }
         return Calendar.current.startOfDay(for: firstPrediction.timestamp)
     }
-    
+
     // MARK: - Body
     var body: some View {
         VStack(spacing: 10) {
@@ -33,7 +33,7 @@ struct TidalCurrentGraphView: View {
                     .font(.headline)
                     .padding(.top, 5)
             }
-            
+
             if predictions.isEmpty {
                 Text("No data available")
                     .foregroundColor(.gray)
@@ -47,7 +47,7 @@ struct TidalCurrentGraphView: View {
                     startOfDay: startOfDay ?? Date()
                 )
                 .frame(height: 250)
-                
+
                 // Legend
                 HStack {
                     Spacer()
@@ -59,7 +59,7 @@ struct TidalCurrentGraphView: View {
                             Text("Flood")
                                 .font(.caption)
                         }
-                        
+
                         HStack {
                             Rectangle()
                                 .fill(Color.red)
@@ -83,30 +83,30 @@ struct GraphContent: View {
     let maxVelocity: Double
     let selectedTime: Date?
     let startOfDay: Date
-    
+
     // TimeInterval constants to avoid recalculation
     private let hoursInDay: Int = 24
     private let minutesInDay: Double = 24 * 60
-    
+
     // Coordinate transformations
     private func xPosition(for date: Date, in width: CGFloat) -> CGFloat {
         // Calculate minutes since midnight
         let minutes = date.timeIntervalSince(startOfDay) / 60
-        
+
         // Scale to view width (avoid division in the render loop)
         return CGFloat(minutes / minutesInDay) * width
     }
-    
+
     private func yPosition(for velocity: Double, in height: CGFloat) -> CGFloat {
         // Center line is at height/2
         // Positive velocity (flood) goes upward from center
         // Negative velocity (ebb) goes downward from center
         let centerY = height / 2
         let scale = (height / 2) / CGFloat(maxVelocity)
-        
+
         return centerY - (CGFloat(velocity) * scale)
     }
-    
+
     var body: some View {
         GeometryReader { geometry in
             ZStack {
@@ -124,7 +124,7 @@ struct GraphContent: View {
                         self.yPosition(for: velocity, in: geometry.size.height)
                     }
                 )
-                
+
                 // Current Curve - most performance-intensive part
                 CurrentCurve(
                     predictions: predictions,
@@ -134,7 +134,7 @@ struct GraphContent: View {
                     startOfDay: startOfDay,
                     minutesInDay: minutesInDay
                 )
-                
+
                 // Selected Time Marker - only draw when needed
                 if let selectedTime = selectedTime {
                     let x = xPosition(for: selectedTime, in: geometry.size.width)
@@ -158,20 +158,20 @@ struct GraphBackground: View {
     let hoursInDay: Int
     let xPositionCalculator: (Date) -> CGFloat
     let yPositionCalculator: (Double) -> CGFloat
-    
+
     var body: some View {
         ZStack {
             // White background
             Rectangle()
                 .fill(Color.white)
-            
+
             // Horizontal grid lines for velocity
             HorizontalGridLines(
                 maxVelocity: maxVelocity,
                 width: width,
                 yPositionCalculator: yPositionCalculator
             )
-            
+
             // Vertical grid lines for time
             VerticalGridLines(
                 hoursInDay: hoursInDay,
@@ -179,7 +179,7 @@ struct GraphBackground: View {
                 height: height,
                 xPositionCalculator: xPositionCalculator
             )
-            
+
             // Add time labels
             TimeLabels(
                 hoursInDay: hoursInDay,
@@ -187,7 +187,7 @@ struct GraphBackground: View {
                 height: height,
                 xPositionCalculator: xPositionCalculator
             )
-            
+
             // Add velocity scale
             VelocityScale(
                 maxVelocity: maxVelocity,
@@ -202,7 +202,7 @@ struct HorizontalGridLines: View {
     let maxVelocity: Double
     let width: CGFloat
     let yPositionCalculator: (Double) -> CGFloat
-    
+
     var body: some View {
         ZStack {
             ForEach(-Int(maxVelocity)...Int(maxVelocity), id: \.self) { value in
@@ -233,7 +233,7 @@ struct VerticalGridLines: View {
     let startOfDay: Date
     let height: CGFloat
     let xPositionCalculator: (Date) -> CGFloat
-    
+
     var body: some View {
         ZStack {
             ForEach(0...hoursInDay, id: \.self) { hour in
@@ -241,7 +241,7 @@ struct VerticalGridLines: View {
                     let calendar = Calendar.current
                     let hourDate = calendar.date(byAdding: .hour, value: hour, to: startOfDay) ?? Date()
                     let x = xPositionCalculator(hourDate)
-                    
+
                     path.move(to: CGPoint(x: x, y: 0))
                     path.addLine(to: CGPoint(x: x, y: height))
                 }
@@ -262,14 +262,14 @@ struct TimeLabels: View {
         formatter.dateFormat = "HH:mm"
         return formatter
     }()
-    
+
     var body: some View {
         ZStack {
             ForEach(0...hoursInDay/3, id: \.self) { index in
                 let hour = index * 3 // Every 3 hours
                 let calendar = Calendar.current
                 let hourDate = calendar.date(byAdding: .hour, value: hour, to: startOfDay) ?? Date()
-                
+
                 Text(timeFormatter.string(from: hourDate))
                     .font(.caption)
                     .foregroundColor(.gray)
@@ -286,7 +286,7 @@ struct TimeLabels: View {
 struct VelocityScale: View {
     let maxVelocity: Double
     let yPositionCalculator: (Double) -> CGFloat
-    
+
     var body: some View {
         ZStack {
             // Add velocity labels
@@ -313,38 +313,38 @@ struct CurrentCurve: View {
     let maxVelocity: Double
     let startOfDay: Date
     let minutesInDay: Double
-    
+
     // Pre-compute values for better performance
     private var centerY: CGFloat {
         return height / 2
     }
-    
+
     private var velocityScale: CGFloat {
         return (height / 2) / CGFloat(maxVelocity)
     }
-    
+
     // Optimized position calculation
     private func position(for prediction: TidalCurrentPrediction) -> CGPoint {
         // X position - calculate minutes since midnight
         let minutes = prediction.timestamp.timeIntervalSince(startOfDay) / 60
         let x = CGFloat(minutes / minutesInDay) * width
-        
+
         // Y position - scale velocity to view height
         let y = centerY - (CGFloat(prediction.speed) * velocityScale)
-        
+
         return CGPoint(x: x, y: y)
     }
-    
+
     var body: some View {
         // Use a single Path for better performance
         Path { path in
             guard !predictions.isEmpty else { return }
-            
+
             let points = predictions.map { position(for: $0) }
-            
+
             // Move to first point
             path.move(to: points[0])
-            
+
             // Connect the rest of the points
             for i in 1..<points.count {
                 path.addLine(to: points[i])
@@ -369,7 +369,7 @@ struct CurrentCurve: View {
         let time = calendar.date(byAdding: .hour, value: hour, to: now)!
         // Create a sine wave pattern
         let speed = 3 * sin(Double(hour) * .pi / 6) // Period of 12 hours
-        
+
         return TidalCurrentPrediction(
             regularSpeed: speed,
             velocityMajor: speed,
@@ -382,7 +382,7 @@ struct CurrentCurve: View {
             type: speed > 0 ? "flood" : "ebb"
         )
     }
-    
+
     return TidalCurrentGraphView(
         predictions: mockPredictions,
         selectedTime: now,

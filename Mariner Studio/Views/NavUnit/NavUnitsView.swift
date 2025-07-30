@@ -1,4 +1,3 @@
-
 //
 //  NavUnitsView.swift
 //  Mariner Studio
@@ -17,12 +16,12 @@ struct NavUnitListItem: Identifiable {
     let latitude: Double?
     let longitude: Double?
     let isFavorite: Bool
-    
+
     var distanceDisplay: String {
         if distanceFromUser == Double.greatestFiniteMagnitude {
             return ""
         }
-        
+
         let miles = distanceFromUser * 0.000621371 // Convert meters to miles
         return String(format: "%.1f mi", miles)
     }
@@ -31,19 +30,19 @@ struct NavUnitListItem: Identifiable {
 struct NavUnitsView: View {
     @StateObject private var viewModel: NavUnitsViewModel
     @EnvironmentObject var serviceProvider: ServiceProvider
-    
+
     init(navUnitService: NavUnitDatabaseService, locationService: LocationService) {
         _viewModel = StateObject(wrappedValue: NavUnitsViewModel(
             navUnitService: navUnitService,
             locationService: locationService
         ))
     }
-    
+
     var body: some View {
         VStack(spacing: 0) {
             // Search Bar
             searchBar
-            
+
             // Main Content
             ZStack {
                 if viewModel.isLoading {
@@ -65,19 +64,19 @@ struct NavUnitsView: View {
             }
         }
     }
-    
+
     // MARK: - View Components
     private var searchBar: some View {
         HStack {
             HStack {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(.gray)
-                
+
                 TextField("Search navigation units...", text: $viewModel.searchText)
                     .onChange(of: viewModel.searchText) {
                         viewModel.filterNavUnits()
                     }
-                
+
                 if !viewModel.searchText.isEmpty {
                     Button(action: {
                         viewModel.clearSearch()
@@ -95,7 +94,7 @@ struct NavUnitsView: View {
                     .stroke(Color(.systemGray4), lineWidth: 1)
             )
             .padding(.trailing, 8)
-            
+
             Button(action: {
                 viewModel.toggleFavorites()
             }) {
@@ -107,7 +106,7 @@ struct NavUnitsView: View {
         .padding([.horizontal, .top])
         .background(Color(.secondarySystemBackground))
     }
-    
+
     private var navUnitsList: some View {
         List(viewModel.navUnitListItems) { navUnitItem in
             NavigationLink(
@@ -123,19 +122,19 @@ struct NavUnitsView: View {
                    //   Image("refinerysixseven")
                         .resizable()
                         .frame(width: 45, height: 45)
-                    
+
                     VStack(alignment: .leading, spacing: 3) {
                         Text(navUnitItem.name)
                             .font(.headline)
                             .foregroundColor(.primary)
-                        
+
                         if !navUnitItem.distanceDisplay.isEmpty {
                             Text(navUnitItem.distanceDisplay)
                                 .font(.subheadline)
                                 .foregroundColor(.blue)
                                 .fontWeight(.medium)
                         }
-                        
+
                         // Coordinates - always show if available
                         if let latitude = navUnitItem.latitude,
                            let longitude = navUnitItem.longitude {
@@ -144,9 +143,9 @@ struct NavUnitsView: View {
                                 .foregroundColor(.gray)
                         }
                     }
-                    
+
                     Spacer()
-                    
+
                     // Star icon to show favorite status
                     if navUnitItem.isFavorite {
                         Image(systemName: "star.fill")
@@ -169,7 +168,7 @@ struct NavUnitsView: View {
 struct LazyNavUnitDetailsView: View {
     let navUnitId: String
     let serviceProvider: ServiceProvider
-    
+
     var body: some View {
         // Create details view that will load the full model by ID
         NavUnitDetailsView(

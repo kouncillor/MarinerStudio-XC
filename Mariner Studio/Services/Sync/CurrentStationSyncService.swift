@@ -1,4 +1,3 @@
-
 //
 //  CurrentStationSyncService.swift
 //  Mariner
@@ -13,7 +12,7 @@ import Supabase
 final class CurrentStationSyncService {
     // MODIFICATION: The 'shared' instance is now a 'let' and will be configured once.
     static let shared = CurrentStationSyncService()
-    
+
     // MODIFICATION: This is now a 'let' and will be injected.
     private let localDatabase: CurrentStationDatabaseService
     private let deviceId = UIDevice.current.identifierForVendor?.uuidString ?? "unknown_device"
@@ -29,7 +28,7 @@ final class CurrentStationSyncService {
     func syncCurrentStationFavorites() async -> Result<TideSyncStats, Error> {
         let startTime = Date()
         print("\n🟢🌊 SYNC START: Current Station Favorites Sync Initiated at \(startTime)")
-        
+
         do {
             // STEP 1: Authentication
             print("🔐🌊 SYNC STEP 1: Authenticating user...")
@@ -38,7 +37,7 @@ final class CurrentStationSyncService {
                 return .failure(TideSyncError.authenticationRequired)
             }
             let userId = session.user.id
-            print("✅🌊 SYNC STEP 1: Authentication successful. User ID: \(userId)")
+            print("✅🌊 SYNC STEP 1: Authentication successful")
 
             // STEP 2: Fetch Local and Remote Data Concurrently
             print("📡🌊 SYNC STEP 2: Fetching local and remote data concurrently...")
@@ -50,7 +49,6 @@ final class CurrentStationSyncService {
                 self.localDatabase.getAllCurrentStationFavoritesForUser()
             )
             print("✅🌊 SYNC STEP 2: Data fetching complete. Local: \(localFavorites.count), Remote: \(remoteFavorites.count)")
-
 
             // STEP 3: Compare and Sync
             print("🔄🌊 SYNC STEP 3: Comparing local and remote data...")
@@ -68,16 +66,7 @@ final class CurrentStationSyncService {
             return .failure(TideSyncError.unknownError(error.localizedDescription))
         }
     }
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+
     private func fetchRemoteFavorites(for userId: UUID) async throws -> [RemoteCurrentFavorite] {
         print("  ☁️ 1. Preparing to fetch remote favorites for user \(userId)...")
         do {
@@ -87,7 +76,7 @@ final class CurrentStationSyncService {
                 .eq("user_id", value: userId)
                 .execute()
                 .value
-            
+
             let duration = Date().timeIntervalSince(queryStartTime)
             print("  ✅☁️ 2. Remote fetch successful in \(String(format: "%.3f", duration))s. Found \(response.count) records.")
             if let first = response.first {
@@ -125,7 +114,7 @@ final class CurrentStationSyncService {
                 downloadedCount = await downloadNewFavorites(recordsToDownload)
                  print("  ✅📥 DOWNLOAD: Successfully downloaded \(downloadedCount) records.")
             }
-            
+
             // CONFLICTS
             let toResolveIds = localSet.intersection(remoteSet)
             if !toResolveIds.isEmpty {
@@ -137,7 +126,7 @@ final class CurrentStationSyncService {
                 conflictsDownloaded = resolvedStats.downloaded
                  print("  ✅⚔️ CONFLICTS: Resolution complete. Uploaded: \(conflictsUploaded), Downloaded: \(conflictsDownloaded).")
             }
-            
+
             let stats = TideSyncStats(
                 operationId: "current_sync_\(Date().timeIntervalSince1970)",
                 startTime: startTime, endTime: Date(),
@@ -147,7 +136,7 @@ final class CurrentStationSyncService {
                 conflictsResolved: conflictsUploaded + conflictsDownloaded,
                 errors: errorCount
             )
-            
+
             return .success(stats)
 
         } catch {
@@ -156,7 +145,7 @@ final class CurrentStationSyncService {
             return .failure(TideSyncError.supabaseError(error.localizedDescription))
         }
     }
-        
+
     private func uploadNewFavorites(_ records: [TidalCurrentFavoriteRecord], userId: UUID) async throws -> Int {
         let remoteRecords = records.map {
             RemoteCurrentFavorite(
@@ -184,20 +173,20 @@ final class CurrentStationSyncService {
         }
         return downloadCount
     }
-    
+
     private func resolveConflicts(local: [TidalCurrentFavoriteRecord], remote: [RemoteCurrentFavorite], userId: UUID) async -> (uploaded: Int, downloaded: Int) {
         var uploaded = 0, downloaded = 0
         let remoteDict: [String: RemoteCurrentFavorite] = Dictionary(uniqueKeysWithValues: remote.map { ("\($0.stationId):\($0.currentBin)", $0) })
-        
+
         for localRecord in local {
             let key = "\(localRecord.stationId):\(localRecord.currentBin)"
             guard let remoteRecord = remoteDict[key] else { continue }
-            
+
             let timeDiff = localRecord.lastModified.timeIntervalSince(remoteRecord.lastModified)
             print("🕒 TIMESTAMP CHECK: \(localRecord.stationId) - Local: \(localRecord.lastModified), Remote: \(remoteRecord.lastModified), Diff: \(timeDiff)s")
-            
+
             let tolerance: TimeInterval = 0.01  // 10 millisecond tolerance
-            
+
             if timeDiff > tolerance {
                 print("⬆️ LOCAL NEWER: Uploading \(localRecord.stationId)")
                 do {

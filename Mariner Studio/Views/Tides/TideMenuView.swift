@@ -1,4 +1,3 @@
-
 import SwiftUI
 
 struct TideMenuView: View {
@@ -16,7 +15,7 @@ struct TideMenuView: View {
                         color: .yellow
                     )
                 }
-                
+
                 // Local Tides - System Icon
                 NavigationLink(destination: TidalHeightStationsView(
                     tidalHeightService: TidalHeightServiceImpl(),
@@ -29,8 +28,7 @@ struct TideMenuView: View {
                         color: .green
                     )
                 }
-                
-        
+
             }
             .padding()
         }
@@ -94,5 +92,3 @@ struct MenuButtonContentTide: View {
         )
     }
 }
-
-

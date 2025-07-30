@@ -10,19 +10,19 @@ struct AdminDashboardView: View {
     @State private var statusChangeMessage = ""
     @State private var selectedRecommendations = Set<UUID>()
     @State private var showingBulkActionSheet = false
-    
+
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
                 // Statistics Header
                 statisticsHeader
-                
+
                 // Search and Filter Controls
                 searchAndFilterSection
-                
+
                 // Recommendations List
                 recommendationsList
-                
+
                 // Bulk Actions Toolbar
                 if !selectedRecommendations.isEmpty {
                     bulkActionsToolbar
@@ -62,9 +62,9 @@ struct AdminDashboardView: View {
             }
         }
     }
-    
+
     // MARK: - Statistics Header
-    
+
     private var statisticsHeader: some View {
         VStack(spacing: 12) {
             HStack {
@@ -73,19 +73,19 @@ struct AdminDashboardView: View {
                     count: viewModel.totalCount,
                     color: .blue
                 )
-                
+
                 StatCard(
                     title: "Pending",
                     count: viewModel.pendingCount,
                     color: .orange
                 )
-                
+
                 StatCard(
                     title: "Approved",
                     count: viewModel.approvedCount,
                     color: .green
                 )
-                
+
                 StatCard(
                     title: "Rejected",
                     count: viewModel.rejectedCount,
@@ -93,7 +93,7 @@ struct AdminDashboardView: View {
                 )
             }
             .padding(.horizontal)
-            
+
             if viewModel.isLoading {
                 ProgressView("Loading recommendations...")
                     .padding(.bottom, 8)
@@ -102,19 +102,19 @@ struct AdminDashboardView: View {
         .padding(.vertical, 12)
         .background(Color(.systemGroupedBackground))
     }
-    
+
     // MARK: - Search and Filter Section
-    
+
     private var searchAndFilterSection: some View {
         VStack(spacing: 8) {
             // Search Bar
             HStack {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(.secondary)
-                
+
                 TextField("Search nav units or descriptions...", text: $searchText)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
-                
+
                 if !searchText.isEmpty {
                     Button("Clear") {
                         searchText = ""
@@ -123,7 +123,7 @@ struct AdminDashboardView: View {
                 }
             }
             .padding(.horizontal)
-            
+
             // Status Filter
             Picker("Filter by Status", selection: $selectedStatus) {
                 Text("All").tag(RecommendationStatusFilter.all)
@@ -137,9 +137,9 @@ struct AdminDashboardView: View {
         .padding(.vertical, 8)
         .background(Color(.systemGroupedBackground))
     }
-    
+
     // MARK: - Recommendations List
-    
+
     private var recommendationsList: some View {
         List {
             ForEach(filteredRecommendations, id: \.id) { recommendation in
@@ -158,17 +158,17 @@ struct AdminDashboardView: View {
             await viewModel.refreshRecommendations()
         }
     }
-    
+
     // MARK: - Bulk Actions Toolbar
-    
+
     private var bulkActionsToolbar: some View {
         HStack {
             Text("\(selectedRecommendations.count) selected")
                 .font(.caption)
                 .foregroundColor(.secondary)
-            
+
             Spacer()
-            
+
             Button("Bulk Actions") {
                 showingBulkActionSheet = true
             }
@@ -182,9 +182,9 @@ struct AdminDashboardView: View {
         .background(Color(.systemBackground))
         .shadow(radius: 2)
     }
-    
+
     // MARK: - Navigation Bar Buttons
-    
+
     private var refreshButton: some View {
         Button(action: {
             viewModel.loadAllRecommendations()
@@ -192,26 +192,26 @@ struct AdminDashboardView: View {
             Image(systemName: "arrow.clockwise")
         }
     }
-    
+
     private var selectAllButton: some View {
         Button("Select All") {
             selectedRecommendations = Set(filteredRecommendations.map { $0.id })
         }
         .disabled(filteredRecommendations.isEmpty)
     }
-    
+
     private var clearSelectionButton: some View {
         Button("Clear") {
             selectedRecommendations.removeAll()
         }
         .disabled(selectedRecommendations.isEmpty)
     }
-    
+
     // MARK: - Computed Properties
-    
+
     private var filteredRecommendations: [CloudRecommendation] {
         var recommendations = viewModel.recommendations
-        
+
         // Filter by status
         switch selectedStatus {
         case .pending:
@@ -223,7 +223,7 @@ struct AdminDashboardView: View {
         case .all:
             break
         }
-        
+
         // Filter by search text
         if !searchText.isEmpty {
             recommendations = recommendations.filter { recommendation in
@@ -232,12 +232,12 @@ struct AdminDashboardView: View {
                 recommendation.category.displayName.localizedCaseInsensitiveContains(searchText)
             }
         }
-        
+
         return recommendations.sorted { $0.createdAt > $1.createdAt }
     }
-    
+
     // MARK: - Helper Methods
-    
+
     private func toggleSelection(_ recommendation: CloudRecommendation) {
         if selectedRecommendations.contains(recommendation.id) {
             selectedRecommendations.remove(recommendation.id)
@@ -245,7 +245,7 @@ struct AdminDashboardView: View {
             selectedRecommendations.insert(recommendation.id)
         }
     }
-    
+
     private func updateRecommendationStatus(_ recommendation: CloudRecommendation, newStatus: RecommendationStatus, notes: String?) {
         Task {
             await viewModel.updateRecommendationStatus(recommendation, newStatus: newStatus, adminNotes: notes)
@@ -255,10 +255,10 @@ struct AdminDashboardView: View {
             }
         }
     }
-    
+
     private func bulkUpdateStatus(_ newStatus: RecommendationStatus) {
         let selectedRecs = viewModel.recommendations.filter { selectedRecommendations.contains($0.id) }
-        
+
         Task {
             await viewModel.bulkUpdateStatus(selectedRecs, newStatus: newStatus)
             await MainActor.run {
@@ -276,14 +276,14 @@ struct StatCard: View {
     let title: String
     let count: Int
     let color: Color
-    
+
     var body: some View {
         VStack(spacing: 4) {
             Text("\(count)")
                 .font(.title2)
                 .fontWeight(.bold)
                 .foregroundColor(color)
-            
+
             Text(title)
                 .font(.caption)
                 .foregroundColor(.secondary)
@@ -301,11 +301,11 @@ struct RecommendationAdminRow: View {
     let isSelected: Bool
     let onToggleSelection: () -> Void
     let onStatusChange: (RecommendationStatus, String?) -> Void
-    
+
     @State private var showingStatusSheet = false
     @State private var adminNotes = ""
     @State private var selectedNewStatus: RecommendationStatus = .approved
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             // Header with selection and nav unit
@@ -314,36 +314,36 @@ struct RecommendationAdminRow: View {
                     Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                         .foregroundColor(isSelected ? .blue : .gray)
                 }
-                
+
                 VStack(alignment: .leading, spacing: 2) {
                     Text(recommendation.navUnitName)
                         .font(.headline)
                         .lineLimit(1)
-                    
+
                     Text(recommendation.category.displayName)
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
-                
+
                 Spacer()
-                
+
                 AdminStatusBadge(status: recommendation.status)
             }
-            
+
             // Description
             Text(recommendation.description)
                 .font(.body)
                 .foregroundColor(.primary)
                 .lineLimit(3)
-            
+
             // Metadata
             HStack {
                 Text(recommendation.createdAt.timeAgoDisplay())
                     .font(.caption)
                     .foregroundColor(.secondary)
-                
+
                 Spacer()
-                
+
                 if recommendation.status == .pending {
                     Button("Review") {
                         showingStatusSheet = true
@@ -387,7 +387,7 @@ struct RecommendationAdminRow: View {
             )
         }
     }
-    
+
     private func requestAdminNotes() {
         // This will trigger the sheet to show for notes entry
         showingStatusSheet = true
@@ -396,7 +396,7 @@ struct RecommendationAdminRow: View {
 
 struct AdminStatusBadge: View {
     let status: RecommendationStatus
-    
+
     var body: some View {
         Text(status.displayName)
             .font(.caption)
@@ -413,21 +413,21 @@ struct AdminNotesView: View {
     @Binding var notes: String
     let onSave: () -> Void
     @Environment(\.presentationMode) var presentationMode
-    
+
     var body: some View {
         NavigationView {
             VStack(alignment: .leading, spacing: 16) {
                 Text("Add admin notes (optional)")
                     .font(.headline)
-                
+
                 Text("Status: \(status.displayName)")
                     .foregroundColor(status.uiColor)
                     .font(.subheadline)
-                
+
                 TextEditor(text: $notes)
                     .border(Color.gray, width: 1)
                     .frame(minHeight: 100)
-                
+
                 Spacer()
             }
             .padding()

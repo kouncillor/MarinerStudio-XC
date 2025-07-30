@@ -8,7 +8,7 @@ protocol GeocodingService {
     ///   - longitude: The longitude coordinate
     /// - Returns: A GeocodingResponse containing location information
     func reverseGeocode(latitude: Double, longitude: Double) async throws -> GeocodingResponse
-    
+
     /// Forward geocodes a place name to coordinates
     /// - Parameter address: The address or place name to geocode
     /// - Returns: A GeocodingResponse containing location information
@@ -21,6 +21,6 @@ struct GeocodingResponse {
         let name: String
         let state: String
     }
-    
+
     let results: [Result]
 }

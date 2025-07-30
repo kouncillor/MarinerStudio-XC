@@ -5,14 +5,13 @@
 //  Created by Timothy Russell on 5/31/25.
 //
 
-
 import SwiftUI
 
 struct UserRecommendationsView: View {
     // MARK: - Properties
     @StateObject private var viewModel = UserRecommendationsViewModel()
     @EnvironmentObject var serviceProvider: ServiceProvider
-    
+
     var body: some View {
         Group {
             if viewModel.isLoading {
@@ -38,38 +37,38 @@ struct UserRecommendationsView: View {
             await viewModel.loadRecommendations()
         }
     }
-    
+
     // MARK: - Loading View
-    
+
     private var loadingView: some View {
         VStack(spacing: 20) {
             ProgressView()
                 .scaleEffect(1.5)
-            
+
             Text("Loading your recommendations...")
                 .font(.headline)
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-    
+
     // MARK: - Error View
-    
+
     private var errorView: some View {
         VStack(spacing: 20) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 60))
                 .foregroundColor(.orange)
-            
+
             Text("Unable to Load Recommendations")
                 .font(.title2)
                 .fontWeight(.semibold)
-            
+
             Text(viewModel.errorMessage)
                 .multilineTextAlignment(.center)
                 .foregroundColor(.secondary)
                 .padding(.horizontal)
-            
+
             Button("Try Again") {
                 Task {
                     await viewModel.loadRecommendations()
@@ -80,43 +79,43 @@ struct UserRecommendationsView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding()
     }
-    
+
     // MARK: - Empty State View
-    
+
     private var emptyStateView: some View {
         VStack(spacing: 24) {
             Image(systemName: "lightbulb.circle")
                 .font(.system(size: 80))
                 .foregroundColor(.blue)
-            
+
             VStack(spacing: 12) {
                 Text("No Recommendations Yet")
                     .font(.title2)
                     .fontWeight(.semibold)
-                
+
                 Text("When you find outdated information in navigation units, you can suggest updates to help other mariners.")
                     .multilineTextAlignment(.center)
                     .foregroundColor(.secondary)
                     .padding(.horizontal)
             }
-            
+
             VStack(spacing: 16) {
                 Text("To submit a recommendation:")
                     .font(.headline)
-                
+
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
                         Text("1.")
                             .fontWeight(.bold)
                         Text("Browse to any navigation unit")
                     }
-                    
+
                     HStack {
                         Text("2.")
                             .fontWeight(.bold)
                         Text("Tap the \"Suggest Update\" button")
                     }
-                    
+
                     HStack {
                         Text("3.")
                             .fontWeight(.bold)
@@ -135,9 +134,9 @@ struct UserRecommendationsView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding()
     }
-    
+
     // MARK: - Recommendations List
-    
+
     private var recommendationsList: some View {
         List {
             // Summary Section
@@ -146,7 +145,7 @@ struct UserRecommendationsView: View {
             }
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
-            
+
             // Recommendations Section
             Section(header: Text("Your Recommendations")) {
                 ForEach(viewModel.recommendations) { recommendation in
@@ -156,9 +155,9 @@ struct UserRecommendationsView: View {
         }
         .listStyle(InsetGroupedListStyle())
     }
-    
+
     // MARK: - Summary Card
-    
+
     private var summaryCard: some View {
         VStack(spacing: 16) {
             HStack {
@@ -167,30 +166,30 @@ struct UserRecommendationsView: View {
                         .font(.largeTitle)
                         .fontWeight(.bold)
                         .foregroundColor(.primary)
-                    
+
                     Text("Total Recommendations")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
-                
+
                 Spacer()
-                
+
                 Image(systemName: "lightbulb.fill")
                     .font(.system(size: 40))
                     .foregroundColor(.blue)
             }
-            
+
             HStack(spacing: 24) {
                 StatusCount(
                     status: .pending,
                     count: viewModel.pendingCount
                 )
-                
+
                 StatusCount(
                     status: .approved,
                     count: viewModel.approvedCount
                 )
-                
+
                 StatusCount(
                     status: .rejected,
                     count: viewModel.rejectedCount
@@ -209,7 +208,7 @@ struct UserRecommendationsView: View {
 
 struct RecommendationRow: View {
     let recommendation: CloudRecommendation
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Header with nav unit and status
@@ -218,57 +217,57 @@ struct RecommendationRow: View {
                     Text(recommendation.navUnitName)
                         .font(.headline)
                         .lineLimit(1)
-                    
+
                     Text("ID: \(recommendation.navUnitId)")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
-                
+
                 Spacer()
-                
+
                 StatusBadge(status: recommendation.status)
             }
-            
+
             // Category
             HStack(spacing: 8) {
                 Image(systemName: recommendation.category.iconName)
                     .foregroundColor(.blue)
                     .font(.system(size: 14))
-                
+
                 Text(recommendation.category.displayName)
                     .font(.subheadline)
                     .foregroundColor(.blue)
             }
-            
+
             // Description
             Text(recommendation.description)
                 .font(.body)
                 .lineLimit(3)
                 .multilineTextAlignment(.leading)
-            
+
             // Footer with date and admin notes
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Text("Submitted \(recommendation.createdAt.formatted(date: .abbreviated, time: .omitted))")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    
+
                     Spacer()
-                    
+
                     if let reviewedAt = recommendation.reviewedAt {
                         Text("Reviewed \(reviewedAt.formatted(date: .abbreviated, time: .omitted))")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
                 }
-                
+
                 if let adminNotes = recommendation.adminNotes, !adminNotes.isEmpty {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Admin Notes:")
                             .font(.caption)
                             .fontWeight(.semibold)
                             .foregroundColor(.secondary)
-                        
+
                         Text(adminNotes)
                             .font(.caption)
                             .foregroundColor(.secondary)
@@ -290,12 +289,12 @@ struct RecommendationRow: View {
 
 struct StatusBadge: View {
     let status: RecommendationStatus
-    
+
     var body: some View {
         HStack(spacing: 4) {
             Image(systemName: status.iconName)
                 .font(.system(size: 12))
-            
+
             Text(status.displayName)
                 .font(.caption)
                 .fontWeight(.medium)
@@ -308,7 +307,7 @@ struct StatusBadge: View {
         )
         .foregroundColor(statusColor)
     }
-    
+
     private var statusColor: Color {
         switch status {
         case .pending:
@@ -326,14 +325,14 @@ struct StatusBadge: View {
 struct StatusCount: View {
     let status: RecommendationStatus
     let count: Int
-    
+
     var body: some View {
         VStack(spacing: 4) {
             Text("\(count)")
                 .font(.title2)
                 .fontWeight(.bold)
                 .foregroundColor(statusColor)
-            
+
             Text(status.displayName)
                 .font(.caption)
                 .foregroundColor(.secondary)
@@ -341,7 +340,7 @@ struct StatusCount: View {
         }
         .frame(maxWidth: .infinity)
     }
-    
+
     private var statusColor: Color {
         switch status {
         case .pending:

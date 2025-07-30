@@ -5,7 +5,6 @@
 //  Created by Timothy Russell on 5/10/25.
 //
 
-
 import Foundation
 
 protocol BuoyApiService {
@@ -15,32 +14,32 @@ protocol BuoyApiService {
 class BuoyServiceImpl: BuoyApiService {
     // MARK: - Properties
     private let activeStationsUrl = "https://www.ndbc.noaa.gov/activestations.xml"
-    
+
     // MARK: - BuoyService Protocol
     func getBuoyStations() async throws -> BuoyStationResponse {
         print("⏰ BuoyService: getBuoyStations() started at \(Date())")
-        
+
         guard let url = URL(string: activeStationsUrl) else {
             print("❌ BuoyService: Invalid URL")
             throw URLError(.badURL)
         }
-        
+
         do {
             print("⏰ BuoyService: Starting API call at \(Date())")
             let (data, response) = try await URLSession.shared.data(from: url)
-            
+
             guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
                 print("❌ BuoyService: Bad response")
                 throw URLError(.badServerResponse)
             }
-            
+
             print("⏰ BuoyService: API call succeeded at \(Date())")
-            
+
             // Parse XML
             let parser = XMLParser(data: data)
             let buoyXMLParser = BuoyXMLParser()
             parser.delegate = buoyXMLParser
-            
+
             if parser.parse() {
                 let response = BuoyStationResponse(stations: buoyXMLParser.stations)
                 print("⏰ BuoyService: Parsed \(response.stations.count) stations at \(Date())")
@@ -60,31 +59,31 @@ class BuoyServiceImpl: BuoyApiService {
 class BuoyXMLParser: NSObject, XMLParserDelegate {
     var stations: [BuoyStation] = []
     private var currentElement = ""
-    
+
     // XMLParserDelegate methods
     func parser(_ parser: XMLParser, didStartElement elementName: String, namespaceURI: String?, qualifiedName qName: String?, attributes attributeDict: [String: String] = [:]) {
         currentElement = elementName
-        
+
         if elementName == "station" {
             // Create a station from the attributes
             let id = attributeDict["id"] ?? ""
             let name = attributeDict["name"] ?? ""
-            
-            var latitude: Double? = nil
+
+            var latitude: Double?
             if let latString = attributeDict["lat"], let lat = Double(latString) {
                 latitude = lat
             }
-            
-            var longitude: Double? = nil
+
+            var longitude: Double?
             if let lonString = attributeDict["lon"], let lon = Double(lonString) {
                 longitude = lon
             }
-            
-            var elevation: Double? = nil
+
+            var elevation: Double?
             if let elevString = attributeDict["elev"], let elev = Double(elevString) {
                 elevation = elev
             }
-            
+
             let station = BuoyStation(
                 id: id,
                 name: name,
@@ -97,7 +96,7 @@ class BuoyXMLParser: NSObject, XMLParserDelegate {
                 waterQuality: attributeDict["waterquality"],
                 dart: attributeDict["dart"]
             )
-            
+
             stations.append(station)
         }
     }

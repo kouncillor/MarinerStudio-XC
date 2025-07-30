@@ -5,22 +5,22 @@ import CoreLocation
 enum LocationAccuracyState: Equatable {
     /// No location available yet
     case unavailable
-    
+
     /// Using a cached location (might be old)
     case cached(location: CLLocation, age: TimeInterval)
-    
+
     /// Using a low accuracy location (> 100m accuracy)
     case lowAccuracy(location: CLLocation, accuracy: Double)
-    
+
     /// Using a medium accuracy location (between 100m and 50m accuracy)
     case mediumAccuracy(location: CLLocation, accuracy: Double)
-    
+
     /// Using a high accuracy location (< 50m accuracy)
     case highAccuracy(location: CLLocation, accuracy: Double)
-    
+
     /// Location services are disabled or denied
     case disabled
-    
+
     /// Human-readable description of the current state
     var description: String {
         switch self {
@@ -39,7 +39,7 @@ enum LocationAccuracyState: Equatable {
             return "Location services unavailable"
         }
     }
-    
+
     /// Returns the location associated with this state, if available
     var location: CLLocation? {
         switch self {
@@ -52,12 +52,12 @@ enum LocationAccuracyState: Equatable {
             return location
         }
     }
-    
+
     /// Returns true if this state has a usable location
     var hasLocation: Bool {
         return location != nil
     }
-    
+
     /// Returns true if this state is the best possible accuracy
     var isBestPossible: Bool {
         if case .highAccuracy = self {

@@ -2,9 +2,9 @@
 //
 //// TidalCurrentStation.swift
 //
-//import Foundation
+// import Foundation
 //
-//struct TidalCurrentStation: Identifiable, Codable {
+// struct TidalCurrentStation: Identifiable, Codable {
 //    // MARK: - Properties
 //    let id: String
 //    let name: String
@@ -49,36 +49,31 @@
 //        case expand
 //        // isFavorite is not included as it will be set locally, not decoded from API
 //    }
-//}
+// }
 //
 //// MARK: - Supporting Types
-//struct CurrentPredictionOffsets: Codable {
+// struct CurrentPredictionOffsets: Codable {
 //    let selfUrl: String
 //    
 //    enum CodingKeys: String, CodingKey {
 //        case selfUrl = "self"
 //    }
-//}
+// }
 //
-//struct HarmonicConstituents: Codable {
+// struct HarmonicConstituents: Codable {
 //    let selfUrl: String
 //    
 //    enum CodingKeys: String, CodingKey {
 //        case selfUrl = "self"
 //    }
-//}
+// }
 //
 //// MARK: - Extensions
-//extension TidalCurrentStation: StationCoordinates {
+// extension TidalCurrentStation: StationCoordinates {
 //    // The protocol implementation is empty because
 //    // TidalCurrentStation already has latitude and longitude properties
 //    // that satisfy the protocol requirements
-//}
-
-
-
-
-
+// }
 
 // TidalCurrentStation.swift
 
@@ -101,10 +96,10 @@ struct TidalCurrentStation: Identifiable, Codable {
     let selfUrl: String?
     let expand: String?
     var isFavorite: Bool = false
-    
+
     // Distance from user (calculated at runtime, not stored in API)
     var distanceFromUser: Double?
-    
+
     // Add a computed property for a unique ID that combines station ID and bin
     var uniqueId: String {
         if let bin = currentBin {
@@ -113,7 +108,7 @@ struct TidalCurrentStation: Identifiable, Codable {
             return id
         }
     }
-    
+
     // MARK: - Coding Keys
     enum CodingKeys: String, CodingKey {
         case id
@@ -132,13 +127,13 @@ struct TidalCurrentStation: Identifiable, Codable {
         case expand
         // isFavorite and distanceFromUser are not included as they are set locally, not decoded from API
     }
-    
+
     // MARK: - Custom Initializers
-    
+
     /// Initialize from API data (distance will be nil)
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        
+
         id = try container.decode(String.self, forKey: .id)
         name = try container.decode(String.self, forKey: .name)
         latitude = try container.decodeIfPresent(Double.self, forKey: .latitude)
@@ -153,12 +148,12 @@ struct TidalCurrentStation: Identifiable, Codable {
         harmonicConstituents = try container.decodeIfPresent(HarmonicConstituents.self, forKey: .harmonicConstituents)
         selfUrl = try container.decodeIfPresent(String.self, forKey: .selfUrl)
         expand = try container.decodeIfPresent(String.self, forKey: .expand)
-        
+
         // These are set locally, not from API
         isFavorite = false
         distanceFromUser = nil
     }
-    
+
     /// Initialize with all parameters (useful for creating from database records)
     init(
         id: String,
@@ -195,23 +190,23 @@ struct TidalCurrentStation: Identifiable, Codable {
         self.isFavorite = isFavorite
         self.distanceFromUser = distanceFromUser
     }
-    
+
     // MARK: - Convenience Methods
-    
+
     /// Create a copy with updated distance
     func withDistance(_ distance: Double?) -> TidalCurrentStation {
         var copy = self
         copy.distanceFromUser = distance
         return copy
     }
-    
+
     /// Create a copy with updated favorite status
     func withFavoriteStatus(_ isFavorite: Bool) -> TidalCurrentStation {
         var copy = self
         copy.isFavorite = isFavorite
         return copy
     }
-    
+
     /// Format distance for display
     var formattedDistance: String {
         if let distance = distanceFromUser {
@@ -224,16 +219,16 @@ struct TidalCurrentStation: Identifiable, Codable {
             return "Distance unknown"
         }
     }
-    
+
     /// Check if station has valid coordinates
     var hasValidCoordinates: Bool {
         return latitude != nil && longitude != nil
     }
-    
+
     /// Get formatted depth string
     var formattedDepth: String? {
         guard let depth = depth else { return nil }
-        
+
         if let depthType = depthType, !depthType.isEmpty {
             return String(format: "%.1f ft (%@)", depth, depthType)
         } else {
@@ -245,7 +240,7 @@ struct TidalCurrentStation: Identifiable, Codable {
 // MARK: - Supporting Types
 struct CurrentPredictionOffsets: Codable {
     let selfUrl: String
-    
+
     enum CodingKeys: String, CodingKey {
         case selfUrl = "self"
     }
@@ -253,7 +248,7 @@ struct CurrentPredictionOffsets: Codable {
 
 struct HarmonicConstituents: Codable {
     let selfUrl: String
-    
+
     enum CodingKeys: String, CodingKey {
         case selfUrl = "self"
     }

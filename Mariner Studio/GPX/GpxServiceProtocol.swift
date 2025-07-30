@@ -1,4 +1,3 @@
-
 //
 //  GpxServiceProtocol.swift
 //  Mariner Studio
@@ -35,7 +34,7 @@ enum GpxServiceError: Error, LocalizedError {
     case fileAccessDenied
     case writeNotSupported
     case serializationFailed
-    
+
     var errorDescription: String? {
         switch self {
         case .fileNotFound:
@@ -69,7 +68,7 @@ struct GpxServiceCapabilities {
     let supportsExtensions: Bool
     let supportedVersions: [String]
     let serviceName: String
-    
+
     static let legacyCapabilities = GpxServiceCapabilities(
         canRead: true,
         canWrite: false,
@@ -80,7 +79,7 @@ struct GpxServiceCapabilities {
         supportedVersions: ["1.1"],
         serviceName: "Legacy GPX Service"
     )
-    
+
     static let coreGpxCapabilities = GpxServiceCapabilities(
         canRead: true,
         canWrite: true,

@@ -7,11 +7,11 @@ class WeatherDatabaseService {
     // MARK: - Table Definitions
     private let moonPhases = Table("MoonPhase")
     private let weatherLocationFavorites = Table("WeatherLocationFavorites")
-    
+
     // MARK: - Column Definitions - MoonPhase
     private let colDate = Expression<String>("Date")
     private let colPhase = Expression<String>("Phase")
-    
+
     // MARK: - Column Definitions - WeatherLocationsFavorites
     private let colId = Expression<Int64>("id")
     private let colLatitude = Expression<Double>("Latitude")
@@ -19,30 +19,30 @@ class WeatherDatabaseService {
     private let colLocationName = Expression<String>("LocationName")
     private let colIsFavorite = Expression<Bool>("is_favorite")
     private let colCreatedAt = Expression<Date>("CreatedAt")
-    
+
     // MARK: - Sync Metadata Columns
     private let colUserId = Expression<String?>("user_id")
     private let colDeviceId = Expression<String?>("device_id")
     private let colLastModified = Expression<Date?>("last_modified")
     private let colRemoteId = Expression<String?>("remote_id")
-    
+
     // MARK: - Properties
     private let databaseCore: DatabaseCore
-    
+
     // MARK: - Initialization
     init(databaseCore: DatabaseCore) {
         self.databaseCore = databaseCore
     }
-    
+
     // MARK: - Moon Phase Methods
-    
+
     // Get moon phase for a specific date
     func getMoonPhaseForDateAsync(date: String) async throws -> MoonPhase? {
         do {
             let db = try databaseCore.ensureConnection()
-            
+
             let query = moonPhases.filter(colDate == date)
-            
+
             if let row = try db.pluck(query) {
                 let phase = MoonPhase(
                     date: row[colDate],
@@ -50,30 +50,29 @@ class WeatherDatabaseService {
                 )
                 print("Looking up moon phase for date: \(date)")
                 print("Found: \(phase.phase)")
-                
+
                 return phase
             }
-            
+
             print("Looking up moon phase for date: \(date)")
             print("Found: no phase")
-            
+
             return nil
         } catch {
             print("Error getting moon phase: \(error.localizedDescription)")
             return nil
         }
     }
-    
+
     // MARK: - Weather Location Methods
-    
-    
+
     // Check if a weather location is marked as favorite
     func isWeatherLocationFavoriteAsync(latitude: Double, longitude: Double) async -> Bool {
         do {
             let db = try databaseCore.ensureConnection()
-            
+
             let query = weatherLocationFavorites.filter(colLatitude == latitude && colLongitude == longitude)
-            
+
             if let favorite = try db.pluck(query) {
                 return favorite[colIsFavorite]
             }
@@ -83,26 +82,26 @@ class WeatherDatabaseService {
             return false
         }
     }
-    
+
     // Toggle favorite status for a weather location
     func toggleWeatherLocationFavoriteAsync(latitude: Double, longitude: Double, locationName: String) async -> Bool {
         do {
             let db = try databaseCore.ensureConnection()
             let now = Date()
-            
+
             let query = weatherLocationFavorites.filter(colLatitude == latitude && colLongitude == longitude)
-            
+
             if let favorite = try db.pluck(query) {
                 let currentValue = favorite[colIsFavorite]
                 let newValue = !currentValue
-                
+
                 let updatedRow = weatherLocationFavorites.filter(colLatitude == latitude && colLongitude == longitude)
                 try db.run(updatedRow.update(
                     colIsFavorite <- newValue,
                     colLocationName <- locationName,
                     colLastModified <- now
                 ))
-                
+
                 try await databaseCore.flushDatabaseAsync()
                 return newValue
             } else {
@@ -122,15 +121,15 @@ class WeatherDatabaseService {
             return false
         }
     }
-    
+
     // Get all favorite weather locations
     func getFavoriteWeatherLocationsAsync() async throws -> [WeatherLocationFavorite] {
         do {
             let db = try databaseCore.ensureConnection()
-            
+
             let query = weatherLocationFavorites.filter(colIsFavorite == true).order(colCreatedAt.desc)
             var results: [WeatherLocationFavorite] = []
-            
+
             for row in try db.prepare(query) {
                 let favorite = WeatherLocationFavorite(
                     id: row[colId],
@@ -146,32 +145,29 @@ class WeatherDatabaseService {
                 )
                 results.append(favorite)
             }
-            
+
             return results
         } catch {
             print("Error fetching favorite weather locations: \(error.localizedDescription)")
             throw error
         }
     }
-    
-    
-    
-    
+
     // Add this method to WeatherDatabaseService
     func updateWeatherLocationNameAsync(latitude: Double, longitude: Double, newName: String) async -> Bool {
         do {
             let db = try databaseCore.ensureConnection()
             let now = Date()
-            
+
             let query = weatherLocationFavorites.filter(colLatitude == latitude && colLongitude == longitude)
-            
+
             if let favorite = try db.pluck(query) {
                 let updatedRow = weatherLocationFavorites.filter(colLatitude == latitude && colLongitude == longitude)
                 try db.run(updatedRow.update(
                     colLocationName <- newName,
                     colLastModified <- now
                 ))
-                
+
                 try await databaseCore.flushDatabaseAsync()
                 return true
             } else {
@@ -182,19 +178,18 @@ class WeatherDatabaseService {
             return false
         }
     }
-    
-    
+
     // MARK: - Enhanced Sync Methods
-    
+
     /// Get all weather locations with sync metadata for synchronization (includes both favorites and unfavorited items)
     func getFavoriteWeatherLocationsForSync() async throws -> [WeatherLocationFavorite] {
         do {
             let db = try databaseCore.ensureConnection()
-            
+
             // Get all records that have sync metadata, regardless of favorite status
             let query = weatherLocationFavorites.filter(colLastModified != nil).order(colCreatedAt.desc)
             var results: [WeatherLocationFavorite] = []
-            
+
             for row in try db.prepare(query) {
                 let favorite = WeatherLocationFavorite(
                     id: row[colId],
@@ -210,14 +205,14 @@ class WeatherDatabaseService {
                 )
                 results.append(favorite)
             }
-            
+
             return results
         } catch {
             print("Error fetching weather locations for sync: \(error.localizedDescription)")
             throw error
         }
     }
-    
+
     /// Set weather location favorite with sync metadata for cloud synchronization
     func setWeatherLocationFavoriteWithSyncData(
         latitude: Double,
@@ -231,20 +226,20 @@ class WeatherDatabaseService {
     ) async -> Bool {
         do {
             let db = try databaseCore.ensureConnection()
-            
-            var existingRecord: Row? = nil
-            
+
+            var existingRecord: Row?
+
             // First try to find by remote ID if provided
             if let remoteId = remoteId {
                 let remoteQuery = weatherLocationFavorites.filter(colRemoteId == remoteId)
                 existingRecord = try db.pluck(remoteQuery)
             }
-            
+
             if let existing = existingRecord {
                 // Update existing record found by remote ID
                 print("🔍💾 setWeatherLocationFavoriteWithSyncData: BEFORE update - existing lastModified: \(existing[colLastModified]?.description ?? "nil")")
                 print("🔍💾 setWeatherLocationFavoriteWithSyncData: About to set lastModified to: \(lastModified)")
-                
+
                 let updatedRow = weatherLocationFavorites.filter(colId == existing[colId])
                 try db.run(updatedRow.update(
                     colLatitude <- latitude,
@@ -256,7 +251,7 @@ class WeatherDatabaseService {
                     colLastModified <- lastModified,
                     colRemoteId <- remoteId
                 ))
-                
+
                 // Verify the update worked correctly
                 if let updatedRecord = try db.pluck(weatherLocationFavorites.filter(colId == existing[colId])) {
                     print("✅💾 setWeatherLocationFavoriteWithSyncData: AFTER update - lastModified is: \(updatedRecord[colLastModified]?.description ?? "nil")")
@@ -281,7 +276,7 @@ class WeatherDatabaseService {
                     colRemoteId <- remoteId
                 ))
             }
-            
+
             try await databaseCore.flushDatabaseAsync()
             return true
         } catch {
@@ -289,15 +284,15 @@ class WeatherDatabaseService {
             return false
         }
     }
-    
+
     /// Update an existing local record with its remote ID after upload
     func updateLocalRecordWithRemoteId(localId: Int64, remoteId: String) async -> Bool {
         do {
             let db = try databaseCore.ensureConnection()
-            
+
             let updatedRow = weatherLocationFavorites.filter(colId == localId)
             try db.run(updatedRow.update(colRemoteId <- remoteId))
-            
+
             try await databaseCore.flushDatabaseAsync()
             return true
         } catch {
@@ -305,8 +300,7 @@ class WeatherDatabaseService {
             return false
         }
     }
-    
-    
+
     /// Enhanced toggle method that updates sync metadata - now creates new entries instead of toggling
     func toggleWeatherLocationFavoriteWithSyncData(
         latitude: Double,
@@ -318,7 +312,7 @@ class WeatherDatabaseService {
         do {
             let db = try databaseCore.ensureConnection()
             let now = Date()
-            
+
             // Always create a new entry - no more coordinate-based deduplication
             try db.run(weatherLocationFavorites.insert(
                 colLatitude <- latitude,
@@ -331,7 +325,7 @@ class WeatherDatabaseService {
                 colLastModified <- now,
                 colRemoteId <- nil  // Will be set when synced to remote
             ))
-            
+
             try await databaseCore.flushDatabaseAsync()
             return true
         } catch {

@@ -5,7 +5,6 @@
 //  Created by Timothy Russell on 5/10/25.
 //
 
-
 import Foundation
 
 protocol GpxService {
@@ -15,14 +14,14 @@ protocol GpxService {
 class GpxServiceImpl: GpxService {
     func loadGpxFile(from url: URL) async throws -> GpxFile {
         let data = try Data(contentsOf: url)
-        
+
         // Parse XML into a GpxFile object
         let parser = XMLParser(data: data)
         let delegate = GPXParserDelegate()
         parser.delegate = delegate
-        
+
         let success = parser.parse()
-        
+
         if !success {
             if let error = parser.parserError {
                 throw error
@@ -32,11 +31,11 @@ class GpxServiceImpl: GpxService {
                 throw XMLDecodingError.parsingFailed
             }
         }
-        
+
         guard let gpxFile = delegate.gpxFile else {
             throw XMLDecodingError.noResult
         }
-        
+
         return gpxFile
     }
 }
@@ -44,16 +43,16 @@ class GpxServiceImpl: GpxService {
 class GPXParserDelegate: NSObject, XMLParserDelegate {
     var gpxFile: GpxFile?
     var error: Error?
-    
+
     private var currentElement = ""
     private var currentRoute: GpxRoute?
     private var currentRoutePoints: [GpxRoutePoint] = []
     private var currentRoutePoint: GpxRoutePoint?
     private var routeName: String?
-    
+
     func parser(_ parser: XMLParser, didStartElement elementName: String, namespaceURI: String?, qualifiedName qName: String?, attributes attributeDict: [String: String] = [:]) {
         currentElement = elementName
-        
+
         switch elementName {
         case "gpx":
             // Start of GPX file
@@ -71,7 +70,7 @@ class GPXParserDelegate: NSObject, XMLParserDelegate {
             break
         }
     }
-    
+
     func parser(_ parser: XMLParser, didEndElement elementName: String, namespaceURI: String?, qualifiedName qName: String?) {
         switch elementName {
         case "rte":
@@ -80,7 +79,7 @@ class GPXParserDelegate: NSObject, XMLParserDelegate {
                 route.name = routeName ?? "Route"
                 route.routePoints = currentRoutePoints
                 currentRoute = route
-                
+
                 // Create the GpxFile with the route
                 gpxFile = GpxFile(route: route)
             }
@@ -94,10 +93,10 @@ class GPXParserDelegate: NSObject, XMLParserDelegate {
             break
         }
     }
-    
+
     func parser(_ parser: XMLParser, foundCharacters string: String) {
         let data = string.trimmingCharacters(in: .whitespacesAndNewlines)
-        
+
         if !data.isEmpty {
             switch currentElement {
             case "name":
@@ -113,7 +112,7 @@ class GPXParserDelegate: NSObject, XMLParserDelegate {
             }
         }
     }
-    
+
     func parser(_ parser: XMLParser, parseErrorOccurred parseError: Error) {
         error = parseError
     }

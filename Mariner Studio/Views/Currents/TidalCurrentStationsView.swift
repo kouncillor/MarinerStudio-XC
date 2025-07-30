@@ -1,28 +1,27 @@
-
 import SwiftUI
 
 struct TidalCurrentStationsView: View {
     @StateObject var viewModel: TidalCurrentStationsViewModel
     @EnvironmentObject var serviceProvider: ServiceProvider
-    
+
     init(tidalCurrentService: TidalCurrentService, locationService: LocationService, currentFavoritesCloudService: CurrentFavoritesCloudService) {
         print("🏗️ VIEW: Initializing TidalCurrentStationsView (CLOUD-ONLY)")
         print("🏗️ VIEW: Injecting services - TidalCurrentService: \(type(of: tidalCurrentService))")
         print("🏗️ VIEW: Injecting services - LocationService: \(type(of: locationService))")
         print("🏗️ VIEW: Injecting services - CurrentFavoritesCloudService: \(type(of: currentFavoritesCloudService))")
-        
+
         _viewModel = StateObject(wrappedValue: TidalCurrentStationsViewModel(
             tidalCurrentService: tidalCurrentService,
             locationService: locationService,
             currentFavoritesCloudService: currentFavoritesCloudService
         ))
-        
+
         print("✅ VIEW: TidalCurrentStationsView initialization complete (CLOUD-ONLY)")
     }
-    
+
     var body: some View {
         print("🖼️ VIEW: Building TidalCurrentStationsView body")
-        
+
         return NavigationStack {
             VStack(spacing: 0) {
                 headerControls
@@ -38,22 +37,22 @@ struct TidalCurrentStationsView: View {
                 print("\n👁️ VIEW: ===== VIEW APPEARED =====")
                 print("👁️ VIEW: TidalCurrentStationsView appeared at \(Date())")
                 print("🔄 VIEW: Triggering loadStations() on appear")
-                
+
                 Task {
                     await viewModel.loadStations()
                 }
-                
+
                 print("👁️ VIEW: ===== VIEW APPEAR COMPLETE =====\n")
             }
         }
     }
-    
+
     private var headerControls: some View {
         print("🏗️ VIEW: Building header controls")
-        
+
         return HStack {
             searchBar
-            
+
             Button(action: {
                 viewModel.toggleFavorites()
             }) {
@@ -61,7 +60,7 @@ struct TidalCurrentStationsView: View {
                     .foregroundColor(viewModel.showOnlyFavorites ? .yellow : .gray)
                     .frame(width: 44, height: 44)
             }
-            
+
             if viewModel.isLoading {
                 ProgressView()
                     .scaleEffect(0.8)
@@ -71,21 +70,21 @@ struct TidalCurrentStationsView: View {
         .padding([.horizontal, .top])
         .background(Color(.systemGroupedBackground))
     }
-    
+
     private var searchBar: some View {
         print("🔍 VIEW: Building search bar")
-        
+
         return HStack {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(.gray)
-            
+
             TextField("Search stations...", text: $viewModel.searchText)
                 .onChange(of: viewModel.searchText) { newValue in
                     print("🔍 VIEW: Search text changed to: '\(newValue)'")
                     print("🔍 VIEW: Triggering filterStations() from search change")
                     viewModel.filterStations()
                 }
-            
+
             if !viewModel.searchText.isEmpty {
                 Button(action: {
                     print("🗑️ VIEW: Clear search button tapped")
@@ -105,10 +104,10 @@ struct TidalCurrentStationsView: View {
         )
         .padding(.trailing, 8)
     }
-    
+
     private var contentView: some View {
         print("🖼️ VIEW: Building content view")
-        
+
         if viewModel.isLoading {
             print("⏳ VIEW: Showing loading state")
             return AnyView(
@@ -126,11 +125,11 @@ struct TidalCurrentStationsView: View {
                         .font(.largeTitle)
                         .foregroundColor(.orange)
                         .padding()
-                    
+
                     Text(viewModel.errorMessage)
                         .multilineTextAlignment(.center)
                         .padding()
-                    
+
                     Button("Retry") {
                         print("🔄 VIEW: Retry button tapped")
                         Task {
@@ -149,12 +148,12 @@ struct TidalCurrentStationsView: View {
             return AnyView(stationsList)
         }
     }
-    
+
     private var stationsList: some View {
         print("📋 VIEW: Building stations list")
         print("📋 VIEW: List will show \(viewModel.stations.count) stations")
         print("🚫 VIEW: NO favorite checking will occur in this list")
-        
+
         return List {
             ForEach(viewModel.stations, id: \.station.uniqueId) { stationWithDistance in
                 NavigationLink(destination: TidalCurrentPredictionView(
@@ -191,17 +190,17 @@ struct TidalCurrentStationsView: View {
             await viewModel.refreshStations()
         }
     }
-    
+
     struct TidalCurrentStationRow: View {
         let stationWithDistance: StationWithDistance<TidalCurrentStation>
         let onToggleFavorite: () -> Void
-        
+
         var body: some View {
             // Log only for first few stations to avoid spam
             if stationWithDistance.station.id.hasSuffix("01") {
                 print("🏗️ VIEW: Building row for station \(stationWithDistance.station.id)")
             }
-            
+
             return VStack(alignment: .leading, spacing: 5) {
                 HStack {
                     Text(stationWithDistance.station.name)
@@ -212,27 +211,26 @@ struct TidalCurrentStationsView: View {
                             .foregroundColor(stationWithDistance.station.isFavorite ? .yellow : .gray)
                     }
                 }
-                
+
                 if let state = stationWithDistance.station.state, !state.isEmpty {
                     Text(state)
                         .font(.subheadline)
                         .foregroundColor(.gray)
                 }
-                
-                
+
                 if !stationWithDistance.distanceDisplay.isEmpty {
                     Text(stationWithDistance.distanceDisplay)
                         .font(.subheadline)
                         .foregroundColor(.blue)
                         .fontWeight(.medium)
                 }
-                
+
                 if let depth = stationWithDistance.station.depth {
                     Text("Depth: \(String(format: "%.1f", depth)) ft")
                         .font(.caption)
                         .foregroundColor(Color(red: 0.0, green: 0.6, blue: 0.0))
                 }
-                
+
                 // Coordinates (matching tidal height stations format)
                 if let latitude = stationWithDistance.station.latitude,
                    let longitude = stationWithDistance.station.longitude {

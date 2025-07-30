@@ -1,20 +1,19 @@
-
 import SwiftUI
 import RevenueCat
 
 class AppDelegate: NSObject, UIApplicationDelegate {
-    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
-        
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+
         // Get secure configuration
         let config = AppConfiguration.shared
-        
+
         // Validate configuration before proceeding
         let validation = config.validateConfiguration()
         if !validation.isValid {
             DebugLogger.shared.log("❌ RevenueCat: Missing configuration keys: \(validation.missingKeys.joined(separator: ", "))", category: "CONFIG_ERROR")
             fatalError("❌ RevenueCat configuration is invalid. Missing keys: \(validation.missingKeys.joined(separator: ", "))")
         }
-        
+
         // Configure RevenueCat with environment-appropriate settings
         // Set log level directly to avoid type issues
         switch config.revenueCatLogLevel {
@@ -27,9 +26,9 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         default:
             Purchases.logLevel = .error
         }
-        
+
         Purchases.configure(withAPIKey: config.revenueCatAPIKey)
-        
+
         // Log configuration summary (only in debug)
         #if DEBUG
         DebugLogger.shared.log("🎫 RevenueCat Configuration:", category: "REVENUECAT_INIT")

@@ -1,4 +1,3 @@
-
 //
 //  RemoteNavUnitFavorite.swift
 //  Mariner Studio
@@ -26,7 +25,7 @@ struct RemoteNavUnitFavorite: Codable, Identifiable {
     let facilityType: String?
     let createdAt: Date?
     let updatedAt: Date?
-    
+
     enum CodingKeys: String, CodingKey {
         case id
         case userId = "user_id"
@@ -41,9 +40,9 @@ struct RemoteNavUnitFavorite: Codable, Identifiable {
         case createdAt = "created_at"
         case updatedAt = "updated_at"
     }
-    
+
     // MARK: - Initializers
-    
+
     init(userId: UUID, navUnitId: String, isFavorite: Bool, deviceId: String,
          navUnitName: String? = nil, latitude: Double? = nil, longitude: Double? = nil,
          facilityType: String? = nil) {
@@ -60,9 +59,9 @@ struct RemoteNavUnitFavorite: Codable, Identifiable {
         self.createdAt = Date()
         self.updatedAt = Date()
     }
-    
+
     // MARK: - Factory Methods
-    
+
     /// Create from local favorite data with navigation unit details
     static func fromLocal(
         userId: UUID,

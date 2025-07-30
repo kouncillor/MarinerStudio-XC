@@ -13,7 +13,7 @@ enum WeatherCondition: Int {
     case thunderstormWithLightDrizzle = 230
     case thunderstormWithDrizzle = 231
     case thunderstormWithHeavyDrizzle = 232
-    
+
     // Drizzle Group (3xx)
     case lightIntensityDrizzle = 300
     case drizzle = 301
@@ -24,7 +24,7 @@ enum WeatherCondition: Int {
     case showerRainAndDrizzle = 313
     case heavyShowerRainAndDrizzle = 314
     case showerDrizzle = 321
-    
+
     // Rain Group (5xx)
     case lightRain = 500
     case moderateRain = 501
@@ -36,7 +36,7 @@ enum WeatherCondition: Int {
     case showerRain = 521
     case heavyIntensityShowerRain = 522
     case raggedShowerRain = 531
-    
+
     // Snow Group (6xx)
     case lightSnow = 600
     case snow = 601
@@ -49,7 +49,7 @@ enum WeatherCondition: Int {
     case lightShowerSnow = 620
     case showerSnow = 621
     case heavyShowerSnow = 622
-    
+
     // Atmosphere Group (7xx)
     case mist = 701
     case smoke = 711
@@ -61,14 +61,14 @@ enum WeatherCondition: Int {
     case volcanicAsh = 762
     case squalls = 771
     case tornado = 781
-    
+
     // Clear and Clouds (800-804)
     case clearSky = 800
     case fewClouds = 801        // 11-25%
     case scatteredClouds = 802  // 25-50%
     case brokenClouds = 803     // 51-84%
     case overcastClouds = 804   // 85-100%
-    
+
     // Open-Meteo weather codes
     case clearSkyOm = 0
     case mainlyClearOm = 1
@@ -94,7 +94,7 @@ enum WeatherCondition: Int {
     case thunderstormOm = 95
     case thunderstormWithSlightHailOm = 96
     case thunderstormWithHeavyHailOm = 99
-    
+
     func getIconName() -> String {
         switch self {
         case .clearSky, .clearSkyOm:
@@ -129,7 +129,7 @@ enum WeatherCondition: Int {
             return "cloud.fill"
         }
     }
-    
+
     func getDescription() -> String {
         switch self {
         // Open-Meteo codes
@@ -181,7 +181,7 @@ enum WeatherCondition: Int {
             return "Thunderstorm with slight hail"
         case .thunderstormWithHeavyHailOm:
             return "Thunderstorm with heavy hail"
-            
+
         // Regular OWM codes
         case .clearSky:
             return "Clear sky"
@@ -232,7 +232,7 @@ struct DailyForecastItem: Identifiable {
     let visibilityMeters: Double
     let weatherCode: Int
     let isToday: Bool
-    
+
     init(
         id: UUID = UUID(),
         date: Date,
@@ -298,21 +298,21 @@ struct HourlyForecastItem: Identifiable {
     let cardinalDirection: String
     let weatherIcon: String
     let moonPhase: String
-    
+
     var visibility: String {
         return formatVisibility()
     }
-    
+
     var pressureTrendIcon: String {
         guard let prevPressure = previousPressure else { return "" }
-        
+
         let difference = pressure - prevPressure
         if abs(difference) < 0.02 {
             return "minus"
         }
         return difference > 0 ? "arrow.up" : "arrow.down"
     }
-    
+
     private func formatVisibility() -> String {
         let visibilityMiles = visibilityMeters / 1609.34
         return visibilityMiles >= 15.0 ? "15+ mi" : "\(String(format: "%.1f", visibilityMiles)) mi"
@@ -329,7 +329,7 @@ struct MoonPhase: Identifiable {
     let illumination: Double
     let previousMajorPhase: String
     let nextMajorPhase: String
-    
+
     init(date: String, phase: String, icon: String = "moonphase.new.moon", isWaxing: Bool = true, illumination: Double = 0.0, previousMajorPhase: String = "", nextMajorPhase: String = "") {
         self.date = date
         self.phase = phase
@@ -360,7 +360,7 @@ struct OpenMeteoResponse: Decodable {
     let currentWeather: CurrentWeather
     let hourly: HourlyWeather
     let daily: DailyWeather
-    
+
     enum CodingKeys: String, CodingKey {
         case isDay = "is_day"
         case latitude, longitude, timezone
@@ -376,7 +376,7 @@ struct CurrentWeather: Decodable {
     let weatherCode: Int
     let time: String
     let isDay: Int
-    
+
     enum CodingKeys: String, CodingKey {
         case temperature
         case windSpeed = "windspeed"
@@ -386,15 +386,6 @@ struct CurrentWeather: Decodable {
         case isDay = "is_day"
     }
 }
-
-
-
-
-
-
-
-
-
 
 struct HourlyWeather: Decodable {
     let time: [String]
@@ -409,7 +400,7 @@ struct HourlyWeather: Decodable {
     let visibility: [Double]
     var isDay: [Int]
     var weatherCode: [Int]
-    
+
     enum CodingKeys: String, CodingKey {
         case time
         case temperature = "temperature_2m"
@@ -424,7 +415,7 @@ struct HourlyWeather: Decodable {
         case isDay = "is_day"
         case weatherCode = "weathercode"
     }
-    
+
     // Custom initializer with default values for the new fields
     init(time: [String], temperature: [Double], relativeHumidity: [Int]?, precipitation: [Double],
          windSpeed: [Double], windDirection: [Double], windGusts: [Double], dewPoint: [Double]?,
@@ -444,20 +435,6 @@ struct HourlyWeather: Decodable {
     }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 struct DailyWeather: Decodable {
     let time: [String]
     let temperatureMax: [Double]
@@ -468,7 +445,7 @@ struct DailyWeather: Decodable {
     let windDirectionDominant: [Double]
     let weatherCode: [Int]
     let surfacePressure: [Double]
-    
+
     enum CodingKeys: String, CodingKey {
         case time
         case temperatureMax = "temperature_2m_max"
@@ -486,7 +463,7 @@ struct DailyWeather: Decodable {
 struct OpenMeteoHourlyResponse: Decodable {
     let hourly: HourlyData
     let hourlyUnits: HourlyUnits
-    
+
     enum CodingKeys: String, CodingKey {
         case hourly
         case hourlyUnits = "hourly_units"
@@ -506,7 +483,7 @@ struct HourlyData: Decodable {
     let windSpeed: [Double]
     let windDirection: [Double]
     let windGusts: [Double]
-    
+
     enum CodingKeys: String, CodingKey {
         case time
         case temperature = "temperature_2m"
@@ -535,7 +512,7 @@ struct HourlyUnits: Decodable {
     let windSpeed: String
     let windDirection: String
     let windGusts: String
-    
+
     enum CodingKeys: String, CodingKey {
         case time
         case temperature = "temperature_2m"
@@ -555,7 +532,7 @@ struct HourlyUnits: Decodable {
 struct OpenMeteoMarineResponse: Decodable {
     let hourly: MarineHourlyData
     let hourlyUnits: MarineHourlyUnits
-    
+
     enum CodingKeys: String, CodingKey {
         case hourly
         case hourlyUnits = "hourly_units"
@@ -572,19 +549,19 @@ struct MarineHourlyData: Decodable {
     let swellWavePeriod: [Double]
     let windWaveHeight: [Double]
     let windWaveDirection: [Double]
-    
+
     var waveHeightFeet: [Double] {
         waveHeight.map { round($0 * 3.28084 * 10) / 10 }
     }
-    
+
     var swellWaveHeightFeet: [Double] {
         swellWaveHeight.map { round($0 * 3.28084 * 10) / 10 }
     }
-    
+
     var windWaveHeightFeet: [Double] {
         windWaveHeight.map { round($0 * 3.28084 * 10) / 10 }
     }
-    
+
     enum CodingKeys: String, CodingKey {
         case time
         case waveHeight = "wave_height"
@@ -608,7 +585,7 @@ struct MarineHourlyUnits: Decodable {
     let swellWavePeriod: String
     let windWaveHeight: String
     let windWaveDirection: String
-    
+
     enum CodingKeys: String, CodingKey {
         case time
         case waveHeight = "wave_height"
@@ -629,7 +606,7 @@ enum WeatherError: Error, LocalizedError {
     case serverError(statusCode: Int)
     case decodingError(Error)
     case invalidDate
-    
+
     var errorDescription: String? {
         switch self {
         case .invalidURL:

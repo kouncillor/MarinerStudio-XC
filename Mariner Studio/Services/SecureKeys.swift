@@ -11,7 +11,7 @@ import Foundation
 /// Secure storage for API keys with runtime obfuscation
 /// Keys are stored as encrypted segments and reconstructed at runtime
 class SecureKeys {
-    
+
     // MARK: - Supabase Key Storage
     // Generated obfuscated Supabase key data
 private static let supabaseSegments: [(data: [UInt8], offset: Int)] = [
@@ -44,14 +44,14 @@ private static let supabaseSegments: [(data: [UInt8], offset: Int)] = [
         ([0x01, 0x07, 0x32, 0x0d, 0x18, 0x06, 0x32], 182),
         ([0x14, 0x01, 0x35, 0x12, 0x32, 0x2f, 0x09], 189),
         ([0x29, 0x28, 0x1b, 0x14, 0x00, 0x07, 0x0a], 196),
-        ([0x0d, 0x33, 0x2c, 0x14, 0x0b], 203),
+        ([0x0d, 0x33, 0x2c, 0x14, 0x0b], 203)
     ]
     private static let supabaseXorKey: UInt8 = 0x42
-    
+
     /// Reconstructs the Supabase anonymous key from obfuscated segments
     static func getSupabaseKey() -> String {
         var result = [UInt8](repeating: 0, count: 208)
-        
+
         for segment in supabaseSegments {
             for (index, byte) in segment.data.enumerated() {
                 let targetIndex = segment.offset + index
@@ -60,21 +60,21 @@ private static let supabaseSegments: [(data: [UInt8], offset: Int)] = [
                 }
             }
         }
-        
+
         return String(bytes: result, encoding: .utf8)?.trimmingCharacters(in: CharacterSet(charactersIn: "\0")) ?? ""
     }
-    
+
     // MARK: - RevenueCat Key Storage
     // Generated obfuscated RevenueCat key data
 private static let revenueCatEncoded: String = "1203031f2c1c042431112920011d0701312134152b1a25121b07321c09350118"
 private static let revenueCatXorKey: UInt8 = 0x73
-    
+
     /// Reconstructs the RevenueCat API key from obfuscated hex string
     static func getRevenueCatKey() -> String {
         // Convert hex string back to bytes
         var bytes: [UInt8] = []
         let hexString = revenueCatEncoded
-        
+
         for i in stride(from: 0, to: hexString.count, by: 2) {
             let start = hexString.index(hexString.startIndex, offsetBy: i)
             let end = hexString.index(start, offsetBy: 2)
@@ -83,19 +83,19 @@ private static let revenueCatXorKey: UInt8 = 0x73
                 bytes.append(byte)
             }
         }
-        
+
         // XOR decrypt
         let decrypted = bytes.map { $0 ^ revenueCatXorKey }
-        
+
         return String(bytes: decrypted, encoding: .utf8) ?? ""
     }
-    
+
     // MARK: - Verification (Debug only)
     #if DEBUG
     static func verifyKeys() {
         let supabase = getSupabaseKey()
         let revenueCat = getRevenueCatKey()
-        
+
         print("🔐 SecureKeys Verification:")
         print("   Supabase key length: \(supabase.count)")
         print("   Supabase starts with: \(String(supabase.prefix(20)))...")

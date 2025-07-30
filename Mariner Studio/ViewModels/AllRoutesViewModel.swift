@@ -18,10 +18,10 @@ class AllRoutesViewModel: ObservableObject {
     @Published var errorMessage: String = ""
     @Published var selectedFilter: String = "all"
     @Published var operationsInProgress: Set<Int> = []
-    
+
     // MARK: - Dependencies
     private let allRoutesService: AllRoutesDatabaseService
-    
+
     init(allRoutesService: AllRoutesDatabaseService? = nil) {
         // Use provided service or create a new one with shared DatabaseCore
         if let service = allRoutesService {
@@ -33,7 +33,7 @@ class AllRoutesViewModel: ObservableObject {
             self.allRoutesService = AllRoutesDatabaseService(databaseCore: databaseCore)
             print("📋 ALL ROUTES: ⚠️ Creating fallback AllRoutesDatabaseService")
         }
-        
+
         // Monitor search text changes to trigger filtering
         $searchText
             .sink { [weak self] _ in
@@ -41,21 +41,21 @@ class AllRoutesViewModel: ObservableObject {
             }
             .store(in: &cancellables)
     }
-    
+
     private var cancellables = Set<AnyCancellable>()
-    
+
     // MARK: - Route Loading
-    
+
     func loadRoutes() {
         print("📋 ALL ROUTES: Starting route loading")
         isLoading = true
         errorMessage = ""
-        
+
         Task {
             do {
                 print("📋 ALL ROUTES: Fetching routes from local database")
                 let fetchedRoutes = try await allRoutesService.getAllRoutesAsync()
-                
+
                 await MainActor.run {
                     self.routes = fetchedRoutes
                     self.applyFilter()
@@ -63,7 +63,7 @@ class AllRoutesViewModel: ObservableObject {
                     print("📋 ALL ROUTES: ✅ Loaded \(fetchedRoutes.count) routes successfully")
                     self.printRouteSummary()
                 }
-                
+
             } catch {
                 print("📋 ALL ROUTES: ❌ Failed to load routes: \(error)")
                 await MainActor.run {
@@ -73,12 +73,12 @@ class AllRoutesViewModel: ObservableObject {
             }
         }
     }
-    
+
     // MARK: - Filtering
-    
+
     func applyFilter() {
         var routesToFilter: [AllRoute] = []
-        
+
         // First apply type filter
         switch selectedFilter {
         case "all":
@@ -92,7 +92,7 @@ class AllRoutesViewModel: ObservableObject {
         default:
             routesToFilter = routes
         }
-        
+
         // Then apply search filter if search text is not empty
         if !searchText.isEmpty {
             routesToFilter = routesToFilter.filter { route in
@@ -102,29 +102,29 @@ class AllRoutesViewModel: ObservableObject {
                 route.sourceTypeDisplayName.localizedCaseInsensitiveContains(searchText)
             }
         }
-        
+
         filteredRoutes = routesToFilter
-        
+
         let searchInfo = searchText.isEmpty ? "" : " with search '\(searchText)'"
         print("📋 ALL ROUTES: 🔍 Applied filter '\(selectedFilter)'\(searchInfo): \(filteredRoutes.count)/\(routes.count) routes")
     }
-    
+
     // MARK: - Route Actions
-    
+
     func toggleFavorite(_ route: AllRoute) {
         // Check if operation is already in progress for this route
         guard !operationsInProgress.contains(route.id) else {
             print("📋 ALL ROUTES: ⚠️ Operation already in progress for route: \(route.name)")
             return
         }
-        
+
         print("📋 ALL ROUTES: Toggling favorite for route: \(route.name)")
         operationsInProgress.insert(route.id)
-        
+
         Task {
             do {
                 try await allRoutesService.toggleFavoriteAsync(routeId: route.id)
-                
+
                 // Update the route in the local array instead of reloading everything
                 await MainActor.run {
                     if let index = self.routes.firstIndex(where: { $0.id == route.id }) {
@@ -145,9 +145,9 @@ class AllRoutesViewModel: ObservableObject {
                     }
                     self.operationsInProgress.remove(route.id)
                 }
-                
+
                 print("📋 ALL ROUTES: ✅ Successfully toggled favorite for '\(route.name)' to \(!route.isFavorite)")
-                
+
             } catch {
                 print("📋 ALL ROUTES: ❌ Failed to toggle favorite: \(error)")
                 await MainActor.run {
@@ -157,21 +157,21 @@ class AllRoutesViewModel: ObservableObject {
             }
         }
     }
-    
+
     func deleteRoute(_ route: AllRoute) {
         // Check if operation is already in progress for this route
         guard !operationsInProgress.contains(route.id) else {
             print("📋 ALL ROUTES: ⚠️ Operation already in progress for route: \(route.name)")
             return
         }
-        
+
         print("📋 ALL ROUTES: Deleting route: \(route.name) (ID: \(route.id))")
         operationsInProgress.insert(route.id)
-        
+
         Task {
             do {
                 let affectedRows = try await allRoutesService.deleteRouteAsync(routeId: route.id)
-                
+
                 if affectedRows > 0 {
                     // Remove from local arrays
                     await MainActor.run {
@@ -179,7 +179,7 @@ class AllRoutesViewModel: ObservableObject {
                         self.applyFilter()
                         self.operationsInProgress.remove(route.id)
                     }
-                    
+
                     print("📋 ALL ROUTES: ✅ Successfully deleted route '\(route.name)'")
                 } else {
                     print("📋 ALL ROUTES: ⚠️ No rows affected when deleting route '\(route.name)'")
@@ -187,7 +187,7 @@ class AllRoutesViewModel: ObservableObject {
                         self.operationsInProgress.remove(route.id)
                     }
                 }
-                
+
             } catch {
                 print("📋 ALL ROUTES: ❌ Failed to delete route: \(error)")
                 await MainActor.run {
@@ -197,20 +197,20 @@ class AllRoutesViewModel: ObservableObject {
             }
         }
     }
-    
+
     // MARK: - Helper Methods
-    
+
     func refresh() {
         print("📋 ALL ROUTES: Manual refresh triggered")
         loadRoutes()
     }
-    
+
     private func printRouteSummary() {
         let publicCount = routes.filter { $0.sourceType == "public" }.count
         let importedCount = routes.filter { $0.sourceType == "imported" }.count
         let createdCount = routes.filter { $0.sourceType == "created" }.count
         let favoriteCount = routes.filter { $0.isFavorite }.count
-        
+
         print("📋 ALL ROUTES: 📊 Route Summary:")
         print("📋 ALL ROUTES: 📊 - Total: \(routes.count)")
         print("📋 ALL ROUTES: 📊 - Public: \(publicCount)")

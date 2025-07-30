@@ -16,22 +16,22 @@ struct NavUnitPhoto: Identifiable, Codable {
     let isUploaded: Bool
     let isSyncedFromCloud: Bool
     var userId: String?
-    
+
     // MARK: - Computed Properties
-    
+
     /// Local file URL in Documents directory
     var localURL: URL {
         let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         return documentsPath.appendingPathComponent("NavUnitPhotos").appendingPathComponent(localFileName)
     }
-    
+
     /// Thumbnail URL in cache directory
     var thumbnailURL: URL {
         let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         let thumbnailFileName = "thumb_" + localFileName
         return documentsPath.appendingPathComponent("NavUnitPhotos/thumbnails").appendingPathComponent(thumbnailFileName)
     }
-    
+
     /// Display name for the photo
     var displayName: String {
         let formatter = DateFormatter()
@@ -39,19 +39,19 @@ struct NavUnitPhoto: Identifiable, Codable {
         formatter.timeStyle = .short
         return formatter.string(from: timestamp)
     }
-    
+
     /// Check if photo exists locally
     var existsLocally: Bool {
         return FileManager.default.fileExists(atPath: localURL.path)
     }
-    
+
     /// Check if thumbnail exists locally
     var thumbnailExists: Bool {
         return FileManager.default.fileExists(atPath: thumbnailURL.path)
     }
-    
+
     // MARK: - Initializers
-    
+
     init(
         id: UUID = UUID(),
         navUnitId: String,
@@ -71,9 +71,9 @@ struct NavUnitPhoto: Identifiable, Codable {
         self.isSyncedFromCloud = isSyncedFromCloud
         self.userId = userId
     }
-    
+
     // MARK: - Database Coding Keys
-    
+
     enum CodingKeys: String, CodingKey {
         case id
         case navUnitId = "nav_unit_id"
@@ -103,7 +103,7 @@ extension NavUnitPhoto: Hashable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }
-    
+
     static func == (lhs: NavUnitPhoto, rhs: NavUnitPhoto) -> Bool {
         return lhs.id == rhs.id
     }

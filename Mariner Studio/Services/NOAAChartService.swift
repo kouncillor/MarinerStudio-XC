@@ -1,4 +1,3 @@
-
 //
 //  NOAAChartService.swift
 //  Mariner Studio
@@ -24,7 +23,7 @@ struct NOAAChartLayer {
 }
 
 class NOAAChartServiceImpl: NOAAChartService {
-    
+
     // Available NOAA chart layers with descriptions
     private let availableLayers = [
         NOAAChartLayer(id: "0", name: "Chart Framework", description: "Basic chart outline and geographic framework", isVisible: true),
@@ -43,37 +42,37 @@ class NOAAChartServiceImpl: NOAAChartService {
         NOAAChartLayer(id: "13", name: "Deep Water Routes", description: "Deep water routing information", isVisible: true),
         NOAAChartLayer(id: "14", name: "Quality of Data", description: "Data quality indicators", isVisible: true)
     ]
-    
+
     init() {
         print("🗺️ NOAAChartService: Initialized with layer selection support")
-        
+
         // Test NOAA connection in background
         Task {
             let connectionResult = await testNOAAConnection()
             print("🌐 NOAAChartService: Connection test result: \(connectionResult ? "SUCCESS" : "FAILED")")
         }
     }
-    
+
     func createChartTileOverlay(selectedLayers: Set<Int>) -> NOAAChartTileOverlay {
         let overlay = NOAAChartTileOverlay(selectedLayers: selectedLayers)
         print("🗺️ NOAAChartService: Created NOAA chart tile overlay with layers: \(selectedLayers.sorted())")
         return overlay
     }
-    
+
     func getAvailableChartLayers() -> [NOAAChartLayer] {
         return availableLayers
     }
-    
+
     func testNOAAConnection() async -> Bool {
         // Test if we can reach NOAA's chart service
         let testUrls = [
             "https://gis.charttools.noaa.gov/arcgis/rest/services/MCS/ENCOnline/MapServer/exts/MaritimeChartService/MapServer?f=json",
             "https://seamlessrnc.nauticalcharts.noaa.gov/arcgis/rest/services/RNC/NOAA_RNC/MapServer?f=json"
         ]
-        
+
         for urlString in testUrls {
             guard let url = URL(string: urlString) else { continue }
-            
+
             do {
                 let (_, response) = try await URLSession.shared.data(from: url)
                 if let httpResponse = response as? HTTPURLResponse,
@@ -85,7 +84,7 @@ class NOAAChartServiceImpl: NOAAChartService {
                 print("❌ NOAAChartService: Failed to connect to \(urlString): \(error.localizedDescription)")
             }
         }
-        
+
         return false
     }
 }

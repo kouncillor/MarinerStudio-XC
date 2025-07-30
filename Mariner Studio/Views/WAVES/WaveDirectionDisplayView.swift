@@ -1,8 +1,8 @@
 //
-//import SwiftUI
+// import SwiftUI
 //
 //// A view to draw the wave direction arrow (cyan, points inward)
-//struct WaveArrowView: View {
+// struct WaveArrowView: View {
 //    var body: some View {
 //        // This ZStack layers the arrow and the icon together, so they move as one unit.
 //        ZStack {
@@ -23,10 +23,10 @@
 //        // Offset the whole arrow group so its tail starts just inside the compass ring
 //        .offset(y: -70)
 //    }
-//}
+// }
 //
 //// NEW: A view to draw the vessel's heading arrow (green, points outward)
-//struct VesselHeadingArrowView: View {
+// struct VesselHeadingArrowView: View {
 //    var body: some View {
 //        // This ZStack layers the arrow and the text label together
 //        ZStack {
@@ -56,10 +56,10 @@
 //        // Offset the arrow so its base is at the center of the compass
 //        .offset(y: -77)
 //    }
-//}
+// }
 //
 //
-//struct WaveDirectionDisplayView: View {
+// struct WaveDirectionDisplayView: View {
 //    @State private var vesselCourse: String = ""
 //    @State private var directionWavesFrom: String = ""
 //    @FocusState private var isInputFocused: Bool
@@ -174,9 +174,9 @@
 //            isInputFocused = false
 //        }
 //    }
-//}
+// }
 //
-//struct Marker: Hashable {
+// struct Marker: Hashable {
 //    let degrees: Double
 //    let label: String
 //
@@ -205,9 +205,9 @@
 //            Marker(degrees: 330)
 //        ]
 //    }
-//}
+// }
 //
-//struct CompassMarkerView: View {
+// struct CompassMarkerView: View {
 //    let marker: Marker
 //    let compassDegrees: Double
 //
@@ -255,18 +255,14 @@
 //    private func textAngle() -> Angle {
 //        return Angle(degrees: self.compassDegrees - self.marker.degrees)
 //    }
-//}
+// }
 //
-//#Preview {
+// #Preview {
 //    // Wrap in a NavigationView for better previewing
 //    NavigationView {
 //        WaveDirectionDisplayView()
 //    }
-//}
-
-
-
-
+// }
 
 //
 //  WaveDirectionDisplayView.swift
@@ -281,28 +277,28 @@ struct WaveDirectionDisplayView: View {
     @State private var vesselCourse: String = ""
     @State private var directionWavesFrom: String = ""
     @FocusState private var isInputFocused: Bool
-    
+
     // Computed property to get vessel course as Double for rotation
     private var vesselCourseValue: Double {
         return Double(vesselCourse) ?? 0.0
     }
-    
+
     // Computed property to get the wave direction as Double for the arrow's rotation
     private var waveDirectionValue: Double? {
         // Return nil if the string is empty or not a valid number
         return Double(directionWavesFrom)
     }
-    
+
     // Computed property to format the course display
     private var formattedCourse: String {
         let courseValue = Int(vesselCourseValue)
         return String(format: "%03d", courseValue)
     }
-    
+
     var body: some View {
         VStack(spacing: 30) {
             Spacer()
-            
+
             // Compass
             ZStack {
                 // This ZStack contains all the elements that rotate with the vessel's course
@@ -311,7 +307,7 @@ struct WaveDirectionDisplayView: View {
                     ForEach(Marker.markers(), id: \.self) { marker in
                         CompassMarkerView(marker: marker, compassDegrees: vesselCourseValue)
                     }
-                    
+
                     // Wave direction arrow (cyan, rotates with compass)
                     if let waveDirection = waveDirectionValue {
                         WaveArrowView()
@@ -319,7 +315,7 @@ struct WaveDirectionDisplayView: View {
                     }
                 }
                 .rotationEffect(Angle(degrees: -vesselCourseValue)) // Rotate entire compass ring
-                
+
                 // Centered course display (stationary)
                 VStack(spacing: 2) {
                     // The vessel's course, with the degree symbol removed
@@ -333,7 +329,7 @@ struct WaveDirectionDisplayView: View {
                     Circle()   // The shape of the background is a circle
                         .stroke(Color.orange, lineWidth: 4) // Style the circle as a 4-point orange line
                 )
-                
+
                 // Vessel heading arrow (green, stationary, points up)
                 VesselHeadingArrowView()
             }
@@ -343,7 +339,7 @@ struct WaveDirectionDisplayView: View {
                 Circle()
                     .stroke(Color.gray, lineWidth: 5)
             )
-            
+
             // Labels and input boxes
             VStack(spacing: 20) {
                 // Vessel Course
@@ -351,20 +347,20 @@ struct WaveDirectionDisplayView: View {
                     Text("Vessel Course")
                         .font(.headline)
                         .frame(width: 150, alignment: .leading)
-                    
+
                     TextField("Enter course", text: $vesselCourse)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
                         .frame(width: 100)
                         .keyboardType(.decimalPad)
                         .focused($isInputFocused)
                 }
-                
+
                 // Direction Waves From
                 HStack {
                     Text("Direction Waves From")
                         .font(.headline)
                         .frame(width: 150, alignment: .leading)
-                    
+
                     TextField("Enter direction", text: $directionWavesFrom)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
                         .frame(width: 100)
@@ -382,7 +378,7 @@ struct WaveDirectionDisplayView: View {
                     }
                 }
             }
-            
+
             Spacer()
         }
         .navigationTitle("Wave Direction")

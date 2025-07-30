@@ -15,7 +15,7 @@ protocol TidalCurrentPredictionService {
     ///   - date: The date for which to get predictions
     /// - Returns: A TidalCurrentPredictionResponse or throws an error
     func getPredictions(stationId: String, bin: Int, date: Date) async throws -> TidalCurrentPredictionResponse
-    
+
     /// Gets extremes for a tidal current station
     /// - Parameters:
     ///   - stationId: The ID of the station
@@ -23,7 +23,7 @@ protocol TidalCurrentPredictionService {
     ///   - date: The date for which to get extremes
     /// - Returns: A TidalCurrentPredictionResponse or throws an error
     func getExtremes(stationId: String, bin: Int, date: Date) async throws -> TidalCurrentPredictionResponse
-    
+
     /// Gets the type of a tidal current station
     /// - Parameters:
     ///   - stationId: The ID of the station

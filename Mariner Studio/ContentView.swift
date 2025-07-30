@@ -11,7 +11,7 @@ struct ContentView: View {
                 MainView()
                     .presentPaywallIfNeeded(
                         requiredEntitlementIdentifier: "Pro"
-                    ) { customerInfo in
+                    ) { _ in
                         DebugLogger.shared.log("Purchase successful! User now has Pro access.", category: "PURCHASE")
                     }
             } else {

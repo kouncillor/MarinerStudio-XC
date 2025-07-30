@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Maps weather codes and descriptive strings to SF Symbols
 struct WeatherIconMapper {
-    
+
     /// Maps Open-Meteo weather codes to SF Symbols
     /// - Parameter code: The weather code from the API
     /// - Parameter isNight: Whether it's nighttime (for sun/moon variations)
@@ -14,7 +14,7 @@ struct WeatherIconMapper {
             return mapDayWeatherCode(code)
         }
     }
-    
+
     /// Maps string-based weather image names from the original app to SF Symbols
     /// - Parameter imageName: The image name from the original app
     /// - Parameter isNight: Whether it's nighttime
@@ -24,7 +24,7 @@ struct WeatherIconMapper {
         if isNight && (imageName.contains("sun") || imageName.isEmpty) {
             return "moon.stars.fill"
         }
-        
+
         if imageName.contains("sun") {
             return "sun.max.fill"
         } else if imageName.contains("fewclouds") {
@@ -55,7 +55,7 @@ struct WeatherIconMapper {
             return "questionmark.circle"
         }
     }
-    
+
     /// Maps moon phase strings to SF Symbols
     /// - Parameter phaseName: The moon phase string
     /// - Returns: The name of the SF Symbol to use
@@ -80,9 +80,9 @@ struct WeatherIconMapper {
             return "moonphase.new.moon"
         }
     }
-    
+
     // MARK: - Private Helper Methods
-    
+
     private static func mapDayWeatherCode(_ code: Int) -> String {
         switch code {
         // Open-Meteo WMO weather codes
@@ -110,7 +110,7 @@ struct WeatherIconMapper {
             return "cloud.snow.fill"
         case 95, 96, 99: // Thunderstorm
             return "cloud.bolt.rain.fill"
-            
+
         // Original OpenWeatherMap codes
         case 200...232: // Thunderstorms
             return "cloud.bolt.rain.fill"
@@ -150,7 +150,7 @@ struct WeatherIconMapper {
             return "cloud.fill"
         }
     }
-    
+
     private static func mapNightWeatherCode(_ code: Int) -> String {
         switch code {
         // Open-Meteo WMO weather codes
@@ -178,7 +178,7 @@ struct WeatherIconMapper {
             return "cloud.snow.fill"
         case 95, 96, 99: // Thunderstorm
             return "cloud.bolt.rain.fill"
-            
+
         // Original OpenWeatherMap codes
         case 200...232: // Thunderstorms
             return "cloud.bolt.rain.fill"
@@ -218,7 +218,7 @@ struct WeatherIconMapper {
             return "cloud.fill"
         }
     }
-    
+
     /// Returns a color appropriate for the weather condition
     /// - Parameter code: The weather code
     /// - Returns: A color for the weather icon
@@ -240,7 +240,7 @@ struct WeatherIconMapper {
             return .gray
         }
     }
-    
+
     /// Returns an appropriate color for a given temperature
     /// - Parameter temperature: The temperature in Fahrenheit
     /// - Returns: A color representing the temperature (blue for cold, red for hot)

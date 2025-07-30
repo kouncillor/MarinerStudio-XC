@@ -1,5 +1,3 @@
-
-
 import Foundation
 import SwiftUI
 import Combine
@@ -31,7 +29,7 @@ class HourlyForecastViewModel: ObservableObject {
     private var weatherService: WeatherService?
     private var databaseService: WeatherDatabaseService?
     private var cancellables = Set<AnyCancellable>()
-    
+
     // Task tracking
     private var forecastTask: Task<Void, Never>?
 
@@ -40,7 +38,7 @@ class HourlyForecastViewModel: ObservableObject {
         self.weatherService = weatherService
         self.databaseService = databaseService
     }
-    
+
     deinit {
         cleanup()
     }
@@ -51,7 +49,7 @@ class HourlyForecastViewModel: ObservableObject {
     func initialize(selectedDate: Date, allDates: [Date], latitude: Double, longitude: Double, locationName: String) {
         // Clear previous state
         cleanup()
-        
+
         // Set new data
         self.availableDates = allDates.sorted()
         self.latitude = latitude
@@ -66,7 +64,7 @@ class HourlyForecastViewModel: ObservableObject {
         }
 
         updateDayDisplay()
-        
+
         print("🕐 HourlyForecastViewModel: Initialized for date \(selectedDate), day index: \(currentDayIndex)")
     }
 
@@ -75,7 +73,7 @@ class HourlyForecastViewModel: ObservableObject {
         // Cancel any existing task
         forecastTask?.cancel()
         forecastTask = nil
-        
+
         // Update UI state
         Task { @MainActor in
             isLoading = true
@@ -83,20 +81,20 @@ class HourlyForecastViewModel: ObservableObject {
             dailyHourlyForecasts = []
             currentDayHourlyForecasts = []
         }
-        
+
         // Print day information for debugging
         print("🕐 HourlyForecastViewModel: loadHourlyForecasts called for day index \(currentDayIndex) of \(availableDates.count) days")
         if currentDayIndex < availableDates.count {
             print("🕐 Loading forecasts for date: \(availableDates[currentDayIndex])")
         }
-        
+
         // Create a new task for loading forecasts
         forecastTask = Task {
             do {
                 // Fetch forecasts for each date
                 for date in availableDates {
                     if Task.isCancelled { break }
-                    
+
                     let components = Calendar.current.dateComponents([.year, .month, .day], from: date)
 
                     if let weatherService = weatherService,
@@ -111,11 +109,11 @@ class HourlyForecastViewModel: ObservableObject {
                             latitude: latitude,
                             longitude: longitude
                         )
-                        
+
                         if Task.isCancelled { break }
 
                         let hourlyForecasts = try await processHourlyData(hourlyData, for: date)
-                        
+
                         if Task.isCancelled { break }
 
                         await MainActor.run {
@@ -133,7 +131,7 @@ class HourlyForecastViewModel: ObservableObject {
                     await MainActor.run {
                         updateCurrentDayForecasts()
                         isLoading = false
-                        
+
                         // Log the current day forecasts for debugging
                         print("🕐 Finished loading hourly forecasts. Current day index: \(currentDayIndex), forecasts count: \(currentDayHourlyForecasts.count)")
                     }
@@ -180,7 +178,7 @@ class HourlyForecastViewModel: ObservableObject {
         // Cancel any ongoing forecast task
         forecastTask?.cancel()
         forecastTask = nil
-        
+
         // Clear data to prevent state issues when returning
         dailyHourlyForecasts = []
         currentDayHourlyForecasts = []
@@ -206,7 +204,7 @@ class HourlyForecastViewModel: ObservableObject {
         canGoToNextDay = currentDayIndex < availableDates.count - 1
 
         print("🕐 Updated day display: \(currentDayDisplay), index: \(currentDayIndex), date: \(date)")
-        
+
         updateCurrentDayForecasts()
     }
 
@@ -219,7 +217,7 @@ class HourlyForecastViewModel: ObservableObject {
 
         let currentDate = availableDates[currentDayIndex]
         print("🕐 Updating forecasts for date: \(currentDate), day index: \(currentDayIndex)")
-        
+
         let dayForecast = dailyHourlyForecasts.first { Calendar.current.isDate($0.date, inSameDayAs: currentDate) }
 
         if let forecast = dayForecast {
@@ -248,7 +246,6 @@ class HourlyForecastViewModel: ObservableObject {
        // dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
         // --- End Change ---
 
-
         // Process each hour
         for i in 0..<min(24, timeCount) {
             if Task.isCancelled { break }
@@ -259,7 +256,6 @@ class HourlyForecastViewModel: ObservableObject {
                  continue // Skip this hour if date parsing fails
              }
             // --- End Change ---
-
 
             // Get pressure in inHg (convert from hPa)
             let pressureHpa = hourlyData.hourly.pressure.count > i ? hourlyData.hourly.pressure[i] : 0
@@ -304,7 +300,6 @@ class HourlyForecastViewModel: ObservableObject {
             // Get dew point (if available)
              let dewPoint = hourlyData.hourly.dewPoint?.count ?? 0 > i ?
                  hourlyData.hourly.dewPoint?[i] ?? 0.0 : 0.0 // Use 0.0 as default if nil
-
 
             // Create the item
             let item = HourlyForecastItem(

@@ -1,5 +1,3 @@
-
-
 import MapKit
 
 class NavUnitAnnotationView: MKMarkerAnnotationView {
@@ -81,25 +79,16 @@ class BuoyStationAnnotationView: MKMarkerAnnotationView {
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-    
+
     override func prepareForDisplay() {
         super.prepareForDisplay()
         displayPriority = .defaultLow
         markerTintColor = UIColor.purple // Purple color for buoy stations
-        
+
         // Use the b.circle SF Symbol for buoys
         glyphImage = UIImage(systemName: "b.circle")
     }
 }
-
-
-
-
-
-
-
-
-
 
 // Keep MaritimeClusterAnnotationView as a fallback, but it won't be used since clustering is disabled
 class MaritimeClusterAnnotationView: MKAnnotationView {
@@ -190,5 +179,3 @@ class MaritimeClusterAnnotationView: MKAnnotationView {
         }.count
     }
 }
-
-

@@ -1,4 +1,3 @@
-
 //
 //  RouteMenuView.swift
 //  Mariner Studio
@@ -14,11 +13,11 @@ struct RouteMenuView: View {
     @State private var loadedGpxFile: GpxFile?
     @State private var isLoadingFile = false
     @State private var errorMessage = ""
-    
+
     let columns: [GridItem] = [
         GridItem(.flexible(), spacing: 12)
     ]
-    
+
     var body: some View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: 12) {
@@ -32,7 +31,7 @@ struct RouteMenuView: View {
                         iconColor: .yellow
                     )
                 }
-                
+
                 // All Routes - Display all routes from various sources
                 NavigationLink(destination: AllRoutesView(allRoutesService: serviceProvider.allRoutesService)) {
                     RouteMenuButtonContent(
@@ -43,7 +42,7 @@ struct RouteMenuView: View {
                         iconColor: .gray
                     )
                 }
-                
+
                 // Download Routes from Supabase
                 NavigationLink(destination: EmbeddedRoutesBrowseView(
                     allRoutesService: serviceProvider.allRoutesService,
@@ -57,7 +56,7 @@ struct RouteMenuView: View {
                         iconColor: .blue
                     )
                 }
-                
+
                 // Import Personal Routes - Access files from various storage locations
                 NavigationLink(destination: ImportPersonalRoutesView(
                     allRoutesService: serviceProvider.allRoutesService,
@@ -72,7 +71,7 @@ struct RouteMenuView: View {
                         iconColor: .purple
                     )
                 }
-                
+
                 // Create New Route - Uses CoreGPX for writing
                 NavigationLink(destination: CreateRouteView()) {
                     RouteMenuButtonContent(
@@ -83,7 +82,7 @@ struct RouteMenuView: View {
                         iconColor: .orange
                     )
                 }
-                
+
                 // Voyage Plan - COMMENTED OUT - Now accessible via swipe actions on routes
                 /*
                 Button(action: {
@@ -101,7 +100,7 @@ struct RouteMenuView: View {
                 }
                 .disabled(isLoadingFile)
                 */
-                
+
                 // Import from Cloud Services - COMMENTED OUT
                 /*
                 NavigationLink(destination: CloudImportView()) {
@@ -114,7 +113,7 @@ struct RouteMenuView: View {
                     )
                 }
                 */
-                
+
                 // Route Converter - Convert between formats - COMMENTED OUT
                 /*
                 NavigationLink(destination: RouteConverterView()) {
@@ -129,7 +128,7 @@ struct RouteMenuView: View {
                 */
             }
             .padding()
-            
+
             // Loading indicator
             if isLoadingFile {
                 VStack {
@@ -142,7 +141,7 @@ struct RouteMenuView: View {
                 .frame(maxWidth: .infinity)
                 .padding()
             }
-            
+
             // Error message
             if !errorMessage.isEmpty {
                 Text(errorMessage)
@@ -172,29 +171,29 @@ struct RouteMenuView: View {
             GpxServiceFactory.shared.printServiceStatus()
         }
     }
-    
+
     // MARK: - File Loading Functions
-    
+
     private func openGpxFile() async {
         await MainActor.run {
             isLoadingFile = true
             errorMessage = ""
             loadedGpxFile = nil
         }
-        
+
         do {
             // Present document picker directly
             let url = try await presentDocumentPicker(fileTypes: ["com.topografix.gpx", "public.xml"])
-            
+
             // Load GPX file using the service
             let gpxFile = try await serviceProvider.gpxService.loadGpxFile(from: url)
-            
+
             await MainActor.run {
                 loadedGpxFile = gpxFile
                 showingGpxView = true
                 isLoadingFile = false
             }
-            
+
         } catch let gpxError as GpxServiceError {
             await MainActor.run {
                 errorMessage = gpxError.localizedDescription
@@ -207,12 +206,12 @@ struct RouteMenuView: View {
             }
         }
     }
-    
+
     private func presentDocumentPicker(fileTypes: [String]) async throws -> URL {
         return try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.main.async {
                 let documentPickerVC = UIDocumentPickerViewController(documentTypes: fileTypes, in: .import)
-                
+
                 // Create a delegate to handle the document picker
                 let delegate = DocumentPickerDelegate { result in
                     switch result {
@@ -222,13 +221,13 @@ struct RouteMenuView: View {
                         continuation.resume(throwing: error)
                     }
                 }
-                
+
                 // Store the delegate to prevent it from being deallocated
                 documentPickerVC.delegate = delegate
-                
+
                 // Store delegate in the view to prevent deallocation
                 self.setDocumentPickerDelegate(delegate)
-                
+
                 // Present the document picker
                 if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
                    let window = windowScene.windows.first,
@@ -240,10 +239,10 @@ struct RouteMenuView: View {
             }
         }
     }
-    
+
     // Store delegate to prevent deallocation
     @State private var documentPickerDelegate: DocumentPickerDelegate?
-    
+
     private func setDocumentPickerDelegate(_ delegate: DocumentPickerDelegate) {
         documentPickerDelegate = delegate
     }
@@ -252,21 +251,21 @@ struct RouteMenuView: View {
 // Document picker delegate to handle the file selection
 class DocumentPickerDelegate: NSObject, UIDocumentPickerDelegate {
     typealias CompletionHandler = (Result<URL, Error>) -> Void
-    
+
     private let completion: CompletionHandler
-    
+
     init(completion: @escaping CompletionHandler) {
         self.completion = completion
         super.init()
     }
-    
+
     func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
         guard let url = urls.first else {
             completion(.failure(NSError(domain: "com.marinerstudio", code: 404,
                                userInfo: [NSLocalizedDescriptionKey: "No document selected"])))
             return
         }
-        
+
         // Ensure we have access to the URL
         let shouldStopAccessing = url.startAccessingSecurityScopedResource()
         defer {
@@ -274,10 +273,10 @@ class DocumentPickerDelegate: NSObject, UIDocumentPickerDelegate {
                 url.stopAccessingSecurityScopedResource()
             }
         }
-        
+
         completion(.success(url))
     }
-    
+
     func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
         completion(.failure(NSError(domain: "com.marinerstudio", code: 401,
                            userInfo: [NSLocalizedDescriptionKey: "Document picker was cancelled"])))
@@ -322,7 +321,7 @@ struct RouteMenuButtonContent: View {
                 Text(title)
                     .font(.headline)
                     .multilineTextAlignment(.center)
-                
+
                 if let subtitle = subtitle {
                     Text(subtitle)
                         .font(.caption)

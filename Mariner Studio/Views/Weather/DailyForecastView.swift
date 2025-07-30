@@ -1,12 +1,11 @@
-
 import SwiftUI
 
 struct DailyForecastView: View {
     let forecasts: [DailyForecastItem]
     let onForecastSelected: (DailyForecastItem) -> Void
-    
-    @State private var expandedForecastId: UUID? = nil
-    
+
+    @State private var expandedForecastId: UUID?
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Section header
@@ -14,10 +13,10 @@ struct DailyForecastView: View {
                 .font(.headline)
                 .fontWeight(.semibold)
                 .padding(.vertical, 4)
-            
+
             // Forecast header row
             ForecastHeaderRow()
-            
+
             // Forecast items
             if forecasts.isEmpty {
                 Text("No forecast data available")
@@ -41,11 +40,11 @@ struct DailyForecastView: View {
                                 expandedForecastId = forecast.id
                             }
                         }
-                        
+
                         // Also trigger the navigation callback
                         onForecastSelected(forecast)
                     }
-                    
+
                     if forecast.id != forecasts.last?.id {
                         Divider()
                             .padding(.leading)
@@ -67,23 +66,23 @@ struct ForecastHeaderRow: View {
         HStack {
             Text("Date")
                 .frame(width: 60, alignment: .leading)
-            
+
             Image(systemName: "thermometer")
                 .frame(width: 60)
                 .foregroundColor(.orange)
-            
+
             Image(systemName: "moon.stars")
                 .frame(width: 40)
                 .foregroundColor(.yellow)
-            
+
             Image(systemName: "wind")
                 .frame(width: 40)
                 .foregroundColor(.blue)
-            
+
             Image(systemName: "eye")
                 .frame(width: 40)
                 .foregroundColor(.green)
-            
+
             Image(systemName: "arrow.down.to.line")
                 .frame(width: 40)
                 .foregroundColor(.purple)
@@ -100,7 +99,7 @@ struct DailyForecastRowView: View {
     let forecast: DailyForecastItem
     let isExpanded: Bool
     let isToday: Bool
-    
+
     var body: some View {
         VStack(spacing: 0) {
             // Main row content
@@ -110,11 +109,11 @@ struct DailyForecastRowView: View {
                     Text(forecast.dayOfWeek)
                         .font(.headline)
                         .fontWeight(.bold)
-                    
+
                     Text(forecast.dateDisplay)
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    
+
                     if isToday {
                         Text("TODAY")
                             .font(.caption2)
@@ -123,61 +122,61 @@ struct DailyForecastRowView: View {
                     }
                 }
                 .frame(width: 60, alignment: .leading)
-                
+
                 // Temperature column
                 VStack(spacing: 4) {
                     TemperaturePill(
                         temperature: Int(forecast.high.rounded()),
                         isHigh: true
                     )
-                    
+
                     TemperaturePill(
                         temperature: Int(forecast.low.rounded()),
                         isHigh: false
                     )
                 }
                 .frame(width: 60)
-                
+
                 // Moon phase column
                 VStack(spacing: 6) {
                     moonPhaseIcon
                         .frame(width: 24, height: 24)
-                    
+
                     Image(systemName: forecast.isWaxingMoon ? "arrow.up" : "arrow.down")
                         .foregroundColor(forecast.isWaxingMoon ? .green : .red)
                         .font(.caption)
                 }
                 .frame(width: 40)
-                
+
                 // Wind column
                 VStack(alignment: .center, spacing: 2) {
                     Text(forecast.windDirection)
                         .font(.caption)
-                    
+
                     Text("\(Int(forecast.windSpeed))")
                         .font(.caption)
-                    
+
                     Text("\(Int(forecast.windGusts))")
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }
                 .frame(width: 40)
-                
+
                 // Visibility column
                 VStack(alignment: .center, spacing: 4) {
                     Text(forecast.visibility)
                         .font(.caption)
-                    
+
                     weatherIcon
                         .frame(width: 24, height: 24)
                 }
                 .frame(width: 40)
-                
+
                 // Pressure column
                 VStack(alignment: .center, spacing: 2) {
                     Text(String(format: "%.1f", forecast.pressure))
                         .font(.caption)
-                    
+
                     Text("inHg")
                         .font(.caption2)
                         .foregroundColor(.secondary)
@@ -192,7 +191,7 @@ struct DailyForecastRowView: View {
                         Color(UIColor.secondarySystemBackground) :
                         Color.clear)
             )
-            
+
             // Expanded details
             if isExpanded {
                 VStack(alignment: .leading, spacing: 8) {
@@ -200,7 +199,7 @@ struct DailyForecastRowView: View {
                         .font(.callout)
                         .foregroundColor(.secondary)
                         .padding(.top, 4)
-                    
+
                     if !forecast.description.isEmpty {
                         Text(forecast.description)
                             .font(.callout)
@@ -215,7 +214,7 @@ struct DailyForecastRowView: View {
         }
         .cornerRadius(8)
     }
-    
+
     // Dynamic weather icon based on weather code
     private var weatherIcon: some View {
         Group {
@@ -246,7 +245,7 @@ struct DailyForecastRowView: View {
             }
         }
     }
-    
+
     // Dynamic moon phase icon
     private var moonPhaseIcon: some View {
         Group {
@@ -285,7 +284,7 @@ struct DailyForecastRowView: View {
 struct TemperaturePill: View {
     let temperature: Int
     let isHigh: Bool
-    
+
     var body: some View {
         Text("\(temperature)°")
             .font(.caption)

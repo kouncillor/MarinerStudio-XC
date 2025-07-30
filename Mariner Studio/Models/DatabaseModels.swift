@@ -1,4 +1,3 @@
-
 import Foundation
 
 // MARK: - Model Classes for Database Entities
@@ -17,17 +16,17 @@ struct TidalCurrentStationFavorite {
     let isFavorite: Bool
 }
 
-//struct Tug: Identifiable {
+// struct Tug: Identifiable {
 //    let id = UUID()
 //    let tugId: String
 //    let vesselName: String
-//}
+// }
 
-//struct Barge: Identifiable {
+// struct Barge: Identifiable {
 //    let id = UUID()
 //    let bargeId: String
 //    let vesselName: String
-//}
+// }
 
 struct PersonalNote: Identifiable {
     let id: Int
@@ -35,7 +34,7 @@ struct PersonalNote: Identifiable {
     let noteText: String
     let createdAt: Date
     var modifiedAt: Date?
-    
+
     init(id: Int = 0, navUnitId: String, noteText: String, createdAt: Date = Date(), modifiedAt: Date? = nil) {
         self.id = id
         self.navUnitId = navUnitId
@@ -57,7 +56,7 @@ struct ChangeRecommendation: Identifiable {
     let recommendationText: String
     let createdAt: Date
     var status: RecommendationStatus
-    
+
     init(id: Int = 0, navUnitId: String, recommendationText: String, createdAt: Date = Date(), status: RecommendationStatus = .pending) {
         self.id = id
         self.navUnitId = navUnitId
@@ -74,7 +73,7 @@ struct TugPhoto: Identifiable {
     let fileName: String
     let thumbPath: String?
     let createdAt: Date
-    
+
     init(id: Int = 0, tugId: String, filePath: String, fileName: String, thumbPath: String? = nil, createdAt: Date = Date()) {
         self.id = id
         self.tugId = tugId
@@ -91,7 +90,7 @@ struct TugNote: Identifiable {
     let noteText: String
     let createdAt: Date
     var modifiedAt: Date?
-    
+
     init(id: Int = 0, tugId: String, noteText: String, createdAt: Date = Date(), modifiedAt: Date? = nil) {
         self.id = id
         self.tugId = tugId
@@ -107,7 +106,7 @@ struct TugChangeRecommendation: Identifiable {
     let recommendationText: String
     let createdAt: Date
     var status: RecommendationStatus
-    
+
     init(id: Int = 0, tugId: String, recommendationText: String, createdAt: Date = Date(), status: RecommendationStatus = .pending) {
         self.id = id
         self.tugId = tugId
@@ -116,7 +115,6 @@ struct TugChangeRecommendation: Identifiable {
         self.status = status
     }
 }
-
 
 struct BuoyStationFavorite {
     let stationId: String

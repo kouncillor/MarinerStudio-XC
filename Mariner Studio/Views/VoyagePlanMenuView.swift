@@ -10,11 +10,11 @@ import SwiftUI
 struct VoyagePlanMenuView: View {
     @StateObject private var viewModel = VoyagePlanMenuViewModel()
     @EnvironmentObject var serviceProvider: ServiceProvider
-    
+
     let columns: [GridItem] = [
         GridItem(.flexible(), spacing: 12)
     ]
-    
+
     var body: some View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: 12) {
@@ -28,7 +28,7 @@ struct VoyagePlanMenuView: View {
                         iconColor: .yellow
                     )
                 }
-                
+
                 // All Routes
                 NavigationLink(destination: VoyagePlanRoutesView(allRoutesService: serviceProvider.allRoutesService)) {
                     VoyagePlanMenuButtonContent(
@@ -41,7 +41,7 @@ struct VoyagePlanMenuView: View {
                 }
             }
             .padding()
-            
+
             // Error message
             if !viewModel.errorMessage.isEmpty {
                 Text(viewModel.errorMessage)
@@ -62,26 +62,26 @@ struct VoyagePlanMenuView: View {
             print("🗺️ VOYAGE_PLAN_MENU: View appeared")
         }
     }
-    
+
     // MARK: - Helper Methods
-    
+
     /// Placeholder destination for stubbed navigation links
     private func destinationPlaceholder(_ title: String) -> some View {
         VStack(spacing: 20) {
             Image(systemName: "map")
                 .font(.system(size: 60))
                 .foregroundColor(.gray)
-            
+
             Text("\(title) Integration")
                 .font(.title2)
                 .fontWeight(.semibold)
-            
+
             Text("This will navigate to \(title) for voyage planning.")
                 .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
-            
+
             Text("Coming Soon!")
                 .font(.headline)
                 .foregroundColor(.blue)
@@ -131,7 +131,7 @@ struct VoyagePlanMenuButtonContent: View {
                 Text(title)
                     .font(.headline)
                     .multilineTextAlignment(.center)
-                
+
                 if let subtitle = subtitle {
                     Text(subtitle)
                         .font(.caption)

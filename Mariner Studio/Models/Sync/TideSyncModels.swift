@@ -18,11 +18,11 @@ struct TideSyncStats {
     let downloaded: Int
     let conflictsResolved: Int
     let errors: Int
-    
+
     var duration: TimeInterval {
         endTime.timeIntervalSince(startTime)
     }
-    
+
     var totalOperations: Int {
         uploaded + downloaded + conflictsResolved
     }
@@ -36,7 +36,7 @@ enum TideSyncError: Error, LocalizedError {
     case databaseError(String)
     case conflictResolutionFailed(String)
     case unknownError(String)
-    
+
     var errorDescription: String? {
         switch self {
         case .authenticationRequired:

@@ -7,7 +7,7 @@ protocol CurrentLocalWeatherServiceForMap {
     ///   - longitude: Longitude coordinate
     /// - Returns: Weather data response
     func getWeather(latitude: Double, longitude: Double) async throws -> OpenMeteoResponse
-    
+
     /// Fetches hourly forecast data for a specific date and location
     /// - Parameters:
     ///   - year: Year component of the date
@@ -17,7 +17,7 @@ protocol CurrentLocalWeatherServiceForMap {
     ///   - longitude: Longitude coordinate
     /// - Returns: Hourly forecast data response
     func getHourlyForecast(year: Int, month: Int, day: Int, latitude: Double, longitude: Double) async throws -> OpenMeteoHourlyResponse
-    
+
     /// Fetches marine forecast data for a specific date and location
     /// - Parameters:
     ///   - year: Year component of the date

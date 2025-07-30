@@ -1,4 +1,3 @@
-
 import SwiftUI
 
 // Extensions to make it easier to work with services
@@ -14,60 +13,60 @@ extension EnvironmentObject where ObjectType == ServiceProvider {
     var databaseCore: DatabaseCore {
         wrappedValue.databaseCore
     }
-    
+
     var tideFavoritesCloudService: TideFavoritesCloudService {
         wrappedValue.tideFavoritesCloudService
     }
-    
+
     var currentStationService: CurrentStationDatabaseService {
         wrappedValue.currentStationService
     }
-    
+
     var navUnitService: NavUnitDatabaseService {
         wrappedValue.navUnitService
     }
-    
+
     var vesselService: VesselDatabaseService {
         wrappedValue.vesselService
     }
-    
+
     var buoyDatabaseService: BuoyDatabaseService {
         wrappedValue.buoyDatabaseService
     }
-    
+
     var weatherService: WeatherDatabaseService {
         wrappedValue.weatherService
     }
-    
+
     var locationService: LocationService {
         wrappedValue.locationService
     }
-    
+
     var openMeteoService: WeatherService {
         wrappedValue.openMeteoService
     }
-    
+
     var geocodingService: GeocodingService {
         wrappedValue.geocodingService
     }
-    
+
     var noaaChartService: NOAAChartService {
         wrappedValue.noaaChartService
     }
-    
+
     var mapOverlayService: MapOverlayDatabaseService {
         wrappedValue.mapOverlayService
     }
-    
+
     // GPX and Route Service Extensions
     var gpxService: ExtendedGpxServiceProtocol {
         wrappedValue.gpxService
     }
-    
+
     var routeCalculationService: RouteCalculationService {
         wrappedValue.routeCalculationService
     }
-    
+
     // NEW: Recommendation Service Extension
     var recommendationService: RecommendationCloudService {
         wrappedValue.recommendationService
@@ -91,37 +90,37 @@ extension Date {
         formatter.dateFormat = "h:mm a"
         return formatter.string(from: self)
     }
-    
+
     func formattedDay() -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "EEE"
         return formatter.string(from: self)
     }
-    
+
     func formattedDate() -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "MMM d"
         return formatter.string(from: self)
     }
-    
+
     func isSameDay(as date: Date) -> Bool {
         let calendar = Calendar.current
         return calendar.isDate(self, inSameDayAs: date)
     }
-    
+
     // NEW: Recommendation-specific date formatting
     func timeAgoDisplay() -> String {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .abbreviated
         return formatter.localizedString(for: self, relativeTo: Date())
     }
-    
+
     func shortDateFormat() -> String {
         let formatter = DateFormatter()
         formatter.dateStyle = .short
         return formatter.string(from: self)
     }
-    
+
     func daysSinceNow() -> Int {
         let calendar = Calendar.current
         let components = calendar.dateComponents([.day], from: self, to: Date())
@@ -134,7 +133,7 @@ extension Double {
     func fahrenheitToCelsius() -> Double {
         return (self - 32) * 5/9
     }
-    
+
     func celsiusToFahrenheit() -> Double {
         return (self * 9/5) + 32
     }
@@ -145,7 +144,7 @@ extension Double {
     func mphToKmh() -> Double {
         return self * 1.60934
     }
-    
+
     func kmhToMph() -> Double {
         return self / 1.60934
     }
@@ -156,7 +155,7 @@ extension Double {
     func inchesToMm() -> Double {
         return self * 25.4
     }
-    
+
     func mmToInches() -> Double {
         return self / 25.4
     }
@@ -175,33 +174,33 @@ extension CloudRecommendation {
             return "Your recommendation was reviewed but not applied"
         }
     }
-    
+
     /// Get the number of days since submission
     var daysSinceSubmission: Int {
         createdAt.daysSinceNow()
     }
-    
+
     /// Get a formatted submission date
     var formattedSubmissionDate: String {
         createdAt.shortDateFormat()
     }
-    
+
     /// Get relative time since submission
     var timeAgoText: String {
         createdAt.timeAgoDisplay()
     }
-    
+
     /// Check if this recommendation is recent (within last 7 days)
     var isRecent: Bool {
         daysSinceSubmission <= 7
     }
-    
+
     /// Get a truncated description for list views
     func truncatedDescription(maxLength: Int = 100) -> String {
         if description.count <= maxLength {
             return description
         }
-        
+
         let truncated = String(description.prefix(maxLength))
         return truncated + "..."
     }
@@ -220,7 +219,7 @@ extension RecommendationStatus {
             return "Not Applied"
         }
     }
-    
+
     var iconName: String {
         switch self {
         case .pending:
@@ -231,7 +230,7 @@ extension RecommendationStatus {
             return "xmark.circle.fill"
         }
     }
-    
+
     /// Get a user-friendly action description
     var actionDescription: String {
         switch self {
@@ -243,7 +242,7 @@ extension RecommendationStatus {
             return "Not Applied"
         }
     }
-    
+
     /// Get appropriate color for UI display
     var uiColor: Color {
         switch self {
@@ -255,17 +254,17 @@ extension RecommendationStatus {
             return .red
         }
     }
-    
+
     /// Get background color for badges
     var backgroundColor: Color {
         return uiColor.opacity(0.1)
     }
-    
+
     /// Get text color for badges
     var textColor: Color {
         return uiColor
     }
-    
+
     var color: String {
         switch self {
         case .pending:
@@ -294,7 +293,7 @@ extension RecommendationCategory {
             return "Any other information that should be updated?"
         }
     }
-    
+
     /// Get priority level for sorting
     var priorityLevel: Int {
         switch self {
@@ -318,18 +317,18 @@ extension Array where Element == CloudRecommendation {
     func groupedByStatus() -> [RecommendationStatus: [CloudRecommendation]] {
         return Dictionary(grouping: self) { $0.status }
     }
-    
+
     /// Get recommendations grouped by category
     func groupedByCategory() -> [RecommendationCategory: [CloudRecommendation]] {
         return Dictionary(grouping: self) { $0.category }
     }
-    
+
     /// Get recent recommendations (last 30 days)
     func recentRecommendations() -> [CloudRecommendation] {
         let thirtyDaysAgo = Calendar.current.date(byAdding: .day, value: -30, to: Date()) ?? Date()
         return self.filter { $0.createdAt >= thirtyDaysAgo }
     }
-    
+
     /// Sort by priority (status first, then date)
     func sortedByPriority() -> [CloudRecommendation] {
         return self.sorted { first, second in
@@ -339,7 +338,7 @@ extension Array where Element == CloudRecommendation {
             } else if first.status != .pending && second.status == .pending {
                 return false
             }
-            
+
             // Then by date (newest first)
             return first.createdAt > second.createdAt
         }

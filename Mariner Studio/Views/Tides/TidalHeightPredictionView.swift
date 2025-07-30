@@ -1,10 +1,9 @@
-
 import SwiftUI
 
 struct TidalHeightPredictionView: View {
     // MARK: - Properties
     @StateObject private var viewModel: TidalHeightPredictionViewModel
-    
+
     // MARK: - Initialization
     init(
         stationId: String,
@@ -23,7 +22,7 @@ struct TidalHeightPredictionView: View {
             tideFavoritesCloudService: tideFavoritesCloudService
         ))
     }
-    
+
     // MARK: - Body
     var body: some View {
         ScrollView {
@@ -34,10 +33,10 @@ struct TidalHeightPredictionView: View {
                         .foregroundColor(.red)
                         .padding()
                 }
-                
+
                 // Date selection
                 dateSelectionView
-                
+
                 // Predictions data
                 if viewModel.isLoading {
                     ProgressView()
@@ -45,9 +44,9 @@ struct TidalHeightPredictionView: View {
                         .padding()
                 } else {
                     stationDataView
-                    
+
                     predictionsListView
-                    
+
                     viewStationWebsiteButton
                 }
             }
@@ -55,14 +54,12 @@ struct TidalHeightPredictionView: View {
         }
         .navigationTitle("Tide Predictions")
         .withHomeButton()
-        
-        
-        
+
         .task {
             await viewModel.loadPredictions()
         }
     }
-    
+
     // MARK: - View Components
     private var dateSelectionView: some View {
         HStack {
@@ -76,14 +73,14 @@ struct TidalHeightPredictionView: View {
                     .frame(width: 40, height: 40)
                     .foregroundColor(.red)
             }
-            
+
             Spacer()
-            
+
             Text(viewModel.formattedSelectedDate)
                 .font(.title2)
-            
+
             Spacer()
-            
+
             Button(action: {
                 Task {
                     await viewModel.nextDay()
@@ -97,7 +94,7 @@ struct TidalHeightPredictionView: View {
         }
         .padding(.horizontal)
     }
-    
+
     private var stationDataView: some View {
         VStack {
             HStack {
@@ -105,9 +102,9 @@ struct TidalHeightPredictionView: View {
                     .font(.title)
                     .bold()
                     .multilineTextAlignment(.center)
-                
+
                 Spacer()
-                
+
                 Button(action: {
                     Task {
                         await viewModel.toggleFavorite()
@@ -119,7 +116,7 @@ struct TidalHeightPredictionView: View {
                         .foregroundColor(viewModel.isFavorite ? .yellow : .gray)
                 }
             }
-            
+
             if !viewModel.predictions.isEmpty {
                 Text("Station ID: \(viewModel.stationId)")
                     .font(.caption)
@@ -130,7 +127,7 @@ struct TidalHeightPredictionView: View {
         .background(Color(.systemGray6))
         .cornerRadius(8)
     }
-    
+
     private var predictionsListView: some View {
         VStack(spacing: 0) {
             if viewModel.predictions.isEmpty {
@@ -144,14 +141,14 @@ struct TidalHeightPredictionView: View {
                         Text(prediction.formattedTime)
                             .font(.headline)
                             .frame(width: 80, alignment: .leading)
-                        
+
                         Text(prediction.tideType)
                             .font(.subheadline)
                             .foregroundColor(prediction.type == "H" ? .blue : .red)
                             .frame(width: 60, alignment: .center)
-                        
+
                         Spacer()
-                        
+
                         Text("\(prediction.formattedHeight) ft")
                             .font(.headline)
                             .foregroundColor(.primary)
@@ -159,7 +156,7 @@ struct TidalHeightPredictionView: View {
                     .padding(.horizontal)
                     .padding(.vertical, 8)
                     .background(Color(.systemBackground))
-                    
+
                     if prediction.id != viewModel.predictions.last?.id {
                         Divider()
                     }
@@ -169,7 +166,7 @@ struct TidalHeightPredictionView: View {
         .background(Color(.systemGray6))
         .cornerRadius(8)
     }
-    
+
     private var viewStationWebsiteButton: some View {
         Button(action: {
             viewModel.viewStationWebsite()

@@ -10,7 +10,7 @@ struct RoutePoint: Equatable {
     var eta: Date = Date()
     var distanceToNext: Double = 0.0
     var bearingToNext: Double = 0.0
-    
+
     // Implementation of Equatable
     static func == (lhs: RoutePoint, rhs: RoutePoint) -> Bool {
         return lhs.name == rhs.name &&

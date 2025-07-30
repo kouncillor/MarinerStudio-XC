@@ -3,7 +3,7 @@ import SwiftUI
 
 /// Helper utility for formatting visibility values
 struct VisibilityHelper {
-    
+
     /// Formats visibility from meters to a readable string with units
     /// - Parameter visibilityMeters: The visibility value in meters
     /// - Returns: A formatted string (e.g. "10.5 mi" or "15+ mi")
@@ -11,7 +11,7 @@ struct VisibilityHelper {
         let visibilityMiles = visibilityMeters / 1609.34
         return visibilityMiles >= 15.0 ? "15+ mi" : "\(String(format: "%.1f", visibilityMiles)) mi"
     }
-    
+
     /// Formats visibility with appropriate units based on the value
     /// - Parameter visibilityMeters: The visibility value in meters
     /// - Returns: A formatted string with the most appropriate units
@@ -21,23 +21,23 @@ struct VisibilityHelper {
             let visibilityFeet = visibilityMeters * 3.28084
             return "\(String(format: "%.0f", visibilityFeet)) ft"
         }
-        
+
         // For medium visibility, use miles with one decimal place
         let visibilityMiles = visibilityMeters / 1609.34
         if visibilityMiles < 15.0 {
             return "\(String(format: "%.1f", visibilityMiles)) mi"
         }
-        
+
         // For high visibility, cap at "15+ mi"
         return "15+ mi"
     }
-    
+
     /// Maps visibility to a descriptive term
     /// - Parameter visibilityMeters: The visibility value in meters
     /// - Returns: A descriptive term for the visibility
     static func getVisibilityDescription(_ visibilityMeters: Double) -> String {
         let visibilityMiles = visibilityMeters / 1609.34
-        
+
         if visibilityMiles < 0.25 {
             return "Dense fog"
         } else if visibilityMiles < 0.5 {
@@ -54,13 +54,13 @@ struct VisibilityHelper {
             return "Excellent"
         }
     }
-    
+
     /// Creates a gradient color representing visibility conditions
     /// - Parameter visibilityMeters: The visibility value in meters
     /// - Returns: A color for the visibility value (red for poor, green for good)
     static func getVisibilityColor(_ visibilityMeters: Double) -> Color {
         let visibilityMiles = visibilityMeters / 1609.34
-        
+
         if visibilityMiles < 0.25 {
             return .red
         } else if visibilityMiles < 1.0 {

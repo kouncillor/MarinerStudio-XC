@@ -13,7 +13,7 @@ struct RemoteWeatherFavorite: Codable, Identifiable {
     let deviceId: String
     let createdAt: Date?
     let updatedAt: Date?
-    
+
     enum CodingKeys: String, CodingKey {
         case id
         case userId = "user_id"
@@ -26,8 +26,8 @@ struct RemoteWeatherFavorite: Codable, Identifiable {
         case createdAt = "created_at"
         case updatedAt = "updated_at"
     }
-    
-    init(userId: UUID, latitude: Double, longitude: Double, locationName: String, 
+
+    init(userId: UUID, latitude: Double, longitude: Double, locationName: String,
          isFavorite: Bool, deviceId: String) {
         self.id = nil  // Let Supabase generate the ID
         self.userId = userId
@@ -40,7 +40,7 @@ struct RemoteWeatherFavorite: Codable, Identifiable {
         self.createdAt = nil  // Let Supabase set these
         self.updatedAt = nil
     }
-    
+
     /// Full initializer with all fields for sync operations
     init(id: UUID?, userId: UUID, latitude: Double, longitude: Double, locationName: String,
          isFavorite: Bool, lastModified: Date, deviceId: String, createdAt: Date?, updatedAt: Date?) {
@@ -55,9 +55,9 @@ struct RemoteWeatherFavorite: Codable, Identifiable {
         self.createdAt = createdAt
         self.updatedAt = updatedAt
     }
-    
+
     /// Create from local favorite data with complete location details
-    static func fromLocal(userId: UUID, latitude: Double, longitude: Double, 
+    static func fromLocal(userId: UUID, latitude: Double, longitude: Double,
                          locationName: String, isFavorite: Bool) -> RemoteWeatherFavorite {
         let deviceId = UIDevice.current.identifierForVendor?.uuidString ?? "unknown"
         return RemoteWeatherFavorite(
