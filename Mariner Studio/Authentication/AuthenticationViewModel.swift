@@ -23,24 +23,24 @@ class AuthenticationViewModel: ObservableObject {
     }
 
     private func setupNetworkMonitoring() {
-        DebugLogger.shared.log("📡 NETWORK: Setting up network monitoring", category: "AUTH_NETWORK")
+        // DebugLogger.shared.log("📡 NETWORK: Setting up network monitoring", category: "AUTH_NETWORK")
         networkMonitor.pathUpdateHandler = { path in
-            DebugLogger.shared.log("📡 NETWORK STATUS: \(path.status)", category: "AUTH_NETWORK")
-            DebugLogger.shared.log("📡 NETWORK EXPENSIVE: \(path.isExpensive)", category: "AUTH_NETWORK")
-            DebugLogger.shared.log("📡 NETWORK CONSTRAINED: \(path.isConstrained)", category: "AUTH_NETWORK")
-            DebugLogger.shared.log("📡 NETWORK INTERFACES: \(path.availableInterfaces)", category: "AUTH_NETWORK")
+            // DebugLogger.shared.log("📡 NETWORK STATUS: \(path.status)", category: "AUTH_NETWORK")
+            // DebugLogger.shared.log("📡 NETWORK EXPENSIVE: \(path.isExpensive)", category: "AUTH_NETWORK")
+            // DebugLogger.shared.log("📡 NETWORK CONSTRAINED: \(path.isConstrained)", category: "AUTH_NETWORK")
+            // DebugLogger.shared.log("📡 NETWORK INTERFACES: \(path.availableInterfaces)", category: "AUTH_NETWORK")
 
             if path.status == .satisfied {
-                DebugLogger.shared.log("✅ NETWORK: Connection is available", category: "AUTH_NETWORK")
+                // DebugLogger.shared.log("✅ NETWORK: Connection is available", category: "AUTH_NETWORK")
                 if path.usesInterfaceType(.wifi) {
-                    DebugLogger.shared.log("📡 NETWORK: Using WiFi", category: "AUTH_NETWORK")
+                    // DebugLogger.shared.log("📡 NETWORK: Using WiFi", category: "AUTH_NETWORK")
                 } else if path.usesInterfaceType(.cellular) {
-                    DebugLogger.shared.log("📡 NETWORK: Using Cellular", category: "AUTH_NETWORK")
+                    // DebugLogger.shared.log("📡 NETWORK: Using Cellular", category: "AUTH_NETWORK")
                 } else if path.usesInterfaceType(.wiredEthernet) {
-                    DebugLogger.shared.log("📡 NETWORK: Using Ethernet", category: "AUTH_NETWORK")
+                    // DebugLogger.shared.log("📡 NETWORK: Using Ethernet", category: "AUTH_NETWORK")
                 }
             } else {
-                DebugLogger.shared.log("❌ NETWORK: No connection available", category: "AUTH_NETWORK")
+                // DebugLogger.shared.log("❌ NETWORK: No connection available", category: "AUTH_NETWORK")
             }
         }
         networkMonitor.start(queue: networkQueue)

@@ -73,43 +73,6 @@
   },
   "subscriptionGroups" : [
     {
-      "id" : "21662431",
-      "localizations" : [
-
-      ],
-      "name" : "Monthly Sub",
-      "subscriptions" : [
-        {
-          "adHocOffers" : [
-
-          ],
-          "codeOffers" : [
-
-          ],
-          "displayPrice" : "2.99",
-          "familyShareable" : false,
-          "groupNumber" : 1,
-          "internalID" : "6744260327",
-          "introductoryOffer" : null,
-          "localizations" : [
-            {
-              "description" : "Full access to all features",
-              "displayName" : "Mariner Studio Monthly",
-              "locale" : "en_US"
-            }
-          ],
-          "productID" : "com.ospreyapplications.MarinerStudio.monthly",
-          "recurringSubscriptionPeriod" : "P1M",
-          "referenceName" : "Monthly",
-          "subscriptionGroupID" : "21662431",
-          "type" : "RecurringSubscription",
-          "winbackOffers" : [
-
-          ]
-        }
-      ]
-    },
-    {
       "id" : "21682209",
       "localizations" : [
 
@@ -131,7 +94,7 @@
           "localizations" : [
 
           ],
-          "productID" : "com.ospreyapplications.MarinerStudio.monthlypro",
+          "productID" : "com.ospreyapplications.MarinerStudio.monthlypro2",
           "recurringSubscriptionPeriod" : "P1M",
           "referenceName" : "MothlyPro",
           "subscriptionGroupID" : "21682209",
@@ -155,7 +118,7 @@
           "localizations" : [
 
           ],
-          "productID" : "com.ospreyapplications.MarinerStudio.weekly",
+          "productID" : "com.ospreyapplications.MarinerStudio.weekly2",
           "recurringSubscriptionPeriod" : "P1W",
           "referenceName" : "Weekly",
           "subscriptionGroupID" : "21682209",
@@ -179,7 +142,7 @@
           "localizations" : [
 
           ],
-          "productID" : "com.ospreyapplications.MarinerStudio.yearlypro",
+          "productID" : "com.ospreyapplications.MarinerStudio.yearlypro2",
           "recurringSubscriptionPeriod" : "P1Y",
           "referenceName" : "YearlyPro",
           "subscriptionGroupID" : "21682209",

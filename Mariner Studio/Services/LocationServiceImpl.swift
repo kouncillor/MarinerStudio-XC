@@ -40,7 +40,7 @@ class LocationServiceImpl: NSObject, LocationService, CLLocationManagerDelegate 
     override init() {
         super.init()
         setupLocationManager()
-        DebugLogger.shared.log("📍 LocationServiceImpl Initialized. Delegate set.", category: "LOCATION_INIT")
+        // DebugLogger.shared.log("📍 LocationServiceImpl Initialized. Delegate set.", category: "LOCATION_INIT")
     }
 
     private func setupLocationManager() {
@@ -50,11 +50,11 @@ class LocationServiceImpl: NSObject, LocationService, CLLocationManagerDelegate 
     }
 
     func requestLocationPermission() async -> Bool {
-        DebugLogger.shared.log("📍 LocationServiceImpl: requestLocationPermission called. Current status: \(permissionStatus.description)", category: "LOCATION_PERMISSION")
+        // DebugLogger.shared.log("📍 LocationServiceImpl: requestLocationPermission called. Current status: \(permissionStatus.description)", category: "LOCATION_PERMISSION")
 
         return await withCheckedContinuation { [weak self] continuation in
             guard let self = self else {
-                DebugLogger.shared.log("📍 LocationServiceImpl: Self is nil in request permission continuation.", category: "LOCATION_PERMISSION")
+                // DebugLogger.shared.log("📍 LocationServiceImpl: Self is nil in request permission continuation.", category: "LOCATION_PERMISSION")
                 continuation.resume(returning: false)
                 return
             }
@@ -63,22 +63,22 @@ class LocationServiceImpl: NSObject, LocationService, CLLocationManagerDelegate 
             Task { @MainActor in
                 switch self.locationManager.authorizationStatus {
                 case .authorizedWhenInUse, .authorizedAlways:
-                    DebugLogger.shared.log("📍 LocationServiceImpl: Permission already granted.", category: "LOCATION_PERMISSION")
+                    // DebugLogger.shared.log("📍 LocationServiceImpl: Permission already granted.", category: "LOCATION_PERMISSION")
                     continuation.resume(returning: true)
                 case .notDetermined:
-                    DebugLogger.shared.log("📍 LocationServiceImpl: Requesting 'When In Use' authorization...", category: "LOCATION_PERMISSION")
+                    // DebugLogger.shared.log("📍 LocationServiceImpl: Requesting 'When In Use' authorization...", category: "LOCATION_PERMISSION")
                     self.onAuthorizationStatusChanged = { status in
                         self.onAuthorizationStatusChanged = nil
                         let authorized = (status == .authorizedWhenInUse || status == .authorizedAlways)
-                        DebugLogger.shared.log("📍 LocationServiceImpl: Authorization status changed to \(status.rawValue). Authorized: \(authorized)", category: "LOCATION_PERMISSION")
+                        // DebugLogger.shared.log("📍 LocationServiceImpl: Authorization status changed to \(status.rawValue). Authorized: \(authorized)", category: "LOCATION_PERMISSION")
                         continuation.resume(returning: authorized)
                     }
                     self.locationManager.requestWhenInUseAuthorization()
                 case .denied, .restricted:
-                    DebugLogger.shared.log("📍 LocationServiceImpl: Permission denied or restricted.", category: "LOCATION_PERMISSION")
+                    // DebugLogger.shared.log("📍 LocationServiceImpl: Permission denied or restricted.", category: "LOCATION_PERMISSION")
                     continuation.resume(returning: false)
                 @unknown default:
-                    DebugLogger.shared.log("📍 LocationServiceImpl: Unknown authorization status.", category: "LOCATION_PERMISSION")
+                    // DebugLogger.shared.log("📍 LocationServiceImpl: Unknown authorization status.", category: "LOCATION_PERMISSION")
                     continuation.resume(returning: false)
                 }
             }
@@ -86,12 +86,12 @@ class LocationServiceImpl: NSObject, LocationService, CLLocationManagerDelegate 
     }
 
     func startUpdatingLocation() {
-        DebugLogger.shared.log("📍 LocationServiceImpl: startUpdatingLocation() called.", category: "LOCATION_UPDATES")
+        // DebugLogger.shared.log("📍 LocationServiceImpl: startUpdatingLocation() called.", category: "LOCATION_UPDATES")
         locationManager.startUpdatingLocation()
     }
 
     func stopUpdatingLocation() {
-        DebugLogger.shared.log("📍 LocationServiceImpl: stopUpdatingLocation() called.", category: "LOCATION_UPDATES")
+        // DebugLogger.shared.log("📍 LocationServiceImpl: stopUpdatingLocation() called.", category: "LOCATION_UPDATES")
         locationManager.stopUpdatingLocation()
     }
 
@@ -113,19 +113,19 @@ class LocationServiceImpl: NSObject, LocationService, CLLocationManagerDelegate 
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let location = locations.last else {
-            DebugLogger.shared.log("‼️ LocationServiceImpl (didUpdateLocations): Called but locations array was empty.", category: "LOCATION_UPDATES")
+            // DebugLogger.shared.log("‼️ LocationServiceImpl (didUpdateLocations): Called but locations array was empty.", category: "LOCATION_UPDATES")
             return
         }
 
         // Print details of the received location
-        DebugLogger.shared.log("📍 LocationServiceImpl (didUpdateLocations): Received location - Lat: \(location.coordinate.latitude), Lon: \(location.coordinate.longitude), Acc: \(location.horizontalAccuracy)m, Time: \(location.timestamp)", category: "LOCATION_UPDATES")
+        // DebugLogger.shared.log("📍 LocationServiceImpl (didUpdateLocations): Received location - Lat: \(location.coordinate.latitude), Lon: \(location.coordinate.longitude), Acc: \(location.horizontalAccuracy)m, Time: \(location.timestamp)", category: "LOCATION_UPDATES")
 
         // Always update lastKnownLocation with the latest reading
         lastKnownLocation = location
 
         // Apply a simpler filtering approach - negative accuracy is invalid
         guard location.horizontalAccuracy >= 0 else {
-            DebugLogger.shared.log("📍 LocationServiceImpl (didUpdateLocations): Ignoring location with negative accuracy.", category: "LOCATION_UPDATES")
+            // DebugLogger.shared.log("📍 LocationServiceImpl (didUpdateLocations): Ignoring location with negative accuracy.", category: "LOCATION_UPDATES")
             return
         }
 
@@ -134,7 +134,7 @@ class LocationServiceImpl: NSObject, LocationService, CLLocationManagerDelegate 
 
         // If we don't have any location yet, use this one regardless of accuracy
         if currentLocation == nil {
-            DebugLogger.shared.log("📍 LocationServiceImpl: First location received, using it.", category: "LOCATION_UPDATES")
+            // DebugLogger.shared.log("📍 LocationServiceImpl: First location received, using it.", category: "LOCATION_UPDATES")
             currentLocation = location
             locationUpdateHandler?(location)
             return
@@ -146,14 +146,14 @@ class LocationServiceImpl: NSObject, LocationService, CLLocationManagerDelegate 
             if let current = currentLocation,
                location.horizontalAccuracy < current.horizontalAccuracy ||
                current.horizontalAccuracy > 100 {
-                DebugLogger.shared.log("📍 LocationServiceImpl: Better location received (more accurate), updating currentLocation.", category: "LOCATION_UPDATES")
+                // DebugLogger.shared.log("📍 LocationServiceImpl: Better location received (more accurate), updating currentLocation.", category: "LOCATION_UPDATES")
                 currentLocation = location
                 locationUpdateHandler?(location)
             }
         } else if locationAge < 10 {
             // Even if accuracy isn't great, update if it's very recent and we have a poor current location
             if let current = currentLocation, current.horizontalAccuracy > 100 {
-                DebugLogger.shared.log("📍 LocationServiceImpl: Recent location received, updating currentLocation.", category: "LOCATION_UPDATES")
+                // DebugLogger.shared.log("📍 LocationServiceImpl: Recent location received, updating currentLocation.", category: "LOCATION_UPDATES")
                 currentLocation = location
                 locationUpdateHandler?(location)
             }
@@ -162,14 +162,14 @@ class LocationServiceImpl: NSObject, LocationService, CLLocationManagerDelegate 
 
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
         // Log errors
-        DebugLogger.shared.log("‼️ LocationServiceImpl: locationManager failed with error: \(error.localizedDescription)", category: "LOCATION_ERROR")
+        // DebugLogger.shared.log("‼️ LocationServiceImpl: locationManager failed with error: \(error.localizedDescription)", category: "LOCATION_ERROR")
         // You might want to set currentLocation to nil or handle specific errors (like kCLErrorDenied)
     }
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         // This is the modern delegate method for authorization changes
         let status = manager.authorizationStatus
-        DebugLogger.shared.log("📍 LocationServiceImpl: locationManagerDidChangeAuthorization delegate called. New status: \(status.rawValue) (\(permissionStatus.description))", category: "LOCATION_PERMISSION")
+        // DebugLogger.shared.log("📍 LocationServiceImpl: locationManagerDidChangeAuthorization delegate called. New status: \(status.rawValue) (\(permissionStatus.description))", category: "LOCATION_PERMISSION")
         // Call the temporary handler if it exists (used by requestLocationPermission)
         onAuthorizationStatusChanged?(status)
     }

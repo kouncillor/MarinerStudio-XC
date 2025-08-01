@@ -28,7 +28,7 @@ class CurrentStationDatabaseService {
     // MARK: - Initialization
     init(databaseCore: DatabaseCore) {
         self.databaseCore = databaseCore
-        print("🏗️ CURRENT_DB_SERVICE: Initialized with databaseCore")
+        // print("🏗️ CURRENT_DB_SERVICE: Initialized with databaseCore")
     }
 
     // MARK: - Utility Methods
@@ -41,10 +41,10 @@ class CurrentStationDatabaseService {
         do {
             let session = try await SupabaseManager.shared.getSession()
             let userId = session.user.id.uuidString
-            print("👤 CURRENT_DB_SERVICE: Retrieved user ID: \(userId)")
+            // print("👤 CURRENT_DB_SERVICE: Retrieved user ID: \(userId)")
             return userId
         } catch {
-            print("❌ CURRENT_DB_SERVICE: Could not get current user ID: \(error.localizedDescription)")
+            // print("❌ CURRENT_DB_SERVICE: Could not get current user ID: \(error.localizedDescription)")
             return nil
         }
     }

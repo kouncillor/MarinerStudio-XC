@@ -28,11 +28,11 @@ final class SupabaseManager {
 
     // MARK: - Initialization
     private init() {
-        logQueue.async {
-            DebugLogger.shared.log("\n🚀 SUPABASE MANAGER: Initializing comprehensive logging system", category: "SUPABASE_INIT")
-            DebugLogger.shared.log("🚀 SUPABASE MANAGER: Thread = \(Thread.current)", category: "SUPABASE_INIT")
-            DebugLogger.shared.log("🚀 SUPABASE MANAGER: Timestamp = \(Date())", category: "SUPABASE_INIT")
-        }
+        // logQueue.async {
+        //     DebugLogger.shared.log("\n🚀 SUPABASE MANAGER: Initializing comprehensive logging system", category: "SUPABASE_INIT")
+        //     DebugLogger.shared.log("🚀 SUPABASE MANAGER: Thread = \(Thread.current)", category: "SUPABASE_INIT")
+        //     DebugLogger.shared.log("🚀 SUPABASE MANAGER: Timestamp = \(Date())", category: "SUPABASE_INIT")
+        // }
 
         // Get secure configuration
         let config = AppConfiguration.shared
@@ -52,10 +52,10 @@ final class SupabaseManager {
 
         self.client = SupabaseClient(supabaseURL: url, supabaseKey: config.supabaseAnonKey)
 
-        logQueue.async {
-            DebugLogger.shared.log("✅ SUPABASE MANAGER: Client initialized successfully", category: "SUPABASE_INIT")
-            DebugLogger.shared.log("✅ SUPABASE MANAGER: Ready for operations\n", category: "SUPABASE_INIT")
-        }
+        // logQueue.async {
+        //     DebugLogger.shared.log("✅ SUPABASE MANAGER: Client initialized successfully", category: "SUPABASE_INIT")
+        //     DebugLogger.shared.log("✅ SUPABASE MANAGER: Ready for operations\n", category: "SUPABASE_INIT")
+        // }
     }
 
     // MARK: - Operation Tracking
@@ -336,9 +336,9 @@ final class SupabaseManager {
     // MARK: - Debug Methods
 
     func enableVerboseLogging() {
-        logQueue.async {
-            DebugLogger.shared.log("🔍 SUPABASE MANAGER: Verbose logging ENABLED", category: "SUPABASE_DEBUG")
-        }
+        // logQueue.async {
+        //     DebugLogger.shared.log("🔍 SUPABASE MANAGER: Verbose logging ENABLED", category: "SUPABASE_DEBUG")
+        // }
     }
 
     func logCurrentState() {
