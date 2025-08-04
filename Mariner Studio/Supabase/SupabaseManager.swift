@@ -214,6 +214,46 @@ final class SupabaseManager {
             throw error
         }
     }
+    
+    func deleteAccount() async throws {
+        let operationId = startOperation("deleteAccount")
+        
+        logQueue.async {
+            DebugLogger.shared.log("🗑️ ACCOUNT DELETION: Starting account deletion process", category: "SUPABASE_DELETE")
+        }
+
+        do {
+            // First get the current session to ensure user is authenticated
+            let session = try await getSession()
+            let userId = session.user.id
+            
+            logQueue.async {
+                DebugLogger.shared.log("🗑️ ACCOUNT DELETION: User authenticated, proceeding with deletion", category: "SUPABASE_DELETE")
+            }
+            
+            // Delete user account via Supabase Admin API
+            // Note: This requires the user to be authenticated
+            try await client.auth.admin.deleteUser(id: userId)
+            
+            logQueue.async {
+                DebugLogger.shared.log("✅ ACCOUNT DELETION: Account successfully deleted from Supabase", category: "SUPABASE_DELETE")
+            }
+            
+            // Clear cached session
+            sessionCacheLock.lock()
+            cachedSession = nil
+            sessionCacheTime = nil
+            sessionCacheLock.unlock()
+            
+            endOperation(operationId, success: true)
+        } catch {
+            logQueue.async {
+                DebugLogger.shared.log("❌ ACCOUNT DELETION: Error occurred - \(error)", category: "SUPABASE_DELETE")
+            }
+            endOperation(operationId, success: false, error: error)
+            throw error
+        }
+    }
 
     func getSession() async throws -> Session {
         // Check cache first

@@ -139,6 +139,14 @@ struct MainView: View {
             )
             .navigationTitle("Mariner Studio")
             .toolbar {
+                // Settings button - Always available
+                ToolbarItem(placement: .topBarTrailing) {
+                    NavigationLink(destination: AppSettingsView()) {
+                        Image(systemName: "gear")
+                            .foregroundColor(.primary)
+                    }
+                }
+                
                 #if DEBUG
                 // Sign out button for development builds only
                 ToolbarItem(placement: .topBarLeading) {
