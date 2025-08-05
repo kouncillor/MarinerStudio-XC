@@ -92,9 +92,15 @@ struct AccountDeletionView: View {
                     // Action Buttons
                     VStack(spacing: 12) {
                         Button(action: {
+                            DebugLogger.shared.log("🗑️ DELETE BUTTON: User pressed delete button", category: "ACCOUNT_DELETION")
+                            DebugLogger.shared.log("🗑️ DELETE BUTTON: Confirmation text = '\(confirmationText)'", category: "ACCOUNT_DELETION")
+                            DebugLogger.shared.log("🗑️ DELETE BUTTON: Required text = '\(requiredConfirmationText)'", category: "ACCOUNT_DELETION")
+                            
                             if confirmationText == requiredConfirmationText {
+                                DebugLogger.shared.log("✅ DELETE BUTTON: Confirmation text matches - showing final alert", category: "ACCOUNT_DELETION")
                                 showFinalConfirmation = true
                             } else {
+                                DebugLogger.shared.log("❌ DELETE BUTTON: Confirmation text doesn't match", category: "ACCOUNT_DELETION")
                                 errorMessage = "Please type the exact confirmation text above."
                             }
                         }) {
@@ -135,8 +141,11 @@ struct AccountDeletionView: View {
             }
         }
         .alert("Final Confirmation", isPresented: $showFinalConfirmation) {
-            Button("Cancel", role: .cancel) { }
+            Button("Cancel", role: .cancel) { 
+                DebugLogger.shared.log("🗑️ FINAL ALERT: User cancelled deletion", category: "ACCOUNT_DELETION")
+            }
             Button("Delete Account", role: .destructive) {
+                DebugLogger.shared.log("🗑️ FINAL ALERT: User confirmed final deletion - calling performAccountDeletion()", category: "ACCOUNT_DELETION")
                 performAccountDeletion()
             }
         } message: {
@@ -145,30 +154,53 @@ struct AccountDeletionView: View {
     }
     
     private func performAccountDeletion() {
+        DebugLogger.shared.log("\n🗑️ ACCOUNT DELETION: Starting account deletion process", category: "ACCOUNT_DELETION")
+        DebugLogger.shared.log("🗑️ ACCOUNT DELETION: User confirmed deletion with text input", category: "ACCOUNT_DELETION")
+        DebugLogger.shared.log("🗑️ ACCOUNT DELETION: Thread = \(Thread.current)", category: "ACCOUNT_DELETION")
+        DebugLogger.shared.log("🗑️ ACCOUNT DELETION: Timestamp = \(Date())", category: "ACCOUNT_DELETION")
+        
         isDeleting = true
         errorMessage = nil
         
+        DebugLogger.shared.log("🗑️ ACCOUNT DELETION: UI state updated - isDeleting = true", category: "ACCOUNT_DELETION")
+        
         Task {
             do {
+                DebugLogger.shared.log("🗑️ ACCOUNT DELETION: STEP 1 - Starting Supabase account deletion", category: "ACCOUNT_DELETION")
+                
                 // Call Supabase account deletion
                 try await SupabaseManager.shared.deleteAccount()
+                
+                DebugLogger.shared.log("✅ ACCOUNT DELETION: STEP 1 COMPLETE - Supabase account deletion successful", category: "ACCOUNT_DELETION")
+                DebugLogger.shared.log("🗑️ ACCOUNT DELETION: STEP 2 - Starting authentication sign out", category: "ACCOUNT_DELETION")
                 
                 // Sign out from RevenueCat
                 try await authViewModel.signOut()
                 
-                DebugLogger.shared.log("✅ ACCOUNT DELETION: Account successfully deleted", category: "ACCOUNT_DELETION")
+                DebugLogger.shared.log("✅ ACCOUNT DELETION: STEP 2 COMPLETE - Authentication sign out successful", category: "ACCOUNT_DELETION")
+                DebugLogger.shared.log("✅ ACCOUNT DELETION: ALL STEPS COMPLETE - Account successfully deleted", category: "ACCOUNT_DELETION")
                 
                 await MainActor.run {
+                    DebugLogger.shared.log("🗑️ ACCOUNT DELETION: Dismissing view on main actor", category: "ACCOUNT_DELETION")
                     dismiss()
                 }
                 
+                DebugLogger.shared.log("✅ ACCOUNT DELETION: Process completed successfully\n", category: "ACCOUNT_DELETION")
+                
             } catch {
-                DebugLogger.shared.log("❌ ACCOUNT DELETION: Error = \(error)", category: "ACCOUNT_DELETION")
+                DebugLogger.shared.log("\n❌ ACCOUNT DELETION: ERROR OCCURRED", category: "ACCOUNT_DELETION")
+                DebugLogger.shared.log("❌ ACCOUNT DELETION: Error type = \(type(of: error))", category: "ACCOUNT_DELETION")
+                DebugLogger.shared.log("❌ ACCOUNT DELETION: Error description = \(error.localizedDescription)", category: "ACCOUNT_DELETION")
+                DebugLogger.shared.log("❌ ACCOUNT DELETION: Full error = \(error)", category: "ACCOUNT_DELETION")
                 
                 await MainActor.run {
+                    DebugLogger.shared.log("❌ ACCOUNT DELETION: Updating UI with error message on main actor", category: "ACCOUNT_DELETION")
                     errorMessage = "Failed to delete account: \(error.localizedDescription)"
                     isDeleting = false
+                    DebugLogger.shared.log("❌ ACCOUNT DELETION: UI state updated - isDeleting = false", category: "ACCOUNT_DELETION")
                 }
+                
+                DebugLogger.shared.log("❌ ACCOUNT DELETION: Process failed\n", category: "ACCOUNT_DELETION")
             }
         }
     }

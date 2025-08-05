@@ -219,24 +219,35 @@ final class SupabaseManager {
         let operationId = startOperation("deleteAccount")
         
         logQueue.async {
-            DebugLogger.shared.log("🗑️ ACCOUNT DELETION: Starting account deletion process", category: "SUPABASE_DELETE")
+            DebugLogger.shared.log("\n🗑️ SUPABASE DELETE: Starting account deletion process", category: "SUPABASE_DELETE")
+            DebugLogger.shared.log("🗑️ SUPABASE DELETE: Operation ID = \(operationId)", category: "SUPABASE_DELETE")
+            DebugLogger.shared.log("🗑️ SUPABASE DELETE: Thread = \(Thread.current)", category: "SUPABASE_DELETE")
+            DebugLogger.shared.log("🗑️ SUPABASE DELETE: Timestamp = \(Date())", category: "SUPABASE_DELETE")
         }
 
         do {
+            logQueue.async {
+                DebugLogger.shared.log("🗑️ SUPABASE DELETE: STEP 1 - Retrieving current session", category: "SUPABASE_DELETE")
+            }
+            
             // First get the current session to ensure user is authenticated
             let session = try await getSession()
             let userId = session.user.id
             
             logQueue.async {
-                DebugLogger.shared.log("🗑️ ACCOUNT DELETION: User authenticated, proceeding with deletion", category: "SUPABASE_DELETE")
+                DebugLogger.shared.log("✅ SUPABASE DELETE: STEP 1 COMPLETE - Session retrieved successfully", category: "SUPABASE_DELETE")
+                DebugLogger.shared.log("🗑️ SUPABASE DELETE: User ID = \(userId)", category: "SUPABASE_DELETE")
+                DebugLogger.shared.log("🗑️ SUPABASE DELETE: User email = \(session.user.email ?? "unknown")", category: "SUPABASE_DELETE")
+                DebugLogger.shared.log("🗑️ SUPABASE DELETE: STEP 2 - Calling delete_user database function", category: "SUPABASE_DELETE")
             }
             
-            // Delete user account via Supabase Admin API
-            // Note: This requires the user to be authenticated
-            try await client.auth.admin.deleteUser(id: userId)
+            // Delete user account via database function (RPC)
+            // This permanently deletes the user from auth.users table
+            try await client.rpc("delete_user")
             
             logQueue.async {
-                DebugLogger.shared.log("✅ ACCOUNT DELETION: Account successfully deleted from Supabase", category: "SUPABASE_DELETE")
+                DebugLogger.shared.log("✅ SUPABASE DELETE: STEP 2 COMPLETE - delete_user function executed successfully", category: "SUPABASE_DELETE")
+                DebugLogger.shared.log("🗑️ SUPABASE DELETE: STEP 3 - Clearing cached session", category: "SUPABASE_DELETE")
             }
             
             // Clear cached session
@@ -245,12 +256,38 @@ final class SupabaseManager {
             sessionCacheTime = nil
             sessionCacheLock.unlock()
             
+            logQueue.async {
+                DebugLogger.shared.log("✅ SUPABASE DELETE: STEP 3 COMPLETE - Session cache cleared", category: "SUPABASE_DELETE")
+                DebugLogger.shared.log("✅ SUPABASE DELETE: ALL STEPS COMPLETE - Account permanently deleted from auth.users", category: "SUPABASE_DELETE")
+            }
+            
             endOperation(operationId, success: true)
+            
+            logQueue.async {
+                DebugLogger.shared.log("✅ SUPABASE DELETE: Operation completed successfully\n", category: "SUPABASE_DELETE")
+            }
+            
         } catch {
             logQueue.async {
-                DebugLogger.shared.log("❌ ACCOUNT DELETION: Error occurred - \(error)", category: "SUPABASE_DELETE")
+                DebugLogger.shared.log("\n❌ SUPABASE DELETE: ERROR OCCURRED", category: "SUPABASE_DELETE")
+                DebugLogger.shared.log("❌ SUPABASE DELETE: Error type = \(type(of: error))", category: "SUPABASE_DELETE")
+                DebugLogger.shared.log("❌ SUPABASE DELETE: Error description = \(error.localizedDescription)", category: "SUPABASE_DELETE")
+                DebugLogger.shared.log("❌ SUPABASE DELETE: Full error = \(error)", category: "SUPABASE_DELETE")
+                
+                // Check for specific error types
+                if let nsError = error as NSError? {
+                    DebugLogger.shared.log("❌ SUPABASE DELETE: NSError domain = \(nsError.domain)", category: "SUPABASE_DELETE")
+                    DebugLogger.shared.log("❌ SUPABASE DELETE: NSError code = \(nsError.code)", category: "SUPABASE_DELETE")
+                    DebugLogger.shared.log("❌ SUPABASE DELETE: NSError userInfo = \(nsError.userInfo)", category: "SUPABASE_DELETE")
+                }
             }
+            
             endOperation(operationId, success: false, error: error)
+            
+            logQueue.async {
+                DebugLogger.shared.log("❌ SUPABASE DELETE: Operation failed\n", category: "SUPABASE_DELETE")
+            }
+            
             throw error
         }
     }

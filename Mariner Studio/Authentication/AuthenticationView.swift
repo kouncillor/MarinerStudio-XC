@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AuthenticationView: View {
     @EnvironmentObject var viewModel: AuthenticationViewModel
+    @Environment(\.dismiss) private var dismiss
     @State private var email = ""
     @State private var password = ""
     @State private var isSigningUp = true
@@ -29,7 +30,13 @@ struct AuthenticationView: View {
                 .cornerRadius(10)
 
             if viewModel.isLoading {
-                ProgressView().padding()
+                VStack {
+                    ProgressView()
+                    Text(isSigningUp ? "Creating account..." : "Signing in...")
+                        .foregroundColor(.secondary)
+                        .padding(.top, 8)
+                }
+                .padding()
             } else {
                 Button(action: {
                     Task {
@@ -48,6 +55,7 @@ struct AuthenticationView: View {
                         .background(Color.blue)
                         .cornerRadius(10)
                 }
+                .disabled(email.isEmpty || password.isEmpty)
             }
 
             Button(action: {
@@ -64,5 +72,13 @@ struct AuthenticationView: View {
             }
         }
         .padding()
+        .onChange(of: viewModel.isAuthenticated) { _, isAuthenticated in
+            if isAuthenticated {
+                // Add a small delay to show completion before dismissing
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    dismiss()
+                }
+            }
+        }
     }
 }
