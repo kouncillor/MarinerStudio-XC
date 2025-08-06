@@ -220,7 +220,7 @@ struct UserStatusDisplay: View {
                 Text("Signed In")
                     .font(.body)
                     .foregroundColor(.primary)
-                Text("Account active")
+                Text(authViewModel.userEmail ?? "Account active")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }

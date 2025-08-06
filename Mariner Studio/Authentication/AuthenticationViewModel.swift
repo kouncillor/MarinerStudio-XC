@@ -8,6 +8,7 @@ class AuthenticationViewModel: ObservableObject {
     @Published var isAuthenticated = false
     @Published var isLoading = false
     @Published var errorMessage: String?
+    @Published var userEmail: String?
 
     private let networkMonitor = NWPathMonitor()
     private let networkQueue = DispatchQueue(label: "NetworkMonitor")
@@ -60,6 +61,7 @@ class AuthenticationViewModel: ObservableObject {
             DebugLogger.shared.log("✅ SESSION CHECK: User authenticated", category: "AUTH_SESSION")
 
             self.isAuthenticated = true
+            self.userEmail = session.user.email
             DebugLogger.shared.log("✅ SESSION CHECK: Authentication state updated to TRUE", category: "AUTH_SESSION")
 
             DebugLogger.shared.log("🎫 REVENUE CAT: Starting RevenueCat login", category: "AUTH_SESSION")
@@ -70,6 +72,7 @@ class AuthenticationViewModel: ObservableObject {
             DebugLogger.shared.log("❌ SESSION CHECK: Error = \(error)", category: "AUTH_SESSION")
 
             self.isAuthenticated = false
+            self.userEmail = nil
             DebugLogger.shared.log("❌ SESSION CHECK: Authentication state updated to FALSE", category: "AUTH_SESSION")
         }
 
@@ -95,6 +98,7 @@ class AuthenticationViewModel: ObservableObject {
             await logInToRevenueCat(userId: authResponse.user.id.uuidString)
 
             self.isAuthenticated = true
+            self.userEmail = authResponse.user.email
             DebugLogger.shared.log("✅ SIGN UP: Authentication state updated to TRUE", category: "AUTH_SIGNUP")
 
         } catch {
@@ -127,6 +131,7 @@ class AuthenticationViewModel: ObservableObject {
             await logInToRevenueCat(userId: session.user.id.uuidString)
 
             self.isAuthenticated = true
+            self.userEmail = session.user.email
             DebugLogger.shared.log("✅ SIGN IN: Authentication state updated to TRUE", category: "AUTH_SIGNIN")
 
         } catch {
@@ -153,6 +158,7 @@ class AuthenticationViewModel: ObservableObject {
             DebugLogger.shared.log("✅ SIGN OUT: RevenueCat logOut completed", category: "AUTH_SIGNOUT")
 
             self.isAuthenticated = false
+            self.userEmail = nil
             DebugLogger.shared.log("✅ SIGN OUT: Authentication state updated to FALSE", category: "AUTH_SIGNOUT")
 
         } catch {
