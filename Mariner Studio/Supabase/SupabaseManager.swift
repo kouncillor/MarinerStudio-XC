@@ -238,12 +238,13 @@ final class SupabaseManager {
                 DebugLogger.shared.log("✅ SUPABASE DELETE: STEP 1 COMPLETE - Session retrieved successfully", category: "SUPABASE_DELETE")
                 DebugLogger.shared.log("🗑️ SUPABASE DELETE: User ID = \(userId)", category: "SUPABASE_DELETE")
                 DebugLogger.shared.log("🗑️ SUPABASE DELETE: User email = \(session.user.email ?? "unknown")", category: "SUPABASE_DELETE")
-                DebugLogger.shared.log("🗑️ SUPABASE DELETE: STEP 2 - Calling delete_user database function", category: "SUPABASE_DELETE")
+                DebugLogger.shared.log("🗑️ SUPABASE DELETE: STEP 2 - Calling delete_user database function with user ID parameter", category: "SUPABASE_DELETE")
             }
             
             // Delete user account via database function (RPC)
             // This permanently deletes the user from auth.users table
-            try await client.rpc("delete_user")
+            // Pass the user ID as a parameter and execute the call properly
+            try await client.rpc("delete_user", params: ["target_user_id": userId.uuidString]).execute()
             
             logQueue.async {
                 DebugLogger.shared.log("✅ SUPABASE DELETE: STEP 2 COMPLETE - delete_user function executed successfully", category: "SUPABASE_DELETE")
