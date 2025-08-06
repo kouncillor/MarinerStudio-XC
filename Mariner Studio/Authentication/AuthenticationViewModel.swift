@@ -64,8 +64,7 @@ class AuthenticationViewModel: ObservableObject {
             self.userEmail = session.user.email
             DebugLogger.shared.log("✅ SESSION CHECK: Authentication state updated to TRUE", category: "AUTH_SESSION")
 
-            DebugLogger.shared.log("🎫 REVENUE CAT: Starting RevenueCat login", category: "AUTH_SESSION")
-            await logInToRevenueCat(userId: session.user.id.uuidString)
+            DebugLogger.shared.log("🎫 SUPABASE SESSION: Authentication successful, Apple ID service will handle subscription linking", category: "AUTH_SESSION")
 
         } catch {
             DebugLogger.shared.log("\n❌ SESSION CHECK: Error occurred via SupabaseManager", category: "AUTH_SESSION")
@@ -95,7 +94,7 @@ class AuthenticationViewModel: ObservableObject {
             DebugLogger.shared.log("✅ SIGN UP: User account created successfully", category: "AUTH_SIGNUP")
             DebugLogger.shared.log("✅ SIGN UP: User email verified", category: "AUTH_SIGNUP")
 
-            await logInToRevenueCat(userId: authResponse.user.id.uuidString)
+            DebugLogger.shared.log("🎫 SUPABASE SIGNUP: User created, Apple ID service will handle subscription linking", category: "AUTH_SIGNUP")
 
             self.isAuthenticated = true
             self.userEmail = authResponse.user.email
@@ -128,7 +127,7 @@ class AuthenticationViewModel: ObservableObject {
             DebugLogger.shared.log("✅ SIGN IN: User session established", category: "AUTH_SIGNIN")
             DebugLogger.shared.log("✅ SIGN IN: User credentials verified", category: "AUTH_SIGNIN")
 
-            await logInToRevenueCat(userId: session.user.id.uuidString)
+            DebugLogger.shared.log("🎫 SUPABASE SIGNIN: User authenticated, Apple ID service will handle subscription linking", category: "AUTH_SIGNIN")
 
             self.isAuthenticated = true
             self.userEmail = session.user.email
@@ -148,14 +147,14 @@ class AuthenticationViewModel: ObservableObject {
     func signOut() async {
         DebugLogger.shared.log("\n🚪 SIGN OUT: Starting user sign out via SupabaseManager", category: "AUTH_SIGNOUT")
         DebugLogger.shared.log("🚪 SIGN OUT: Current auth state = \(isAuthenticated)", category: "AUTH_SIGNOUT")
+        
+        DebugLogger.shared.log("🚪 SIGN OUT: Signing out from Supabase only (Apple ID service manages subscriptions independently)", category: "AUTH_SIGNOUT")
 
         do {
             try await SupabaseManager.shared.signOut()
             DebugLogger.shared.log("✅ SIGN OUT: Supabase signOut completed via SupabaseManager", category: "AUTH_SIGNOUT")
 
-            DebugLogger.shared.log("🎫 SIGN OUT: Calling RevenueCat logOut...", category: "AUTH_SIGNOUT")
-            try await Purchases.shared.logOut()
-            DebugLogger.shared.log("✅ SIGN OUT: RevenueCat logOut completed", category: "AUTH_SIGNOUT")
+            DebugLogger.shared.log("🎫 SIGN OUT: Supabase logout successful - subscriptions remain with Apple ID service", category: "AUTH_SIGNOUT")
 
             self.isAuthenticated = false
             self.userEmail = nil
@@ -164,6 +163,8 @@ class AuthenticationViewModel: ObservableObject {
         } catch {
             DebugLogger.shared.log("\n❌ SIGN OUT: Error occurred", category: "AUTH_SIGNOUT")
             DebugLogger.shared.log("❌ SIGN OUT: Error = \(error)", category: "AUTH_SIGNOUT")
+            DebugLogger.shared.log("❌ SIGN OUT: Error code: \((error as NSError).code)", category: "AUTH_SIGNOUT")
+            DebugLogger.shared.log("❌ SIGN OUT: Error domain: \((error as NSError).domain)", category: "AUTH_SIGNOUT")
 
             self.errorMessage = error.localizedDescription
         }
@@ -171,26 +172,6 @@ class AuthenticationViewModel: ObservableObject {
         DebugLogger.shared.log("🚪 SIGN OUT: Complete. Auth state = \(isAuthenticated)\n", category: "AUTH_SIGNOUT")
     }
 
-    private func logInToRevenueCat(userId: String) async {
-        DebugLogger.shared.log("\n🎫 REVENUE CAT: Starting RevenueCat authentication", category: "AUTH_REVENUECAT")
-        DebugLogger.shared.log("🎫 REVENUE CAT: User account linked", category: "AUTH_REVENUECAT")
-
-        do {
-            let result = try await Purchases.shared.logIn(userId)
-
-            DebugLogger.shared.log("✅ REVENUE CAT: SUCCESS! Login completed", category: "AUTH_REVENUECAT")
-            DebugLogger.shared.log("✅ REVENUE CAT: Customer info received", category: "AUTH_REVENUECAT")
-            DebugLogger.shared.log("✅ REVENUE CAT: Entitlements count = \(result.customerInfo.entitlements.all.count)", category: "AUTH_REVENUECAT")
-
-        } catch {
-            DebugLogger.shared.log("\n❌ REVENUE CAT: Error occurred", category: "AUTH_REVENUECAT")
-            DebugLogger.shared.log("❌ REVENUE CAT: Error = \(error)", category: "AUTH_REVENUECAT")
-
-            self.errorMessage = "Could not connect to subscription service: \(error.localizedDescription)"
-        }
-
-        DebugLogger.shared.log("🎫 REVENUE CAT: Complete\n", category: "AUTH_REVENUECAT")
-    }
 
     deinit {
         DebugLogger.shared.log("💀 AUTH DEINIT: AuthenticationViewModel is being deallocated", category: "AUTH_DEINIT")

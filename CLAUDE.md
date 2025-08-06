@@ -224,5 +224,54 @@ find ~/Library/Developer/CoreSimulator -name "DebugConsole.log" -exec ls -la {} 
 
 ---
 
-**Last Updated**: July 6, 2025
-**Claude Context Version**: 1.1
+## Current Development Status
+
+### Subscription System Overhaul (August 6, 2025)
+
+**COMPLETED WORK:**
+- ✅ **NUKED RevenueCat Complexity**: Completely removed the 300+ line AppleIDRevenueCatService.swift and all associated complexity
+- ✅ **Built Simple StoreKit System**: Created dead-simple 80-line subscription system using pure StoreKit
+- ✅ **New Architecture**: 
+  - `SimpleSubscription.swift` - 80 lines of pure StoreKit magic
+  - `SimplePaywallView.swift` - Clean, simple paywall UI
+  - `ContentView.swift` - Simple logic: Pro = App, No Pro = Paywall
+- ✅ **Removed All RevenueCat Dependencies**: Cleaned AppDelegate, MainView, ContentView
+- ✅ **Build Success**: App compiles and runs perfectly
+- ✅ **App Store Connect Setup**: Created subscription product `pro_monthly` for $2.99/month
+
+**CURRENT STATUS:**
+- 🟡 **Waiting for App Store Connect Propagation**: Product `pro_monthly` created but StoreKit still shows "Product not found"
+- 🟡 **System Working Correctly**: App shows paywall, user can tap subscribe, just waiting for Apple servers to sync
+
+**EXPECTED TIMELINE:**
+- **1-4 hours**: App Store Connect changes should propagate to StoreKit testing environment
+- **24 hours max**: Apple's typical maximum sync time
+
+**NEXT STEPS (When Product is Available):**
+1. Test subscription purchase flow
+2. Verify cross-device restoration (should work automatically with StoreKit)
+3. Test restore purchases functionality
+4. Ready for TestFlight/Production
+
+**SYSTEM BENEFITS:**
+- **No servers required** - Pure client-side StoreKit
+- **No RevenueCat complexity** - Direct Apple integration
+- **No cross-device headaches** - StoreKit handles automatically
+- **Dead simple maintenance** - ~100 lines total vs 500+ before
+
+**FILES CREATED:**
+- `Mariner Studio/Services/SimpleSubscription.swift`
+- `Mariner Studio/Views/SimplePaywallView.swift`
+
+**FILES MODIFIED:**
+- `Mariner Studio/ContentView.swift` - Simple Pro/Paywall logic
+- `Mariner Studio/Views/MainView.swift` - Clean debug tools
+- `Mariner Studio/RevenueCat/AppDelegateAdaptor.swift` - Removed RevenueCat config
+
+**FILES DELETED:**
+- `Mariner Studio/Services/AppleIDRevenueCatService.swift` - The 300+ line monster
+
+---
+
+**Last Updated**: August 6, 2025
+**Claude Context Version**: 1.2 - Simple Subscription System

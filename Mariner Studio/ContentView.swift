@@ -1,27 +1,36 @@
 import SwiftUI
-import RevenueCat
 
 struct ContentView: View {
     @StateObject private var authViewModel = AuthenticationViewModel()
-
+    @StateObject private var subscriptionService = SimpleSubscription()
+    
     var body: some View {
         VStack {
-            // Show MainView with paywall regardless of authentication state
-            // This allows subscription purchase without requiring authentication first
-            MainView()
-                .presentPaywallIfNeeded(
-                    requiredEntitlementIdentifier: "Pro"
-                ) { _ in
-                    DebugLogger.shared.log("Purchase successful! User now has Pro access.", category: "PURCHASE")
-                }
-                .sheet(isPresented: .constant(!authViewModel.isAuthenticated && shouldShowAuthPrompt())) {
-                    // Show authentication as an optional sheet, not a requirement
-                    AuthenticationPromptView()
-                        .environmentObject(authViewModel)
-                }
+            if subscriptionService.isPro {
+                // User has subscription - show the app
+                MainView()
+                    .onAppear {
+                        DebugLogger.shared.log("✅ SIMPLE SUB: User is Pro - showing full app", category: "SIMPLE_SUBSCRIPTION")
+                    }
+            } else {
+                // User needs to subscribe - show paywall
+                SimplePaywallView()
+                    .onAppear {
+                        DebugLogger.shared.log("💰 SIMPLE SUB: Showing paywall - no subscription", category: "SIMPLE_SUBSCRIPTION")
+                    }
+            }
         }
-        .environmentObject(authViewModel) // Make ViewModel available to child views
+        .environmentObject(authViewModel)
+        .environmentObject(subscriptionService)
+        .sheet(isPresented: .constant(!authViewModel.isAuthenticated && shouldShowAuthPrompt())) {
+            AuthenticationPromptView()
+                .environmentObject(authViewModel)
+        }
+        .onAppear {
+            DebugLogger.shared.log("💰 SIMPLE SUB: ContentView appeared - checking subscription", category: "SIMPLE_SUBSCRIPTION")
+        }
     }
+    
     
     // Helper function to determine when to show auth prompt
     private func shouldShowAuthPrompt() -> Bool {

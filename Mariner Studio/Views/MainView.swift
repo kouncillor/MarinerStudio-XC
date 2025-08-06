@@ -1,12 +1,8 @@
 import SwiftUI
-import RevenueCat
-import RevenueCatUI
 
 struct MainView: View {
-    // 1. ACCESS THE VIEWMODEL
-    // We get the authViewModel from the environment to call signOut()
     @EnvironmentObject var authViewModel: AuthenticationViewModel
-
+    @EnvironmentObject var subscriptionService: SimpleSubscription
     @EnvironmentObject var serviceProvider: ServiceProvider
     @State private var navigationPath = NavigationPath()
 
@@ -148,14 +144,28 @@ struct MainView: View {
                 }
                 
                 #if DEBUG
-                // Sign out button for development builds only
+                // Development tools for testing
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Sign Out (Dev)") {
-                        Task {
-                            await authViewModel.signOut()
+                    Menu("Dev Tools") {
+                        Button("Sign Out") {
+                            Task {
+                                await authViewModel.signOut()
+                            }
+                        }
+                        
+                        Button("Check Subscription") {
+                            Task {
+                                await subscriptionService.checkSubscription()
+                            }
+                        }
+                        
+                        Button("Restore Purchases") {
+                            Task {
+                                await subscriptionService.restorePurchases()
+                            }
                         }
                     }
-                    .tint(.red)
+                    .tint(.blue)
                 }
                 #endif
             }
@@ -206,6 +216,7 @@ struct MainView: View {
              clearNavigationHierarchy(from: child)
          }
      }
+     
 }
 
 // These helper structs remain the same
