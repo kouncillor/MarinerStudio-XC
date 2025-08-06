@@ -3,7 +3,15 @@ import SwiftUI
 struct WeatherFavoritesView: View {
     @StateObject private var viewModel: WeatherFavoritesViewModel
     @EnvironmentObject var serviceProvider: ServiceProvider
+    @EnvironmentObject var authViewModel: AuthenticationViewModel
     @Environment(\.colorScheme) var colorScheme
+    
+    // MARK: - Computed Properties
+    
+    private var isAuthenticationError: Bool {
+        return viewModel.errorMessage.contains("User not authenticated") || 
+               viewModel.errorMessage.contains("not authenticated")
+    }
 
     init(weatherFavoritesCloudService: WeatherFavoritesCloudService) {
         print("🏗️ VIEW: Initializing WeatherFavoritesView (CLOUD-ONLY)")
@@ -28,17 +36,8 @@ struct WeatherFavoritesView: View {
                     ProgressView("Loading favorites...")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if !viewModel.errorMessage.isEmpty {
-                    VStack {
-                        Image(systemName: "exclamationmark.triangle")
-                            .font(.largeTitle)
-                            .foregroundColor(.orange)
-                            .padding()
-
-                        Text(viewModel.errorMessage)
-                            .multilineTextAlignment(.center)
-                            .padding()
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    errorView
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if viewModel.favorites.isEmpty {
                     VStack(spacing: 16) {
                         Image(systemName: "heart.slash")
@@ -164,6 +163,81 @@ struct WeatherFavoritesView: View {
         }
         .onDisappear {
             viewModel.cleanup()
+        }
+    }
+    
+    // MARK: - Error View
+    
+    private var errorView: some View {
+        VStack(spacing: 16) {
+            // Check if this is an authentication error
+            if isAuthenticationError {
+                authenticationRequiredView
+            } else {
+                generalErrorView
+            }
+        }
+    }
+    
+    // MARK: - Authentication Required View
+    
+    private var authenticationRequiredView: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "person.crop.circle.badge.exclamationmark")
+                .font(.system(size: 60))
+                .foregroundColor(.blue)
+                .padding()
+
+            Text("Sign In Required")
+                .font(.title2)
+                .fontWeight(.semibold)
+
+            Text("To access your favorite weather locations, please sign in to your account. Your favorites are synced across all your devices.")
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+                .foregroundColor(.secondary)
+                .font(.body)
+
+            NavigationLink(destination: AppSettingsView().environmentObject(authViewModel)) {
+                HStack {
+                    Image(systemName: "person.circle")
+                    Text("Go to Settings & Sign In")
+                }
+                .padding()
+                .background(Color.blue)
+                .foregroundColor(.white)
+                .cornerRadius(10)
+            }
+        }
+    }
+    
+    // MARK: - General Error View
+    
+    private var generalErrorView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.largeTitle)
+                .foregroundColor(.orange)
+                .padding()
+
+            Text("Error Loading Favorites")
+                .font(.title2)
+                .fontWeight(.semibold)
+
+            Text(viewModel.errorMessage)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+                .foregroundColor(.secondary)
+
+            Button("Retry") {
+                Task {
+                    await viewModel.loadFavorites()
+                }
+            }
+            .padding()
+            .background(Color.blue)
+            .foregroundColor(.white)
+            .cornerRadius(10)
         }
     }
 
