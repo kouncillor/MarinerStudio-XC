@@ -3,7 +3,15 @@ import SwiftUI
 struct CurrentFavoritesView: View {
     @StateObject private var viewModel = CurrentFavoritesViewModel()
     @EnvironmentObject var serviceProvider: ServiceProvider
+    @EnvironmentObject var authViewModel: AuthenticationViewModel
     @Environment(\.colorScheme) var colorScheme
+    
+    // MARK: - Computed Properties
+    
+    private var isAuthenticationError: Bool {
+        return viewModel.errorMessage.contains("User not authenticated") || 
+               viewModel.errorMessage.contains("not authenticated")
+    }
 
     var body: some View {
         ZStack {
@@ -72,6 +80,55 @@ struct CurrentFavoritesView: View {
 
     private var errorView: some View {
         VStack(spacing: 16) {
+            // Check if this is an authentication error
+            if isAuthenticationError {
+                authenticationRequiredView
+            } else {
+                generalErrorView
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onAppear {
+            print("🎨 VIEW: Error view appeared with message: \(viewModel.errorMessage)")
+        }
+    }
+    
+    // MARK: - Authentication Required View
+    
+    private var authenticationRequiredView: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "person.crop.circle.badge.exclamationmark")
+                .font(.system(size: 60))
+                .foregroundColor(.blue)
+                .padding()
+
+            Text("Sign In Required")
+                .font(.title2)
+                .fontWeight(.semibold)
+
+            Text("To access your favorite current stations, please sign in to your account. Your favorites are synced across all your devices.")
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+                .foregroundColor(.secondary)
+                .font(.body)
+
+            NavigationLink(destination: AppSettingsView().environmentObject(authViewModel)) {
+                HStack {
+                    Image(systemName: "person.circle")
+                    Text("Go to Settings & Sign In")
+                }
+                .padding()
+                .background(Color.blue)
+                .foregroundColor(.white)
+                .cornerRadius(10)
+            }
+        }
+    }
+    
+    // MARK: - General Error View
+    
+    private var generalErrorView: some View {
+        VStack(spacing: 16) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.largeTitle)
                 .foregroundColor(.orange)
@@ -96,10 +153,6 @@ struct CurrentFavoritesView: View {
             .background(Color.blue)
             .foregroundColor(.white)
             .cornerRadius(10)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onAppear {
-            print("🎨 VIEW: Error view appeared with message: \(viewModel.errorMessage)")
         }
     }
 
