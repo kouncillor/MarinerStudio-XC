@@ -1,15 +1,5 @@
 {
-  "appPolicies" : {
-    "eula" : "",
-    "policies" : [
-      {
-        "locale" : "en_US",
-        "policyText" : "",
-        "policyURL" : ""
-      }
-    ]
-  },
-  "identifier" : "28CEC9FC",
+  "identifier" : "8B93D96E",
   "nonRenewingSubscriptions" : [
 
   ],
@@ -20,7 +10,6 @@
     "_applicationInternalID" : "6744251295",
     "_developerTeamID" : "3YWCA3N57Q",
     "_failTransactionsEnabled" : false,
-    "_lastSynchronizedDate" : 768333088.62016594,
     "_locale" : "en_US",
     "_storefront" : "USA",
     "_storeKitErrors" : [
@@ -88,9 +77,7 @@
           ],
           "displayPrice" : "2.99",
           "familyShareable" : true,
-          "groupNumber" : 1,
           "id" : "pro_monthly",
-          "internalID" : "6745562715",
           "introductoryOffer" : null,
           "localizations" : [
             {
@@ -109,7 +96,7 @@
     }
   ],
   "version" : {
-    "major" : 4,
+    "major" : 3,
     "minor" : 0
   }
 }

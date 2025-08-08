@@ -47,13 +47,23 @@ class SimpleSubscription: ObservableObject {
      */
     func subscribe() async throws {
         DebugLogger.shared.log("💰 SIMPLE SUB: Starting purchase", category: "SIMPLE_SUBSCRIPTION")
+        DebugLogger.shared.log("💰 SIMPLE SUB: Looking for product ID: \(productID)", category: "SIMPLE_SUBSCRIPTION")
         isLoading = true
         
         do {
             // Load the product
+            DebugLogger.shared.log("💰 SIMPLE SUB: Calling Product.products(for:)", category: "SIMPLE_SUBSCRIPTION")
             let products = try await Product.products(for: [productID])
+            DebugLogger.shared.log("💰 SIMPLE SUB: Products response - count: \(products.count)", category: "SIMPLE_SUBSCRIPTION")
+            
+            for (index, product) in products.enumerated() {
+                DebugLogger.shared.log("💰 SIMPLE SUB: Product \(index): ID=\(product.id), Name=\(product.displayName)", category: "SIMPLE_SUBSCRIPTION")
+            }
+            
             guard let product = products.first else {
-                DebugLogger.shared.log("❌ SIMPLE SUB: Product not found", category: "SIMPLE_SUBSCRIPTION")
+                DebugLogger.shared.log("❌ SIMPLE SUB: Product not found in response", category: "SIMPLE_SUBSCRIPTION")
+                DebugLogger.shared.log("❌ SIMPLE SUB: Requested: [\(productID)]", category: "SIMPLE_SUBSCRIPTION")
+                DebugLogger.shared.log("❌ SIMPLE SUB: Available products: \(products.map { $0.id })", category: "SIMPLE_SUBSCRIPTION")
                 throw SubscriptionError.productNotFound
             }
             
