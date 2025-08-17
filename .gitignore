@@ -100,7 +100,7 @@ iOSInjectionProject/
 *.log
 
 # Database files (if sensitive)
-# *.db
+*.db
 
 # API Keys and sensitive files
 # SecureKeys.swift
