@@ -8,7 +8,7 @@ struct TideMenuView: View {
         ScrollView {
             VStack(spacing: 12) {
                 // Favorites - Star Icon
-                NavigationLink(destination: TideFavoritesView()) {
+                NavigationLink(destination: TideFavoritesView(coreDataManager: serviceProvider.coreDataManager)) {
                     MenuButtonContentTide(
                         iconType: .system("star.fill"), // Using star instead of heart to differentiate from weather
                         title: "FAVORITES",
@@ -20,7 +20,7 @@ struct TideMenuView: View {
                 NavigationLink(destination: TidalHeightStationsView(
                     tidalHeightService: TidalHeightServiceImpl(),
                     locationService: serviceProvider.locationService,
-                    tideFavoritesCloudService: serviceProvider.tideFavoritesCloudService
+                    coreDataManager: serviceProvider.coreDataManager
                 )) {
                     MenuButtonContentTide(
                         iconType: .system("location.fill"), // Specify system icon

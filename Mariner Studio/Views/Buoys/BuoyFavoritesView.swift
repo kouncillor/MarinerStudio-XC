@@ -3,7 +3,7 @@ import SwiftUI
 struct BuoyFavoritesView: View {
     @StateObject private var viewModel: BuoyFavoritesViewModel
     @EnvironmentObject var serviceProvider: ServiceProvider
-    @EnvironmentObject var authViewModel: AuthenticationViewModel
+    @EnvironmentObject var cloudKitManager: CloudKitManager
     @Environment(\.colorScheme) var colorScheme
     
     // MARK: - Computed Properties
@@ -13,15 +13,15 @@ struct BuoyFavoritesView: View {
                viewModel.errorMessage.contains("not authenticated")
     }
 
-    init(buoyFavoritesCloudService: BuoyFavoritesCloudService) {
-        print("🏗️ VIEW: Initializing BuoyFavoritesView (CLOUD-ONLY)")
-        print("🏗️ VIEW: Injecting BuoyFavoritesCloudService: \(type(of: buoyFavoritesCloudService))")
+    init(coreDataManager: CoreDataManager) {
+        print("🏗️ VIEW: Initializing BuoyFavoritesView (CORE DATA + CLOUDKIT)")
+        print("🏗️ VIEW: Injecting CoreDataManager: \(type(of: coreDataManager))")
 
         _viewModel = StateObject(wrappedValue: BuoyFavoritesViewModel(
-            cloudService: buoyFavoritesCloudService
+            coreDataManager: coreDataManager
         ))
 
-        print("✅ VIEW: BuoyFavoritesView initialization complete (CLOUD-ONLY)")
+        print("✅ VIEW: BuoyFavoritesView initialization complete (CORE DATA + CLOUDKIT)")
     }
 
     var body: some View {
@@ -53,7 +53,7 @@ struct BuoyFavoritesView: View {
                         NavigationLink(destination: BuoyStationsView(
                             buoyService: serviceProvider.buoyApiservice,
                             locationService: serviceProvider.locationService,
-                            buoyFavoritesCloudService: serviceProvider.buoyFavoritesCloudService
+                            coreDataManager: serviceProvider.coreDataManager
                         )) {
                             HStack {
                                 Image("buoysixseven")
@@ -76,7 +76,7 @@ struct BuoyFavoritesView: View {
                             NavigationLink {
                                 BuoyStationWebView(
                                     station: station,
-                                    buoyFavoritesCloudService: serviceProvider.buoyFavoritesCloudService
+                                    coreDataManager: serviceProvider.coreDataManager
                                 )
                             } label: {
                                 FavoriteBuoyStationRow(station: station)
@@ -109,7 +109,7 @@ struct BuoyFavoritesView: View {
 
         .onAppear {
             viewModel.initialize(
-                buoyFavoritesCloudService: serviceProvider.buoyFavoritesCloudService,
+                buoyFavoritesCloudService: serviceProvider.coreDataManager,
                 locationService: serviceProvider.locationService
             )
             Task {
@@ -153,7 +153,7 @@ struct BuoyFavoritesView: View {
                 .foregroundColor(.secondary)
                 .font(.body)
 
-            NavigationLink(destination: AppSettingsView().environmentObject(authViewModel)) {
+            NavigationLink(destination: AppSettingsView()) {
                 HStack {
                     Image(systemName: "person.circle")
                     Text("Go to Settings & Sign In")
@@ -262,8 +262,9 @@ struct FavoriteBuoyStationRow: View {
 #Preview {
     NavigationView {
         BuoyFavoritesView(
-            buoyFavoritesCloudService: BuoyFavoritesCloudService()
+            coreDataManager: CoreDataManager.shared
         )
         .environmentObject(ServiceProvider())
+        .environmentObject(CloudKitManager.shared)
     }
 }

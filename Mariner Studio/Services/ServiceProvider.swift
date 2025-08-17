@@ -11,11 +11,9 @@ class ServiceProvider: ObservableObject {
     // MARK: - Database Services
     // ❌ REMOVED: let tideStationService: TideStationDatabaseService - replaced with cloud service
 
-    // MARK: - Cloud Services  
-    let tideFavoritesCloudService: TideFavoritesCloudService
-    let currentFavoritesCloudService: CurrentFavoritesCloudService
-    let weatherFavoritesCloudService: WeatherFavoritesCloudService
-    let buoyFavoritesCloudService: BuoyFavoritesCloudService
+    // MARK: - Core Data + CloudKit Services (Replaces Supabase)
+    let coreDataManager: CoreDataManager
+    let cloudKitManager: CloudKitManager
     let currentStationService: CurrentStationDatabaseService
     let navUnitService: NavUnitDatabaseService
     let vesselService: VesselDatabaseService
@@ -45,7 +43,7 @@ class ServiceProvider: ObservableObject {
     // MARK: - Photo Services
     let photoService: PhotoService
 
-    // MARK: - Sync Services
+    // MARK: - Legacy Database Services (Keeping for Maritime Data)
     let currentStationSyncService: CurrentStationSyncService
     let navUnitSyncService: NavUnitSyncService
     let weatherStationSyncService: WeatherStationSyncService
@@ -69,10 +67,10 @@ class ServiceProvider: ObservableObject {
         // ❌ REMOVED: self.tideStationService = TideStationDatabaseService(databaseCore: databaseCore)
 
         // Initialize Cloud Services
-        self.tideFavoritesCloudService = TideFavoritesCloudService()
-        self.currentFavoritesCloudService = CurrentFavoritesCloudService()
-        self.weatherFavoritesCloudService = WeatherFavoritesCloudService()
-        self.buoyFavoritesCloudService = BuoyFavoritesCloudService()
+        // Initialize Core Data + CloudKit Services (Replaces Supabase)
+        self.coreDataManager = CoreDataManager.shared
+        self.cloudKitManager = CloudKitManager.shared
+        DebugLogger.shared.log("📦 ServiceProvider: Initialized Core Data + CloudKit (replacing Supabase)", category: "SERVICE_INIT")
         self.currentStationService = CurrentStationDatabaseService(databaseCore: databaseCore)
         self.currentStationSyncService = CurrentStationSyncService(databaseService: self.currentStationService)
         self.navUnitService = NavUnitDatabaseService(databaseCore: databaseCore)

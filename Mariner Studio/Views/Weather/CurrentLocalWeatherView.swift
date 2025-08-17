@@ -135,7 +135,7 @@ struct CurrentLocalWeatherView: View {
                 currentLocalWeatherService: serviceProvider.currentLocalWeatherService,
                 geocodingService: serviceProvider.geocodingService,
                 databaseService: serviceProvider.weatherService,
-                weatherFavoritesCloudService: serviceProvider.weatherFavoritesCloudService
+                coreDataManager: serviceProvider.coreDataManager
             )
 
             // Load weather data (now includes location permission request)

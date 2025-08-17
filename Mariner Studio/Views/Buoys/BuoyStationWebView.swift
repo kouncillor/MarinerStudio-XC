@@ -4,15 +4,15 @@ import WebKit
 struct BuoyStationWebView: View {
     // MARK: - Properties
     let station: BuoyStation
-    let buoyFavoritesCloudService: BuoyFavoritesCloudService
+    let coreDataManager: CoreDataManager
     @State private var isFavorite: Bool
     @State private var isLoading = true
     @State private var loadingURL: URL?
 
     // MARK: - Initialization
-    init(station: BuoyStation, buoyFavoritesCloudService: BuoyFavoritesCloudService) {
+    init(station: BuoyStation, coreDataManager: CoreDataManager) {
         self.station = station
-        self.buoyFavoritesCloudService = buoyFavoritesCloudService
+        self.coreDataManager = coreDataManager
         // Initialize with the station's current favorite status
         _isFavorite = State(initialValue: station.isFavorite)
     }
@@ -70,36 +70,23 @@ struct BuoyStationWebView: View {
 
     // MARK: - Methods
     private func loadFavoriteStatus() {
-        Task {
-            let result = await buoyFavoritesCloudService.isFavorite(stationId: station.id)
-            let favoriteStatus = (try? result.get()) ?? false
-            await MainActor.run {
-                isFavorite = favoriteStatus
-            }
-        }
+        let buoyFavorites = coreDataManager.getBuoyFavorites()
+        let favoriteStatus = buoyFavorites.contains { $0.stationId == station.id }
+        isFavorite = favoriteStatus
     }
 
     private func toggleFavorite() {
-        Task {
-            let result = await buoyFavoritesCloudService.toggleFavorite(
+        if isFavorite {
+            coreDataManager.removeBuoyFavorite(stationId: station.id)
+        } else {
+            coreDataManager.addBuoyFavorite(
                 stationId: station.id,
-                stationName: station.name,
+                name: station.name,
                 latitude: station.latitude,
-                longitude: station.longitude,
-                stationType: station.type,
-                meteorological: station.meteorological,
-                currents: station.currents
+                longitude: station.longitude
             )
-
-            switch result {
-            case .success(let newStatus):
-                await MainActor.run {
-                    isFavorite = newStatus
-                }
-            case .failure(let error):
-                print("❌ BuoyStationWebView: Failed to toggle favorite: \(error.localizedDescription)")
-            }
         }
+        isFavorite.toggle()
     }
 
     private func shareStation() {

@@ -4,16 +4,16 @@ struct TidalCurrentStationsView: View {
     @StateObject var viewModel: TidalCurrentStationsViewModel
     @EnvironmentObject var serviceProvider: ServiceProvider
 
-    init(tidalCurrentService: TidalCurrentService, locationService: LocationService, currentFavoritesCloudService: CurrentFavoritesCloudService) {
+    init(tidalCurrentService: TidalCurrentService, locationService: LocationService, coreDataManager: CoreDataManager) {
         print("🏗️ VIEW: Initializing TidalCurrentStationsView (CLOUD-ONLY)")
         print("🏗️ VIEW: Injecting services - TidalCurrentService: \(type(of: tidalCurrentService))")
         print("🏗️ VIEW: Injecting services - LocationService: \(type(of: locationService))")
-        print("🏗️ VIEW: Injecting services - CurrentFavoritesCloudService: \(type(of: currentFavoritesCloudService))")
+        print("🏗️ VIEW: Injecting services - CoreDataManager: \(type(of: coreDataManager))")
 
         _viewModel = StateObject(wrappedValue: TidalCurrentStationsViewModel(
             tidalCurrentService: tidalCurrentService,
             locationService: locationService,
-            currentFavoritesCloudService: currentFavoritesCloudService
+            coreDataManager: coreDataManager
         ))
 
         print("✅ VIEW: TidalCurrentStationsView initialization complete (CLOUD-ONLY)")
@@ -164,7 +164,7 @@ struct TidalCurrentStationsView: View {
                     stationLongitude: stationWithDistance.station.longitude,    // ← ADD
                     stationDepth: stationWithDistance.station.depth,            // ← ADD
                     stationDepthType: stationWithDistance.station.depthType,    // ← ADD
-                    currentFavoritesCloudService: viewModel.currentFavoritesCloudService
+                    coreDataManager: viewModel.coreDataManager
                 )) {
                     TidalCurrentStationRow(
                         stationWithDistance: stationWithDistance,

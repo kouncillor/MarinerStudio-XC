@@ -127,7 +127,7 @@ struct CurrentLocalWeatherViewForMap: View {
                     ?? CurrentLocalWeatherServiceForMapImpl(), // Fallback to new instance if needed
                 geocodingService: serviceProvider.geocodingService,
                 databaseService: serviceProvider.weatherService,
-                weatherFavoritesCloudService: serviceProvider.weatherFavoritesCloudService
+                coreDataManager: serviceProvider.coreDataManager
             )
 
             viewModel.loadWeatherData()

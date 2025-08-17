@@ -55,7 +55,7 @@ struct MapClusteringView: View {
        // Default initializer - uses ServiceProvider via EnvironmentObject
        _viewModel = StateObject(wrappedValue: MapClusteringViewModel(
            navUnitService: NavUnitDatabaseService(databaseCore: DatabaseCore()),
-           tideFavoritesCloudService: TideFavoritesCloudService(),
+           coreDataManager: CoreDataManager.shared,
            currentStationService: CurrentStationDatabaseService(databaseCore: DatabaseCore()),
            tidalHeightService: TidalHeightServiceImpl(),
            tidalCurrentService: TidalCurrentServiceImpl(),
@@ -69,7 +69,7 @@ struct MapClusteringView: View {
 
    // MARK: - Convenience init that takes services for easier testing
    init(navUnitService: NavUnitDatabaseService,
-        tideFavoritesCloudService: TideFavoritesCloudService,
+        coreDataManager: CoreDataManager,
         currentStationService: CurrentStationDatabaseService,
         buoyDatabaseService: BuoyDatabaseService,
         locationService: LocationService,
@@ -82,7 +82,7 @@ struct MapClusteringView: View {
 
        _viewModel = StateObject(wrappedValue: MapClusteringViewModel(
            navUnitService: navUnitService,
-           tideFavoritesCloudService: tideFavoritesCloudService,
+           coreDataManager: coreDataManager,
            currentStationService: currentStationService,
            tidalHeightService: tidalHeightService,
            tidalCurrentService: tidalCurrentService,
@@ -330,7 +330,7 @@ struct MapClusteringView: View {
                                stationName: stationName,
                                latitude: nil,
                                longitude: nil,
-                               tideFavoritesCloudService: serviceProvider.tideFavoritesCloudService
+                               coreDataManager: serviceProvider.coreDataManager
                            ))
 
                        } else {
@@ -355,7 +355,7 @@ struct MapClusteringView: View {
                                stationLongitude: nil,
                                stationDepth: nil,
                                stationDepthType: nil,
-                               currentFavoritesCloudService: serviceProvider.currentFavoritesCloudService
+                               coreDataManager: serviceProvider.coreDataManager
                            ))
                        } else {
                            AnyView(Text("Tidal Current Station not found"))
@@ -385,7 +385,7 @@ struct MapClusteringView: View {
                            )
                            AnyView(BuoyStationWebView(
                                station: buoyStation,
-                               buoyFavoritesCloudService: serviceProvider.buoyFavoritesCloudService
+                               coreDataManager: serviceProvider.coreDataManager
                            ))
                        } else {
                            AnyView(Text("Buoy Station not found"))

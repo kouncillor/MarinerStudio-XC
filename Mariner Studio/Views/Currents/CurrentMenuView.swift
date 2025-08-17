@@ -20,7 +20,7 @@ struct CurrentMenuView: View {
                 NavigationLink(destination: TidalCurrentStationsView(
                     tidalCurrentService: TidalCurrentServiceImpl(),
                     locationService: serviceProvider.locationService,
-                    currentFavoritesCloudService: serviceProvider.currentFavoritesCloudService
+                    coreDataManager: serviceProvider.coreDataManager
                 )) {
                     MenuButtonContentCurrent(
                         iconType: .system("location.fill"),

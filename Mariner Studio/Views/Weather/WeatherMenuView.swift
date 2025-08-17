@@ -9,7 +9,7 @@ struct WeatherMenuView: View {
             VStack(spacing: 12) {
                 // Favorites - Star Icon
                 NavigationLink(destination: WeatherFavoritesView(
-                    weatherFavoritesCloudService: serviceProvider.weatherFavoritesCloudService
+                    coreDataManager: serviceProvider.coreDataManager
                 )) {
                     MenuButtonContent(
                         iconType: .system("star.fill"), // Star icon for favorites

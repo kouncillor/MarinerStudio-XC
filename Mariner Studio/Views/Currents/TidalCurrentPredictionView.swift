@@ -13,7 +13,7 @@ struct TidalCurrentPredictionView: View {
             stationLongitude: Double? = nil,    // ← NEW: Optional longitude
             stationDepth: Double? = nil,        // ← NEW: Optional depth
             stationDepthType: String? = nil,    // ← NEW: Optional depth type
-            currentFavoritesCloudService: CurrentFavoritesCloudService
+            coreDataManager: CoreDataManager
         ) {
             _viewModel = StateObject(wrappedValue: TidalCurrentPredictionViewModel(
                 stationId: stationId,
@@ -24,7 +24,7 @@ struct TidalCurrentPredictionView: View {
                 stationDepth: stationDepth,              // ← Pass to ViewModel
                 stationDepthType: stationDepthType,      // ← Pass to ViewModel
                 predictionService: TidalCurrentPredictionServiceImpl(),
-                currentFavoritesCloudService: currentFavoritesCloudService
+                coreDataManager: coreDataManager
             ))
         }
 

@@ -21,7 +21,7 @@ class TidalCurrentStationsViewModel: ObservableObject {
     }
 
     // MARK: - Properties
-    let currentFavoritesCloudService: CurrentFavoritesCloudService
+    let coreDataManager: CoreDataManager
     private let tidalCurrentService: TidalCurrentService
     private let locationService: LocationService
     private var allStations: [StationWithDistance<TidalCurrentStation>] = []
@@ -30,13 +30,13 @@ class TidalCurrentStationsViewModel: ObservableObject {
     init(
         tidalCurrentService: TidalCurrentService,
         locationService: LocationService,
-        currentFavoritesCloudService: CurrentFavoritesCloudService
+        coreDataManager: CoreDataManager
     ) {
         self.tidalCurrentService = tidalCurrentService
         self.locationService = locationService
-        self.currentFavoritesCloudService = currentFavoritesCloudService
-        print("✅ VIEWMODEL: TidalCurrentStationsViewModel initialized with CLOUD-ONLY favorites service")
-        print("☁️ VIEWMODEL: Cloud service injected: \(type(of: currentFavoritesCloudService))")
+        self.coreDataManager = coreDataManager
+        print("✅ VIEWMODEL: TidalCurrentStationsViewModel initialized with CORE DATA + CLOUDKIT")
+        print("📊 VIEWMODEL: Core Data manager injected: \(type(of: coreDataManager))")
         print("🌐 VIEWMODEL: Network service injected: \(type(of: tidalCurrentService))")
         print("📍 VIEWMODEL: Location service injected: \(type(of: locationService))")
     }
@@ -195,13 +195,12 @@ class TidalCurrentStationsViewModel: ObservableObject {
             }
         }
 
-        // Get all favorites at once (much more efficient than individual calls)
-        let favoritesResult = await currentFavoritesCloudService.getFavorites()
-        let favoriteStations = (try? favoritesResult.get()) ?? []
-
+        // Get all favorites from Core Data (CloudKit syncs automatically)
+        let favoriteStations = coreDataManager.getCurrentFavorites()
+        
         // Create a set of favorite station+bin combinations for fast lookup
-        let favoriteKeys = Set(favoriteStations.map { "\($0.id)_\($0.currentBin ?? 0)" })
-        print("📍 VIEWMODEL: Retrieved \(favoriteKeys.count) favorite station+bin combinations for checking")
+        let favoriteKeys = Set(favoriteStations.map { "\($0.stationId)_\($0.currentBin)" })
+        print("📍 VIEWMODEL: Retrieved \(favoriteKeys.count) favorite station+bin combinations from Core Data")
 
         var stationsWithDistance: [StationWithDistance<TidalCurrentStation>] = []
 
@@ -252,39 +251,33 @@ class TidalCurrentStationsViewModel: ObservableObject {
 
         let currentStation = stationWithDistance.station
 
-        let toggleResult = await currentFavoritesCloudService.toggleFavorite(
-            stationId: stationId,
-            currentBin: currentStation.currentBin ?? 0,
-            stationName: currentStation.name,
-            latitude: currentStation.latitude,
-            longitude: currentStation.longitude,
-            depth: currentStation.depth,
-            depthType: currentStation.depthType
-        )
+        let currentlyFavorite = currentStation.isFavorite
+        
+        if currentlyFavorite {
+            coreDataManager.removeCurrentFavorite(stationId: stationId, currentBin: currentStation.currentBin ?? 0)
+        } else {
+            coreDataManager.addCurrentFavorite(
+                stationId: stationId,
+                currentBin: currentStation.currentBin ?? 0
+            )
+        }
+        
+        let newFavoriteStatus = !currentlyFavorite
+        print("⭐ VIEWMODEL: Toggle completed for station \(stationId), new status: \(newFavoriteStatus)")
 
-        switch toggleResult {
-        case .success(let newFavoriteStatus):
-            print("⭐ VIEWMODEL: Toggle completed for station \(stationId), new status: \(newFavoriteStatus)")
+        if let index = allStations.firstIndex(where: { $0.station.id == stationId }) {
+            var updatedStation = allStations[index].station
+            updatedStation.isFavorite = newFavoriteStatus
+            allStations[index] = StationWithDistance(
+                station: updatedStation,
+                distanceFromUser: allStations[index].distanceFromUser
+            )
 
-            if let index = allStations.firstIndex(where: { $0.station.id == stationId }) {
-                var updatedStation = allStations[index].station
-                updatedStation.isFavorite = newFavoriteStatus
-                allStations[index] = StationWithDistance(
-                    station: updatedStation,
-                    distanceFromUser: allStations[index].distanceFromUser
-                )
-
-                await MainActor.run {
-                    filterStations()
-                }
-
-                print("⭐ VIEWMODEL: Updated station \(stationId) in allStations array")
-            }
-        case .failure(let error):
-            print("❌ VIEWMODEL: Failed to toggle favorite for station \(stationId): \(error.localizedDescription)")
             await MainActor.run {
-                errorMessage = "Failed to update favorite: \(error.localizedDescription)"
+                filterStations()
             }
+
+            print("⭐ VIEWMODEL: Updated station \(stationId) in allStations array")
         }
 
         print("⭐ VIEWMODEL: ===== TOGGLE STATION FAVORITE END =====\n")

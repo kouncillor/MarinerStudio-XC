@@ -8,12 +8,12 @@ struct BuoyStationsView: View {
     init(
         buoyService: BuoyApiService = BuoyServiceImpl(),
         locationService: LocationService = LocationServiceImpl(),
-        buoyFavoritesCloudService: BuoyFavoritesCloudService
+        coreDataManager: CoreDataManager
     ) {
         _viewModel = StateObject(wrappedValue: BuoyStationsViewModel(
             buoyService: buoyService,
             locationService: locationService,
-            buoyFavoritesCloudService: buoyFavoritesCloudService
+            coreDataManager: coreDataManager
         ))
     }
 
@@ -96,7 +96,7 @@ struct BuoyStationsView: View {
             ForEach(viewModel.stations) { stationWithDistance in
                 NavigationLink(destination: BuoyStationWebView(
                     station: stationWithDistance.station,
-                    buoyFavoritesCloudService: viewModel.buoyFavoritesCloudService
+                    coreDataManager: viewModel.coreDataManager
                 )) {
                     BuoyStationRow(
                         stationWithDistance: stationWithDistance,

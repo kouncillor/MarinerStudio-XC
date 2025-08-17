@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct MainView: View {
-    @EnvironmentObject var authViewModel: AuthenticationViewModel
+    @EnvironmentObject var cloudKitManager: CloudKitManager
     @EnvironmentObject var subscriptionService: SimpleSubscription
     @EnvironmentObject var serviceProvider: ServiceProvider
     @State private var navigationPath = NavigationPath()
@@ -147,9 +147,9 @@ struct MainView: View {
                 // Development tools for testing
                 ToolbarItem(placement: .topBarLeading) {
                     Menu("Dev Tools") {
-                        Button("Sign Out") {
+                        Button("CloudKit Status") {
                             Task {
-                                await authViewModel.signOut()
+                                await cloudKitManager.checkAccountStatus()
                             }
                         }
                         
@@ -163,6 +163,12 @@ struct MainView: View {
                             Task {
                                 await subscriptionService.restorePurchases()
                             }
+                        }
+                        
+                        Divider()
+                        
+                        NavigationLink("Core Data + CloudKit Test") {
+                            CoreDataTestView()
                         }
                     }
                     .tint(.blue)

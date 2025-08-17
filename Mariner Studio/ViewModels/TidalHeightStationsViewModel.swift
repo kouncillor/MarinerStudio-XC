@@ -20,7 +20,7 @@ class TidalHeightStationsViewModel: ObservableObject {
     }
 
     // MARK: - Properties
-    let tideFavoritesCloudService: TideFavoritesCloudService
+    let coreDataManager: CoreDataManager
     private let tidalHeightService: TidalHeightService
     private let locationService: LocationService
     private var allStations: [StationWithDistance<TidalHeightStation>] = []
@@ -29,12 +29,12 @@ class TidalHeightStationsViewModel: ObservableObject {
     init(
         tidalHeightService: TidalHeightService,
         locationService: LocationService,
-        tideFavoritesCloudService: TideFavoritesCloudService
+        coreDataManager: CoreDataManager
     ) {
         self.tidalHeightService = tidalHeightService
         self.locationService = locationService
-        self.tideFavoritesCloudService = tideFavoritesCloudService
-        print("✅ TidalHeightStationsViewModel initialized with CLOUD-ONLY favorites service.")
+        self.coreDataManager = coreDataManager
+        print("✅ TidalHeightStationsViewModel initialized with CORE DATA + CLOUDKIT favorites service.")
     }
 
     // MARK: - Public Methods
@@ -86,11 +86,10 @@ class TidalHeightStationsViewModel: ObservableObject {
             }
         }
 
-        // Get all favorites at once (much more efficient than individual calls)
-        let favoritesResult = await tideFavoritesCloudService.getFavorites()
-        let favoriteStations = (try? favoritesResult.get()) ?? []
-        let favoriteStationIds = Set(favoriteStations.map { $0.id })
-        print("📍 ViewModel: Retrieved \(favoriteStationIds.count) favorite station IDs for checking")
+        // Get all favorites from Core Data (CloudKit syncs automatically)
+        let favoriteStations = coreDataManager.getTideFavorites()
+        let favoriteStationIds = Set(favoriteStations.map { $0.stationId })
+        print("📍 ViewModel: Retrieved \(favoriteStationIds.count) favorite station IDs from Core Data")
 
         var stationsWithDistance: [StationWithDistance<TidalHeightStation>] = []
 
@@ -172,21 +171,20 @@ class TidalHeightStationsViewModel: ObservableObject {
 
         let currentStation = stationWithDistance.station
 
-        let toggleResult = await tideFavoritesCloudService.toggleFavorite(
-            stationId: stationId,
-            stationName: currentStation.name,
-            latitude: currentStation.latitude,
-            longitude: currentStation.longitude
-        )
-
-        let newFavoriteStatus: Bool
-        switch toggleResult {
-        case .success(let status):
-            newFavoriteStatus = status
-        case .failure(let error):
-            print("❌ ViewModel: Failed to toggle favorite for station \(stationId): \(error)")
-            return // Exit early if toggle failed
+        let currentlyFavorite = currentStation.isFavorite
+        
+        if currentlyFavorite {
+            coreDataManager.removeTideFavorite(stationId: stationId)
+        } else {
+            coreDataManager.addTideFavorite(
+                stationId: stationId,
+                name: currentStation.name,
+                latitude: currentStation.latitude,
+                longitude: currentStation.longitude
+            )
         }
+        
+        let newFavoriteStatus = !currentlyFavorite
 
         print("⭐ ViewModel: Toggle completed for station \(stationId), new status: \(newFavoriteStatus)")
 

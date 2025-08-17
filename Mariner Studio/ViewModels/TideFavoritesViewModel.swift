@@ -3,7 +3,7 @@ import SwiftUI
 import Combine
 import CoreLocation
 
-/// Cloud-only Tide Favorites ViewModel - NO sync complexity!
+/// Core Data + CloudKit Tide Favorites ViewModel - Seamless sync!
 class TideFavoritesViewModel: ObservableObject {
 
     // MARK: - Published Properties
@@ -12,16 +12,16 @@ class TideFavoritesViewModel: ObservableObject {
     @Published var errorMessage = ""
 
     // MARK: - Dependencies  
-    private let cloudService: TideFavoritesCloudService
+    private let coreDataManager: CoreDataManager
     private var locationService: LocationService?
 
     // MARK: - Initialization
-    init(cloudService: TideFavoritesCloudService = TideFavoritesCloudService(),
+    init(coreDataManager: CoreDataManager = CoreDataManager.shared,
          locationService: LocationService? = nil) {
-        self.cloudService = cloudService
+        self.coreDataManager = coreDataManager
         self.locationService = locationService
 
-        print("🎯 INIT: TideFavoritesViewModel (CLOUD-ONLY) created at \(Date())")
+        print("🎯 INIT: TideFavoritesViewModel (CORE DATA + CLOUDKIT) created at \(Date())")
     }
 
     // MARK: - Core Operations
@@ -29,124 +29,77 @@ class TideFavoritesViewModel: ObservableObject {
     /// Load favorites from cloud (single source of truth)
     @MainActor
     func loadFavorites() async {
-        print("🚀 LOAD_FAVORITES: Starting cloud-only load")
+        print("🚀 LOAD_FAVORITES: Starting Core Data + CloudKit load")
         isLoading = true
         errorMessage = ""
 
-        let result = await cloudService.getFavorites()
-
-        switch result {
-        case .success(let stations):
-            print("✅ LOAD_FAVORITES: Retrieved \(stations.count) stations from cloud")
-
-            // Calculate distances if location available
-            print("📍 LOAD_FAVORITES: Starting distance calculation process")
-            print("📍 LOAD_FAVORITES: LocationService exists: \(locationService != nil)")
-
-            var stationsWithDistance = stations
-            if let locationService = locationService,
-               let userLocation = locationService.currentLocation {
-
-                print("📍 LOAD_FAVORITES: User location available - Lat: \(String(format: "%.6f", userLocation.coordinate.latitude)), Lng: \(String(format: "%.6f", userLocation.coordinate.longitude))")
-                print("📍 LOAD_FAVORITES: Processing \(stationsWithDistance.count) stations for distance calculation")
-
-                var stationsWithCoords = 0
-                var stationsWithoutCoords = 0
-
-                for i in 0..<stationsWithDistance.count {
-                    if let lat = stationsWithDistance[i].latitude,
-                       let lon = stationsWithDistance[i].longitude {
-                        let stationLocation = CLLocation(latitude: lat, longitude: lon)
-                        let distanceInMeters = userLocation.distance(from: stationLocation)
-                        let distanceInMiles = distanceInMeters * 0.000621371
-                        stationsWithDistance[i].distanceFromUser = distanceInMiles
-                        stationsWithCoords += 1
-
-                        // Log first 3 stations for verification
-                        if i < 3 {
-                            print("📍 LOAD_FAVORITES: Station \(i+1) - \(stationsWithDistance[i].name): \(String(format: "%.1f", distanceInMiles)) miles")
-                        }
-                    } else {
-                        stationsWithoutCoords += 1
-                        if stationsWithoutCoords <= 3 {
-                            print("⚠️ LOAD_FAVORITES: Station \(stationsWithDistance[i].name) has missing coordinates (lat: \(stationsWithDistance[i].latitude?.description ?? "nil"), lng: \(stationsWithDistance[i].longitude?.description ?? "nil"))")
-                        }
-                    }
-                }
-
-                print("📍 LOAD_FAVORITES: Distance calculation complete - \(stationsWithCoords) stations with coords, \(stationsWithoutCoords) without coords")
-
-            } else {
-                if locationService == nil {
-                    print("❌ LOAD_FAVORITES: LocationService is nil - no distance calculations possible")
-                } else {
-                    print("❌ LOAD_FAVORITES: User location not available - no distance calculations possible")
-                    print("📍 LOAD_FAVORITES: Location permission status: \(locationService!.permissionStatus)")
-                }
-            }
-
-            // Sort by distance, then alphabetically
-            print("🔄 LOAD_FAVORITES: Starting sort process")
-
-            var distanceSorted = 0
-            var alphabeticalSorted = 0
-
-            favorites = stationsWithDistance.sorted { station1, station2 in
-                if let distance1 = station1.distanceFromUser,
-                   let distance2 = station2.distanceFromUser {
-                    distanceSorted += 1
-                    return distance1 < distance2
-                } else if station1.distanceFromUser != nil {
-                    return true
-                } else if station2.distanceFromUser != nil {
-                    return false
-                } else {
-                    alphabeticalSorted += 1
-                    return station1.name < station2.name
-                }
-            }
-
-            print("🔄 LOAD_FAVORITES: Sort complete - \(distanceSorted) distance comparisons, \(alphabeticalSorted) alphabetical comparisons")
-
-            // Log first 5 stations with their sort criteria
-            print("📊 LOAD_FAVORITES: Top 5 sorted stations:")
-            for (index, station) in favorites.prefix(5).enumerated() {
-                if let distance = station.distanceFromUser {
-                    print("📊 LOAD_FAVORITES: \(index + 1). \(station.name) - \(String(format: "%.1f", distance)) miles")
-                } else {
-                    print("📊 LOAD_FAVORITES: \(index + 1). \(station.name) - No distance (alphabetical)")
-                }
-            }
-
-            print("✅ LOAD_FAVORITES: Loaded and sorted \(favorites.count) favorites")
-
-        case .failure(let error):
-            print("❌ LOAD_FAVORITES: Failed - \(error.localizedDescription)")
-            errorMessage = "Failed to load favorites: \(error.localizedDescription)"
-            favorites = []
+        // Get favorites from Core Data
+        let tideFavorites = coreDataManager.getTideFavorites()
+        
+        // Convert Core Data entities to TidalHeightStation objects
+        let stations: [TidalHeightStation] = tideFavorites.map { favorite in
+            TidalHeightStation(
+                id: favorite.stationId,
+                name: favorite.name,
+                latitude: favorite.latitude,
+                longitude: favorite.longitude,
+                state: nil,
+                type: "Unknown",
+                referenceId: "Unknown",
+                timezoneCorrection: nil,
+                timeMeridian: nil,
+                tidePredOffsets: nil,
+                isFavorite: true
+            )
         }
 
+        print("✅ LOAD_FAVORITES: Retrieved \(stations.count) stations from Core Data")
+
+        // Calculate distances if location available
+        var stationsWithDistance = stations
+        if let locationService = locationService,
+           let userLocation = locationService.currentLocation {
+
+            for i in 0..<stationsWithDistance.count {
+                if let lat = stationsWithDistance[i].latitude,
+                   let lon = stationsWithDistance[i].longitude {
+                    let stationLocation = CLLocation(latitude: lat, longitude: lon)
+                    let distanceInMeters = userLocation.distance(from: stationLocation)
+                    let distanceInMiles = distanceInMeters * 0.000621371
+                    stationsWithDistance[i].distanceFromUser = distanceInMiles
+                }
+            }
+        }
+
+        // Sort by distance, then alphabetically
+        favorites = stationsWithDistance.sorted { station1, station2 in
+            if let distance1 = station1.distanceFromUser,
+               let distance2 = station2.distanceFromUser {
+                return distance1 < distance2
+            } else if station1.distanceFromUser != nil {
+                return true
+            } else if station2.distanceFromUser != nil {
+                return false
+            } else {
+                return station1.name < station2.name
+            }
+        }
+
+        print("✅ LOAD_FAVORITES: Loaded and sorted \(favorites.count) favorites (CloudKit syncs automatically)")
         isLoading = false
     }
 
-    /// Remove favorite from cloud (single operation, no sync needed!)
+    /// Remove favorite from Core Data (CloudKit syncs automatically!)
     @MainActor
     func removeFavorite(stationId: String) async {
-        print("🗑️ REMOVE_FAVORITE: Removing station \(stationId) from cloud")
+        print("🗑️ REMOVE_FAVORITE: Removing station \(stationId) from Core Data")
 
-        let result = await cloudService.removeFavorite(stationId: stationId)
-
-        switch result {
-        case .success:
-            print("✅ REMOVE_FAVORITE: Successfully removed from cloud")
-            // Immediately update UI by removing from local array
-            favorites.removeAll { $0.id == stationId }
-            print("✅ REMOVE_FAVORITE: Updated local UI, station removed")
-
-        case .failure(let error):
-            print("❌ REMOVE_FAVORITE: Failed - \(error.localizedDescription)")
-            errorMessage = "Failed to remove favorite: \(error.localizedDescription)"
-        }
+        coreDataManager.removeTideFavorite(stationId: stationId)
+        
+        print("✅ REMOVE_FAVORITE: Successfully removed from Core Data (CloudKit will sync)")
+        // Immediately update UI by removing from local array
+        favorites.removeAll { $0.id == stationId }
+        print("✅ REMOVE_FAVORITE: Updated local UI, station removed")
     }
 
     /// Remove favorite by index (for swipe actions)

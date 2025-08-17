@@ -24,18 +24,18 @@ class WeatherFavoritesViewModel: ObservableObject {
     @Published var operationInProgress: Set<String> = []
 
     // MARK: - Private Properties
-    private let weatherFavoritesCloudService: WeatherFavoritesCloudService
+    private let coreDataManager: CoreDataManager
     private var cancellables = Set<AnyCancellable>()
     private var loadTask: Task<Void, Never>?
 
     // MARK: - Initialization
-    init(weatherFavoritesCloudService: WeatherFavoritesCloudService) {
-        print("🏗️ WEATHER_FAVORITES_VM: Initializing WeatherFavoritesViewModel (CLOUD-ONLY)")
-        print("🏗️ WEATHER_FAVORITES_VM: Injecting WeatherFavoritesCloudService: \(type(of: weatherFavoritesCloudService))")
+    init(coreDataManager: CoreDataManager) {
+        print("🏗️ WEATHER_FAVORITES_VM: Initializing WeatherFavoritesViewModel (CORE DATA + CLOUDKIT)")
+        print("🏗️ WEATHER_FAVORITES_VM: Injecting CoreDataManager: \(type(of: coreDataManager))")
 
-        self.weatherFavoritesCloudService = weatherFavoritesCloudService
+        self.coreDataManager = coreDataManager
 
-        print("✅ WEATHER_FAVORITES_VM: WeatherFavoritesViewModel initialization complete (CLOUD-ONLY)")
+        print("✅ WEATHER_FAVORITES_VM: WeatherFavoritesViewModel initialization complete (CORE DATA + CLOUDKIT)")
     }
 
     deinit {
@@ -56,20 +56,29 @@ class WeatherFavoritesViewModel: ObservableObject {
                 errorMessage = ""
             }
 
-            let result = await weatherFavoritesCloudService.getFavorites()
+            let weatherFavorites = coreDataManager.getWeatherFavorites()
+            
+            // Convert Core Data entities to WeatherLocationFavorite objects
+            let favoriteLocations = weatherFavorites.map { favorite in
+                WeatherLocationFavorite(
+                    id: Int64.random(in: 1...Int64.max),
+                    latitude: favorite.latitude,
+                    longitude: favorite.longitude,
+                    locationName: favorite.locationName,
+                    isFavorite: true,
+                    createdAt: favorite.dateAdded ?? Date(),
+                    userId: nil,
+                    deviceId: nil,
+                    lastModified: nil,
+                    remoteId: nil
+                )
+            }
 
             if !Task.isCancelled {
                 await MainActor.run {
-                    switch result {
-                    case .success(let favoriteLocations):
-                        print("✅ WEATHER_FAVORITES_VM: Loaded \(favoriteLocations.count) weather favorites from cloud")
-                        self.favorites = favoriteLocations
-                        self.isLoading = false
-                    case .failure(let error):
-                        print("❌ WEATHER_FAVORITES_VM: Failed to load favorites: \(error.localizedDescription)")
-                        self.errorMessage = "Failed to load favorites: \(error.localizedDescription)"
-                        self.isLoading = false
-                    }
+                    print("✅ WEATHER_FAVORITES_VM: Loaded \(favoriteLocations.count) weather favorites from Core Data")
+                    self.favorites = favoriteLocations
+                    self.isLoading = false
                 }
             }
         }
@@ -91,36 +100,24 @@ class WeatherFavoritesViewModel: ObservableObject {
                         operationInProgress.insert(operationKey)
                     }
 
-                    print("🗑️ WEATHER_FAVORITES_VM: Removing favorite: \(favorite.locationName) (CLOUD-ONLY)")
+                    print("🗑️ WEATHER_FAVORITES_VM: Removing favorite: \(favorite.locationName) (CORE DATA + CLOUDKIT)")
 
-                    guard let remoteId = favorite.remoteId else {
-                        print("❌ WEATHER_FAVORITES_VM: Cannot remove favorite - no remote ID")
-                        return
-                    }
-
-                    let result = await weatherFavoritesCloudService.removeFavorite(
-                        id: remoteId
+                    coreDataManager.removeWeatherFavorite(
+                        latitude: favorite.latitude,
+                        longitude: favorite.longitude
                     )
 
                     await MainActor.run {
                         operationInProgress.remove(operationKey)
                     }
 
-                    switch result {
-                    case .success:
-                        print("✅ WEATHER_FAVORITES_VM: Successfully removed favorite")
-                        // Optimistically remove from local array immediately
-                        await MainActor.run {
-                            if let removeIndex = self.favorites.firstIndex(where: {
-                                $0.latitude == favorite.latitude && $0.longitude == favorite.longitude
-                            }) {
-                                self.favorites.remove(at: removeIndex)
-                            }
-                        }
-                    case .failure(let error):
-                        print("❌ WEATHER_FAVORITES_VM: Failed to remove favorite: \(error.localizedDescription)")
-                        await MainActor.run {
-                            self.errorMessage = "Failed to remove favorite: \(error.localizedDescription)"
+                    print("✅ WEATHER_FAVORITES_VM: Successfully removed favorite from Core Data")
+                    // Remove from local array immediately
+                    await MainActor.run {
+                        if let removeIndex = self.favorites.firstIndex(where: {
+                            $0.latitude == favorite.latitude && $0.longitude == favorite.longitude
+                        }) {
+                            self.favorites.remove(at: removeIndex)
                         }
                     }
                 }
@@ -167,45 +164,22 @@ class WeatherFavoritesViewModel: ObservableObject {
             }
         }
 
-        let result = await weatherFavoritesCloudService.updateLocationName(
+        // Update in Core Data by removing and re-adding with new name
+        coreDataManager.removeWeatherFavorite(
+            latitude: favorite.latitude,
+            longitude: favorite.longitude
+        )
+        coreDataManager.addWeatherFavorite(
             latitude: favorite.latitude,
             longitude: favorite.longitude,
-            newName: newName
+            locationName: newName
         )
 
         await MainActor.run {
             operationInProgress.remove(operationKey)
         }
 
-        switch result {
-        case .success:
-            print("✅ WEATHER_FAVORITES_VM: Successfully updated location name")
-            // Optimistic update was successful, no need to reload
-        case .failure(let error):
-            print("❌ WEATHER_FAVORITES_VM: Failed to update location name: \(error.localizedDescription)")
-            // Revert optimistic update
-            await MainActor.run {
-                if let index = self.favorites.firstIndex(where: {
-                    $0.latitude == favorite.latitude && $0.longitude == favorite.longitude
-                }) {
-                    var revertedFavorite = self.favorites[index]
-                    revertedFavorite = WeatherLocationFavorite(
-                        id: revertedFavorite.id,
-                        latitude: revertedFavorite.latitude,
-                        longitude: revertedFavorite.longitude,
-                        locationName: favorite.locationName, // Revert to original name
-                        isFavorite: revertedFavorite.isFavorite,
-                        createdAt: revertedFavorite.createdAt,
-                        userId: revertedFavorite.userId,
-                        deviceId: revertedFavorite.deviceId,
-                        lastModified: revertedFavorite.lastModified,
-                        remoteId: revertedFavorite.remoteId
-                    )
-                    self.favorites[index] = revertedFavorite
-                }
-                self.errorMessage = "Failed to update location name: \(error.localizedDescription)"
-            }
-        }
+        print("✅ WEATHER_FAVORITES_VM: Successfully updated location name in Core Data")
     }
 
     // MARK: - UI Helper Methods

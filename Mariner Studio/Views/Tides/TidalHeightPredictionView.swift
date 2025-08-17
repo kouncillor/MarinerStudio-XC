@@ -11,7 +11,7 @@ struct TidalHeightPredictionView: View {
         latitude: Double?,
         longitude: Double?,
         predictionService: TidalHeightPredictionService = TidalHeightPredictionServiceImpl(),
-        tideFavoritesCloudService: TideFavoritesCloudService
+        coreDataManager: CoreDataManager
     ) {
         _viewModel = StateObject(wrappedValue: TidalHeightPredictionViewModel(
             stationId: stationId,
@@ -19,7 +19,7 @@ struct TidalHeightPredictionView: View {
             latitude: latitude,
             longitude: longitude,
             predictionService: predictionService,
-            tideFavoritesCloudService: tideFavoritesCloudService
+            coreDataManager: coreDataManager
         ))
     }
 

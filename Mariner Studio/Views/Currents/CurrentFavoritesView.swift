@@ -178,7 +178,7 @@ struct CurrentFavoritesView: View {
             NavigationLink(destination: TidalCurrentStationsView(
                 tidalCurrentService: TidalCurrentServiceImpl(),
                 locationService: serviceProvider.locationService,
-                currentFavoritesCloudService: serviceProvider.currentFavoritesCloudService
+                coreDataManager: serviceProvider.coreDataManager
             )) {
                 HStack {
                     Image(systemName: "arrow.left.arrow.right")
@@ -208,7 +208,7 @@ struct CurrentFavoritesView: View {
                             stationId: station.id,
                             bin: station.currentBin ?? 0,
                             stationName: station.name,
-                            currentFavoritesCloudService: serviceProvider.currentFavoritesCloudService
+                            coreDataManager: serviceProvider.coreDataManager
                         )
                     } label: {
                         FavoriteCurrentStationRow(station: station)

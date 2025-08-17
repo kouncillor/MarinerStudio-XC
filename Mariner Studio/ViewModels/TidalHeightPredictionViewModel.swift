@@ -17,7 +17,7 @@ class TidalHeightPredictionViewModel: ObservableObject {
     let latitude: Double?
     let longitude: Double?
     private let predictionService: TidalHeightPredictionService
-    private let tideFavoritesCloudService: TideFavoritesCloudService
+    private let coreDataManager: CoreDataManager
 
     // MARK: - Private Properties
     private let dateFormatter: DateFormatter = {
@@ -33,14 +33,14 @@ class TidalHeightPredictionViewModel: ObservableObject {
         latitude: Double?,
         longitude: Double?,
         predictionService: TidalHeightPredictionService,
-        tideFavoritesCloudService: TideFavoritesCloudService
+        coreDataManager: CoreDataManager
     ) {
         self.stationId = stationId
         self.stationName = stationName
         self.latitude = latitude
         self.longitude = longitude
         self.predictionService = predictionService
-        self.tideFavoritesCloudService = tideFavoritesCloudService
+        self.coreDataManager = coreDataManager
 
         updateFormattedDate()
 
@@ -85,21 +85,22 @@ class TidalHeightPredictionViewModel: ObservableObject {
     }
 
     func toggleFavorite() async {
-        let result = await tideFavoritesCloudService.toggleFavorite(
-            stationId: stationId,
-            stationName: stationName,
-            latitude: latitude,
-            longitude: longitude
-        )
-
-        switch result {
-        case .success(let newValue):
-            await MainActor.run {
-                self.isFavorite = newValue
-            }
-        case .failure(let error):
-            print("❌ TidalHeightPrediction: Failed to toggle favorite: \(error)")
-            // Keep current state if toggle fails
+        let currentlyFavorite = isFavorite
+        
+        if currentlyFavorite {
+            coreDataManager.removeTideFavorite(stationId: stationId)
+        } else {
+            coreDataManager.addTideFavorite(
+                stationId: stationId,
+                name: stationName,
+                latitude: latitude,
+                longitude: longitude
+            )
+        }
+        
+        let newValue = !currentlyFavorite
+        await MainActor.run {
+            self.isFavorite = newValue
         }
     }
 
@@ -134,18 +135,11 @@ class TidalHeightPredictionViewModel: ObservableObject {
 
     // MARK: - Private Methods
     private func updateFavoriteStatus() async {
-        let result = await tideFavoritesCloudService.isFavorite(stationId: stationId)
+        let tideFavorites = coreDataManager.getTideFavorites()
+        let isFavorite = tideFavorites.contains { $0.stationId == stationId }
 
-        switch result {
-        case .success(let isFavorite):
-            await MainActor.run {
-                self.isFavorite = isFavorite
-            }
-        case .failure(let error):
-            print("❌ TidalHeightPrediction: Failed to check favorite status: \(error)")
-            await MainActor.run {
-                self.isFavorite = false // Default to false if check fails
-            }
+        await MainActor.run {
+            self.isFavorite = isFavorite
         }
     }
 

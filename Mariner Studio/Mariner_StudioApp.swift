@@ -10,14 +10,11 @@ struct Mariner_StudioApp: App {
     @StateObject private var serviceProvider = ServiceProvider()
 
     init() {
-        // Initialize Supabase manager early
-        _ = SupabaseManager.shared
-        SupabaseManager.shared.enableVerboseLogging()
         DebugLogger.shared.printLogLocation()
         DebugLogger.shared.log("🚀 Mariner_StudioApp: App initialization started", category: "APP_INIT")
-        DebugLogger.shared.log("🔧 Mariner_StudioApp: SupabaseManager initialized and verbose logging enabled", category: "APP_INIT")
+        DebugLogger.shared.log("🔧 Mariner_StudioApp: Core Data + CloudKit replaces Supabase", category: "APP_INIT")
 
-        // Test obfuscated keys (debug only)
+        // Test obfuscated keys (debug only) - Still needed for legacy services
         #if DEBUG
         SecureKeys.verifyKeys()
         #endif

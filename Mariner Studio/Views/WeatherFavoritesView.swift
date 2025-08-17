@@ -13,15 +13,15 @@ struct WeatherFavoritesView: View {
                viewModel.errorMessage.contains("not authenticated")
     }
 
-    init(weatherFavoritesCloudService: WeatherFavoritesCloudService) {
-        print("🏗️ VIEW: Initializing WeatherFavoritesView (CLOUD-ONLY)")
-        print("🏗️ VIEW: Injecting WeatherFavoritesCloudService: \(type(of: weatherFavoritesCloudService))")
+    init(coreDataManager: CoreDataManager) {
+        print("🏗️ VIEW: Initializing WeatherFavoritesView (CORE DATA + CLOUDKIT)")
+        print("🏗️ VIEW: Injecting CoreDataManager: \(type(of: coreDataManager))")
 
         _viewModel = StateObject(wrappedValue: WeatherFavoritesViewModel(
-            weatherFavoritesCloudService: weatherFavoritesCloudService
+            coreDataManager: coreDataManager
         ))
 
-        print("✅ VIEW: WeatherFavoritesView initialization complete (CLOUD-ONLY)")
+        print("✅ VIEW: WeatherFavoritesView initialization complete (CORE DATA + CLOUDKIT)")
     }
 
     // State for navigation

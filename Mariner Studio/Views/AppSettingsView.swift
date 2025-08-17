@@ -1,8 +1,7 @@
 import SwiftUI
 
 struct AppSettingsView: View {
-    @EnvironmentObject var authViewModel: AuthenticationViewModel
-    @State private var showAuthenticationView = false
+    @EnvironmentObject var cloudKitManager: CloudKitManager
     
     var body: some View {
         NavigationView {
@@ -17,8 +16,8 @@ struct AppSettingsView: View {
                     
                     DividerView()
                     
-                    AccountSection(showAuthenticationView: $showAuthenticationView)
-                        .environmentObject(authViewModel)
+                    // Replace Account Section with CloudKit Status
+                    CloudKitSection()
                     
                     DividerView()
                     
@@ -38,10 +37,6 @@ struct AppSettingsView: View {
                     endPoint: .bottom
                 )
             )
-        }
-        .fullScreenCover(isPresented: $showAuthenticationView) {
-            AuthenticationView()
-                .environmentObject(authViewModel)
         }
     }
 }
@@ -170,6 +165,50 @@ struct TermsOfUseButton: View {
     }
 }
 
+struct CloudKitSection: View {
+    @EnvironmentObject var cloudKitManager: CloudKitManager
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("iCloud Sync")
+                .font(.headline)
+                .padding(.horizontal)
+            
+            VStack(spacing: 12) {
+                // Status Display
+                HStack {
+                    Image(systemName: cloudKitManager.accountStatus == .available ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                        .foregroundColor(cloudKitManager.accountStatus == .available ? .green : .orange)
+                        .frame(width: 24)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(cloudKitManager.accountStatus == .available ? "iCloud Sync Active" : "iCloud Setup Needed")
+                            .font(.body)
+                            .foregroundColor(.primary)
+                        Text(cloudKitManager.getAccountStatusMessage())
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                    
+                    NavigationLink(destination: CloudKitStatusView().environmentObject(cloudKitManager)) {
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .padding()
+                .background(
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(cloudKitManager.accountStatus == .available ? Color.green.opacity(0.1) : Color.orange.opacity(0.1))
+                )
+            }
+            .padding(.horizontal)
+        }
+    }
+}
+
+// LEGACY: Keep for now but will be removed
 struct AccountSection: View {
     @EnvironmentObject var authViewModel: AuthenticationViewModel
     @Binding var showAuthenticationView: Bool

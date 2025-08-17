@@ -1,8 +1,9 @@
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject private var authViewModel = AuthenticationViewModel()
+    @EnvironmentObject var serviceProvider: ServiceProvider
     @StateObject private var subscriptionService = SimpleSubscription()
+    @StateObject private var cloudKitManager = CloudKitManager.shared
     
     var body: some View {
         VStack {
@@ -11,6 +12,7 @@ struct ContentView: View {
                 MainView()
                     .onAppear {
                         DebugLogger.shared.log("✅ SIMPLE SUB: User is Pro - showing full app", category: "SIMPLE_SUBSCRIPTION")
+                        DebugLogger.shared.log("☁️ AUTH: Using seamless CloudKit authentication", category: "CLOUDKIT_AUTH")
                     }
             } else {
                 // User needs to subscribe - show paywall
@@ -20,22 +22,12 @@ struct ContentView: View {
                     }
             }
         }
-        .environmentObject(authViewModel)
         .environmentObject(subscriptionService)
-        .sheet(isPresented: .constant(!authViewModel.isAuthenticated && shouldShowAuthPrompt())) {
-            AuthenticationPromptView()
-                .environmentObject(authViewModel)
-        }
+        .environmentObject(cloudKitManager)
+        .environmentObject(serviceProvider)
         .onAppear {
             DebugLogger.shared.log("💰 SIMPLE SUB: ContentView appeared - checking subscription", category: "SIMPLE_SUBSCRIPTION")
+            DebugLogger.shared.log("☁️ AUTH: No authentication prompts needed - using iCloud account", category: "CLOUDKIT_AUTH")
         }
-    }
-    
-    
-    // Helper function to determine when to show auth prompt
-    private func shouldShowAuthPrompt() -> Bool {
-        // Only show auth prompt if user tries to access features that require authentication
-        // For now, we'll make this false to allow full app access without authentication
-        return false
     }
 }

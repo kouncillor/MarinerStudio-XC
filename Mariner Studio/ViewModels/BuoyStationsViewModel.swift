@@ -27,7 +27,7 @@ class BuoyStationsViewModel: ObservableObject {
     }
 
     // MARK: - Properties
-    let buoyFavoritesCloudService: BuoyFavoritesCloudService
+    let coreDataManager: CoreDataManager
     private let buoyService: BuoyApiService
     private let locationService: LocationService
     private var allStations: [StationWithDistance<BuoyStation>] = []
@@ -36,12 +36,12 @@ class BuoyStationsViewModel: ObservableObject {
     init(
         buoyService: BuoyApiService,
         locationService: LocationService,
-        buoyFavoritesCloudService: BuoyFavoritesCloudService
+        coreDataManager: CoreDataManager
     ) {
         self.buoyService = buoyService
         self.locationService = locationService
-        self.buoyFavoritesCloudService = buoyFavoritesCloudService
-        print("✅ BuoyStationsViewModel initialized (CLOUD-ONLY). Will rely on ServiceProvider for location permission/start.")
+        self.coreDataManager = coreDataManager
+        print("✅ BuoyStationsViewModel initialized (CORE DATA + CLOUDKIT). Will rely on ServiceProvider for location permission/start.")
     }
 
     // MARK: - Public Methods
@@ -74,8 +74,8 @@ class BuoyStationsViewModel: ObservableObject {
             var stations = response.stations
 
             print("⏰ ViewModel (Buoys): Starting batch favorite check (CLOUD-ONLY) at \(Date())")
-            let favoriteIdsResult = await buoyFavoritesCloudService.getFavoriteStationIds()
-            let favoriteIds = (try? favoriteIdsResult.get()) ?? Set<String>()
+            let buoyFavorites = coreDataManager.getBuoyFavorites()
+            let favoriteIds = Set(buoyFavorites.map { $0.stationId })
             print("⏰ ViewModel (Buoys): Loaded \(favoriteIds.count) favorites from cloud at \(Date())")
 
             for i in 0..<stations.count {
@@ -176,30 +176,30 @@ class BuoyStationsViewModel: ObservableObject {
 
         let station = allStations[index].station
 
-        let result = await buoyFavoritesCloudService.toggleFavorite(
-            stationId: stationId,
-            stationName: station.name,
-            latitude: station.latitude,
-            longitude: station.longitude,
-            stationType: station.type,
-            meteorological: station.meteorological,
-            currents: station.currents
-        )
-
-        switch result {
-        case .success(let newFavoriteStatus):
-            await MainActor.run {
-                var updatedStation = station
-                updatedStation.isFavorite = newFavoriteStatus
-                allStations[index] = StationWithDistance(
-                    station: updatedStation,
-                    distanceFromUser: allStations[index].distanceFromUser
-                )
-                print("⭐ ViewModel (Buoys): Updated allStations array for \(stationId) to \(newFavoriteStatus) at \(Date())")
-                filterStations()
-            }
-        case .failure(let error):
-            print("❌ ViewModel (Buoys): Failed to toggle favorite for \(stationId): \(error.localizedDescription)")
+        let currentlyFavorite = station.isFavorite
+        
+        if currentlyFavorite {
+            coreDataManager.removeBuoyFavorite(stationId: stationId)
+        } else {
+            coreDataManager.addBuoyFavorite(
+                stationId: stationId,
+                name: station.name,
+                latitude: station.latitude,
+                longitude: station.longitude
+            )
+        }
+        
+        let newFavoriteStatus = !currentlyFavorite
+        
+        await MainActor.run {
+            var updatedStation = station
+            updatedStation.isFavorite = newFavoriteStatus
+            allStations[index] = StationWithDistance(
+                station: updatedStation,
+                distanceFromUser: allStations[index].distanceFromUser
+            )
+            print("⭐ ViewModel (Buoys): Updated allStations array for \(stationId) to \(newFavoriteStatus) at \(Date())")
+            filterStations()
         }
     }
 }

@@ -1,17 +1,22 @@
 import SwiftUI
 
 struct TideFavoritesView: View {
-    @StateObject private var viewModel = TideFavoritesViewModel()
+    @StateObject private var viewModel: TideFavoritesViewModel
     @EnvironmentObject var serviceProvider: ServiceProvider
-    @EnvironmentObject var authViewModel: AuthenticationViewModel
     @Environment(\.colorScheme) var colorScheme
     
-    // MARK: - Computed Properties
-    
-    private var isAuthenticationError: Bool {
-        return viewModel.errorMessage.contains("User not authenticated") || 
-               viewModel.errorMessage.contains("not authenticated")
+    init(coreDataManager: CoreDataManager) {
+        print("🏗️ VIEW: Initializing TideFavoritesView (CORE DATA + CLOUDKIT)")
+        print("🏗️ VIEW: Injecting CoreDataManager: \(type(of: coreDataManager))")
+
+        _viewModel = StateObject(wrappedValue: TideFavoritesViewModel(
+            coreDataManager: coreDataManager
+        ))
+
+        print("✅ VIEW: TideFavoritesView initialization complete (CORE DATA + CLOUDKIT)")
     }
+    
+    // MARK: - Computed Properties (Simplified for Core Data)
 
     var body: some View {
         ZStack {
@@ -27,12 +32,12 @@ struct TideFavoritesView: View {
         // ❌ REMOVED: Sync button - no longer needed with cloud-only approach
 
         .onAppear {
-            print("🌊 VIEW: TideFavoritesView appeared (CLOUD-ONLY)")
+            print("🌊 VIEW: TideFavoritesView appeared (CORE DATA + CLOUDKIT)")
 
             // Initialize location service
             viewModel.initialize(locationService: serviceProvider.locationService)
 
-            // Load favorites from cloud
+            // Load favorites from Core Data
             Task {
                 await viewModel.loadFavorites()
             }
@@ -82,48 +87,11 @@ struct TideFavoritesView: View {
 
     private var errorView: some View {
         VStack(spacing: 16) {
-            // Check if this is an authentication error
-            if isAuthenticationError {
-                authenticationRequiredView
-            } else {
-                generalErrorView
-            }
+            generalErrorView
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
             print("🎨 VIEW: Error view appeared with message: \(viewModel.errorMessage)")
-        }
-    }
-    
-    // MARK: - Authentication Required View
-    
-    private var authenticationRequiredView: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "person.crop.circle.badge.exclamationmark")
-                .font(.system(size: 60))
-                .foregroundColor(.blue)
-                .padding()
-
-            Text("Sign In Required")
-                .font(.title2)
-                .fontWeight(.semibold)
-
-            Text("To access your favorite tide stations, please sign in to your account. Your favorites are synced across all your devices.")
-                .multilineTextAlignment(.center)
-                .padding(.horizontal)
-                .foregroundColor(.secondary)
-                .font(.body)
-
-            NavigationLink(destination: AppSettingsView().environmentObject(authViewModel)) {
-                HStack {
-                    Image(systemName: "person.circle")
-                    Text("Go to Settings & Sign In")
-                }
-                .padding()
-                .background(Color.blue)
-                .foregroundColor(.white)
-                .cornerRadius(10)
-            }
         }
     }
     
@@ -180,7 +148,7 @@ struct TideFavoritesView: View {
             NavigationLink(destination: TidalHeightStationsView(
                 tidalHeightService: TidalHeightServiceImpl(),
                 locationService: serviceProvider.locationService,
-                tideFavoritesCloudService: serviceProvider.tideFavoritesCloudService
+                coreDataManager: serviceProvider.coreDataManager
             )) {
                 HStack {
                     Image(systemName: "water.waves")
@@ -214,7 +182,7 @@ struct TideFavoritesView: View {
                             stationName: station.name,
                             latitude: station.latitude,
                             longitude: station.longitude,
-                            tideFavoritesCloudService: serviceProvider.tideFavoritesCloudService
+                            coreDataManager: serviceProvider.coreDataManager
                         )
                     } label: {
                         FavoriteStationRow(station: station)
