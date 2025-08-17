@@ -60,6 +60,7 @@ class NavUnitDetailsViewModel: ObservableObject {
     private let databaseService: NavUnitDatabaseService
     private let favoritesService: FavoritesService
     private let noaaChartService: NOAAChartService
+    private let coreDataManager: CoreDataManager
 
     private var cancellables = Set<AnyCancellable>()
 
@@ -70,19 +71,21 @@ class NavUnitDetailsViewModel: ObservableObject {
         navUnitId: String,
         databaseService: NavUnitDatabaseService,
         favoritesService: FavoritesService,
-        noaaChartService: NOAAChartService
+        noaaChartService: NOAAChartService,
+        coreDataManager: CoreDataManager = CoreDataManager.shared
     ) {
-        print("🎯 NavUnitDetailsViewModel: Initializing with navUnitId: \(navUnitId)")
+        DebugLogger.shared.log("🎯 NAVUNIT_DETAILS_VM: Initializing with navUnitId: \(navUnitId)", category: "NAVUNIT_DETAILS")
 
         self.navUnitId = navUnitId
         self.databaseService = databaseService
         self.favoritesService = favoritesService
         self.noaaChartService = noaaChartService
+        self.coreDataManager = coreDataManager
 
         // Initialize empty state - will load async
         self.unit = nil
 
-        print("✅ NavUnitDetailsViewModel: Initialized for async loading")
+        DebugLogger.shared.log("✅ NAVUNIT_DETAILS_VM: Initialized for async loading", category: "NAVUNIT_DETAILS")
     }
 
     // EXISTING: Initializer for direct model injection
@@ -90,14 +93,16 @@ class NavUnitDetailsViewModel: ObservableObject {
         navUnit: NavUnit,
         databaseService: NavUnitDatabaseService,
         favoritesService: FavoritesService,
-        noaaChartService: NOAAChartService
+        noaaChartService: NOAAChartService,
+        coreDataManager: CoreDataManager = CoreDataManager.shared
     ) {
-        print("🎯 NavUnitDetailsViewModel: Initializing with direct navUnit: \(navUnit.navUnitName)")
+        DebugLogger.shared.log("🎯 NAVUNIT_DETAILS_VM: Initializing with direct navUnit: \(navUnit.navUnitName)", category: "NAVUNIT_DETAILS")
 
         self.navUnitId = nil  // No async loading needed
         self.databaseService = databaseService
         self.favoritesService = favoritesService
         self.noaaChartService = noaaChartService
+        self.coreDataManager = coreDataManager
 
         // Set the unit immediately
         self.unit = navUnit
@@ -418,90 +423,38 @@ class NavUnitDetailsViewModel: ObservableObject {
     /// Toggle favorite status
     func toggleFavorite() async {
         guard let unit = unit else {
-            print("⚠️ NavUnitDetailsViewModel: Cannot toggle favorite - no nav unit loaded")
+            DebugLogger.shared.log("⚠️ NAVUNIT_DETAILS_VM: Cannot toggle favorite - no nav unit loaded", category: "NAVUNIT_DETAILS")
             return
         }
 
-        print("⭐ NavUnitDetailsViewModel: Toggling favorite for: \(unit.navUnitName)")
-
-        do {
-            // Toggle favorite in database
-            let newFavoriteStatus = try await databaseService.toggleFavoriteNavUnitAsync(navUnitId: unit.navUnitId)
-
-            await MainActor.run {
-                // Update the local unit
-                var updatedUnit = unit
-                updatedUnit.isFavorite = newFavoriteStatus
-                self.unit = updatedUnit
-
-                // Update the favorite icon
-                self.updateFavoriteIcon()
-
-                print("✅ NavUnitDetailsViewModel: Favorite status updated to: \(newFavoriteStatus)")
-            }
-
-            // Trigger auto-sync if needed
-            await performAutoSyncIfNeeded()
-
-        } catch {
-            print("❌ NavUnitDetailsViewModel: Error toggling favorite: \(error.localizedDescription)")
-
-            await MainActor.run {
-                self.errorMessage = "Failed to update favorite status: \(error.localizedDescription)"
-            }
-        }
-    }
-
-    // MARK: - Auto-Sync Methods
-
-    /// Perform auto-sync if conditions are met
-    private func performAutoSyncIfNeeded() async {
-        guard let unit = unit else { return }
-
-        let navUnitId = unit.navUnitId
-        let currentTime = Date()
-
-        // Check if we should throttle this sync
-        if let lastSync = lastSyncTime[navUnitId],
-           currentTime.timeIntervalSince(lastSync) < syncThrottleInterval {
-            print("🔄 NavUnitDetailsViewModel: Skipping sync for \(navUnitId) - throttled")
-            return
-        }
-
-        // Check if sync is already in progress
-        guard !activeSyncTasks.contains(navUnitId) else {
-            print("🔄 NavUnitDetailsViewModel: Skipping sync for \(navUnitId) - already in progress")
-            return
-        }
-
-        // Mark sync as active
-        activeSyncTasks.insert(navUnitId)
-        lastSyncTime[navUnitId] = currentTime
+        DebugLogger.shared.log("⭐ NAVUNIT_DETAILS_VM: Toggling favorite for: \(unit.navUnitName)", category: "NAVUNIT_DETAILS")
 
         await MainActor.run {
-            isAutoSyncing = true
+            if unit.isFavorite {
+                // Remove from favorites
+                coreDataManager.removeNavUnitFavorite(navUnitId: unit.navUnitId)
+                DebugLogger.shared.log("➖ NAVUNIT_DETAILS_VM: Removed from favorites", category: "NAVUNIT_DETAILS")
+            } else {
+                // Add to favorites
+                coreDataManager.addNavUnitFavorite(
+                    navUnitId: unit.navUnitId,
+                    name: unit.navUnitName,
+                    latitude: unit.latitude,
+                    longitude: unit.longitude
+                )
+                DebugLogger.shared.log("➕ NAVUNIT_DETAILS_VM: Added to favorites", category: "NAVUNIT_DETAILS")
+            }
+
+            // Update the local unit
+            var updatedUnit = unit
+            updatedUnit.isFavorite = !unit.isFavorite
+            self.unit = updatedUnit
+
+            // Update the favorite icon
+            self.updateFavoriteIcon()
+
+            DebugLogger.shared.log("✅ NAVUNIT_DETAILS_VM: Favorite status updated to: \(updatedUnit.isFavorite)", category: "NAVUNIT_DETAILS")
         }
-
-        do {
-            // Perform sync using the favorites service
-            print("☁️ NavUnitDetailsViewModel: Starting auto-sync for nav unit: \(navUnitId)")
-
-            // Note: This would need to be implemented in the favorites service
-            // For now, we'll just simulate the sync
-            try await Task.sleep(nanoseconds: 1_000_000_000) // 1 second delay
-
-            print("✅ NavUnitDetailsViewModel: Auto-sync completed for: \(navUnitId)")
-
-        } catch {
-            print("❌ NavUnitDetailsViewModel: Auto-sync failed: \(error.localizedDescription)")
-        }
-
-        await MainActor.run {
-            isAutoSyncing = false
-        }
-
-        // Remove from active sync tasks
-        activeSyncTasks.remove(navUnitId)
     }
 
     // MARK: - Cleanup

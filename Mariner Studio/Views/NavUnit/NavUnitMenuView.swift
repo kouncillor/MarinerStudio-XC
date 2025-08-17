@@ -8,7 +8,7 @@ struct NavUnitMenuView: View {
         ScrollView {
             VStack(spacing: 12) {
                 // Favorites - Star Icon
-                NavigationLink(destination: NavUnitFavoritesView()) {
+                NavigationLink(destination: NavUnitFavoritesView(coreDataManager: CoreDataManager.shared)) {
                     MenuButtonContentNavUnit(
                         iconType: .system("star.fill"),
                         title: "FAVORITES",

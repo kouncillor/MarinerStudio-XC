@@ -10,9 +10,14 @@
 import SwiftUI
 
 struct NavUnitFavoritesView: View {
-    @StateObject private var viewModel = NavUnitFavoritesViewModel()
+    @StateObject private var viewModel: NavUnitFavoritesViewModel
     @EnvironmentObject var serviceProvider: ServiceProvider
     @Environment(\.colorScheme) var colorScheme
+    
+    // Allow dependency injection for testing
+    init(coreDataManager: CoreDataManager = CoreDataManager.shared) {
+        self._viewModel = StateObject(wrappedValue: NavUnitFavoritesViewModel(coreDataManager: coreDataManager))
+    }
 
     var body: some View {
         Group {
@@ -35,59 +40,19 @@ struct NavUnitFavoritesView: View {
         .toolbarBackground(.visible, for: .navigationBar)
         .withHomeButton()
         .onAppear {
-            print("🎨 NavUnitFavoritesView: View appeared")
+            DebugLogger.shared.log("🎨 NAVUNIT_FAVORITES_VIEW: View appeared", category: "NAVUNIT_FAVORITES")
             viewModel.initialize(
                 navUnitService: serviceProvider.navUnitService,
-                locationService: serviceProvider.locationService,
-                syncService: serviceProvider.navUnitSyncService
+                locationService: serviceProvider.locationService
             )
             viewModel.loadFavorites()
         }
         .onDisappear {
-            print("🎨 NavUnitFavoritesView: View disappeared")
+            DebugLogger.shared.log("🎨 NAVUNIT_FAVORITES_VIEW: View disappeared", category: "NAVUNIT_FAVORITES")
             viewModel.cleanup()
         }
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                // Sync button in the same position as CurrentFavoritesView
-                SyncButton()
-            }
-        }
     }
 
-    // MARK: - Sync Button
-
-    @ViewBuilder
-    private func SyncButton() -> some View {
-        if viewModel.isSyncing {
-            // Show progress indicator when syncing
-            ProgressView()
-                .scaleEffect(0.8)
-                .foregroundColor(.blue)
-        } else {
-            // Show sync button when not syncing
-            Button(action: {
-                print("🔄 NavUnitFavoritesView: Manual sync button tapped")
-                Task {
-                    await viewModel.performManualSync()
-                }
-            }) {
-                Image(systemName: syncIconName)
-                    .foregroundColor(syncIconColor)
-            }
-            .disabled(viewModel.isLoading) // Disable while initial load is happening
-        }
-    }
-
-    // MARK: - Sync Icon State
-
-    private var syncIconName: String {
-        return "arrow.clockwise"
-    }
-
-    private var syncIconColor: Color {
-        return .white
-    }
 
     // MARK: - Loading View
 
@@ -182,12 +147,8 @@ struct NavUnitFavoritesView: View {
 
     @ViewBuilder
     private func FavoritesListView() -> some View {
-        VStack(spacing: 0) {
-            // NEW: Sync Status View (like CurrentFavoritesView)
-            SyncStatusView()
-
-            // List of favorites
-            List {
+        // List of favorites
+        List {
                 ForEach(viewModel.favorites) { navUnitWithDistance in
                     NavigationLink {
                         // Create NavUnitDetailsView with proper dependency injection
@@ -195,19 +156,17 @@ struct NavUnitFavoritesView: View {
                             navUnit: navUnitWithDistance.station,
                             databaseService: serviceProvider.navUnitService,
                             favoritesService: serviceProvider.favoritesService,
-                            noaaChartService: serviceProvider.noaaChartService
+                            noaaChartService: serviceProvider.noaaChartService,
+                            coreDataManager: CoreDataManager.shared
                         )
 
                         NavUnitDetailsView(viewModel: detailsViewModel)
                     } label: {
                         FavoriteNavUnitRow(navUnitWithDistance: navUnitWithDistance)
                     }
-                    .onAppear {
-                        print("🎨 NavUnitFavoritesView: Nav unit row appeared for \(navUnitWithDistance.station.navUnitId)")
-                    }
                 }
                 .onDelete(perform: { offsets in
-                    print("🗑️ NavUnitFavoritesView: Delete gesture triggered for offsets \(Array(offsets))")
+                    DebugLogger.shared.log("🗑️ NAVUNIT_FAVORITES_VIEW: Delete gesture triggered", category: "NAVUNIT_FAVORITES")
                     Task {
                         await viewModel.removeFavorite(at: offsets)
                     }
@@ -215,92 +174,11 @@ struct NavUnitFavoritesView: View {
             }
             .listStyle(.insetGrouped)
             .refreshable {
-                print("🔄 NavUnitFavoritesView: Pull-to-refresh triggered")
+                DebugLogger.shared.log("🔄 NAVUNIT_FAVORITES_VIEW: Pull-to-refresh triggered", category: "NAVUNIT_FAVORITES")
                 await viewModel.refreshFavorites()
             }
-        }
     }
 
-    // MARK: - Sync Status View
-
-    @ViewBuilder
-    private func SyncStatusView() -> some View {
-        if viewModel.isSyncing {
-            // Show syncing status
-            HStack {
-                ProgressView()
-                    .scaleEffect(0.7)
-                Text("Syncing nav unit favorites...")
-                    .font(.caption)
-                Spacer()
-            }
-            .padding(.horizontal)
-            .padding(.vertical, 8)
-            .background(Color.blue.opacity(0.1))
-            .foregroundColor(.blue)
-        } else if let errorMessage = viewModel.syncErrorMessage {
-            // Show sync error
-            HStack {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundColor(.orange)
-                Text(errorMessage)
-                    .font(.caption)
-                    .foregroundColor(.red)
-                Spacer()
-
-                Button("Retry") {
-                    Task {
-                        await viewModel.performManualSync()
-                    }
-                }
-                .font(.caption)
-                .foregroundColor(.blue)
-            }
-            .padding(.horizontal)
-            .padding(.vertical, 8)
-            .background(Color.red.opacity(0.1))
-        } else if let successMessage = viewModel.syncSuccessMessage {
-            // Show sync success (auto-dismiss after 3 seconds)
-            HStack {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(.green)
-                Text(successMessage)
-                    .font(.caption)
-                    .foregroundColor(.green)
-                Spacer()
-            }
-            .padding(.horizontal)
-            .padding(.vertical, 8)
-            .background(Color.green.opacity(0.1))
-            .onAppear {
-                // Auto-dismiss success message after 3 seconds
-                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                    viewModel.clearSyncMessages()
-                }
-            }
-        } else if let lastSyncTime = viewModel.lastSyncTime {
-            // Show last sync time
-            HStack {
-                Image(systemName: "checkmark.icloud.fill")
-                    .foregroundColor(.green)
-                Text("Last sync: \(DateFormatter.syncStatus.string(from: lastSyncTime))")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                Spacer()
-
-                Button("Sync") {
-                    Task {
-                        await viewModel.performManualSync()
-                    }
-                }
-                .font(.caption)
-                .foregroundColor(.blue)
-            }
-            .padding(.horizontal)
-            .padding(.vertical, 8)
-            .background(Color(.systemGray6))
-        }
-    }
 }
 
 // MARK: - Favorite Nav Unit Row

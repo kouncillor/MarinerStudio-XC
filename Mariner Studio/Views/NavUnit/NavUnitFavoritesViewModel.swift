@@ -2,9 +2,9 @@
 //  NavUnitFavoritesViewModel.swift
 //  Mariner Studio
 //
-//  NavUnit Favorites ViewModel with comprehensive sync integration
+//  NavUnit Favorites ViewModel migrated to Core Data + CloudKit
 //  Manages the display and interaction logic for favorite navigation units
-//  Handles loading favorites from local database, distance calculations, sync operations, and favorite status toggling
+//  Uses CoreDataManager for simple, synchronous operations with automatic CloudKit sync
 //
 
 import Foundation
@@ -19,37 +19,24 @@ class NavUnitFavoritesViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage = ""
 
-    // Sync-related published properties
-    @Published var isSyncing = false
-    @Published var syncErrorMessage: String?
-    @Published var syncSuccessMessage: String?
-    @Published var lastSyncTime: Date?
-
     // MARK: - Properties
+    private var coreDataManager: CoreDataManager
     private var navUnitService: NavUnitDatabaseService?
     private var locationService: LocationService?
-    private var syncService: NavUnitSyncService?
     private var loadTask: Task<Void, Never>?
-    private var cancellables = Set<AnyCancellable>()
 
     // Performance tracking
     private var startTime: Date?
 
     // MARK: - Initialization
-    init() {
-        logDebug("🎯 NavUnitFavoritesViewModel: Created at \(Date())")
-        logDebug("🎯 NavUnitFavoritesViewModel: Thread = \(Thread.current)")
-        logDebug("🎯 NavUnitFavoritesViewModel: Memory address = \(Unmanaged.passUnretained(self).toOpaque())")
+    init(coreDataManager: CoreDataManager = CoreDataManager.shared) {
+        self.coreDataManager = coreDataManager
+        DebugLogger.shared.log("🎯 NAVUNIT_FAVORITES_VM: Initialized with CoreDataManager", category: "NAVUNIT_FAVORITES")
     }
 
     deinit {
-        // Use print directly instead of logDebug to avoid main actor isolation
-        print("💀 NavUnitFavoritesViewModel: Being deallocated")
-
-        // Cancel task and cleanup directly - these are the only safe operations from deinit
+        DebugLogger.shared.log("💀 NAVUNIT_FAVORITES_VM: Being deallocated", category: "NAVUNIT_FAVORITES")
         loadTask?.cancel()
-        // Note: Can't access cancellables from deinit due to main actor isolation
-        // The cleanup() method should be called from onDisappear instead
     }
 
     // MARK: - Service Initialization
@@ -57,44 +44,21 @@ class NavUnitFavoritesViewModel: ObservableObject {
     /// Initialize with services using dependency injection
     func initialize(
         navUnitService: NavUnitDatabaseService,
-        locationService: LocationService,
-        syncService: NavUnitSyncService
+        locationService: LocationService
     ) {
-        logDebug("🔧 NavUnitFavoritesViewModel: Starting service initialization...")
-        logDebug("🔧 NavUnitFavoritesViewModel: NavUnitService = \(type(of: navUnitService))")
-        logDebug("🔧 NavUnitFavoritesViewModel: LocationService = \(type(of: locationService))")
-        logDebug("🔧 NavUnitFavoritesViewModel: SyncService = \(type(of: syncService))")
-
+        DebugLogger.shared.log("🔧 NAVUNIT_FAVORITES_VM: Initializing services", category: "NAVUNIT_FAVORITES")
+        
         self.navUnitService = navUnitService
         self.locationService = locationService
-        self.syncService = syncService
-
-        // Observe sync service state changes
-        setupSyncObservation()
-
-        logDebug("✅ NavUnitFavoritesViewModel: All services assigned successfully")
-    }
-
-    // MARK: - Sync Observation
-
-    /// Set up observation of sync service state changes
-    private func setupSyncObservation() {
-        guard let syncService = syncService else { return }
-
-        // Observe isSyncing state from the sync service
-        syncService.$isSyncing
-            .receive(on: DispatchQueue.main)
-            .assign(to: \.isSyncing, on: self)
-            .store(in: &cancellables)
-
-        logDebug("🔗 NavUnitFavoritesViewModel: Sync observation configured")
+        
+        DebugLogger.shared.log("✅ NAVUNIT_FAVORITES_VM: Services initialized", category: "NAVUNIT_FAVORITES")
     }
 
     // MARK: - Data Loading
 
-    /// Load favorite navigation units from local database
+    /// Load favorite navigation units from Core Data
     func loadFavorites() {
-        logDebug("📱 NavUnitFavoritesViewModel: Starting load process")
+        DebugLogger.shared.log("📱 NAVUNIT_FAVORITES_VM: Starting favorites load", category: "NAVUNIT_FAVORITES")
 
         // Cancel any existing load task
         loadTask?.cancel()
@@ -116,7 +80,7 @@ class NavUnitFavoritesViewModel: ObservableObject {
 
     /// Refresh favorites (used by pull-to-refresh and manual refresh)
     func refreshFavorites() async {
-        logDebug("🔄 NavUnitFavoritesViewModel: Refreshing favorites")
+        DebugLogger.shared.log("🔄 NAVUNIT_FAVORITES_VM: Refreshing favorites", category: "NAVUNIT_FAVORITES")
         do {
             try await performLoadFavorites()
         } catch {
@@ -127,22 +91,31 @@ class NavUnitFavoritesViewModel: ObservableObject {
     /// Perform the actual loading of favorites
     private func performLoadFavorites() async throws {
         startTime = Date()
-        logDebug("⏰ NavUnitFavoritesViewModel: Beginning favorite nav units load at \(Date())")
+        DebugLogger.shared.log("⏰ NAVUNIT_FAVORITES_VM: Starting load operation", category: "NAVUNIT_FAVORITES")
 
+        // Get Core Data favorites
+        let coreDataFavorites = coreDataManager.getNavUnitFavorites()
+        DebugLogger.shared.log("📥 NAVUNIT_FAVORITES_VM: Found \(coreDataFavorites.count) CoreData favorites", category: "NAVUNIT_FAVORITES")
+
+        // Convert to NavUnit objects using the nav unit service
         guard let navUnitService = navUnitService else {
             throw NSError(domain: "NavUnitFavoritesViewModel", code: 1,
                          userInfo: [NSLocalizedDescriptionKey: "NavUnit service not available"])
         }
 
-        // Get all favorite nav units from database
-        logDebug("📱 NavUnitFavoritesViewModel: Requesting favorite nav units from database")
-        let favoriteNavUnits = try await navUnitService.getFavoriteNavUnitsAsync()
+        var favoriteNavUnits: [NavUnit] = []
+        
+        for favorite in coreDataFavorites {
+            if let navUnit = try await navUnitService.getNavUnitAsync(navUnitId: favorite.navUnitId) {
+                favoriteNavUnits.append(navUnit)
+            }
+        }
 
-        logDebug("📱 NavUnitFavoritesViewModel: Found \(favoriteNavUnits.count) favorite nav units")
+        DebugLogger.shared.log("📱 NAVUNIT_FAVORITES_VM: Loaded \(favoriteNavUnits.count) nav unit details", category: "NAVUNIT_FAVORITES")
 
         // Get current location for distance calculation
         let currentLocation = locationService?.currentLocation
-        logDebug("📍 NavUnitFavoritesViewModel: Current location = \(currentLocation?.description ?? "unknown")")
+        DebugLogger.shared.log("📍 NAVUNIT_FAVORITES_VM: Current location available: \(currentLocation != nil)", category: "NAVUNIT_FAVORITES")
 
         // Create StationWithDistance objects
         let favoritesWithDistance = favoriteNavUnits.map { navUnit in
@@ -177,71 +150,23 @@ class NavUnitFavoritesViewModel: ObservableObject {
         // Performance logging
         if let startTime = startTime {
             let duration = Date().timeIntervalSince(startTime)
-            logDebug("✅ NavUnitFavoritesViewModel: Load completed in \(String(format: "%.3f", duration))s")
-            logDebug("📊 NavUnitFavoritesViewModel: Performance - \(sortedFavorites.count) favorites processed")
+            DebugLogger.shared.log("✅ NAVUNIT_FAVORITES_VM: Load completed in \(String(format: "%.3f", duration))s", category: "NAVUNIT_FAVORITES")
         }
-    }
-
-    // MARK: - Sync Operations
-
-    /// Perform manual sync triggered by user
-    func performManualSync() async {
-        logDebug("🔄 NavUnitFavoritesViewModel: Manual sync triggered")
-
-        guard let syncService = syncService else {
-            logDebug("❌ NavUnitFavoritesViewModel: Sync service not available")
-            syncErrorMessage = "Sync service not available"
-            return
-        }
-
-        // Clear previous sync messages
-        clearSyncMessages()
-
-        // Perform the sync
-        let success = await syncService.performFullSync()
-
-        if success {
-            logDebug("✅ NavUnitFavoritesViewModel: Manual sync completed successfully")
-            syncSuccessMessage = "Sync completed successfully"
-            lastSyncTime = Date()
-
-            // Reload favorites after successful sync
-            await refreshFavorites()
-        } else {
-            logDebug("❌ NavUnitFavoritesViewModel: Manual sync failed")
-            syncErrorMessage = "Sync failed. Please try again."
-        }
-    }
-
-    /// Clear sync status messages
-    func clearSyncMessages() {
-        syncErrorMessage = nil
-        syncSuccessMessage = nil
     }
 
     // MARK: - Favorite Management
 
     /// Remove favorite at specified indices (used by swipe-to-delete)
     func removeFavorite(at offsets: IndexSet) async {
-        logDebug("🗑️ NavUnitFavoritesViewModel: Removing favorites at offsets: \(Array(offsets))")
-
-        guard let navUnitService = navUnitService else {
-            logDebug("❌ NavUnitFavoritesViewModel: NavUnit service not available for favorite removal")
-            return
-        }
+        DebugLogger.shared.log("🗑️ NAVUNIT_FAVORITES_VM: Removing favorites at offsets: \(Array(offsets))", category: "NAVUNIT_FAVORITES")
 
         for index in offsets {
             let navUnit = favorites[index].station
-            logDebug("🗑️ NavUnitFavoritesViewModel: Removing favorite: \(navUnit.navUnitName)")
+            DebugLogger.shared.log("🗑️ NAVUNIT_FAVORITES_VM: Removing favorite: \(navUnit.navUnitName)", category: "NAVUNIT_FAVORITES")
 
-            do {
-                // Toggle favorite status in database (will set to false)
-                _ = try await navUnitService.toggleFavoriteNavUnitAsync(navUnitId: navUnit.navUnitId)
-                logDebug("✅ NavUnitFavoritesViewModel: Successfully removed favorite: \(navUnit.navUnitName)")
-            } catch {
-                logDebug("❌ NavUnitFavoritesViewModel: Error removing favorite \(navUnit.navUnitName): \(error.localizedDescription)")
-                errorMessage = "Failed to remove favorite: \(error.localizedDescription)"
-            }
+            // Remove from Core Data
+            coreDataManager.removeNavUnitFavorite(navUnitId: navUnit.navUnitId)
+            DebugLogger.shared.log("✅ NAVUNIT_FAVORITES_VM: Removed from CoreData: \(navUnit.navUnitName)", category: "NAVUNIT_FAVORITES")
         }
 
         // Refresh the list after removal
@@ -252,7 +177,7 @@ class NavUnitFavoritesViewModel: ObservableObject {
 
     /// Handle load errors
     private func handleLoadError(_ message: String) async {
-        logDebug("❌ NavUnitFavoritesViewModel: Load error - \(message)")
+        DebugLogger.shared.log("❌ NAVUNIT_FAVORITES_VM: Load error - \(message)", category: "NAVUNIT_FAVORITES")
         errorMessage = message
         isLoading = false
     }
@@ -261,15 +186,7 @@ class NavUnitFavoritesViewModel: ObservableObject {
 
     /// Cleanup resources (for SwiftUI calls)
     func cleanup() {
-        logDebug("🧹 NavUnitFavoritesViewModel: Cleaning up resources")
+        DebugLogger.shared.log("🧹 NAVUNIT_FAVORITES_VM: Cleaning up resources", category: "NAVUNIT_FAVORITES")
         loadTask?.cancel()
-        cancellables.removeAll()
-    }
-
-    // MARK: - Debug Logging
-
-    /// Debug logging helper
-    private func logDebug(_ message: String) {
-        print(message)
     }
 }

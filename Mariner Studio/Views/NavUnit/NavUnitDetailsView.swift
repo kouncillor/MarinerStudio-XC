@@ -125,7 +125,8 @@ struct NavUnitDetailsView: View {
             navUnitId: navUnitId,
             databaseService: serviceProvider.navUnitService,
             favoritesService: serviceProvider.favoritesService,
-            noaaChartService: serviceProvider.noaaChartService
+            noaaChartService: serviceProvider.noaaChartService,
+            coreDataManager: CoreDataManager.shared
         ))
     }
 
@@ -988,7 +989,8 @@ struct NavUnitDetailsView: View {
                 ),
                 databaseService: NavUnitDatabaseService(databaseCore: DatabaseCore()),
                 favoritesService: FavoritesServiceImpl(),
-                noaaChartService: NOAAChartServiceImpl()
+                noaaChartService: NOAAChartServiceImpl(),
+                coreDataManager: CoreDataManager.shared
             )
         )
     }
