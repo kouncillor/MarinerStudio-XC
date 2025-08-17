@@ -106,8 +106,13 @@ class NavUnitFavoritesViewModel: ObservableObject {
         var favoriteNavUnits: [NavUnit] = []
         
         for favorite in coreDataFavorites {
-            if let navUnit = try await navUnitService.getNavUnitAsync(navUnitId: favorite.navUnitId) {
+            do {
+                let navUnit = try await navUnitService.getNavUnitByIdAsync(favorite.navUnitId)
                 favoriteNavUnits.append(navUnit)
+            } catch {
+                DebugLogger.shared.log("⚠️ NAVUNIT_FAVORITES_VM: Could not load NavUnit \(favorite.navUnitId): \(error)", category: "NAVUNIT_FAVORITES")
+                // Skip this favorite if we can't load the nav unit details
+                continue
             }
         }
 
