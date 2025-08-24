@@ -49,9 +49,9 @@ struct PhotoSyncStatus {
         return photosToDownload == 0 && cloudPhotos > 0
     }
 
-    /// Remaining photo slots before hitting the 10 photo limit
+    /// No photo limit with CloudKit - always unlimited
     var remainingSlots: Int {
-        return max(0, 10 - totalPhotos)
+        return Int.max
     }
 
     // MARK: - Initializers
@@ -121,7 +121,7 @@ enum PhotoSyncError: Error, LocalizedError {
         case .authenticationFailed:
             return "Authentication failed - please sign in again"
         case .photoLimitExceeded:
-            return "Photo limit of 10 per navigation unit exceeded"
+            return "Photo limit exceeded (this should not occur with CloudKit)"
         case .fileNotFound(let fileName):
             return "Photo file not found: \(fileName)"
         case .uploadFailed(let fileName):

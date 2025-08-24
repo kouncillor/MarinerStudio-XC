@@ -91,6 +91,10 @@ extension CurrentFavorite {
 
     @NSManaged public var stationId: String
     @NSManaged public var currentBin: Int32
+    @NSManaged public var name: String
+    @NSManaged public var latitude: Double
+    @NSManaged public var longitude: Double
+    @NSManaged public var depth: Double
     @NSManaged public var dateAdded: Date
 
 }
@@ -121,5 +125,33 @@ extension BuoyFavorite {
 }
 
 extension BuoyFavorite : Identifiable {
+
+}
+
+// MARK: - NavUnitPhotoEntity (Core Data Entity)
+
+@objc(NavUnitPhotoEntity)
+public class NavUnitPhotoEntity: NSManagedObject {
+    
+}
+
+extension NavUnitPhotoEntity {
+
+    @nonobjc public class func fetchRequest() -> NSFetchRequest<NavUnitPhotoEntity> {
+        return NSFetchRequest<NavUnitPhotoEntity>(entityName: "NavUnitPhotoEntity")
+    }
+
+    @NSManaged public var id: UUID
+    @NSManaged public var navUnitId: String
+    @NSManaged public var imageData: Data?
+    @NSManaged public var thumbnailData: Data?
+    @NSManaged public var timestamp: Date
+    @NSManaged public var caption: String?
+    @NSManaged public var userId: String?
+    @NSManaged public var dateAdded: Date
+
+}
+
+extension NavUnitPhotoEntity : Identifiable {
 
 }

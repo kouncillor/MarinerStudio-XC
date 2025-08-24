@@ -248,12 +248,16 @@ final class CoreDataManager: ObservableObject {
     }
     
     // MARK: - Current Station Favorites
-    func addCurrentFavorite(stationId: String, currentBin: Int) {
-        DebugLogger.shared.log("➕ CURRENT_FAVORITE: Adding \(stationId) bin \(currentBin)", category: "CORE_DATA_CURRENT")
+    func addCurrentFavorite(stationId: String, currentBin: Int, name: String, latitude: Double, longitude: Double, depth: Double?) {
+        DebugLogger.shared.log("➕ CURRENT_FAVORITE: Adding \(stationId) bin \(currentBin) - \(name) depth: \(depth?.description ?? "nil")", category: "CORE_DATA_CURRENT")
         
         let favorite = CurrentFavorite(context: viewContext)
         favorite.stationId = stationId
         favorite.currentBin = Int32(currentBin)
+        favorite.name = name
+        favorite.latitude = latitude
+        favorite.longitude = longitude
+        favorite.depth = depth ?? 0.0
         favorite.dateAdded = Date()
         
         saveContext()
@@ -285,8 +289,30 @@ final class CoreDataManager: ObservableObject {
         
         do {
             let favorites = try viewContext.fetch(request)
-            DebugLogger.shared.log("📥 CURRENT_FAVORITE: Retrieved \(favorites.count) favorites", category: "CORE_DATA_CURRENT")
-            return favorites
+            
+            // Try to access the new fields to detect old schema
+            var validFavorites: [CurrentFavorite] = []
+            for favorite in favorites {
+                do {
+                    // Try to access the new properties
+                    let _ = favorite.name
+                    let _ = favorite.latitude
+                    let _ = favorite.longitude
+                    validFavorites.append(favorite)
+                } catch {
+                    // This favorite has old schema, delete it
+                    DebugLogger.shared.log("🧹 CURRENT_FAVORITE: Deleting old schema favorite: \(favorite.stationId)", category: "CORE_DATA_CURRENT")
+                    viewContext.delete(favorite)
+                }
+            }
+            
+            if validFavorites.count != favorites.count {
+                DebugLogger.shared.log("🧹 CURRENT_FAVORITE: Cleaned up \(favorites.count - validFavorites.count) old favorites", category: "CORE_DATA_CURRENT")
+                saveContext()
+            }
+            
+            DebugLogger.shared.log("📥 CURRENT_FAVORITE: Retrieved \(validFavorites.count) favorites", category: "CORE_DATA_CURRENT")
+            return validFavorites
         } catch {
             DebugLogger.shared.log("❌ CURRENT_FAVORITE: Fetch failed - \(error)", category: "CORE_DATA_CURRENT")
             return []
@@ -366,6 +392,85 @@ final class CoreDataManager: ObservableObject {
         } catch {
             DebugLogger.shared.log("❌ BUOY_FAVORITE: Check failed - \(error)", category: "CORE_DATA_BUOY")
             return false
+        }
+    }
+    
+    // MARK: - NavUnit Photo Operations
+    func addNavUnitPhoto(navUnitId: String, imageData: Data, thumbnailData: Data, caption: String? = nil) {
+        DebugLogger.shared.log("📸 NAVUNIT_PHOTO: Adding photo for \(navUnitId)", category: "CORE_DATA_PHOTO")
+        
+        let photo = NavUnitPhotoEntity(context: viewContext)
+        photo.id = UUID()
+        photo.navUnitId = navUnitId
+        photo.imageData = imageData
+        photo.thumbnailData = thumbnailData
+        photo.timestamp = Date()
+        photo.caption = caption
+        photo.userId = nil // CloudKit will handle user association automatically
+        photo.dateAdded = Date()
+        
+        saveContext()
+        
+        DebugLogger.shared.log("✅ NAVUNIT_PHOTO: Added successfully - CloudKit will sync automatically", category: "CORE_DATA_PHOTO")
+    }
+    
+    func removeNavUnitPhoto(photoId: UUID) {
+        DebugLogger.shared.log("🗑️ NAVUNIT_PHOTO: Removing photo \(photoId)", category: "CORE_DATA_PHOTO")
+        
+        let request: NSFetchRequest<NavUnitPhotoEntity> = NavUnitPhotoEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "id == %@", photoId as CVarArg)
+        
+        do {
+            let photos = try viewContext.fetch(request)
+            for photo in photos {
+                viewContext.delete(photo)
+            }
+            saveContext()
+            DebugLogger.shared.log("✅ NAVUNIT_PHOTO: Removed successfully", category: "CORE_DATA_PHOTO")
+        } catch {
+            DebugLogger.shared.log("❌ NAVUNIT_PHOTO: Remove failed - \(error)", category: "CORE_DATA_PHOTO")
+        }
+    }
+    
+    func getNavUnitPhotos(for navUnitId: String) -> [NavUnitPhotoEntity] {
+        let request: NSFetchRequest<NavUnitPhotoEntity> = NavUnitPhotoEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "navUnitId == %@", navUnitId)
+        request.sortDescriptors = [NSSortDescriptor(keyPath: \NavUnitPhotoEntity.timestamp, ascending: false)]
+        
+        do {
+            let photos = try viewContext.fetch(request)
+            DebugLogger.shared.log("📥 NAVUNIT_PHOTO: Retrieved \(photos.count) photos for \(navUnitId)", category: "CORE_DATA_PHOTO")
+            return photos
+        } catch {
+            DebugLogger.shared.log("❌ NAVUNIT_PHOTO: Fetch failed - \(error)", category: "CORE_DATA_PHOTO")
+            return []
+        }
+    }
+    
+    func getNavUnitPhotoCount(for navUnitId: String) -> Int {
+        let request: NSFetchRequest<NavUnitPhotoEntity> = NavUnitPhotoEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "navUnitId == %@", navUnitId)
+        
+        do {
+            let count = try viewContext.count(for: request)
+            return count
+        } catch {
+            DebugLogger.shared.log("❌ NAVUNIT_PHOTO: Count failed - \(error)", category: "CORE_DATA_PHOTO")
+            return 0
+        }
+    }
+    
+    func getNavUnitPhoto(by id: UUID) -> NavUnitPhotoEntity? {
+        let request: NSFetchRequest<NavUnitPhotoEntity> = NavUnitPhotoEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+        request.fetchLimit = 1
+        
+        do {
+            let photos = try viewContext.fetch(request)
+            return photos.first
+        } catch {
+            DebugLogger.shared.log("❌ NAVUNIT_PHOTO: Fetch by ID failed - \(error)", category: "CORE_DATA_PHOTO")
+            return nil
         }
     }
 }

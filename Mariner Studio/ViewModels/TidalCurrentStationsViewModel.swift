@@ -258,7 +258,11 @@ class TidalCurrentStationsViewModel: ObservableObject {
         } else {
             coreDataManager.addCurrentFavorite(
                 stationId: stationId,
-                currentBin: currentStation.currentBin ?? 0
+                currentBin: currentStation.currentBin ?? 0,
+                name: currentStation.name,
+                latitude: currentStation.latitude ?? 0.0,
+                longitude: currentStation.longitude ?? 0.0,
+                depth: currentStation.depth
             )
         }
         

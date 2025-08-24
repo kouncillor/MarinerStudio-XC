@@ -305,49 +305,50 @@ struct NavUnitDetailsView: View {
                                 }
                                 .padding(.vertical, 16)
                             } else {
-                                ScrollView(.horizontal, showsIndicators: false) {
-                                    HStack(spacing: 8) {
-                                        ForEach(Array(photos.prefix(4).enumerated()), id: \.element.id) { _, photo in
-                                            Button(action: { showingPhotoGallery = true }) {
-                                                if let thumbnail = thumbnailImages[photo.id] {
-                                                    Image(uiImage: thumbnail)
-                                                        .resizable()
-                                                        .aspectRatio(contentMode: .fill)
-                                                        .frame(width: 80, height: 80)
-                                                        .clipped()
-                                                        .cornerRadius(8)
-                                                } else {
-                                                    RoundedRectangle(cornerRadius: 8)
-                                                        .fill(Color(.systemGray5))
-                                                        .frame(width: 80, height: 80)
-                                                        .overlay(
-                                                            ProgressView()
-                                                                .scaleEffect(0.7)
-                                                        )
+                                HStack(spacing: 8) {
+                                    // Add photo button (always on the left)
+                                    Button(action: { showingPhotoGallery = true }) {
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .strokeBorder(Color.blue, lineWidth: 2, antialiased: true)
+                                            .frame(width: 80, height: 80)
+                                            .overlay(
+                                                VStack(spacing: 4) {
+                                                    Image(systemName: "plus")
+                                                        .font(.system(size: 24))
+                                                        .foregroundColor(.blue)
+                                                    Text("Add")
+                                                        .font(.caption2)
+                                                        .foregroundColor(.blue)
+                                                }
+                                            )
+                                    }
+                                    
+                                    // Photos scroll to the right
+                                    ScrollView(.horizontal, showsIndicators: false) {
+                                        HStack(spacing: 8) {
+                                            ForEach(photos, id: \.id) { photo in
+                                                Button(action: { showingPhotoGallery = true }) {
+                                                    if let thumbnail = thumbnailImages[photo.id] {
+                                                        Image(uiImage: thumbnail)
+                                                            .resizable()
+                                                            .aspectRatio(contentMode: .fill)
+                                                            .frame(width: 80, height: 80)
+                                                            .clipped()
+                                                            .cornerRadius(8)
+                                                    } else {
+                                                        RoundedRectangle(cornerRadius: 8)
+                                                            .fill(Color(.systemGray5))
+                                                            .frame(width: 80, height: 80)
+                                                            .overlay(
+                                                                ProgressView()
+                                                                    .scaleEffect(0.7)
+                                                            )
+                                                    }
                                                 }
                                             }
                                         }
-
-                                        // Add photo button (if there are photos)
-                                        if !photos.isEmpty {
-                                            Button(action: { showingPhotoGallery = true }) {
-                                                RoundedRectangle(cornerRadius: 8)
-                                                    .strokeBorder(Color.blue, lineWidth: 2, antialiased: true)
-                                                    .frame(width: 80, height: 80)
-                                                    .overlay(
-                                                        VStack(spacing: 4) {
-                                                            Image(systemName: "plus")
-                                                                .font(.system(size: 24))
-                                                                .foregroundColor(.blue)
-                                                            Text("Add")
-                                                                .font(.caption2)
-                                                                .foregroundColor(.blue)
-                                                        }
-                                                    )
-                                            }
-                                        }
+                                        .padding(.horizontal, 2)
                                     }
-                                    .padding(.horizontal, 2)
                                 }
                             }
                         }
@@ -915,8 +916,8 @@ struct NavUnitDetailsView: View {
                 isLoadingPhotos = false
             }
 
-            // Load thumbnails for the first 4 photos
-            for photo in loadedPhotos.prefix(4) {
+            // Load thumbnails for all photos
+            for photo in loadedPhotos {
                 await loadThumbnail(for: photo)
             }
 

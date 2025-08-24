@@ -102,54 +102,25 @@ struct NavUnitPhotoGalleryView: View {
 
     private var emptyStateView: some View {
         VStack(spacing: 20) {
-            // Show different icons based on whether photos are available for download
-            Image(systemName: viewModel.syncStatus.photosToDownload > 0 ? "icloud.and.arrow.down" : "camera.fill")
+            Image(systemName: "camera.fill")
                 .font(.system(size: 60))
-                .foregroundColor(viewModel.syncStatus.photosToDownload > 0 ? .blue : .gray)
+                .foregroundColor(.gray)
 
-            Text(viewModel.syncStatus.photosToDownload > 0 ? "Photos Available" : "No Photos Yet")
+            Text("No Photos Yet")
                 .font(.title2)
                 .fontWeight(.semibold)
 
-            // Show different messages based on sync status
-            if viewModel.syncStatus.photosToDownload > 0 {
-                Text("You have \(viewModel.syncStatus.photosToDownload) photo\(viewModel.syncStatus.photosToDownload == 1 ? "" : "s") stored in the cloud for this navigation unit. Tap download to sync them to this device.")
-                    .font(.body)
-                    .multilineTextAlignment(.center)
-                    .foregroundColor(.secondary)
-                    .padding(.horizontal)
+            Text("Take your first photo of this navigation unit to get started. Photos are automatically synced across your devices with CloudKit.")
+                .font(.body)
+                .multilineTextAlignment(.center)
+                .foregroundColor(.secondary)
+                .padding(.horizontal)
 
-                Button(action: {
-                    Task {
-                        await viewModel.downloadPhotos()
-                    }
-                }) {
-                    HStack {
-                        if viewModel.isDownloading {
-                            ProgressView()
-                                .scaleEffect(0.8)
-                        } else {
-                            Image(systemName: "icloud.and.arrow.down")
-                        }
-                        Text("Download Photos")
-                    }
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(viewModel.isDownloading)
-
-            } else {
-                Text("Take your first photo of this navigation unit to get started.")
-                    .font(.body)
-                    .multilineTextAlignment(.center)
-                    .foregroundColor(.secondary)
-                    .padding(.horizontal)
-
-                Button("Take Photo") {
-                    showingCamera = true
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(!viewModel.canTakePhoto)
+            Button("Take Photo") {
+                showingCamera = true
             }
+            .buttonStyle(.borderedProminent)
+            .disabled(!viewModel.canTakePhoto)
         }
         .padding()
     }
@@ -179,6 +150,7 @@ struct NavUnitPhotoGalleryView: View {
                                 showingDeleteAlert = true
                             }
                         )
+                        .id("\(photo.id)-\(photo.timestamp.timeIntervalSince1970)")
                     }
                 }
                 .padding()
@@ -382,8 +354,13 @@ struct PhotoThumbnailView: View {
                 Label("Delete", systemImage: "trash")
             }
         }
-        .task {
+        .task(id: photo.id) {
             await loadThumbnail()
+        }
+        .onChange(of: photo.timestamp) { _, _ in
+            Task {
+                await loadThumbnail()
+            }
         }
     }
 

@@ -255,7 +255,11 @@ struct CoreDataTestView: View {
         // Test adding current favorite
         coreDataManager.addCurrentFavorite(
             stationId: "TEST_CURRENT_001",
-            currentBin: 1
+            currentBin: 1,
+            name: "Test Current Station",
+            latitude: 40.7128,
+            longitude: -74.0060,
+            depth: 15.0
         )
         
         await MainActor.run {

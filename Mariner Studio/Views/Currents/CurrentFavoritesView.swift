@@ -1,10 +1,14 @@
 import SwiftUI
 
 struct CurrentFavoritesView: View {
-    @StateObject private var viewModel = CurrentFavoritesViewModel()
+    @StateObject private var viewModel: CurrentFavoritesViewModel
     @EnvironmentObject var serviceProvider: ServiceProvider
     @EnvironmentObject var authViewModel: AuthenticationViewModel
     @Environment(\.colorScheme) var colorScheme
+    
+    init(coreDataManager: CoreDataManager = CoreDataManager.shared) {
+        self._viewModel = StateObject(wrappedValue: CurrentFavoritesViewModel(coreDataManager: coreDataManager))
+    }
     
     // MARK: - Computed Properties
     
@@ -26,12 +30,12 @@ struct CurrentFavoritesView: View {
         .withHomeButton()
 
         .onAppear {
-            print("🌊 VIEW: CurrentFavoritesView appeared (CLOUD-ONLY)")
+            print("🌊 VIEW: CurrentFavoritesView appeared (CORE DATA + CLOUDKIT)")
 
             // Initialize location service
             viewModel.initialize(locationService: serviceProvider.locationService)
 
-            // Load favorites from cloud
+            // Load favorites from Core Data
             Task {
                 await viewModel.loadFavorites()
             }
@@ -232,7 +236,7 @@ struct CurrentFavoritesView: View {
 
             .listStyle(InsetGroupedListStyle())
             .refreshable {
-                print("🔄 VIEW: Pull-to-refresh triggered (CLOUD-ONLY)")
+                print("🔄 VIEW: Pull-to-refresh triggered (CORE DATA + CLOUDKIT)")
                 await viewModel.loadFavorites()
             }
         }
@@ -257,9 +261,9 @@ struct FavoriteCurrentStationRow: View {
                     .font(.headline)
                     .foregroundColor(.primary)
 
-                // Depth - show actual depth or surface/n/a
+                // Depth - show actual depth like Current Stations view
                 if let depth = station.depth {
-                    Text("Depth: \(String(format: "%.0f", depth)) ft")
+                    Text("Depth: \(String(format: "%.1f", depth)) ft")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 } else {

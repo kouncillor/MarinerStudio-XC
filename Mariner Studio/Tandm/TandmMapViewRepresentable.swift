@@ -6,6 +6,7 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
    var annotations: [NavObject]
    var viewModel: MapClusteringViewModel
    var chartOverlay: NOAAChartTileOverlay? // Added chart overlay binding
+   var mapType: MKMapType // Added map type parameter
    var onNavUnitSelected: (String) -> Void
    var onTidalHeightStationSelected: (String, String) -> Void
    var onTidalCurrentStationSelected: (String, Int, String) -> Void
@@ -15,6 +16,9 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
        let mapView = MKMapView()
        mapView.delegate = context.coordinator
        mapView.showsUserLocation = true
+       
+       // Set initial map type
+       mapView.mapType = mapType
 
        // Use higher performance rendering mode
        mapView.preferredConfiguration = MKStandardMapConfiguration(elevationStyle: .flat)
@@ -33,6 +37,11 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
    }
 
    func updateUIView(_ mapView: MKMapView, context: Context) {
+       // Update map type if it changed
+       if mapView.mapType != mapType {
+           mapView.mapType = mapType
+       }
+       
        // Only update the region if it was changed by user interaction, not by code
        if !context.coordinator.isUpdatingRegion && (mapView.region.center.latitude != region.center.latitude ||
           mapView.region.center.longitude != region.center.longitude) {

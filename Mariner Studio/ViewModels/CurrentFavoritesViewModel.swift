@@ -3,7 +3,7 @@ import SwiftUI
 import Combine
 import CoreLocation
 
-/// Cloud-only Current Favorites ViewModel - NO sync complexity!
+/// Core Data + CloudKit Current Favorites ViewModel - Seamless sync!
 class CurrentFavoritesViewModel: ObservableObject {
 
     // MARK: - Published Properties
@@ -12,141 +12,90 @@ class CurrentFavoritesViewModel: ObservableObject {
     @Published var errorMessage = ""
 
     // MARK: - Dependencies  
-    private let cloudService: CurrentFavoritesCloudService
+    private let coreDataManager: CoreDataManager
     private var locationService: LocationService?
 
     // MARK: - Initialization
-    init(cloudService: CurrentFavoritesCloudService = CurrentFavoritesCloudService(),
+    init(coreDataManager: CoreDataManager = CoreDataManager.shared,
          locationService: LocationService? = nil) {
-        self.cloudService = cloudService
+        self.coreDataManager = coreDataManager
         self.locationService = locationService
 
-        print("🎯 INIT: CurrentFavoritesViewModel (CLOUD-ONLY) created at \(Date())")
+        print("🎯 INIT: CurrentFavoritesViewModel (CORE DATA + CLOUDKIT) created at \(Date())")
     }
 
     // MARK: - Core Operations
 
-    /// Load favorites from cloud (single source of truth)
+    /// Load favorites from Core Data (CloudKit syncs automatically)
     @MainActor
     func loadFavorites() async {
-        print("🚀 LOAD_FAVORITES: Starting cloud-only load")
+        print("🚀 LOAD_FAVORITES: Starting Core Data + CloudKit load")
         isLoading = true
         errorMessage = ""
 
-        let result = await cloudService.getFavorites()
-
-        switch result {
-        case .success(let stations):
-            print("✅ LOAD_FAVORITES: Retrieved \(stations.count) stations from cloud")
-
-            // Calculate distances if location available
-            print("📍 LOAD_FAVORITES: Starting distance calculation process")
-            print("📍 LOAD_FAVORITES: LocationService exists: \(locationService != nil)")
-
-            var stationsWithDistance = stations
-            if let locationService = locationService,
-               let userLocation = locationService.currentLocation {
-
-                print("📍 LOAD_FAVORITES: User location available - Lat: \(String(format: "%.6f", userLocation.coordinate.latitude)), Lng: \(String(format: "%.6f", userLocation.coordinate.longitude))")
-                print("📍 LOAD_FAVORITES: Processing \(stationsWithDistance.count) stations for distance calculation")
-
-                var stationsWithCoords = 0
-                var stationsWithoutCoords = 0
-
-                for i in 0..<stationsWithDistance.count {
-                    if let lat = stationsWithDistance[i].latitude,
-                       let lon = stationsWithDistance[i].longitude {
-                        let stationLocation = CLLocation(latitude: lat, longitude: lon)
-                        let distanceInMeters = userLocation.distance(from: stationLocation)
-                        let distanceInMiles = distanceInMeters * 0.000621371
-                        stationsWithDistance[i].distanceFromUser = distanceInMiles
-                        stationsWithCoords += 1
-
-                        // Log first 3 stations for verification
-                        if i < 3 {
-                            print("📍 LOAD_FAVORITES: Station \(i+1) - \(stationsWithDistance[i].name): \(String(format: "%.1f", distanceInMiles)) miles")
-                        }
-                    } else {
-                        stationsWithoutCoords += 1
-                        if stationsWithoutCoords <= 3 {
-                            print("⚠️ LOAD_FAVORITES: Station \(stationsWithDistance[i].name) has missing coordinates (lat: \(stationsWithDistance[i].latitude?.description ?? "nil"), lng: \(stationsWithDistance[i].longitude?.description ?? "nil"))")
-                        }
-                    }
-                }
-
-                print("📍 LOAD_FAVORITES: Distance calculation complete - \(stationsWithCoords) stations with coords, \(stationsWithoutCoords) without coords")
-
-            } else {
-                if locationService == nil {
-                    print("❌ LOAD_FAVORITES: LocationService is nil - no distance calculations possible")
-                } else {
-                    print("❌ LOAD_FAVORITES: User location not available - no distance calculations possible")
-                    print("📍 LOAD_FAVORITES: Location permission status: \(locationService!.permissionStatus)")
-                }
-            }
-
-            // Sort by distance, then alphabetically
-            print("🔄 LOAD_FAVORITES: Starting sort process")
-
-            var distanceSorted = 0
-            var alphabeticalSorted = 0
-
-            favorites = stationsWithDistance.sorted { station1, station2 in
-                if let distance1 = station1.distanceFromUser,
-                   let distance2 = station2.distanceFromUser {
-                    distanceSorted += 1
-                    return distance1 < distance2
-                } else if station1.distanceFromUser != nil {
-                    return true
-                } else if station2.distanceFromUser != nil {
-                    return false
-                } else {
-                    alphabeticalSorted += 1
-                    return station1.name < station2.name
-                }
-            }
-
-            print("🔄 LOAD_FAVORITES: Sort complete - \(distanceSorted) distance comparisons, \(alphabeticalSorted) alphabetical comparisons")
-
-            // Log first 5 stations with their sort criteria
-            print("📊 LOAD_FAVORITES: Top 5 sorted stations:")
-            for (index, station) in favorites.prefix(5).enumerated() {
-                if let distance = station.distanceFromUser {
-                    print("📊 LOAD_FAVORITES: \(index + 1). \(station.name) - \(String(format: "%.1f", distance)) miles")
-                } else {
-                    print("📊 LOAD_FAVORITES: \(index + 1). \(station.name) - No distance (alphabetical)")
-                }
-            }
-
-            print("✅ LOAD_FAVORITES: Loaded and sorted \(favorites.count) favorites")
-
-        case .failure(let error):
-            print("❌ LOAD_FAVORITES: Failed - \(error.localizedDescription)")
-            errorMessage = "Failed to load favorites: \(error.localizedDescription)"
-            favorites = []
+        // Get favorites from Core Data
+        let currentFavorites = coreDataManager.getCurrentFavorites()
+        
+        // Convert Core Data entities to TidalCurrentStation objects
+        let stations: [TidalCurrentStation] = currentFavorites.map { favorite in
+            TidalCurrentStation(
+                id: favorite.stationId,
+                name: favorite.name,
+                latitude: favorite.latitude,
+                longitude: favorite.longitude,
+                type: "current",
+                depth: favorite.depth > 0 ? favorite.depth : nil,
+                depthType: nil,
+                currentBin: Int(favorite.currentBin),
+                isFavorite: true,
+                distanceFromUser: nil
+            )
         }
 
+        print("✅ LOAD_FAVORITES: Retrieved \(stations.count) stations from Core Data")
+
+        // Calculate distances if location available
+        var stationsWithDistance = stations
+        if let locationService = locationService,
+           let userLocation = locationService.currentLocation {
+
+            for i in 0..<stationsWithDistance.count {
+                let stationLocation = CLLocation(latitude: stationsWithDistance[i].latitude!, longitude: stationsWithDistance[i].longitude!)
+                let distanceInMeters = userLocation.distance(from: stationLocation)
+                let distanceInMiles = distanceInMeters * 0.000621371
+                stationsWithDistance[i].distanceFromUser = distanceInMiles
+            }
+        }
+
+        // Sort by distance, then alphabetically
+        favorites = stationsWithDistance.sorted { station1, station2 in
+            if let distance1 = station1.distanceFromUser,
+               let distance2 = station2.distanceFromUser {
+                return distance1 < distance2
+            } else if station1.distanceFromUser != nil {
+                return true
+            } else if station2.distanceFromUser != nil {
+                return false
+            } else {
+                return station1.name < station2.name
+            }
+        }
+
+        print("✅ LOAD_FAVORITES: Loaded and sorted \(favorites.count) favorites (CloudKit syncs automatically)")
         isLoading = false
     }
 
-    /// Remove favorite from cloud (single operation, no sync needed!)
+    /// Remove favorite from Core Data (CloudKit syncs automatically!)
     @MainActor
     func removeFavorite(stationId: String, currentBin: Int) async {
-        print("🗑️ REMOVE_FAVORITE: Removing station \(stationId), bin \(currentBin) from cloud")
+        print("🗑️ REMOVE_FAVORITE: Removing station \(stationId), bin \(currentBin) from Core Data")
 
-        let result = await cloudService.removeFavorite(stationId: stationId, currentBin: currentBin)
-
-        switch result {
-        case .success:
-            print("✅ REMOVE_FAVORITE: Successfully removed from cloud")
-            // Immediately update UI by removing from local array
-            favorites.removeAll { $0.id == stationId && ($0.currentBin ?? 0) == currentBin }
-            print("✅ REMOVE_FAVORITE: Updated local UI, station removed")
-
-        case .failure(let error):
-            print("❌ REMOVE_FAVORITE: Failed - \(error.localizedDescription)")
-            errorMessage = "Failed to remove favorite: \(error.localizedDescription)"
-        }
+        coreDataManager.removeCurrentFavorite(stationId: stationId, currentBin: currentBin)
+        
+        print("✅ REMOVE_FAVORITE: Successfully removed from Core Data (CloudKit will sync)")
+        // Immediately update UI by removing from local array
+        favorites.removeAll { $0.id == stationId && ($0.currentBin ?? 0) == currentBin }
+        print("✅ REMOVE_FAVORITE: Updated local UI, station removed")
     }
 
     /// Remove favorite by index (for swipe actions)
@@ -164,39 +113,37 @@ class CurrentFavoritesViewModel: ObservableObject {
 
     /// Initialize with services (for dependency injection from ServiceProvider)
     func initialize(locationService: LocationService) {
-        print("🔧 INITIALIZE: Setting location service to \(type(of: locationService))")
+        print("🔧 INITIALIZE: Setting location service")
         self.locationService = locationService
         print("🔧 INITIALIZE: LocationService updated successfully")
     }
 
     /// Cleanup method (much simpler now)
     func cleanup() {
-        print("🧹 CLEANUP: Cloud-only cleanup (minimal)")
-        // No complex cleanup needed - no sync tasks or local database
+        print("🧹 CLEANUP: Core Data + CloudKit cleanup (minimal)")
+        // No complex cleanup needed - no sync tasks or manual database operations
     }
 }
 
-// MARK: - Simplified Architecture Benefits:
+// MARK: - Core Data + CloudKit Architecture Benefits:
 /*
  
  🎉 WHAT WE ELIMINATED:
  
- ❌ Removed CurrentStationDatabaseService dependency
- ❌ Removed CurrentStationSyncService complexity  
- ❌ Removed all sync-related @Published properties
- ❌ Removed 400+ lines of sync/database code
- ❌ Removed race conditions and "ghost favorites"
- ❌ Removed complex error handling and conflict resolution
- ❌ Removed debug info, performance metrics, database stats
- ❌ Removed sync status UI (isSyncing, syncErrorMessage, etc.)
+ ❌ Removed CurrentFavoritesCloudService dependency (Supabase)
+ ❌ Removed complex async Result handling 
+ ❌ Removed manual authentication checks
+ ❌ Removed network error handling complexity
+ ❌ Removed cloud-only storage with no offline support
  
  ✅ WHAT WE GAINED:
  
- ✅ Single source of truth (cloud-only)
- ✅ Predictable behavior - no more reappearing favorites
- ✅ Simple error handling (network errors only)
- ✅ Fast operations (direct cloud calls)
- ✅ Easy testing and debugging
- ✅ Consistent cross-device experience
+ ✅ Single source of truth (Core Data + CloudKit)
+ ✅ Predictable behavior - automatic CloudKit sync
+ ✅ Offline support with local Core Data storage
+ ✅ Simple synchronous operations with automatic background sync
+ ✅ Consistent architecture with other favorites modules
+ ✅ Built-in conflict resolution via CloudKit
+ ✅ No authentication complexity - handled by CloudKit
  
  */

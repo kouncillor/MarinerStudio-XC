@@ -27,6 +27,9 @@ struct MapClusteringView: View {
 
    // Chart overlay states
    @State private var showChartOptions = false
+   
+   // Map type state
+   @State private var mapType: MKMapType = .standard
 
    // NavUnit navigation state
    @State private var selectedNavUnitId: String?
@@ -94,6 +97,52 @@ struct MapClusteringView: View {
        ))
    }
 
+   // Helper method to cycle through map types
+   private func toggleMapType() {
+       switch mapType {
+       case .standard:
+           mapType = .satellite
+       case .satellite:
+           mapType = .hybrid
+       case .hybrid:
+           mapType = .standard
+       default:
+           mapType = .standard
+       }
+       
+       // Provide haptic feedback
+       let impactGenerator = UIImpactFeedbackGenerator(style: .light)
+       impactGenerator.impactOccurred()
+   }
+   
+   // Helper method to get map type display name
+   private func mapTypeDisplayName() -> String {
+       switch mapType {
+       case .standard:
+           return "Standard"
+       case .satellite:
+           return "Satellite"
+       case .hybrid:
+           return "Hybrid"
+       default:
+           return "Standard"
+       }
+   }
+   
+   // Helper method to get map type icon
+   private func mapTypeIcon() -> String {
+       switch mapType {
+       case .standard:
+           return "map"
+       case .satellite:
+           return "globe"
+       case .hybrid:
+           return "map.fill"
+       default:
+           return "map"
+       }
+   }
+   
    // Helper method to update the map region based on user location
    private func updateMapToUserLocation() {
        // Force location service to start updating
@@ -130,6 +179,7 @@ struct MapClusteringView: View {
                annotations: filteredAnnotations(),
                viewModel: viewModel,
                chartOverlay: viewModel.chartOverlay,
+               mapType: mapType,
                onNavUnitSelected: { navUnitId in
                    resetAllNavigationState()
                    selectedNavUnitId = navUnitId
@@ -232,6 +282,34 @@ struct MapClusteringView: View {
                .padding(.top)
            }
 
+           // Map type toggle button (top-right)
+           VStack {
+               HStack {
+                   Spacer()
+                   Button(action: {
+                       toggleMapType()
+                   }) {
+                       VStack(spacing: 2) {
+                           Image(systemName: mapTypeIcon())
+                               .font(.system(size: 20))
+                               .foregroundColor(.white)
+                           Text(mapTypeDisplayName())
+                               .font(.caption2)
+                               .foregroundColor(.white)
+                       }
+                       .padding(.horizontal, 8)
+                       .padding(.vertical, 6)
+                       .background(Color.green.opacity(0.7))
+                       .cornerRadius(8)
+                       .shadow(radius: 2)
+                   }
+               }
+               .padding(.top, 16)
+               .padding(.trailing, 16)
+               
+               Spacer()
+           }
+           
            // Floating buttons - now with location, filter, and chart TOGGLE buttons
            VStack {
                Spacer()

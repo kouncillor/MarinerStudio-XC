@@ -31,31 +31,27 @@ class PhotoGalleryViewModel: ObservableObject {
     // MARK: - Computed Properties
 
     var canTakePhoto: Bool {
-        return !syncStatus.isAtLimit && !isLoading
+        return !isLoading
     }
 
     var photoCountText: String {
-        return "\(photos.count)/10 photos"
+        return "\(photos.count) photos"
     }
 
     var syncStatusText: String {
-        if syncStatus.pendingUploads > 0 {
-            return "\(syncStatus.pendingUploads) pending upload"
-        } else if syncStatus.photosToDownload > 0 {
-            return "\(syncStatus.photosToDownload) available to download"
-        } else if photos.isEmpty {
+        if photos.isEmpty {
             return "No photos yet"
         } else {
-            return "All photos synced"
+            return "CloudKit sync active"
         }
     }
 
     var showUploadButton: Bool {
-        return syncStatus.pendingUploads > 0 && !isUploading
+        return false // CloudKit handles sync automatically
     }
 
     var showDownloadButton: Bool {
-        return syncStatus.photosToDownload > 0 && !isDownloading
+        return false // CloudKit handles sync automatically
     }
 
     // MARK: - Initialization
@@ -100,7 +96,7 @@ class PhotoGalleryViewModel: ObservableObject {
 
     func takePhoto(_ image: UIImage) async {
         guard canTakePhoto else {
-            errorMessage = "Cannot take photo: at limit or loading"
+            errorMessage = "Cannot take photo: loading in progress"
             return
         }
 
