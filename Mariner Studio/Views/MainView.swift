@@ -16,172 +16,182 @@ struct MainView: View {
         GridItem(.flexible(), spacing: 12)
     ]
 
-    var body: some View {
-        NavigationStack(path: $navigationPath) {
-            ScrollView {
-                LazyVGrid(columns: columns, spacing: 3) {
-                    // MAP
-                    NavigationLink(destination: MapClusteringView()) {
-                        NavigationButtonContent(
-                            icon: "earthsixfour",
-                            title: "MAP"
-                        )
-                    }
-
-                    // WEATHER
-                    NavigationLink(destination: WeatherMenuView()) {
-                        NavigationButtonContent(
-                           // icon: "weathersixseventwo",
-                            icon: "weathersunsixseven",
-                            title: "WEATHER"
-                        )
-                    }
-
-                    // TIDES
-                    NavigationLink(destination: TideMenuView()) {
-                        NavigationButtonContent(
-                            icon: "tsixseven",
-                            title: "TIDES"
-                        )
-                    }
-
-                    // CURRENTS
-                    NavigationLink(destination: CurrentMenuView()) {
-                        NavigationButtonContent(
-                            icon: "csixseven",
-                            title: "CURRENTS"
-                        )
-                    }
-
-                    // DOCKS
-                    NavigationLink(destination: NavUnitMenuView()) {
-                        NavigationButtonContent(
-                            icon: "nsixseven",
-                            title: "NAV UNITS"
-                        )
-                    }
-
-                    // BUOYS
-                    NavigationLink(destination: BuoyMenuView()) {
-                        NavigationButtonContent(
-                            icon: "bsixseven",
-                            title: "BUOYS"
-                        )
-                    }
-
-                    // ROUTES
-                    NavigationLink(destination: RouteMenuView()) {
-                        NavigationButtonContent(
-                            icon: "rsixseven",
-                            title: "ROUTES"
-                        )
-                    }
-
-//                    // VOYAGE PLAN
-//                    NavigationLink(destination: VoyagePlanMenuView()) {
-//                        NavigationButtonContent(
-//                            icon: "routeonehundred",
-//                            title: "VOYAGE PLAN"
-//                        )
-//                    }
-//
-//                    // TUGS
-//                    #if DEBUG
-//                    NavigationLink(destination: TugsView(
-//                        vesselService: serviceProvider.vesselService
-//                    )) {
-//                        NavigationButtonContent(
-//                            icon: "tugboatsixseven",
-//                            title: "TUGS"
-//                        )
-//                    }
-//                    #endif
-//
-//                    // BARGES
-//                    #if DEBUG
-//                    NavigationLink(destination: BargesView(
-//                        vesselService: serviceProvider.vesselService
-//                    )) {
-//                        NavigationButtonContent(
-//                            icon: "bargesixseventwo",
-//                            title: "BARGES"
-//                        )
-//                    }
-//                    #endif
-//
-//                    // DEV TOOLS
-//                    #if DEBUG
-//                    NavigationLink(destination: DevPageView()) {
-//                        NavigationButtonContent(
-//                            icon: "gear.badge",
-//                            title: "DEV TOOLS",
-//                            isSystemIcon: true,
-//                            iconColor: .orange
-//                        )
-//                    }
-//                    #endif
-                }
-                .padding()
-            }
-            .background(
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color(red: 0.95, green: 0.97, blue: 1.0),
-                        Color.white
-                    ]),
-                    startPoint: .top,
-                    endPoint: .bottom
+    private var coreNavigationButtons: some View {
+        Group {
+            // MAP
+            NavigationLink(destination: MapClusteringView()) {
+                NavigationButtonContent(
+                    icon: "earthsixfour",
+                    title: "MAP"
                 )
-            )
-            .navigationTitle("Mariner Studio")
-            .toolbar {
-                // Settings button - Always available
-                ToolbarItem(placement: .topBarTrailing) {
-                    NavigationLink(destination: AppSettingsView()) {
-                        Image(systemName: "gear")
-                            .foregroundColor(.primary)
+            }
+
+            // WEATHER
+            NavigationLink(destination: WeatherMenuView()) {
+                NavigationButtonContent(
+                    icon: "weathersunsixseven",
+                    title: "WEATHER"
+                )
+            }
+
+            // TIDES
+            NavigationLink(destination: TideMenuView()) {
+                NavigationButtonContent(
+                    icon: "tsixseven",
+                    title: "TIDES"
+                )
+            }
+        }
+    }
+    
+    private var additionalNavigationButtons: some View {
+        Group {
+            // CURRENTS
+            NavigationLink(destination: CurrentMenuView()) {
+                NavigationButtonContent(
+                    icon: "csixseven",
+                    title: "CURRENTS"
+                )
+            }
+
+            // DOCKS
+            NavigationLink(destination: NavUnitMenuView()) {
+                NavigationButtonContent(
+                    icon: "nsixseven",
+                    title: "NAV UNITS"
+                )
+            }
+
+            // BUOYS
+            NavigationLink(destination: BuoyMenuView()) {
+                NavigationButtonContent(
+                    icon: "bsixseven",
+                    title: "BUOYS"
+                )
+            }
+
+            // ROUTES
+            NavigationLink(destination: RouteMenuView()) {
+                NavigationButtonContent(
+                    icon: "rsixseven",
+                    title: "ROUTES"
+                )
+            }
+        }
+    }
+    
+    private var backgroundGradient: LinearGradient {
+        LinearGradient(
+            gradient: Gradient(colors: [
+                Color(red: 0.95, green: 0.97, blue: 1.0),
+                Color.white
+            ]),
+            startPoint: .top,
+            endPoint: .bottom
+        )
+    }
+    
+    private var mainContent: some View {
+        ScrollView {
+            LazyVGrid(columns: columns, spacing: 3) {
+                coreNavigationButtons
+                additionalNavigationButtons
+            }
+            .padding()
+        }
+        .background(backgroundGradient)
+        .navigationTitle("Mariner Studio")
+    }
+    
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        // Settings button - Always available
+        ToolbarItem(placement: .topBarTrailing) {
+            NavigationLink(destination: AppSettingsView()) {
+                Image(systemName: "gear")
+                    .foregroundColor(.primary)
+            }
+        }
+        
+        #if DEBUG
+        // Development tools for testing
+        ToolbarItem(placement: .topBarLeading) {
+            Menu("Dev Tools") {
+                Button("CloudKit Status") {
+                    Task {
+                        await cloudKitManager.checkAccountStatus()
                     }
                 }
                 
-                #if DEBUG
-                // Development tools for testing
-                ToolbarItem(placement: .topBarLeading) {
-                    Menu("Dev Tools") {
-                        Button("CloudKit Status") {
-                            Task {
-                                await cloudKitManager.checkAccountStatus()
-                            }
-                        }
-                        
-                        Button("Check Subscription") {
-                            Task {
-                                await subscriptionService.checkSubscription()
-                            }
-                        }
-                        
-                        Button("Restore Purchases") {
-                            Task {
-                                await subscriptionService.restorePurchases()
-                            }
-                        }
-                        
-                        Divider()
-                        
-                        NavigationLink("Core Data + CloudKit Test") {
-                            CoreDataTestView()
-                        }
+                Button("Check Subscription") {
+                    Task {
+                        await subscriptionService.determineSubscriptionStatus()
                     }
-                    .tint(.blue)
                 }
-                #endif
-            }
-            // 3. REMOVE THE PAYWALL
-            // The .presentPaywallIfNeeded modifier has been deleted from here.
-            .onAppear {
-                if shouldClearNavigation {
-                    clearNavigationStack()
+                
+                Button("Restore Purchases") {
+                    Task {
+                        await subscriptionService.restorePurchases()
+                    }
+                }
+                
+                Button("Reset to First Launch") {
+                    UserDefaults.standard.removeObject(forKey: "hasUsedTrial")
+                    UserDefaults.standard.removeObject(forKey: "trialStartDate")
+                    UserDefaults.standard.synchronize()
+                    
+                    // Force app to restart by exiting (dev only)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        exit(0)
+                    }
+                }
+                
+                Button("Simulate Day 10 (Banner Appears)") {
+                    let day10Date = Calendar.current.date(byAdding: .day, value: -10, to: Date())!
+                    UserDefaults.standard.set(day10Date, forKey: "trialStartDate")
+                    Task {
+                        await subscriptionService.determineSubscriptionStatus()
+                    }
+                }
+                
+                Button("Simulate Day 14 (Last Day)") {
+                    let day14Date = Calendar.current.date(byAdding: .day, value: -13, to: Date())!
+                    UserDefaults.standard.set(day14Date, forKey: "trialStartDate")
+                    Task {
+                        await subscriptionService.determineSubscriptionStatus()
+                    }
+                }
+                
+                Button("Simulate Trial Expired") {
+                    let expiredDate = Calendar.current.date(byAdding: .day, value: -15, to: Date())!
+                    UserDefaults.standard.set(expiredDate, forKey: "trialStartDate")
+                    Task {
+                        await subscriptionService.determineSubscriptionStatus()
+                    }
+                }
+                
+                Divider()
+                
+                NavigationLink("Core Data + CloudKit Test") {
+                    CoreDataTestView()
                 }
             }
+            .tint(.blue)
+        }
+        #endif
+    }
+
+    var body: some View {
+        NavigationStack(path: $navigationPath) {
+            mainContent
+                .toolbar {
+                    toolbarContent
+                }
+                .onAppear {
+                    if shouldClearNavigation {
+                        clearNavigationStack()
+                    }
+                }
         }
     }
 
@@ -296,10 +306,3 @@ struct NavigationButtonContent: View {
     }
 }
 
-// MARK: - Previews
-
-#Preview {
-    MainView()
-        .environmentObject(AuthenticationViewModel())
-        .environmentObject(ServiceProvider())
-}

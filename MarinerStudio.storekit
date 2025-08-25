@@ -78,10 +78,15 @@
           "displayPrice" : "2.99",
           "familyShareable" : true,
           "id" : "pro_monthly",
-          "introductoryOffer" : null,
+          "introductoryOffer" : {
+            "displayPrice" : "Free",
+            "internalID" : "pro_monthly_trial_intro",
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P2W"
+          },
           "localizations" : [
             {
-              "description" : "Unlock all maritime navigation features including weather maps, tidal data, current information, and route planning tools.",
+              "description" : "Unlock all maritime navigation features with a 14-day free trial. Cancel anytime.",
               "displayName" : "Pro Subscription",
               "locale" : "en_US"
             }

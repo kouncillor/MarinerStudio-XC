@@ -1,122 +1,239 @@
 import Foundation
 import StoreKit
 
-/**
- * SimpleSubscription - Dead Simple $2.99/month Subscription
- * 
- * No servers. No cross-device complexity. No bullshit.
- * Just: "Did this person buy it? Yes/No"
- */
 @MainActor
 class SimpleSubscription: ObservableObject {
     
-    @Published var isPro: Bool = false
+    // MARK: - Published Properties
+    @Published var subscriptionStatus: SubscriptionStatus = .unknown
+    @Published var trialDaysRemaining: Int = 0
     @Published var isLoading: Bool = false
+    @Published var showTrialBanner: Bool = false
     
-    private let productID = "pro_monthly" // Your App Store Connect product ID
+    // MARK: - Constants
+    private let monthlyTrialProductID = "pro_monthly"
+    private let trialDurationDays = 14
     
+    // MARK: - Private Properties
+    private let userDefaults = UserDefaults.standard
+    private let trialStartDateKey = "trialStartDate"
+    private let hasUsedTrialKey = "hasUsedTrial"
+    
+    // MARK: - Computed Properties
+    var hasAppAccess: Bool {
+        return subscriptionStatus.hasAccess
+    }
+    
+    var needsPaywall: Bool {
+        return subscriptionStatus.needsPaywall
+    }
+    
+    // MARK: - Initialization
     init() {
-        DebugLogger.shared.log("💰 SIMPLE SUB: Initializing dead-simple subscription service", category: "SIMPLE_SUBSCRIPTION")
+        DebugLogger.shared.log("💰 TRIAL_SUB: Initializing trial-enabled subscription service", category: "TRIAL_SUBSCRIPTION")
         Task {
-            await checkSubscription()
+            await determineSubscriptionStatus()
         }
     }
     
-    /**
-     * Check if user has active subscription - that's it
-     */
-    func checkSubscription() async {
-        DebugLogger.shared.log("💰 SIMPLE SUB: Checking subscription status", category: "SIMPLE_SUBSCRIPTION")
+    // MARK: - Core Logic Methods
+    
+    func determineSubscriptionStatus() async {
+        DebugLogger.shared.log("💰 TRIAL_SUB: Determining subscription status", category: "TRIAL_SUBSCRIPTION")
+        isLoading = true
         
-        // Check all transactions for our product
+        // First check if user has an active paid subscription
+        if await checkForActiveSubscription() {
+            DebugLogger.shared.log("✅ TRIAL_SUB: Active subscription found", category: "TRIAL_SUBSCRIPTION")
+            subscriptionStatus = .subscribed(expiryDate: nil)
+            isLoading = false
+            return
+        }
+        
+        // Check trial status
+        if hasUsedTrialBefore() {
+            DebugLogger.shared.log("🔍 TRIAL_SUB: User has used trial before", category: "TRIAL_SUBSCRIPTION")
+            if isTrialExpired() {
+                DebugLogger.shared.log("❌ TRIAL_SUB: Trial expired", category: "TRIAL_SUBSCRIPTION")
+                subscriptionStatus = .trialExpired
+            } else {
+                let daysRemaining = calculateTrialDaysRemaining()
+                DebugLogger.shared.log("⏰ TRIAL_SUB: Trial active - \(daysRemaining) days remaining", category: "TRIAL_SUBSCRIPTION")
+                subscriptionStatus = .inTrial(daysRemaining: daysRemaining)
+                trialDaysRemaining = daysRemaining
+                updateTrialBannerVisibility()
+            }
+        } else {
+            DebugLogger.shared.log("🎉 TRIAL_SUB: First time user - ready for trial", category: "TRIAL_SUBSCRIPTION")
+            subscriptionStatus = .firstLaunch
+        }
+        
+        isLoading = false
+    }
+    
+    func startTrial() async {
+        DebugLogger.shared.log("🚀 TRIAL_SUB: Starting trial", category: "TRIAL_SUBSCRIPTION")
+        
+        let now = Date()
+        setTrialStartDate(now)
+        markTrialAsUsed()
+        
+        trialDaysRemaining = trialDurationDays
+        subscriptionStatus = .inTrial(daysRemaining: trialDurationDays)
+        
+        DebugLogger.shared.log("✅ TRIAL_SUB: Trial started successfully", category: "TRIAL_SUBSCRIPTION")
+    }
+    
+    func checkForActiveSubscription() async -> Bool {
+        DebugLogger.shared.log("💰 TRIAL_SUB: Checking for active subscriptions", category: "TRIAL_SUBSCRIPTION")
+        
         for await result in Transaction.all {
-            if case .verified(let transaction) = result,
-               transaction.productID == productID {
-                DebugLogger.shared.log("✅ SIMPLE SUB: Active subscription found", category: "SIMPLE_SUBSCRIPTION")
-                isPro = true
-                return
+            if case .verified(let transaction) = result {
+                if transaction.productID == monthlyTrialProductID {
+                    DebugLogger.shared.log("✅ TRIAL_SUB: Active subscription found: \(transaction.productID)", category: "TRIAL_SUBSCRIPTION")
+                    return true
+                }
             }
         }
         
-        DebugLogger.shared.log("❌ SIMPLE SUB: No active subscription", category: "SIMPLE_SUBSCRIPTION")
-        isPro = false
+        DebugLogger.shared.log("❌ TRIAL_SUB: No active subscription found", category: "TRIAL_SUBSCRIPTION")
+        return false
     }
     
-    /**
-     * Buy the $2.99/month subscription
-     */
-    func subscribe() async throws {
-        DebugLogger.shared.log("💰 SIMPLE SUB: Starting purchase", category: "SIMPLE_SUBSCRIPTION")
-        DebugLogger.shared.log("💰 SIMPLE SUB: Looking for product ID: \(productID)", category: "SIMPLE_SUBSCRIPTION")
+    func calculateTrialDaysRemaining() -> Int {
+        guard let startDate = getTrialStartDate() else {
+            DebugLogger.shared.log("❌ TRIAL_SUB: No trial start date found", category: "TRIAL_SUBSCRIPTION")
+            return 0
+        }
+        
+        let calendar = Calendar.current
+        let now = Date()
+        let daysSinceStart = calendar.dateComponents([.day], from: startDate, to: now).day ?? 0
+        let remaining = max(0, trialDurationDays - daysSinceStart)
+        
+        DebugLogger.shared.log("🔢 TRIAL_SUB: Days since trial start: \(daysSinceStart), remaining: \(remaining)", category: "TRIAL_SUBSCRIPTION")
+        return remaining
+    }
+    
+    func subscribe(to productID: String) async throws {
+        DebugLogger.shared.log("💰 TRIAL_SUB: Starting subscription purchase for \(productID)", category: "TRIAL_SUBSCRIPTION")
         isLoading = true
         
         do {
-            // Load the product
-            DebugLogger.shared.log("💰 SIMPLE SUB: Calling Product.products(for:)", category: "SIMPLE_SUBSCRIPTION")
             let products = try await Product.products(for: [productID])
-            DebugLogger.shared.log("💰 SIMPLE SUB: Products response - count: \(products.count)", category: "SIMPLE_SUBSCRIPTION")
-            
-            for (index, product) in products.enumerated() {
-                DebugLogger.shared.log("💰 SIMPLE SUB: Product \(index): ID=\(product.id), Name=\(product.displayName)", category: "SIMPLE_SUBSCRIPTION")
-            }
+            DebugLogger.shared.log("💰 TRIAL_SUB: Products loaded - count: \(products.count)", category: "TRIAL_SUBSCRIPTION")
             
             guard let product = products.first else {
-                DebugLogger.shared.log("❌ SIMPLE SUB: Product not found in response", category: "SIMPLE_SUBSCRIPTION")
-                DebugLogger.shared.log("❌ SIMPLE SUB: Requested: [\(productID)]", category: "SIMPLE_SUBSCRIPTION")
-                DebugLogger.shared.log("❌ SIMPLE SUB: Available products: \(products.map { $0.id })", category: "SIMPLE_SUBSCRIPTION")
+                DebugLogger.shared.log("❌ TRIAL_SUB: Product not found: \(productID)", category: "TRIAL_SUBSCRIPTION")
                 throw SubscriptionError.productNotFound
             }
             
-            DebugLogger.shared.log("💰 SIMPLE SUB: Product loaded: \(product.displayName) - \(product.displayPrice)", category: "SIMPLE_SUBSCRIPTION")
+            DebugLogger.shared.log("💰 TRIAL_SUB: Purchasing: \(product.displayName) - \(product.displayPrice)", category: "TRIAL_SUBSCRIPTION")
             
-            // Purchase it
             let result = try await product.purchase()
             
             switch result {
             case .success(let verification):
-                DebugLogger.shared.log("🎉 SIMPLE SUB: Purchase successful", category: "SIMPLE_SUBSCRIPTION")
-                await checkSubscription()
+                DebugLogger.shared.log("🎉 TRIAL_SUB: Purchase successful", category: "TRIAL_SUBSCRIPTION")
+                await processTransaction(verification.unsafePayloadValue)
             case .userCancelled:
-                DebugLogger.shared.log("❌ SIMPLE SUB: User cancelled", category: "SIMPLE_SUBSCRIPTION")
+                DebugLogger.shared.log("❌ TRIAL_SUB: User cancelled purchase", category: "TRIAL_SUBSCRIPTION")
             case .pending:
-                DebugLogger.shared.log("⏳ SIMPLE SUB: Purchase pending", category: "SIMPLE_SUBSCRIPTION")
+                DebugLogger.shared.log("⏳ TRIAL_SUB: Purchase pending", category: "TRIAL_SUBSCRIPTION")
             @unknown default:
-                DebugLogger.shared.log("❓ SIMPLE SUB: Unknown purchase result", category: "SIMPLE_SUBSCRIPTION")
+                DebugLogger.shared.log("❓ TRIAL_SUB: Unknown purchase result", category: "TRIAL_SUBSCRIPTION")
             }
             
         } catch {
-            DebugLogger.shared.log("❌ SIMPLE SUB: Purchase failed: \(error)", category: "SIMPLE_SUBSCRIPTION")
+            DebugLogger.shared.log("❌ TRIAL_SUB: Purchase failed: \(error)", category: "TRIAL_SUBSCRIPTION")
             throw error
         }
         
         isLoading = false
     }
     
-    /**
-     * Restore purchases (Apple handles this automatically)
-     */
     func restorePurchases() async {
-        DebugLogger.shared.log("🔄 SIMPLE SUB: Restoring purchases", category: "SIMPLE_SUBSCRIPTION")
+        DebugLogger.shared.log("🔄 TRIAL_SUB: Restoring purchases", category: "TRIAL_SUBSCRIPTION")
+        isLoading = true
         
         do {
             try await AppStore.sync()
-            await checkSubscription()
-            DebugLogger.shared.log("✅ SIMPLE SUB: Restore complete", category: "SIMPLE_SUBSCRIPTION")
+            await determineSubscriptionStatus()
+            DebugLogger.shared.log("✅ TRIAL_SUB: Restore complete", category: "TRIAL_SUBSCRIPTION")
         } catch {
-            DebugLogger.shared.log("❌ SIMPLE SUB: Restore failed: \(error)", category: "SIMPLE_SUBSCRIPTION")
+            DebugLogger.shared.log("❌ TRIAL_SUB: Restore failed: \(error)", category: "TRIAL_SUBSCRIPTION")
         }
+        
+        isLoading = false
+    }
+    
+    func getAvailableProducts() async throws -> [Product] {
+        DebugLogger.shared.log("💰 TRIAL_SUB: Loading available products", category: "TRIAL_SUBSCRIPTION")
+        
+        let productIDs = [monthlyTrialProductID]
+        let products = try await Product.products(for: productIDs)
+        
+        DebugLogger.shared.log("💰 TRIAL_SUB: Loaded \(products.count) products", category: "TRIAL_SUBSCRIPTION")
+        return products
+    }
+    
+    // MARK: - Private Helper Methods
+    
+    private func hasUsedTrialBefore() -> Bool {
+        return userDefaults.bool(forKey: hasUsedTrialKey)
+    }
+    
+    private func getTrialStartDate() -> Date? {
+        guard userDefaults.object(forKey: trialStartDateKey) != nil else { return nil }
+        return userDefaults.object(forKey: trialStartDateKey) as? Date
+    }
+    
+    private func setTrialStartDate(_ date: Date) {
+        userDefaults.set(date, forKey: trialStartDateKey)
+        DebugLogger.shared.log("📅 TRIAL_SUB: Trial start date set: \(date)", category: "TRIAL_SUBSCRIPTION")
+    }
+    
+    private func markTrialAsUsed() {
+        userDefaults.set(true, forKey: hasUsedTrialKey)
+        DebugLogger.shared.log("✅ TRIAL_SUB: Trial marked as used", category: "TRIAL_SUBSCRIPTION")
+    }
+    
+    private func isTrialExpired() -> Bool {
+        let remaining = calculateTrialDaysRemaining()
+        return remaining <= 0
+    }
+    
+    private func processTransaction(_ transaction: Transaction) async {
+        DebugLogger.shared.log("🔄 TRIAL_SUB: Processing transaction: \(transaction.productID)", category: "TRIAL_SUBSCRIPTION")
+        
+        subscriptionStatus = .subscribed(expiryDate: transaction.expirationDate)
+        showTrialBanner = false
+        
+        DebugLogger.shared.log("✅ TRIAL_SUB: Transaction processed - user now subscribed", category: "TRIAL_SUBSCRIPTION")
+    }
+    
+    private func updateTrialBannerVisibility() {
+        // Show banner in last 5 days of trial
+        showTrialBanner = trialDaysRemaining <= 5 && trialDaysRemaining > 0
+        DebugLogger.shared.log("🎌 TRIAL_SUB: Trial banner visibility: \(showTrialBanner)", category: "TRIAL_SUBSCRIPTION")
     }
 }
 
-// MARK: - Simple Errors
+// MARK: - Error Types
 
 enum SubscriptionError: Error, LocalizedError {
     case productNotFound
+    case trialAlreadyUsed
+    case unknownError(String)
     
     var errorDescription: String? {
         switch self {
         case .productNotFound:
             return "Subscription product not found"
+        case .trialAlreadyUsed:
+            return "Trial has already been used"
+        case .unknownError(let message):
+            return message
         }
     }
 }
