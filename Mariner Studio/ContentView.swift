@@ -12,7 +12,7 @@ struct ContentView: View {
             .environmentObject(serviceProvider)
             .onAppear {
                 DebugLogger.shared.log("💰 TRIAL_SUB: ContentView appeared", category: "TRIAL_SUBSCRIPTION")
-                DebugLogger.shared.log("☁️ AUTH: No authentication prompts needed - using iCloud account", category: "CLOUDKIT_AUTH")
+                DebugLogger.shared.log("☁️ CLOUDKIT: Using iCloud for sync", category: "CLOUDKIT")
             }
     }
 }

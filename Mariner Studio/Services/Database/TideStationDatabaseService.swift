@@ -111,25 +111,8 @@ class TideStationDatabaseService {
             try await databaseCore.flushDatabaseAsync()
             print("📊 TOGGLE: ✅ Database changes flushed to disk")
 
-            // BACKGROUND SYNC: Attempt cloud sync after successful local write
-            // This is non-fatal - local operation has already succeeded
-            Task.detached(priority: .background) {
-                print("☁️ TOGGLE: Starting background sync after local write success")
-
-                // Try the sync operation
-                let syncResult = await TideStationSyncService.shared.syncTideStationFavorites()
-                switch syncResult {
-                case .success(let stats):
-                    print("☁️ TOGGLE: ✅ Background sync completed successfully")
-                    print("☁️ TOGGLE: Sync stats - uploaded: \(stats.uploaded), downloaded: \(stats.downloaded)")
-                case .failure(let error):
-                    print("☁️ TOGGLE: ⚠️ Background sync failed (non-fatal): \(error)")
-                case .partialSuccess(let stats, let errors):
-                    print("☁️ TOGGLE: ⚠️ Background sync partially successful")
-                    print("☁️ TOGGLE: Sync stats - uploaded: \(stats.uploaded), downloaded: \(stats.downloaded)")
-                    print("☁️ TOGGLE: Errors encountered: \(errors.count)")
-                }
-            }
+            // BACKGROUND SYNC: CloudKit handles sync automatically
+            print("☁️ TOGGLE: CloudKit will handle sync automatically")
 
             return result
         } catch {

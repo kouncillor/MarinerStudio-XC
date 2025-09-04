@@ -108,8 +108,6 @@ struct NavUnitDetailsView: View {
     @EnvironmentObject var serviceProvider: ServiceProvider
 
     // State for sheet presentations
-    @State private var showingRecommendationForm = false
-    @State private var showingUserRecommendations = false
     @State private var showingPhotoGallery = false
 
     // Photo state
@@ -389,19 +387,6 @@ struct NavUnitDetailsView: View {
                             }
 
                             // Comments button
-                            Button(action: { showingUserRecommendations = true }) {
-                                Image("commentsixseven")
-                                    .resizable()
-                                    .frame(width: 44, height: 44)
-                            }
-
-                            // Recommendation button
-                            Button(action: { showingRecommendationForm = true }) {
-                                Image(systemName: "lightbulb.fill")
-                                    .resizable()
-                                    .frame(width: 44, height: 44)
-                                    .foregroundColor(.orange)
-                            }
 
                             // Share button
                             Button(action: { viewModel.shareUnit() }) {
@@ -864,30 +849,6 @@ struct NavUnitDetailsView: View {
             Task {
                 await viewModel.loadNavUnitIfNeeded()
                 await loadPhotos()
-            }
-        }
-        .sheet(isPresented: $showingUserRecommendations) {
-            NavigationView {
-                UserRecommendationsView()
-                    .environmentObject(serviceProvider)
-                    .toolbar {
-                        ToolbarItem(placement: .navigationBarTrailing) {
-                            Button("Done") {
-                                showingUserRecommendations = false
-                            }
-                        }
-                    }
-            }
-        }
-        .sheet(isPresented: $showingRecommendationForm) {
-            if let navUnit = viewModel.unit {
-                RecommendationFormView(
-                    viewModel: RecommendationFormViewModel(
-                        navUnit: navUnit,
-                        recommendationService: serviceProvider.recommendationService
-                    ),
-                    isPresented: $showingRecommendationForm
-                )
             }
         }
         .sheet(isPresented: $showingPhotoGallery) {

@@ -603,15 +603,8 @@ class NavUnitDatabaseService {
     }
 
     private func getCurrentUserId() async -> String? {
-        do {
-            let session = try await SupabaseManager.shared.getSession()
-            let userId = session.user.id.uuidString
-            print("👤 NAV_UNIT_DB_SERVICE: Retrieved user ID: \(userId)")
-            return userId
-        } catch {
-            print("❌ NAV_UNIT_DB_SERVICE: Could not get current user ID: \(error.localizedDescription)")
-            return nil
-        }
+        // Use device ID as user identifier since authentication is removed
+        return await getDeviceId()
     }
 
     // MARK: - Core Functions (Updated to include sync fields)

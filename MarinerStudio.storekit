@@ -77,10 +77,10 @@
           ],
           "displayPrice" : "2.99",
           "familyShareable" : true,
-          "id" : "pro_monthly",
+          "id" : "mariner_pro_monthly",
           "introductoryOffer" : {
             "displayPrice" : "Free",
-            "internalID" : "pro_monthly_trial_intro",
+            "internalID" : "mariner_pro_monthly_trial_intro",
             "paymentMode" : "free",
             "subscriptionPeriod" : "P2W"
           },
@@ -91,7 +91,7 @@
               "locale" : "en_US"
             }
           ],
-          "productID" : "pro_monthly",
+          "productID" : "mariner_pro_monthly",
           "recurringSubscriptionPeriod" : "P1M",
           "referenceName" : "Mariner Studio Pro Monthly",
           "subscriptionGroupID" : "21482483",

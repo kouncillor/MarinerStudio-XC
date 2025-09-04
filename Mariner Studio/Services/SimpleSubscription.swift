@@ -11,7 +11,7 @@ class SimpleSubscription: ObservableObject {
     @Published var showTrialBanner: Bool = false
     
     // MARK: - Constants
-    private let monthlyTrialProductID = "pro_monthly"
+    private let monthlyTrialProductID = "mariner_pro_monthly"
     private let trialDurationDays = 14
     
     // MARK: - Private Properties
@@ -169,11 +169,15 @@ class SimpleSubscription: ObservableObject {
     
     func getAvailableProducts() async throws -> [Product] {
         DebugLogger.shared.log("💰 TRIAL_SUB: Loading available products", category: "TRIAL_SUBSCRIPTION")
+        DebugLogger.shared.log("💰 TRIAL_SUB: Using Product ID: \(monthlyTrialProductID)", category: "TRIAL_SUBSCRIPTION")
         
         let productIDs = [monthlyTrialProductID]
         let products = try await Product.products(for: productIDs)
         
         DebugLogger.shared.log("💰 TRIAL_SUB: Loaded \(products.count) products", category: "TRIAL_SUBSCRIPTION")
+        for product in products {
+            DebugLogger.shared.log("💰 TRIAL_SUB: Product found: \(product.id) - \(product.displayName) - \(product.displayPrice)", category: "TRIAL_SUBSCRIPTION")
+        }
         return products
     }
     
@@ -216,6 +220,35 @@ class SimpleSubscription: ObservableObject {
         // Show banner in last 5 days of trial
         showTrialBanner = trialDaysRemaining <= 5 && trialDaysRemaining > 0
         DebugLogger.shared.log("🎌 TRIAL_SUB: Trial banner visibility: \(showTrialBanner)", category: "TRIAL_SUBSCRIPTION")
+    }
+    
+    // MARK: - Settings Management Methods
+    
+    func getSubscriptionStatusMessage() -> String {
+        switch subscriptionStatus {
+        case .subscribed(let expiryDate):
+            if let expiry = expiryDate {
+                let formatter = DateFormatter()
+                formatter.dateStyle = .medium
+                return "Renews on \(formatter.string(from: expiry))"
+            } else {
+                return "Active subscription"
+            }
+        case .inTrial(let days):
+            return "\(days) days remaining in free trial"
+        case .firstLaunch:
+            return "Ready to start your free trial"
+        case .trialExpired:
+            return "Free trial has ended"
+        case .expired:
+            return "Subscription has expired"
+        default:
+            return "Checking status..."
+        }
+    }
+    
+    func hasTrialBeenUsed() -> Bool {
+        return hasUsedTrialBefore()
     }
 }
 

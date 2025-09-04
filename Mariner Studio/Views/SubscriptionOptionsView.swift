@@ -89,13 +89,14 @@ struct SubscriptionOptionCard: View {
                 
                 HStack(alignment: .firstTextBaseline) {
                     Text(price)
-                        .font(.title)
+                        .font(.largeTitle)
                         .fontWeight(.bold)
-                        .foregroundColor(.blue)
+                        .foregroundColor(.primary)
                     
                     Text("/ \(period)")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .font(.title3)
+                        .foregroundColor(.primary)
+                        .fontWeight(.semibold)
                 }
                 
                 if let subtitle = subtitle {
@@ -107,9 +108,9 @@ struct SubscriptionOptionCard: View {
                 
                 if case .firstLaunch = subscriptionService.subscriptionStatus {
                     Text("14-day free trial included")
-                        .font(.caption)
-                        .foregroundColor(.green)
-                        .fontWeight(.medium)
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .fontWeight(.regular)
                 }
             }
             

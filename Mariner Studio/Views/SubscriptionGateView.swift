@@ -66,8 +66,14 @@ struct FirstTimeWelcomeView: View {
                     .fontWeight(.bold)
                     .multilineTextAlignment(.center)
                 
-                Text("Get 14 days free, then $2.99/month")
-                    .font(.title2)
+                Text("Just $2.99/month")
+                    .font(.title)
+                    .fontWeight(.bold)
+                    .foregroundColor(.primary)
+                    .multilineTextAlignment(.center)
+                
+                Text("14 days free trial included")
+                    .font(.subheadline)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
             }
@@ -92,7 +98,7 @@ struct FirstTimeWelcomeView: View {
                 }
             }) {
                 HStack {
-                    Text("Start 14-Day Free Trial")
+                    Text("Start 14-Day Trial")
                         .font(.headline)
                         .foregroundColor(.white)
                     
@@ -107,7 +113,7 @@ struct FirstTimeWelcomeView: View {
             .padding(.horizontal)
             
             // Small print
-            Text("Free for 14 days, then $2.99/month • Cancel anytime")
+            Text("$2.99/month after free trial • Cancel anytime")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .padding(.bottom, 30)

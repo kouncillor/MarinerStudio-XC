@@ -44,12 +44,12 @@ struct EnhancedPaywallView: View {
                 }
                 .padding(.horizontal)
                 
-                // Subscription options
+                // Subscription options with prominent pricing
                 if isLoading {
                     ProgressView("Loading subscription options...")
                         .padding()
                 } else {
-                    SubscriptionOptionsView(products: availableProducts)
+                    AppleCompliantSubscriptionView(products: availableProducts)
                 }
                 
                 // Restore purchases button
@@ -143,5 +143,107 @@ struct FeatureCard: View {
         .padding()
         .background(.regularMaterial)
         .cornerRadius(12)
+    }
+}
+
+// MARK: - Apple-Compliant Subscription View
+
+struct AppleCompliantSubscriptionView: View {
+    let products: [Product]
+    @EnvironmentObject var subscriptionService: SimpleSubscription
+    
+    var body: some View {
+        VStack(spacing: 24) {
+            ForEach(products, id: \.id) { product in
+                AppleCompliantSubscriptionCard(product: product)
+            }
+        }
+        .padding(.horizontal)
+    }
+}
+
+struct AppleCompliantSubscriptionCard: View {
+    let product: Product
+    @EnvironmentObject var subscriptionService: SimpleSubscription
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            // Product title
+            Text(product.displayName)
+                .font(.title2)
+                .fontWeight(.semibold)
+                .multilineTextAlignment(.center)
+            
+            // MOST PROMINENT: Billed amount
+            VStack(spacing: 4) {
+                Text(product.displayPrice)
+                    .font(.system(size: 48, weight: .bold, design: .default))
+                    .foregroundColor(.primary)
+                
+                Text("per month")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+            }
+            
+            // SUBORDINATE: Free trial information (smaller, less prominent)
+            if case .firstLaunch = subscriptionService.subscriptionStatus {
+                VStack(spacing: 2) {
+                    Text("14-day free trial")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                    
+                    Text("Then \(product.displayPrice)/month")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .padding(.top, 8)
+            }
+            
+            // Subscribe button
+            Button(action: {
+                Task {
+                    do {
+                        try await subscriptionService.subscribe(to: product.id)
+                    } catch {
+                        DebugLogger.shared.log("❌ SUBSCRIPTION: Purchase failed: \(error)", category: "SUBSCRIPTION")
+                    }
+                }
+            }) {
+                Text(buttonText)
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.blue)
+                    .cornerRadius(12)
+            }
+            .disabled(subscriptionService.isLoading)
+            
+            if subscriptionService.isLoading {
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle(tint: .blue))
+            }
+        }
+        .padding(24)
+        .background(.regularMaterial)
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.blue.opacity(0.3), lineWidth: 1)
+        )
+    }
+    
+    private var buttonText: String {
+        switch subscriptionService.subscriptionStatus {
+        case .firstLaunch, .unknown:
+            return "Start Free Trial"
+        case .trialExpired:
+            return "Subscribe Now"
+        case .expired:
+            return "Reactivate"
+        default:
+            return "Subscribe"
+        }
     }
 }

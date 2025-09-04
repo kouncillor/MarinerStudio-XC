@@ -87,7 +87,7 @@ struct TrialDetailsView: View {
                     title: "Monthly",
                     price: "$2.99",
                     period: "month",
-                    productID: "pro_monthly"
+                    productID: "mariner_pro_monthly"
                 )
             }
             .padding(.horizontal, 16)

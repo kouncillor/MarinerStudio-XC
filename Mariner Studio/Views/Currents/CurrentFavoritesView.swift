@@ -3,7 +3,6 @@ import SwiftUI
 struct CurrentFavoritesView: View {
     @StateObject private var viewModel: CurrentFavoritesViewModel
     @EnvironmentObject var serviceProvider: ServiceProvider
-    @EnvironmentObject var authViewModel: AuthenticationViewModel
     @Environment(\.colorScheme) var colorScheme
     
     init(coreDataManager: CoreDataManager = CoreDataManager.shared) {
@@ -116,7 +115,7 @@ struct CurrentFavoritesView: View {
                 .foregroundColor(.secondary)
                 .font(.body)
 
-            NavigationLink(destination: AppSettingsView().environmentObject(authViewModel)) {
+            NavigationLink(destination: AppSettingsView()) {
                 HStack {
                     Image(systemName: "person.circle")
                     Text("Go to Settings & Sign In")

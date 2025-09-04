@@ -1,0 +1,1725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mariner Studio - Comprehensive Subscription System Test Plan</title>
+    <style>
+        :root {
+            --primary-blue: #007AFF;
+            --secondary-blue: #5856D6;
+            --success-green: #34C759;
+            --warning-orange: #FF9500;
+            --error-red: #FF3B30;
+            --background-gray: #F2F2F7;
+            --text-primary: #1C1C1E;
+            --text-secondary: #8E8E93;
+            --border-gray: #C6C6C8;
+            --card-background: #FFFFFF;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: var(--text-primary);
+            background-color: var(--background-gray);
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: var(--card-background);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .header .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            margin-bottom: 20px;
+        }
+
+        .header .meta {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap;
+            font-size: 0.95rem;
+        }
+
+        .meta-item {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .content {
+            padding: 0;
+        }
+
+        .nav-tabs {
+            display: flex;
+            background-color: var(--background-gray);
+            border-bottom: 1px solid var(--border-gray);
+            overflow-x: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        .nav-tabs::-webkit-scrollbar {
+            display: none;
+        }
+
+        .nav-tab {
+            padding: 15px 25px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+        }
+
+        .nav-tab.active {
+            color: var(--primary-blue);
+            border-bottom-color: var(--primary-blue);
+            background-color: var(--card-background);
+        }
+
+        .nav-tab:hover {
+            color: var(--primary-blue);
+            background-color: rgba(0, 122, 255, 0.05);
+        }
+
+        .tab-content {
+            display: none;
+            padding: 40px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: var(--text-primary);
+            border-bottom: 2px solid var(--primary-blue);
+            padding-bottom: 10px;
+        }
+
+        h3 {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin: 30px 0 15px 0;
+            color: var(--text-primary);
+        }
+
+        h4 {
+            font-size: 1.2rem;
+            font-weight: 500;
+            margin: 25px 0 15px 0;
+            color: var(--text-primary);
+        }
+
+        .card {
+            background: var(--card-background);
+            border: 1px solid var(--border-gray);
+            border-radius: 12px;
+            padding: 25px;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .test-case {
+            background: linear-gradient(135deg, #f8f9ff, #ffffff);
+            border: 1px solid var(--border-gray);
+            border-radius: 12px;
+            padding: 25px;
+            margin: 20px 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .test-case::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--primary-blue);
+        }
+
+        .priority-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 16px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+        }
+
+        .priority-critical {
+            background-color: var(--error-red);
+            color: white;
+        }
+
+        .priority-high {
+            background-color: var(--warning-orange);
+            color: white;
+        }
+
+        .priority-medium {
+            background-color: var(--primary-blue);
+            color: white;
+        }
+
+        .priority-low {
+            background-color: var(--text-secondary);
+            color: white;
+        }
+
+        .code-block {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            line-height: 1.5;
+        }
+
+        .checklist {
+            list-style: none;
+            margin: 15px 0;
+        }
+
+        .checklist li {
+            margin: 8px 0;
+            padding-left: 30px;
+            position: relative;
+        }
+
+        .checklist li::before {
+            content: '✅';
+            position: absolute;
+            left: 0;
+            top: 0;
+        }
+
+        .fail-criteria li::before {
+            content: '❌';
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .info-card {
+            background: linear-gradient(135deg, #f0f7ff, #ffffff);
+            border: 1px solid #e1ecf4;
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .info-card h4 {
+            color: var(--primary-blue);
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+
+        .info-card ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        .info-card li {
+            margin: 8px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .info-card li::before {
+            content: '•';
+            color: var(--primary-blue);
+            position: absolute;
+            left: 0;
+            font-weight: bold;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .metric-card {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, var(--success-green), #30d158);
+            color: white;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+
+        .metric-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            display: block;
+        }
+
+        .metric-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+
+        .schedule-timeline {
+            position: relative;
+            margin: 30px 0;
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-left: 40px;
+            margin-bottom: 25px;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 8px;
+            width: 10px;
+            height: 10px;
+            background: var(--primary-blue);
+            border-radius: 50%;
+            box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2);
+        }
+
+        .timeline-item::after {
+            content: '';
+            position: absolute;
+            left: 19px;
+            top: 20px;
+            width: 2px;
+            height: calc(100% - 10px);
+            background: var(--border-gray);
+        }
+
+        .timeline-item:last-child::after {
+            display: none;
+        }
+
+        .timeline-content {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid var(--border-gray);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .timeline-title {
+            font-weight: 600;
+            color: var(--primary-blue);
+            margin-bottom: 10px;
+        }
+
+        .risk-matrix {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .risk-card {
+            border-radius: 10px;
+            padding: 20px;
+            border-left: 4px solid;
+        }
+
+        .risk-high {
+            background: #fff5f5;
+            border-left-color: var(--error-red);
+        }
+
+        .risk-medium {
+            background: #fffaf0;
+            border-left-color: var(--warning-orange);
+        }
+
+        .risk-low {
+            background: #f0fff4;
+            border-left-color: var(--success-green);
+        }
+
+        .toc {
+            background: var(--background-gray);
+            border-radius: 10px;
+            padding: 25px;
+            margin: 20px 0;
+        }
+
+        .toc h3 {
+            margin-top: 0;
+            color: var(--primary-blue);
+        }
+
+        .toc-list {
+            columns: 2;
+            column-gap: 30px;
+            list-style: none;
+        }
+
+        .toc-list li {
+            break-inside: avoid;
+            margin: 8px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .toc-list li::before {
+            content: '→';
+            position: absolute;
+            left: 0;
+            color: var(--primary-blue);
+        }
+
+        .toc-list a {
+            color: var(--text-primary);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .toc-list a:hover {
+            color: var(--primary-blue);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                border-radius: 0;
+            }
+
+            .header {
+                padding: 30px 20px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .header .meta {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .tab-content {
+                padding: 20px;
+            }
+
+            .nav-tabs {
+                flex-direction: column;
+            }
+
+            .toc-list {
+                columns: 1;
+            }
+
+            .info-grid,
+            .metrics-grid,
+            .risk-matrix {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .search-box {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: var(--card-background);
+            padding: 20px;
+            border-bottom: 1px solid var(--border-gray);
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 20px;
+            border: 1px solid var(--border-gray);
+            border-radius: 25px;
+            font-size: 1rem;
+            background: var(--background-gray);
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+        }
+
+        .highlight {
+            background: yellow;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚢 Mariner Studio</h1>
+            <div class="subtitle">Comprehensive Subscription System Test Plan</div>
+            <div class="meta">
+                <div class="meta-item"><strong>Version:</strong> 1.0</div>
+                <div class="meta-item"><strong>Date:</strong> 2025-08-28</div>
+                <div class="meta-item"><strong>Target:</strong> App Store Submission</div>
+                <div class="meta-item"><strong>Product:</strong> Pro Monthly $2.99 + 14-day trial</div>
+            </div>
+        </div>
+
+        <div class="search-box">
+            <input type="text" class="search-input" placeholder="🔍 Search test plan content..." id="searchInput">
+        </div>
+
+        <div class="content">
+            <nav class="nav-tabs">
+                <button class="nav-tab active" data-tab="overview">Overview</button>
+                <button class="nav-tab" data-tab="environment">Environment</button>
+                <button class="nav-tab" data-tab="functional">Functional Testing</button>
+                <button class="nav-tab" data-tab="user-journey">User Journeys</button>
+                <button class="nav-tab" data-tab="edge-cases">Edge Cases</button>
+                <button class="nav-tab" data-tab="ui-testing">UI/UX Testing</button>
+                <button class="nav-tab" data-tab="integration">Integration</button>
+                <button class="nav-tab" data-tab="compliance">App Store</button>
+                <button class="nav-tab" data-tab="performance">Performance</button>
+                <button class="nav-tab" data-tab="test-cases">Test Cases</button>
+                <button class="nav-tab" data-tab="schedule">Schedule</button>
+                <button class="nav-tab" data-tab="metrics">Success Metrics</button>
+            </nav>
+
+            <!-- Overview Tab -->
+            <div class="tab-content active" id="overview">
+                <h2>📋 Executive Summary</h2>
+                <p>This comprehensive test plan covers all aspects of the Mariner Studio subscription system before App Store submission. The system implements a 14-day free trial with seamless conversion to paid subscription, CloudKit sync integration, and full compliance with Apple's App Store guidelines.</p>
+                
+                <div class="info-grid">
+                    <div class="info-card">
+                        <h4>🏗️ System Architecture</h4>
+                        <ul>
+                            <li><strong>Product ID:</strong> pro_monthly</li>
+                            <li><strong>Trial Duration:</strong> 14 days</li>
+                            <li><strong>Price:</strong> $2.99/month</li>
+                            <li><strong>Core Service:</strong> SimpleSubscription.swift</li>
+                            <li><strong>Storage:</strong> UserDefaults + StoreKit</li>
+                            <li><strong>Sync:</strong> CloudKit integration</li>
+                        </ul>
+                    </div>
+                    <div class="info-card">
+                        <h4>🎯 Key Components</h4>
+                        <ul>
+                            <li>SubscriptionGateView</li>
+                            <li>EnhancedPaywallView</li>
+                            <li>TrialBannerView</li>
+                            <li>SubscriptionStatus enum (6 states)</li>
+                            <li>FirstTimeWelcomeView</li>
+                            <li>AppSettingsView integration</li>
+                        </ul>
+                    </div>
+                    <div class="info-card">
+                        <h4>📊 Testing Coverage</h4>
+                        <ul>
+                            <li><strong>130+</strong> test cases</li>
+                            <li><strong>8</strong> testing categories</li>
+                            <li><strong>4</strong> priority levels</li>
+                            <li><strong>21-day</strong> execution timeline</li>
+                            <li>Critical, High, Medium, Low priorities</li>
+                            <li>Automation possibilities identified</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="toc">
+                    <h3>📚 Table of Contents</h3>
+                    <ul class="toc-list">
+                        <li><a href="#" data-tab="environment">Test Environment Setup</a></li>
+                        <li><a href="#" data-tab="functional">Functional Testing Categories</a></li>
+                        <li><a href="#" data-tab="user-journey">User Journey Testing</a></li>
+                        <li><a href="#" data-tab="edge-cases">Edge Case Testing</a></li>
+                        <li><a href="#" data-tab="ui-testing">UI/UX Testing</a></li>
+                        <li><a href="#" data-tab="integration">Integration Testing</a></li>
+                        <li><a href="#" data-tab="compliance">App Store Compliance</a></li>
+                        <li><a href="#" data-tab="performance">Performance Testing</a></li>
+                        <li><a href="#" data-tab="test-cases">Detailed Test Cases</a></li>
+                        <li><a href="#" data-tab="schedule">Test Execution Schedule</a></li>
+                        <li><a href="#" data-tab="metrics">Success Criteria & Metrics</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Environment Tab -->
+            <div class="tab-content" id="environment">
+                <h2>🔧 Test Environment Setup</h2>
+                
+                <div class="test-case">
+                    <div class="priority-badge priority-critical">Critical</div>
+                    <h3>Sandbox Testing Requirements</h3>
+                    <h4>Test Accounts Setup</h4>
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h4>Primary Test Account</h4>
+                            <ul>
+                                <li>Fresh sandbox Apple ID</li>
+                                <li>No prior purchase history</li>
+                                <li>Valid payment method</li>
+                                <li>US region testing</li>
+                            </ul>
+                        </div>
+                        <div class="info-card">
+                            <h4>Secondary Test Account</h4>
+                            <ul>
+                                <li>Restore purchases testing</li>
+                                <li>Multi-device scenarios</li>
+                                <li>Family sharing tests</li>
+                                <li>International pricing</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="test-case">
+                    <div class="priority-badge priority-high">High</div>
+                    <h3>StoreKit Configuration</h3>
+                    <div class="code-block">
+{
+  "subscriptionGroups": [
+    {
+      "id": "21482483",
+      "name": "Pro Subscription",
+      "subscriptions": [
+        {
+          "id": "pro_monthly",
+          "displayPrice": "2.99",
+          "displayName": "Pro Subscription",
+          "familyShareable": true,
+          "recurringSubscriptionPeriod": "P1M"
+        }
+      ]
+    }
+  ]
+}
+                    </div>
+                </div>
+
+                <div class="test-case">
+                    <div class="priority-badge priority-high">High</div>
+                    <h3>Device Configuration Matrix</h3>
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h4>Primary Testing Devices</h4>
+                            <ul>
+                                <li>iPhone 15 Pro (iOS 18.0)</li>
+                                <li>iPhone 14 (iOS 17.6)</li>
+                                <li>iPhone SE 3rd Gen (iOS 16.7)</li>
+                                <li>iPad Pro 12.9" (iPadOS 18.0)</li>
+                                <li>iPad Air (iPadOS 17.6)</li>
+                            </ul>
+                        </div>
+                        <div class="info-card">
+                            <h4>Secondary Testing Devices</h4>
+                            <ul>
+                                <li>iPhone 13 mini (iOS 16.6)</li>
+                                <li>iPhone 12 (iOS 15.8)</li>
+                                <li>iPad 10th Gen (iPadOS 17.0)</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Functional Testing Tab -->
+            <div class="tab-content" id="functional">
+                <h2>⚙️ Functional Testing Categories</h2>
+                
+                <div class="test-case">
+                    <div class="priority-badge priority-critical">Critical</div>
+                    <h3>Trial System Testing</h3>
+                    <h4>TC-TRIAL-001: First Launch Trial Start</h4>
+                    <div class="code-block">
+Steps:
+1. Install fresh app (clear all data)
+2. Launch app for first time
+3. Observe SubscriptionGateView behavior
+4. Tap "Start 14-Day Free Trial"
+5. Verify trial status in SimpleSubscription
+
+Expected Results:
+- subscriptionStatus = .firstLaunch initially
+- After trial start: subscriptionStatus = .inTrial(daysRemaining: 14)
+- trialStartDate saved to UserDefaults
+- hasUsedTrial = true in UserDefaults
+- User gains full app access
+                    </div>
+                    <ul class="checklist">
+                        <li>Trial starts successfully</li>
+                        <li>14 days remaining shown</li>
+                        <li>Full app functionality available</li>
+                        <li>UserDefaults keys set correctly</li>
+                    </ul>
+                </div>
+
+                <div class="test-case">
+                    <div class="priority-badge priority-high">High</div>
+                    <h3>Purchase Flow Testing</h3>
+                    <h4>TC-PURCHASE-001: Complete Purchase Journey</h4>
+                    <div class="code-block">
+Steps:
+1. Navigate to EnhancedPaywallView
+2. Tap subscription option ($2.99/month)
+3. Complete Apple ID authentication
+4. Confirm purchase in system dialog
+5. Wait for transaction completion
+6. Verify app access granted
+
+Performance Requirements:
+- Purchase flow completion: <30 seconds
+- UI responsiveness maintained during purchase
+- Loading states clearly indicated
+                    </div>
+                </div>
+
+                <div class="test-case">
+                    <div class="priority-badge priority-critical">Critical</div>
+                    <h3>Restore Purchases Testing</h3>
+                    <h4>TC-RESTORE-001: Successful Purchase Restoration</h4>
+                    <div class="code-block">
+Steps:
+1. Purchase subscription on Device A
+2. Install app on Device B with same Apple ID
+3. Tap "Restore Purchases" in paywall
+4. Wait for restoration completion
+5. Verify subscription status updated
+
+Expected Results:
+- AppStore.sync() called successfully
+- determineSubscriptionStatus() executed
+- Subscription status updated to .subscribed
+- User gains immediate app access
+                    </div>
+                </div>
+            </div>
+
+            <!-- User Journey Tab -->
+            <div class="tab-content" id="user-journey">
+                <h2>👤 User Journey Testing</h2>
+                
+                <div class="test-case">
+                    <div class="priority-badge priority-critical">Critical</div>
+                    <h3>First Launch Experience</h3>
+                    <h4>TC-UX-001: Complete First Launch Flow</h4>
+                    <p><strong>User Story:</strong> As a new user, I want to easily start my free trial and access the app</p>
+                    
+                    <div class="code-block">
+Steps:
+1. Install app from TestFlight/App Store
+2. Launch for first time
+3. Experience FirstTimeWelcomeView
+4. Review feature highlights
+5. Start free trial
+6. Access main app features
+
+Expected Results:
+- SubscriptionGateView displays loading briefly
+- FirstTimeWelcomeView shows welcome message
+- Feature highlights clearly displayed:
+  * "Real-time Weather - Live maritime weather data"
+  * "Tidal Information - Precise tidal predictions"
+  * "Navigation Tools - Professional maritime navigation"
+  * "iCloud Sync - Seamless sync across devices"
+- "Start 14-Day Free Trial" button prominent
+- Smooth transition to MainView after trial start
+                    </div>
+
+                    <h4>UI/UX Requirements:</h4>
+                    <ul class="checklist">
+                        <li>Professional maritime theme</li>
+                        <li>Clear value proposition</li>
+                        <li>No friction in trial start process</li>
+                        <li>Accessibility compliant (VoiceOver support)</li>
+                    </ul>
+                </div>
+
+                <div class="test-case">
+                    <div class="priority-badge priority-critical">Critical</div>
+                    <h3>Trial-to-Paid Conversion Flows</h3>
+                    <h4>TC-CONVERSION-001: Organic Trial to Subscription</h4>
+                    <p><strong>User Story:</strong> As a trial user approaching expiry, I want clear options to subscribe</p>
+                    
+                    <div class="code-block">
+Steps:
+1. User in trial with 5 days remaining
+2. TrialBannerView appears at top of app
+3. User taps banner or accesses paywall
+4. Reviews subscription options
+5. Completes purchase
+6. Continues using app seamlessly
+
+Expected Results:
+- Trial banner appears when trialDaysRemaining ≤ 5
+- Banner clearly communicates urgency without being pushy
+- Smooth transition from trial to paid
+- No interruption in user experience
+- All data/preferences preserved
+                    </div>
+
+                    <h4>Conversion Tracking:</h4>
+                    <ul class="checklist">
+                        <li>Monitor banner appearance timing</li>
+                        <li>Track conversion rates from banner</li>
+                        <li>Measure time from trial start to conversion</li>
+                    </ul>
+                </div>
+
+                <div class="test-case">
+                    <div class="priority-badge priority-high">High</div>
+                    <h3>Multi-Device Sync Testing</h3>
+                    <h4>TC-SYNC-001: Multi-Device Subscription Status</h4>
+                    <div class="code-block">
+Steps:
+1. Purchase subscription on iPhone
+2. Install app on iPad with same Apple ID
+3. Launch app on iPad
+4. Verify automatic subscription recognition
+5. Test feature access on both devices
+
+Expected Results:
+- Subscription status syncs automatically
+- No need for manual restore on second device
+- Consistent feature access across devices
+- CloudKit data syncs properly
+
+Technical Requirements:
+- StoreKit 2 handles cross-device sync
+- App checks subscription on each launch
+- CloudKit subscription status integration
+                    </div>
+                </div>
+            </div>
+
+            <!-- Edge Cases Tab -->
+            <div class="tab-content" id="edge-cases">
+                <h2>⚠️ Edge Case Testing</h2>
+                
+                <div class="test-case">
+                    <div class="priority-badge priority-high">High</div>
+                    <h3>Clock Manipulation Scenarios</h3>
+                    <h4>TC-EDGE-001: Forward Time Manipulation</h4>
+                    <div class="code-block">
+Steps:
+1. Start trial normally
+2. Set device date forward 7 days
+3. Launch app and check trial status
+4. Set date forward another 8 days
+5. Verify trial expiry handling
+
+Expected Results:
+- Trial days recalculated correctly based on new date
+- Trial expires appropriately when date exceeds 14 days
+- No negative day counts displayed
+- Paywall appears when trial truly expired
+
+Security Considerations:
+- Time manipulation shouldn't grant indefinite access
+- Server validation may be needed for production
+- Graceful handling of extreme date changes
+                    </div>
+                </div>
+
+                <div class="test-case">
+                    <div class="priority-badge priority-high">High</div>
+                    <h3>Network Interruption Scenarios</h3>
+                    <h4>TC-EDGE-003: Network Loss During Purchase</h4>
+                    <div class="code-block">
+Steps:
+1. Initiate subscription purchase
+2. Disconnect network during purchase flow
+3. Reconnect network
+4. Verify purchase completion or failure
+
+Expected Results:
+- Graceful handling of network interruption
+- Purchase either completes or fails cleanly
+- No hanging or ambiguous states
+- Clear user communication about status
+
+Recovery Testing:
+- App Store handles transaction queue properly
+- User can retry purchase after reconnection
+- No duplicate charges or partial states
+                    </div>
+                </div>
+
+                <div class="test-case">
+                    <div class="priority-badge priority-high">High</div>
+                    <h3>Multiple Rapid Purchase Attempts</h3>
+                    <h4>TC-EDGE-006: Duplicate Purchase Prevention</h4>
+                    <div class="code-block">
+Steps:
+1. Initiate purchase
+2. Rapidly tap purchase button multiple times
+3. Check for duplicate transactions
+4. Verify single subscription result
+
+Expected Results:
+- Only one purchase transaction initiated
+- UI prevents multiple rapid taps
+- Loading states block additional purchases
+- Single subscription granted, no duplicates
+
+Technical Implementation:
+- Purchase button disabled during transaction
+- isLoading state prevents multiple calls
+- StoreKit handles deduplication
+                    </div>
+                </div>
+
+                <div class="test-case">
+                    <div class="priority-badge priority-high">High</div>
+                    <h3>iOS Version Compatibility</h3>
+                    <h4>TC-EDGE-009: iOS Compatibility Testing</h4>
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h4>Test Matrix</h4>
+                            <ul>
+                                <li>iOS 16.6 (minimum supported)</li>
+                                <li>iOS 17.0, 17.6</li>
+                                <li>iOS 18.0, 18.1</li>
+                            </ul>
+                        </div>
+                        <div class="info-card">
+                            <h4>For each version</h4>
+                            <ul>
+                                <li>Install and launch app</li>
+                                <li>Complete full subscription journey</li>
+                                <li>Verify StoreKit 2 compatibility</li>
+                                <li>Test all subscription states</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- UI Testing Tab -->
+            <div class="tab-content" id="ui-testing">
+                <h2>🎨 UI/UX Testing</h2>
+                
+                <div class="test-case">
+                    <div class="priority-badge priority-critical">Critical</div>
+                    <h3>Subscription-Related Views Testing</h3>
+                    <h4>TC-UI-001: SubscriptionGateView Testing</h4>
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h4>Test Scenarios</h4>
+                            <ul>
+                                <li>Loading state display</li>
+                                <li>First launch user flow</li>
+                                <li>Trial user with banner</li>
+                                <li>Subscribed user access</li>
+                                <li>Expired user paywall</li>
+                            </ul>
+                        </div>
+                        <div class="info-card">
+                            <h4>Expected Results</h4>
+                            <ul>
+                                <li>Smooth transitions between states</li>
+                                <li>Loading indicators clearly visible</li>
+                                <li>Appropriate view for each subscription status</li>
+                                <li>No UI glitches or inconsistencies</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="test-case">
+                    <div class="priority-badge priority-critical">Critical</div>
+                    <h3>EnhancedPaywallView Testing</h3>
+                    <h4>TC-UI-003: Paywall User Experience</h4>
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h4>Test Areas</h4>
+                            <ul>
+                                <li>Product loading states</li>
+                                <li>Subscription option presentation</li>
+                                <li>Purchase button functionality</li>
+                                <li>Restore purchases link</li>
+                                <li>Error message display</li>
+                            </ul>
+                        </div>
+                        <div class="info-card">
+                            <h4>Expected Results</h4>
+                            <ul>
+                                <li>Clear pricing information</li>
+                                <li>Prominent purchase options</li>
+                                <li>Easy-to-find restore functionality</li>
+                                <li>Professional, trustworthy appearance</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="test-case">
+                    <div class="priority-badge priority-high">High</div>
+                    <h3>Accessibility Compliance</h3>
+                    <h4>TC-A11Y-001: VoiceOver Support</h4>
+                    <div class="code-block">
+Test Areas:
+- Subscription flow navigation
+- Purchase button accessibility
+- Trial status announcements
+- Error message readability
+
+Requirements:
+- All interactive elements accessible
+- Meaningful accessibility labels
+- Logical navigation order
+- Status updates announced clearly
+                    </div>
+                </div>
+
+                <div class="test-case">
+                    <div class="priority-badge priority-high">High</div>
+                    <h3>Screen Size and Orientation Testing</h3>
+                    <h4>TC-SCREEN-001: iPhone Layout Testing</h4>
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h4>Device Categories</h4>
+                            <ul>
+                                <li>Compact (iPhone SE): 4.7" screen</li>
+                                <li>Standard (iPhone 14): 6.1" screen</li>
+                                <li>Plus (iPhone 14 Pro Max): 6.7" screen</li>
+                            </ul>
+                        </div>
+                        <div class="info-card">
+                            <h4>For each category</h4>
+                            <ul>
+                                <li>Subscription views fit properly</li>
+                                <li>No content cutoff</li>
+                                <li>Touch targets appropriately sized</li>
+                                <li>Readable text at all sizes</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Integration Tab -->
+            <div class="tab-content" id="integration">
+                <h2>🔗 Integration Testing</h2>
+                
+                <div class="test-case">
+                    <div class="priority-badge priority-high">High</div>
+                    <h3>CloudKit Sync Integration</h3>
+                    <h4>TC-INT-001: CloudKit Subscription Integration</h4>
+                    <div class="code-block">
+Test Flow:
+1. Subscribe on Device A
+2. Install on Device B with same iCloud account
+3. Verify subscription status syncs
+4. Check feature access consistency
+5. Test offline/online sync behavior
+
+Expected Results:
+- Subscription status available across devices
+- No duplicate trial attempts possible
+- Consistent feature access
+- Proper handling of sync delays
+
+Technical Validation:
+- CloudKit container configured correctly
+- Subscription data model includes necessary fields
+- Sync conflicts handled appropriately
+- Privacy/security requirements met
+                    </div>
+                </div>
+
+                <div class="test-case">
+                    <div class="priority-badge priority-critical">Critical</div>
+                    <h3>App State Restoration</h3>
+                    <h4>TC-INT-003: App Launch State Management</h4>
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h4>Test Scenarios</h4>
+                            <ul>
+                                <li>Cold launch with active subscription</li>
+                                <li>Cold launch during trial period</li>
+                                <li>Cold launch with expired subscription</li>
+                                <li>Cold launch after uninstall/reinstall</li>
+                            </ul>
+                        </div>
+                        <div class="info-card">
+                            <h4>Technical Requirements</h4>
+                            <ul>
+                                <li>determineSubscriptionStatus() completes quickly</li>
+                                <li>UserDefaults read efficiently</li>
+                                <li>StoreKit queries optimized</li>
+                                <li>UI updates smoothly</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Compliance Tab -->
+            <div class="tab-content" id="compliance">
+                <h2>🏪 App Store Compliance Testing</h2>
+                
+                <div class="test-case">
+                    <div class="priority-badge priority-critical">Critical</div>
+                    <h3>Pricing Display Accuracy</h3>
+                    <h4>TC-COMPLIANCE-001: Pricing Transparency</h4>
+                    <div class="code-block">
+Test Areas:
+1. Subscription price clearly displayed ($2.99/month)
+2. Trial period clearly communicated (14 days free)
+3. Auto-renewal terms disclosed
+4. Currency matches user's App Store region
+
+Required Elements:
+- "Get 14 days free, then $2.99/month" messaging
+- Clear auto-renewal disclosure
+- Subscription management link accessible
+- Family sharing status indicated if applicable
+                    </div>
+                    <ul class="checklist">
+                        <li>Price prominently displayed</li>
+                        <li>Trial duration clearly stated</li>
+                        <li>Auto-renewal terms disclosed</li>
+                        <li>Subscription management accessible</li>
+                        <li>No misleading or confusing language</li>
+                    </ul>
+                </div>
+
+                <div class="test-case">
+                    <div class="priority-badge priority-critical">Critical</div>
+                    <h3>Required Legal Links</h3>
+                    <h4>TC-COMPLIANCE-003: Legal Documentation Access</h4>
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h4>Required Links</h4>
+                            <ul>
+                                <li>Terms of Service</li>
+                                <li>Privacy Policy</li>
+                                <li>Subscription Terms</li>
+                                <li>App Store Subscription Management</li>
+                            </ul>
+                        </div>
+                        <div class="info-card">
+                            <h4>Test Requirements</h4>
+                            <ul>
+                                <li>Links easily accessible from subscription views</li>
+                                <li>Links open properly (in-app or Safari)</li>
+                                <li>Documents load correctly</li>
+                                <li>Up-to-date legal information</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="test-case">
+                    <div class="priority-badge priority-critical">Critical</div>
+                    <h3>Auto-Renewal Disclosures</h3>
+                    <h4>TC-COMPLIANCE-005: Auto-Renewal Communication</h4>
+                    <div class="code-block">
+Required Disclosures:
+1. Subscription automatically renews monthly
+2. Renewal occurs 24 hours before expiry
+3. Account charged upon renewal
+4. Subscriptions can be managed/cancelled via App Store
+
+Sample Text Validation:
+"Subscription automatically renews unless auto-renew is turned off at least 24-hours before the end of the current period. Account will be charged for renewal within 24-hours prior to the end of the current period. Subscriptions may be managed by the user and auto-renewal may be turned off by going to the user's Account Settings after purchase."
+                    </div>
+                </div>
+
+                <div class="test-case">
+                    <div class="priority-badge priority-medium">Medium</div>
+                    <h3>Family Sharing Compatibility</h3>
+                    <h4>TC-COMPLIANCE-006: Family Sharing Functionality</h4>
+                    <div class="code-block">
+Test Setup:
+1. Family organizer purchases subscription
+2. Family member installs app
+3. Verify subscription sharing works
+4. Check access permissions
+
+Expected Results:
+- Family members gain subscription benefits
+- Proper sharing indicated in StoreKit config
+- No additional charges for family members
+- Subscription management remains with organizer
+
+Technical Requirements:
+- familyShareable: true in StoreKit config
+- App detects family shared subscriptions
+- Proper transaction verification
+- Consistent behavior across family devices
+                    </div>
+                </div>
+            </div>
+
+            <!-- Performance Tab -->
+            <div class="tab-content" id="performance">
+                <h2>⚡ Performance Testing</h2>
+                
+                <div class="test-case">
+                    <div class="priority-badge priority-high">High</div>
+                    <h3>Subscription Status Check Performance</h3>
+                    <h4>TC-PERF-001: Launch Time Subscription Verification</h4>
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <span class="metric-value">&lt;2s</span>
+                            <span class="metric-label">determineSubscriptionStatus()</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-value">&lt;1s</span>
+                            <span class="metric-label">UI visible to user</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-value">&lt;5s</span>
+                            <span class="metric-label">Complete verification</span>
+                        </div>
+                    </div>
+
+                    <h4>Measurement Tools:</h4>
+                    <ul class="checklist">
+                        <li>Xcode Instruments (Time Profiler)</li>
+                        <li>Custom logging with timestamps</li>
+                        <li>User-perceived performance testing</li>
+                        <li>Battery usage monitoring</li>
+                    </ul>
+
+                    <h4>Acceptable Performance:</h4>
+                    <ul class="checklist">
+                        <li>App launches quickly</li>
+                        <li>Subscription check doesn't block UI</li>
+                        <li>Loading states clearly indicated</li>
+                        <li>Overall responsive experience</li>
+                    </ul>
+                </div>
+
+                <div class="test-case">
+                    <div class="priority-badge priority-medium">Medium</div>
+                    <h3>Memory Usage During Purchase Flows</h3>
+                    <h4>TC-PERF-003: Purchase Memory Management</h4>
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h4>Test Scenarios</h4>
+                            <ul>
+                                <li>Complete purchase flow start to finish</li>
+                                <li>Multiple purchase attempts (success/cancel)</li>
+                                <li>Restore purchases operation</li>
+                                <li>Extended app usage post-purchase</li>
+                            </ul>
+                        </div>
+                        <div class="info-card">
+                            <h4>Acceptable Limits</h4>
+                            <ul>
+                                <li>Peak memory increase: &lt;50MB during purchase</li>
+                                <li>Memory returns to baseline within 30 seconds</li>
+                                <li>No memory leaks detected</li>
+                                <li>Stable long-term memory usage</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="test-case">
+                    <div class="priority-badge priority-low">Low</div>
+                    <h3>Battery Impact Assessment</h3>
+                    <h4>TC-PERF-004: Battery Usage Analysis</h4>
+                    <div class="code-block">
+Test Duration: 24-hour period
+Monitoring Areas:
+- Background subscription checks
+- StoreKit transaction monitoring  
+- CloudKit sync operations
+- Idle power consumption
+
+Battery Usage Targets:
+- Subscription system adds <2% battery drain
+- No excessive background activity
+- Efficient StoreKit integration
+- Minimal CloudKit sync overhead
+
+Testing Method:
+- Battery usage in Settings app
+- Xcode Energy Log monitoring
+- Long-term usage patterns
+- Comparison with similar apps
+                    </div>
+                </div>
+            </div>
+
+            <!-- Test Cases Tab -->
+            <div class="tab-content" id="test-cases">
+                <h2>📝 Detailed Test Cases</h2>
+                
+                <div class="test-case">
+                    <div class="priority-badge priority-critical">Critical</div>
+                    <h3>TC-CRITICAL-001: End-to-End New User Journey</h3>
+                    <p><strong>Automation:</strong> MEDIUM</p>
+                    
+                    <h4>Pre-conditions:</h4>
+                    <ul class="checklist">
+                        <li>Fresh device/simulator with no prior app installation</li>
+                        <li>Valid sandbox Apple ID signed in</li>
+                        <li>Network connectivity available</li>
+                    </ul>
+
+                    <h4>Test Steps:</h4>
+                    <div class="code-block">
+1. Install Mariner Studio from TestFlight/App Store
+2. Launch app for first time
+3. Observe SubscriptionGateView loading state
+4. Verify FirstTimeWelcomeView displays correctly
+5. Review feature highlights presentation
+6. Tap "Start 14-Day Free Trial" button
+7. Wait for trial initialization
+8. Confirm access to MainView
+9. Verify trial status shows "14 days remaining"
+10. Close and relaunch app
+11. Confirm trial status persists
+                    </div>
+
+                    <h4>Expected Results:</h4>
+                    <div class="code-block">
+- Loading state appears briefly (<2 seconds)
+- Welcome view shows professional design with anchor icon
+- Feature highlights clearly presented:
+  * "Real-time Weather - Live maritime weather data"
+  * "Tidal Information - Precise tidal predictions" 
+  * "Navigation Tools - Professional maritime navigation"
+  * "iCloud Sync - Seamless sync across devices"
+- Trial starts successfully without errors
+- User gains full app access immediately
+- Trial status persists across app launches
+- No crashes or errors throughout flow
+                    </div>
+
+                    <h4>Pass Criteria:</h4>
+                    <ul class="checklist">
+                        <li>Complete flow executes without issues</li>
+                        <li>Trial status correctly shows 14 days remaining</li>
+                        <li>MainView accessible with all features</li>
+                        <li>App state persists across launches</li>
+                        <li>Professional user experience maintained</li>
+                    </ul>
+
+                    <h4>Data Validation:</h4>
+                    <div class="code-block">
+- UserDefaults contains trialStartDate
+- UserDefaults hasUsedTrial = true
+- subscriptionStatus = .inTrial(daysRemaining: 14)
+- showTrialBanner = false (first 9 days)
+                    </div>
+                </div>
+
+                <div class="test-case">
+                    <div class="priority-badge priority-critical">Critical</div>
+                    <h3>TC-CRITICAL-002: Trial Expiry and Paywall Flow</h3>
+                    <p><strong>Automation:</strong> HIGH</p>
+                    
+                    <div class="code-block">
+Pre-conditions:
+- Device with app installed and trial previously started
+- Trial period expired (>14 days since start)
+- No active subscription
+
+Test Steps:
+1. Set UserDefaults trialStartDate to 15+ days ago
+2. Force quit and relaunch app
+3. Wait for subscription status determination
+4. Verify EnhancedPaywallView displays
+5. Check subscription status and access restrictions
+6. Attempt to access main features (should be blocked)
+7. Verify paywall content and pricing display
+8. Check "Restore Purchases" option availability
+
+Expected Results:
+- App launches and shows loading briefly
+- determineSubscriptionStatus() detects expired trial
+- subscriptionStatus = .trialExpired
+- needsPaywall = true, hasAppAccess = false
+- EnhancedPaywallView displayed prominently
+- MainView not accessible
+- Paywall shows clear pricing: $2.99/month
+- Feature benefits clearly communicated
+- Restore purchases option visible and functional
+                    </div>
+
+                    <h4>Automation Notes:</h4>
+                    <ul class="checklist">
+                        <li>Can manipulate UserDefaults for consistent testing</li>
+                        <li>Verify subscriptionStatus enum values</li>
+                        <li>Check UI element visibility programmatically</li>
+                    </ul>
+                </div>
+
+                <div class="test-case">
+                    <div class="priority-badge priority-high">High</div>
+                    <h3>TC-HIGH-002: Trial Banner Behavior</h3>
+                    <p><strong>Automation:</strong> HIGH</p>
+                    
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h4>Test Scenarios</h4>
+                            <ul>
+                                <li>Trial with 10 days remaining (banner hidden)</li>
+                                <li>Trial with 5 days remaining (banner appears)</li>
+                                <li>Trial with 1 day remaining (urgent banner)</li>
+                                <li>Banner tap functionality</li>
+                            </ul>
+                        </div>
+                        <div class="info-card">
+                            <h4>Expected Results</h4>
+                            <ul>
+                                <li>Banner hidden when >5 days remaining</li>
+                                <li>Banner appears when ≤5 days remaining</li>
+                                <li>Banner shows correct days remaining</li>
+                                <li>Tapping banner navigates to subscription options</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <h4>Automation Implementation:</h4>
+                    <ul class="checklist">
+                        <li>Mock trialDaysRemaining values</li>
+                        <li>Verify showTrialBanner boolean</li>
+                        <li>Check UI element visibility</li>
+                        <li>Test banner tap navigation</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Schedule Tab -->
+            <div class="tab-content" id="schedule">
+                <h2>📅 Test Execution Schedule</h2>
+                
+                <div class="schedule-timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-content">
+                            <div class="timeline-title">Phase 1: Core Functionality (Days 1-3)</div>
+                            <ul>
+                                <li>Critical path test cases</li>
+                                <li>Basic subscription flows</li>
+                                <li>Trial system validation</li>
+                                <li>Purchase flow testing</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-content">
+                            <div class="timeline-title">Phase 2: Integration Testing (Days 4-6)</div>
+                            <ul>
+                                <li>CloudKit sync testing</li>
+                                <li>Multi-device scenarios</li>
+                                <li>App state restoration</li>
+                                <li>Cross-platform consistency</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-content">
+                            <div class="timeline-title">Phase 3: Edge Case & Error Handling (Days 7-9)</div>
+                            <ul>
+                                <li>Network failure scenarios</li>
+                                <li>Clock manipulation testing</li>
+                                <li>Receipt validation failures</li>
+                                <li>Memory/storage constraints</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-content">
+                            <div class="timeline-title">Phase 4: UI/UX & Accessibility (Days 10-12)</div>
+                            <ul>
+                                <li>Interface testing across devices</li>
+                                <li>Accessibility compliance</li>
+                                <li>User experience validation</li>
+                                <li>Performance optimization</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-content">
+                            <div class="timeline-title">Phase 5: App Store Compliance (Days 13-14)</div>
+                            <ul>
+                                <li>Pricing display verification</li>
+                                <li>Legal link validation</li>
+                                <li>Auto-renewal disclosure check</li>
+                                <li>Final compliance review</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-content">
+                            <div class="timeline-title">Phase 6: TestFlight Validation (Days 15-21)</div>
+                            <ul>
+                                <li>Internal team testing</li>
+                                <li>External beta testing</li>
+                                <li>Real-world scenario validation</li>
+                                <li>Final bug fixes and polish</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>📊 Resource Allocation</h3>
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h4>Internal Testing Phase</h4>
+                            <ul>
+                                <li><strong>Duration:</strong> 5-7 days minimum</li>
+                                <li><strong>Team Size:</strong> 3-5 internal testers</li>
+                                <li><strong>Focus:</strong> Core functionality, edge cases</li>
+                            </ul>
+                        </div>
+                        <div class="info-card">
+                            <h4>External Testing Phase</h4>
+                            <ul>
+                                <li><strong>Duration:</strong> 7-10 days</li>
+                                <li><strong>Team Size:</strong> 10-25 external testers</li>
+                                <li><strong>Focus:</strong> Real-world scenarios, diverse device testing</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Metrics Tab -->
+            <div class="tab-content" id="metrics">
+                <h2>🎯 Success Criteria and Metrics</h2>
+                
+                <div class="card">
+                    <h3>⚙️ Functional Success Criteria</h3>
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <span class="metric-value">100%</span>
+                            <span class="metric-label">Users can start trial successfully</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-value">100%</span>
+                            <span class="metric-label">Purchase attempts succeed or fail gracefully</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-value">100%</span>
+                            <span class="metric-label">Trial expirations handled correctly</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-value">100%</span>
+                            <span class="metric-label">Restore purchases work for valid subscriptions</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>⚡ Performance Criteria</h3>
+                    <ul class="checklist">
+                        <li>App launches and determines subscription status within 5 seconds</li>
+                        <li>Purchase flows complete within 30 seconds</li>
+                        <li>UI remains responsive during all subscription operations</li>
+                        <li>Memory usage stays within reasonable bounds</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h3>🔒 Reliability Criteria</h3>
+                    <ul class="checklist">
+                        <li>Zero crashes related to subscription functionality</li>
+                        <li>Subscription status persists correctly across app launches</li>
+                        <li>Multi-device sync works reliably</li>
+                        <li>Network error recovery functions properly</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h3>👤 User Experience Criteria</h3>
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h4>Usability Metrics</h4>
+                            <ul>
+                                <li>Trial start completion rate >95%</li>
+                                <li>Purchase flow abandonment rate <20%</li>
+                                <li>User confusion incidents <5% (based on feedback)</li>
+                                <li>Accessibility compliance for all subscription flows</li>
+                            </ul>
+                        </div>
+                        <div class="info-card">
+                            <h4>Business Metrics</h4>
+                            <ul>
+                                <li>Trial-to-paid conversion rate baseline established</li>
+                                <li>User retention through trial period tracked</li>
+                                <li>Subscription renewal rate monitored</li>
+                                <li>Revenue per user calculated</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>🏪 App Store Compliance Criteria</h3>
+                    <ul class="checklist">
+                        <li>All pricing displayed clearly and accurately</li>
+                        <li>Terms of Service and Privacy Policy easily accessible</li>
+                        <li>Auto-renewal terms properly disclosed</li>
+                        <li>Subscription management links functional</li>
+                        <li>Family sharing works if enabled</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h3>⚠️ Risk Assessment</h3>
+                    <div class="risk-matrix">
+                        <div class="risk-card risk-high">
+                            <h4>🚨 High Risk Areas</h4>
+                            <ul>
+                                <li><strong>Subscription Purchase Failures</strong> - Users cannot subscribe, revenue loss</li>
+                                <li><strong>Trial Status Synchronization Issues</strong> - Users might get multiple trials</li>
+                            </ul>
+                        </div>
+                        <div class="risk-card risk-medium">
+                            <h4>⚠️ Medium Risk Areas</h4>
+                            <ul>
+                                <li><strong>Device Clock Manipulation</strong> - Users might extend trial illegitimately</li>
+                                <li><strong>iOS Version Compatibility</strong> - App might not work on older versions</li>
+                            </ul>
+                        </div>
+                        <div class="risk-card risk-low">
+                            <h4>ℹ️ Low Risk Areas</h4>
+                            <ul>
+                                <li><strong>UI/UX Issues</strong> - User experience degradation</li>
+                                <li><strong>Performance Optimization</strong> - Minor performance improvements needed</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tab switching functionality
+        document.querySelectorAll('.nav-tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                // Remove active class from all tabs and contents
+                document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                // Add active class to clicked tab and corresponding content
+                this.classList.add('active');
+                document.getElementById(this.dataset.tab).classList.add('active');
+            });
+        });
+
+        // TOC link functionality
+        document.querySelectorAll('.toc-list a[data-tab]').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Switch to the target tab
+                const targetTab = this.dataset.tab;
+                document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                document.querySelector(`[data-tab="${targetTab}"]`).classList.add('active');
+                document.getElementById(targetTab).classList.add('active');
+                
+                // Scroll to top
+                window.scrollTo(0, 0);
+            });
+        });
+
+        // Search functionality
+        const searchInput = document.getElementById('searchInput');
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const allContent = document.querySelectorAll('.tab-content');
+            
+            // Clear previous highlights
+            document.querySelectorAll('.highlight').forEach(el => {
+                el.outerHTML = el.innerHTML;
+            });
+            
+            if (searchTerm.length > 2) {
+                allContent.forEach(content => {
+                    const text = content.innerHTML;
+                    if (text.toLowerCase().includes(searchTerm)) {
+                        const highlightedText = text.replace(
+                            new RegExp(`(${searchTerm})`, 'gi'),
+                            '<span class="highlight">$1</span>'
+                        );
+                        content.innerHTML = highlightedText;
+                    }
+                });
+            }
+        });
+
+        // Smooth scrolling for internal links
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const target = document.querySelector(this.getAttribute('href'));
+                    if (target) {
+                        target.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

@@ -9,7 +9,6 @@ import SwiftUI
 
 #if DEBUG
 struct DevPageView: View {
-    @EnvironmentObject var authViewModel: AuthenticationViewModel
     @StateObject private var viewModel = DevPageViewModel()
 
     var body: some View {
@@ -172,6 +171,5 @@ struct DevPageView: View {
 
 #Preview {
     DevPageView()
-        .environmentObject(AuthenticationViewModel())
 }
 #endif

@@ -3,7 +3,6 @@ import SwiftUI
 struct WeatherFavoritesView: View {
     @StateObject private var viewModel: WeatherFavoritesViewModel
     @EnvironmentObject var serviceProvider: ServiceProvider
-    @EnvironmentObject var authViewModel: AuthenticationViewModel
     @Environment(\.colorScheme) var colorScheme
     
     // MARK: - Computed Properties
@@ -198,7 +197,7 @@ struct WeatherFavoritesView: View {
                 .foregroundColor(.secondary)
                 .font(.body)
 
-            NavigationLink(destination: AppSettingsView().environmentObject(authViewModel)) {
+            NavigationLink(destination: AppSettingsView()) {
                 HStack {
                     Image(systemName: "person.circle")
                     Text("Go to Settings & Sign In")
