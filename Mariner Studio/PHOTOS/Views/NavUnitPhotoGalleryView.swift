@@ -16,6 +16,7 @@ struct NavUnitPhotoGalleryView: View {
     @State private var capturedImage: UIImage?
     @State private var showingDeleteAlert = false
     @State private var photoToDelete: NavUnitPhoto?
+    @State private var showingPermissionView = false
 
     // MARK: - Grid Configuration
 
@@ -75,6 +76,9 @@ struct NavUnitPhotoGalleryView: View {
             .sheet(isPresented: $showingCamera) {
                 CameraView(capturedImage: $capturedImage, isPresented: $showingCamera)
             }
+            .sheet(isPresented: $showingPermissionView) {
+                CameraPermissionView(isPresented: $showingPermissionView)
+            }
             .sheet(isPresented: $showingPhotoViewer) {
                 if let selectedPhoto = selectedPhoto {
                     PhotoViewerView(
@@ -117,7 +121,7 @@ struct NavUnitPhotoGalleryView: View {
                 .padding(.horizontal)
 
             Button("Take Photo") {
-                showingCamera = true
+                requestCameraPermission()
             }
             .buttonStyle(.borderedProminent)
             .disabled(!viewModel.canTakePhoto)
@@ -238,7 +242,7 @@ struct NavUnitPhotoGalleryView: View {
 
     private var takePhotoButton: some View {
         Button(action: {
-            showingCamera = true
+            requestCameraPermission()
         }) {
             VStack {
                 Image(systemName: "camera.fill")
@@ -265,7 +269,7 @@ struct NavUnitPhotoGalleryView: View {
 
     private var cameraButton: some View {
         Button(action: {
-            showingCamera = true
+            requestCameraPermission()
         }) {
             Image(systemName: "camera.fill")
         }
@@ -290,6 +294,34 @@ struct NavUnitPhotoGalleryView: View {
                 RoundedRectangle(cornerRadius: 12)
                     .fill(Color(.systemBackground))
             )
+        }
+    }
+    
+    // MARK: - Camera Permission Helper
+    
+    private func requestCameraPermission() {
+        guard viewModel.canTakePhoto else { return }
+        
+        let authStatus = CameraAvailabilityCheck.getCameraAuthorizationStatus()
+        
+        switch authStatus {
+        case .authorized:
+            showingCamera = true
+        case .notDetermined:
+            Task {
+                let granted = await CameraAvailabilityCheck.requestCameraPermission()
+                await MainActor.run {
+                    if granted {
+                        showingCamera = true
+                    } else {
+                        showingPermissionView = true
+                    }
+                }
+            }
+        case .denied, .restricted:
+            showingPermissionView = true
+        @unknown default:
+            showingPermissionView = true
         }
     }
 }

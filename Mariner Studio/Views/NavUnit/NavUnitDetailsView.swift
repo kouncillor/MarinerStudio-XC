@@ -109,6 +109,7 @@ struct NavUnitDetailsView: View {
 
     // State for sheet presentations
     @State private var showingPhotoGallery = false
+    @State private var showingPermissionView = false
 
     // Photo state
     @State private var photos: [NavUnitPhoto] = []
@@ -295,7 +296,7 @@ struct NavUnitDetailsView: View {
                                     Text("No photos yet")
                                         .font(.subheadline)
                                         .foregroundColor(.secondary)
-                                    Button(action: { showingPhotoGallery = true }) {
+                                    Button(action: { requestCameraPermissionForGallery() }) {
                                         Text("Add Photo")
                                             .font(.subheadline)
                                             .foregroundColor(.blue)
@@ -305,7 +306,7 @@ struct NavUnitDetailsView: View {
                             } else {
                                 HStack(spacing: 8) {
                                     // Add photo button (always on the left)
-                                    Button(action: { showingPhotoGallery = true }) {
+                                    Button(action: { requestCameraPermissionForGallery() }) {
                                         RoundedRectangle(cornerRadius: 8)
                                             .strokeBorder(Color.blue, lineWidth: 2, antialiased: true)
                                             .frame(width: 80, height: 80)
@@ -325,7 +326,7 @@ struct NavUnitDetailsView: View {
                                     ScrollView(.horizontal, showsIndicators: false) {
                                         HStack(spacing: 8) {
                                             ForEach(photos, id: \.id) { photo in
-                                                Button(action: { showingPhotoGallery = true }) {
+                                                Button(action: { requestCameraPermissionForGallery() }) {
                                                     if let thumbnail = thumbnailImages[photo.id] {
                                                         Image(uiImage: thumbnail)
                                                             .resizable()
@@ -859,6 +860,9 @@ struct NavUnitDetailsView: View {
                 )
             }
         }
+        .sheet(isPresented: $showingPermissionView) {
+            CameraPermissionView(isPresented: $showingPermissionView)
+        }
     }
 
     // MARK: - Photo Loading Functions
@@ -907,6 +911,32 @@ struct NavUnitDetailsView: View {
             }
         } catch {
             print("Error loading thumbnail for photo \(photo.id): \(error)")
+        }
+    }
+    
+    // MARK: - Camera Permission Helper
+    
+    private func requestCameraPermissionForGallery() {
+        let authStatus = CameraAvailabilityCheck.getCameraAuthorizationStatus()
+        
+        switch authStatus {
+        case .authorized:
+            showingPhotoGallery = true
+        case .notDetermined:
+            Task {
+                let granted = await CameraAvailabilityCheck.requestCameraPermission()
+                await MainActor.run {
+                    if granted {
+                        showingPhotoGallery = true
+                    } else {
+                        showingPermissionView = true
+                    }
+                }
+            }
+        case .denied, .restricted:
+            showingPermissionView = true
+        @unknown default:
+            showingPermissionView = true
         }
     }
 }

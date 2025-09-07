@@ -319,9 +319,9 @@
 				INFOPLIST_FILE = "Mariner-Studio-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.navigation";
-				INFOPLIST_KEY_NSCameraUsageDescription = "";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Mariner Studio uses your camera to photograph marine facilities including ports, docks, and terminals. Mariners can reference these photos to recall critical details like dock headings, fender positions, and approach routes before returning to these locations. Photos are stored privately in your iCloud account.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Mariner Studio needs access to your location to show nearby tide stations and calculate distances.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Mariner Studio uses your location to center nautical charts and weather maps on your position, find nearby tide and current stations, calculate distances to ports and navigation waypoints, and provide local marine weather conditions for navigation planning.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -364,9 +364,9 @@
 				INFOPLIST_FILE = "Mariner-Studio-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.navigation";
-				INFOPLIST_KEY_NSCameraUsageDescription = "";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Mariner Studio uses your camera to photograph marine facilities including ports, docks, and terminals. Mariners can reference these photos to recall critical details like dock headings, fender positions, and approach routes before returning to these locations. Photos are stored privately in your iCloud account.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Mariner Studio needs access to your location to show nearby tide stations and calculate distances.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Mariner Studio uses your location to center nautical charts and weather maps on your position, find nearby tide and current stations, calculate distances to ports and navigation waypoints, and provide local marine weather conditions for navigation planning.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
