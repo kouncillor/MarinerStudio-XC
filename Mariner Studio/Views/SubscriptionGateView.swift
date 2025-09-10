@@ -198,6 +198,10 @@ struct SubscriptionGateView: View {
                             TrialExplanationView()
                         }
                 
+                case .skippedTrial:
+                    // User skipped trial - limited access to MainView (only MAP accessible)
+                    MainView()
+                
                 case .trialExpired, .expired, .unknown:
                     // No valid access - show paywall
                     EnhancedPaywallView()

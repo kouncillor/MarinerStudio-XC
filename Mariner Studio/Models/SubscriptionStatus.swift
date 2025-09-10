@@ -3,6 +3,7 @@ import Foundation
 enum SubscriptionStatus: Equatable {
     case unknown
     case firstLaunch
+    case skippedTrial
     case inTrial(daysRemaining: Int)
     case trialExpired
     case subscribed(expiryDate: Date?)
@@ -10,9 +11,9 @@ enum SubscriptionStatus: Equatable {
     
     var hasAccess: Bool {
         switch self {
-        case .firstLaunch, .inTrial, .subscribed:
+        case .inTrial, .subscribed:
             return true
-        case .unknown, .trialExpired, .expired:
+        case .unknown, .firstLaunch, .skippedTrial, .trialExpired, .expired:
             return false
         }
     }
@@ -32,6 +33,8 @@ enum SubscriptionStatus: Equatable {
             return "Checking subscription status..."
         case .firstLaunch:
             return "Welcome! Your 14-day trial starts now."
+        case .skippedTrial:
+            return "Limited access - Subscribe for full features"
         case .inTrial(let days):
             return "Trial: \(days) days remaining"
         case .trialExpired:

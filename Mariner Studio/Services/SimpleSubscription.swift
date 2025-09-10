@@ -289,6 +289,11 @@ class SimpleSubscription: ObservableObject {
         return hasUsedTrialBefore()
     }
     
+    func skipTrial() {
+        DebugLogger.shared.log("⏭️ TRIAL_SUB: User skipped trial - limited access mode", category: "TRIAL_SUBSCRIPTION")
+        subscriptionStatus = .skippedTrial
+    }
+    
     // MARK: - Debug Methods
     #if DEBUG
     func enableDebugOverride(_ enabled: Bool) {

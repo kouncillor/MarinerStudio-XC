@@ -5,6 +5,7 @@ struct MainView: View {
     @EnvironmentObject var subscriptionService: SimpleSubscription
     @EnvironmentObject var serviceProvider: ServiceProvider
     @State private var navigationPath = NavigationPath()
+    @State private var showSubscriptionPrompt = false
 
     let shouldClearNavigation: Bool
 
@@ -18,7 +19,7 @@ struct MainView: View {
 
     private var coreNavigationButtons: some View {
         Group {
-            // MAP
+            // MAP - Free feature
             NavigationLink(destination: MapClusteringView()) {
                 NavigationButtonContent(
                     icon: "earthsixfour",
@@ -26,59 +27,137 @@ struct MainView: View {
                 )
             }
 
-            // WEATHER
-            NavigationLink(destination: WeatherMenuView()) {
-                NavigationButtonContent(
-                    icon: "weathersunsixseven",
-                    title: "WEATHER"
-                )
+            // WEATHER - Premium feature
+            if subscriptionService.hasAppAccess {
+                NavigationLink(destination: WeatherMenuView()) {
+                    NavigationButtonContent(
+                        icon: "weathersunsixseven",
+                        title: "WEATHER"
+                    )
+                }
+            } else {
+                Button(action: {
+                    showSubscriptionPrompt = true
+                }) {
+                    NavigationButtonContent(
+                        icon: "weathersunsixseven",
+                        title: "WEATHER",
+                        isPremium: true
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
             }
 
-            // TIDES
-            NavigationLink(destination: TideMenuView()) {
-                NavigationButtonContent(
-                    icon: "tsixseven",
-                    title: "TIDES"
-                )
+            // TIDES - Premium feature  
+            if subscriptionService.hasAppAccess {
+                NavigationLink(destination: TideMenuView()) {
+                    NavigationButtonContent(
+                        icon: "tsixseven",
+                        title: "TIDES"
+                    )
+                }
+            } else {
+                Button(action: {
+                    showSubscriptionPrompt = true
+                }) {
+                    NavigationButtonContent(
+                        icon: "tsixseven",
+                        title: "TIDES",
+                        isPremium: true
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
             }
         }
     }
     
     private var additionalNavigationButtons: some View {
         Group {
-            // CURRENTS
-            NavigationLink(destination: CurrentMenuView()) {
-                NavigationButtonContent(
-                    icon: "csixseven",
-                    title: "CURRENTS"
-                )
+            // CURRENTS - Premium feature
+            if subscriptionService.hasAppAccess {
+                NavigationLink(destination: CurrentMenuView()) {
+                    NavigationButtonContent(
+                        icon: "csixseven",
+                        title: "CURRENTS"
+                    )
+                }
+            } else {
+                Button(action: {
+                    showSubscriptionPrompt = true
+                }) {
+                    NavigationButtonContent(
+                        icon: "csixseven",
+                        title: "CURRENTS",
+                        isPremium: true
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
             }
 
-            // DOCKS
-            NavigationLink(destination: NavUnitMenuView()) {
-                NavigationButtonContent(
-                    icon: "nsixseven",
-                    title: "NAV UNITS"
-                )
+            // NAV UNITS - Premium feature
+            if subscriptionService.hasAppAccess {
+                NavigationLink(destination: NavUnitMenuView()) {
+                    NavigationButtonContent(
+                        icon: "nsixseven",
+                        title: "NAV UNITS"
+                    )
+                }
+            } else {
+                Button(action: {
+                    showSubscriptionPrompt = true
+                }) {
+                    NavigationButtonContent(
+                        icon: "nsixseven",
+                        title: "NAV UNITS",
+                        isPremium: true
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
             }
 
-            // BUOYS
-            NavigationLink(destination: BuoyMenuView()) {
-                NavigationButtonContent(
-                    icon: "bsixseven",
-                    title: "BUOYS"
-                )
+            // BUOYS - Premium feature
+            if subscriptionService.hasAppAccess {
+                NavigationLink(destination: BuoyMenuView()) {
+                    NavigationButtonContent(
+                        icon: "bsixseven",
+                        title: "BUOYS"
+                    )
+                }
+            } else {
+                Button(action: {
+                    showSubscriptionPrompt = true
+                }) {
+                    NavigationButtonContent(
+                        icon: "bsixseven",
+                        title: "BUOYS",
+                        isPremium: true
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
             }
 
-            // ROUTES
-            NavigationLink(destination: RouteMenuView()) {
-                NavigationButtonContent(
-                    icon: "rsixseven",
-                    title: "ROUTES"
-                )
+            // ROUTES - Premium feature
+            if subscriptionService.hasAppAccess {
+                NavigationLink(destination: RouteMenuView()) {
+                    NavigationButtonContent(
+                        icon: "rsixseven",
+                        title: "ROUTES"
+                    )
+                }
+            } else {
+                Button(action: {
+                    showSubscriptionPrompt = true
+                }) {
+                    NavigationButtonContent(
+                        icon: "rsixseven",
+                        title: "ROUTES",
+                        isPremium: true
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
             }
             
-            // TESTING TOOLS - Only visible in debug builds
+            // TESTING TOOLS - Only visible in debug builds, always accessible
             #if DEBUG
             NavigationLink(destination: TestingToolsView()) {
                 NavigationButtonContent(
@@ -135,6 +214,14 @@ struct MainView: View {
                 .onAppear {
                     if shouldClearNavigation {
                         clearNavigationStack()
+                    }
+                }
+                .sheet(isPresented: $showSubscriptionPrompt) {
+                    // Show different prompts based on subscription status
+                    if case .firstLaunch = subscriptionService.subscriptionStatus {
+                        TrialExplanationView()
+                    } else {
+                        EnhancedPaywallView()
                     }
                 }
         }
@@ -209,12 +296,14 @@ struct NavigationButtonContent: View {
     let title: String
     let isSystemIcon: Bool
     let iconColor: Color?
+    let isPremium: Bool
 
-    init(icon: String, title: String, isSystemIcon: Bool = false, iconColor: Color? = nil) {
+    init(icon: String, title: String, isSystemIcon: Bool = false, iconColor: Color? = nil, isPremium: Bool = false) {
         self.icon = icon
         self.title = title
         self.isSystemIcon = isSystemIcon
         self.iconColor = iconColor
+        self.isPremium = isPremium
     }
 
     var body: some View {
@@ -225,27 +314,50 @@ struct NavigationButtonContent: View {
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .frame(width: 50, height: 50)
-                        .foregroundColor(iconColor ?? .accentColor)
+                        .foregroundColor(isPremium ? .gray.opacity(0.5) : (iconColor ?? .accentColor))
                 } else {
                     Image(icon)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .frame(width: 50, height: 50)
+                        .opacity(isPremium ? 0.5 : 1.0)
                 }
             }
 
-            Text(title)
-                .font(.largeTitle)
-                .multilineTextAlignment(.leading)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.largeTitle)
+                    .multilineTextAlignment(.leading)
+                    .foregroundColor(isPremium ? .gray.opacity(0.7) : .primary)
+                
+                if isPremium {
+                    HStack(spacing: 4) {
+                        Image(systemName: "lock.fill")
+                            .font(.caption)
+                            .foregroundColor(.orange)
+                        
+                        Text("PREMIUM")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.orange)
+                    }
+                }
+            }
 
             Spacer()
+            
+            if isPremium {
+                Image(systemName: "crown.fill")
+                    .font(.title2)
+                    .foregroundColor(.orange)
+            }
         }
         .frame(maxWidth: .infinity)
         .padding(27)
         .background(
             RoundedRectangle(cornerRadius: 10)
-                .strokeBorder(Color.gray.opacity(0.4), lineWidth: 1)
-                .background(RoundedRectangle(cornerRadius: 10).fill(Color.white))
+                .strokeBorder(isPremium ? Color.orange.opacity(0.3) : Color.gray.opacity(0.4), lineWidth: isPremium ? 2 : 1)
+                .background(RoundedRectangle(cornerRadius: 10).fill(isPremium ? Color.orange.opacity(0.05) : Color.white))
         )
         .frame(minHeight: 110)
     }

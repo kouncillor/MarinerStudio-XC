@@ -323,10 +323,8 @@ struct TrialExplanationView: View {
                     }
                     
                     Button(action: {
-                        Task {
-                            await subscriptionService.startTrial()
-                            dismiss()
-                        }
+                        subscriptionService.skipTrial()
+                        dismiss()
                     }) {
                         Text("SKIP")
                             .font(.subheadline)

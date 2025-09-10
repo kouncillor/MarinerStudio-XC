@@ -52,10 +52,14 @@ struct TestingToolsView: View {
                     }
                     .foregroundColor(.purple)
                     
-                    Button("Reset Subscription State") {
-                        // Clear all subscription-related data and enable debug override
+                    Button("Reset to First Launch (No Subscription)") {
+                        // Clear ALL subscription and trial data
                         UserDefaults.standard.removeObject(forKey: "hasUsedTrial")
                         UserDefaults.standard.removeObject(forKey: "trialStartDate")
+                        UserDefaults.standard.removeObject(forKey: "subscriptionStatus")
+                        UserDefaults.standard.removeObject(forKey: "subscriptionProductId")
+                        UserDefaults.standard.removeObject(forKey: "subscriptionPurchaseDate")
+                        UserDefaults.standard.removeObject(forKey: "debugOverrideSubscription")
                         UserDefaults.standard.synchronize()
                         
                         // Enable debug override to bypass StoreKit subscription check
@@ -63,8 +67,13 @@ struct TestingToolsView: View {
                         subscriptionService.enableDebugOverride(true)
                         #endif
                         
-                        alertMessage = "Subscription state reset - StoreKit override enabled for testing"
-                        showingAlert = true
+                        Task {
+                            await subscriptionService.determineSubscriptionStatus()
+                            await MainActor.run {
+                                alertMessage = "Reset complete - user appears as first-time installer with no subscription"
+                                showingAlert = true
+                            }
+                        }
                     }
                     .foregroundColor(.red)
                     
