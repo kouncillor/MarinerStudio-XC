@@ -90,8 +90,7 @@ private static let revenueCatXorKey: UInt8 = 0x73
         return String(bytes: decrypted, encoding: .utf8) ?? ""
     }
 
-    // MARK: - Verification (Debug only)
-    #if DEBUG
+    // MARK: - Verification
     static func verifyKeys() {
         let supabase = getSupabaseKey()
         let revenueCat = getRevenueCatKey()
@@ -102,5 +101,4 @@ private static let revenueCatXorKey: UInt8 = 0x73
         print("   RevenueCat key length: \(revenueCat.count)")
         print("   RevenueCat starts with: \(String(revenueCat.prefix(10)))...")
     }
-    #endif
 }

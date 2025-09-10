@@ -114,8 +114,7 @@ class SecureKeys {
         return String(bytes: decrypted, encoding: .utf8) ?? ""
     }
     
-    // MARK: - Verification (Debug only)
-    #if DEBUG
+    // MARK: - Verification
     static func verifyKeys() {
         let supabase = getSupabaseKey()
         let revenueCat = getRevenueCatKey()
@@ -126,7 +125,6 @@ class SecureKeys {
         print("   RevenueCat key length: \\(revenueCat.count)")
         print("   RevenueCat starts with: \\(String(revenueCat.prefix(10)))...")
     }
-    #endif
 }
 """
     }

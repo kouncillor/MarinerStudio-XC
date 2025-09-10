@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 // MARK: - Model Classes for Database Entities
 
@@ -48,6 +49,30 @@ enum RecommendationStatus: Int {
     case pending = 0
     case approved = 1
     case rejected = 2
+    
+    var displayName: String {
+        switch self {
+        case .pending: return "Pending"
+        case .approved: return "Approved"  
+        case .rejected: return "Rejected"
+        }
+    }
+    
+    var backgroundColor: Color {
+        switch self {
+        case .pending: return .orange
+        case .approved: return .green
+        case .rejected: return .red
+        }
+    }
+    
+    var uiColor: Color {
+        switch self {
+        case .pending: return .orange
+        case .approved: return .green
+        case .rejected: return .red
+        }
+    }
 }
 
 struct ChangeRecommendation: Identifiable {

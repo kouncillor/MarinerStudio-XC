@@ -11,13 +11,22 @@ class SimpleSubscription: ObservableObject {
     @Published var showTrialBanner: Bool = false
     
     // MARK: - Constants
-    private let monthlyTrialProductID = "mariner_pro_monthly"
+    private let monthlyTrialProductID = "mariner_pro_monthly14"
     private let trialDurationDays = 14
     
     // MARK: - Private Properties
     private let userDefaults = UserDefaults.standard
     private let trialStartDateKey = "trialStartDate"
     private let hasUsedTrialKey = "hasUsedTrial"
+    
+    // MARK: - Debug Properties
+    #if DEBUG
+    private let debugOverrideSubscriptionKey = "debugOverrideSubscription"
+    private var debugOverrideSubscription: Bool {
+        get { userDefaults.bool(forKey: debugOverrideSubscriptionKey) }
+        set { userDefaults.set(newValue, forKey: debugOverrideSubscriptionKey) }
+    }
+    #endif
     
     // MARK: - Computed Properties
     var hasAppAccess: Bool {
@@ -42,15 +51,28 @@ class SimpleSubscription: ObservableObject {
         DebugLogger.shared.log("💰 TRIAL_SUB: Determining subscription status", category: "TRIAL_SUBSCRIPTION")
         isLoading = true
         
-        // First check if user has an active paid subscription
-        if await checkForActiveSubscription() {
+        // First check if user has an active subscription
+        let subscriptionResult = await checkForActiveSubscription()
+        if subscriptionResult.hasSubscription, let transaction = subscriptionResult.transaction {
             DebugLogger.shared.log("✅ TRIAL_SUB: Active subscription found", category: "TRIAL_SUBSCRIPTION")
-            subscriptionStatus = .subscribed(expiryDate: nil)
+            
+            // Check if this subscription is currently in its free trial period
+            if hasUsedTrialBefore() && !isTrialExpired() {
+                let daysRemaining = calculateTrialDaysRemaining()
+                DebugLogger.shared.log("⏰ TRIAL_SUB: Subscription in trial period - \(daysRemaining) days remaining", category: "TRIAL_SUBSCRIPTION")
+                subscriptionStatus = .inTrial(daysRemaining: daysRemaining)
+                trialDaysRemaining = daysRemaining
+                updateTrialBannerVisibility()
+            } else {
+                // Full paid subscription (trial period over)
+                subscriptionStatus = .subscribed(expiryDate: transaction.expirationDate)
+            }
+            
             isLoading = false
             return
         }
         
-        // Check trial status
+        // No active subscription - check local trial status
         if hasUsedTrialBefore() {
             DebugLogger.shared.log("🔍 TRIAL_SUB: User has used trial before", category: "TRIAL_SUBSCRIPTION")
             if isTrialExpired() {
@@ -84,20 +106,28 @@ class SimpleSubscription: ObservableObject {
         DebugLogger.shared.log("✅ TRIAL_SUB: Trial started successfully", category: "TRIAL_SUBSCRIPTION")
     }
     
-    func checkForActiveSubscription() async -> Bool {
+    func checkForActiveSubscription() async -> (hasSubscription: Bool, transaction: Transaction?) {
         DebugLogger.shared.log("💰 TRIAL_SUB: Checking for active subscriptions", category: "TRIAL_SUBSCRIPTION")
+        
+        #if DEBUG
+        // Check for debug override first
+        if debugOverrideSubscription {
+            DebugLogger.shared.log("🧪 TRIAL_SUB: Debug override enabled - ignoring StoreKit subscriptions", category: "TRIAL_SUBSCRIPTION")
+            return (false, nil)
+        }
+        #endif
         
         for await result in Transaction.all {
             if case .verified(let transaction) = result {
                 if transaction.productID == monthlyTrialProductID {
                     DebugLogger.shared.log("✅ TRIAL_SUB: Active subscription found: \(transaction.productID)", category: "TRIAL_SUBSCRIPTION")
-                    return true
+                    return (true, transaction)
                 }
             }
         }
         
         DebugLogger.shared.log("❌ TRIAL_SUB: No active subscription found", category: "TRIAL_SUBSCRIPTION")
-        return false
+        return (false, nil)
     }
     
     func calculateTrialDaysRemaining() -> Int {
@@ -210,6 +240,14 @@ class SimpleSubscription: ObservableObject {
     private func processTransaction(_ transaction: Transaction) async {
         DebugLogger.shared.log("🔄 TRIAL_SUB: Processing transaction: \(transaction.productID)", category: "TRIAL_SUBSCRIPTION")
         
+        // Check if this is a subscription with free trial (first time user)
+        if case .firstLaunch = subscriptionStatus {
+            // Mark trial as used and set start date for proper tracking
+            markTrialAsUsed()
+            setTrialStartDate(Date())
+            DebugLogger.shared.log("🎉 TRIAL_SUB: First subscription with trial - marked trial as used", category: "TRIAL_SUBSCRIPTION")
+        }
+        
         subscriptionStatus = .subscribed(expiryDate: transaction.expirationDate)
         showTrialBanner = false
         
@@ -250,6 +288,26 @@ class SimpleSubscription: ObservableObject {
     func hasTrialBeenUsed() -> Bool {
         return hasUsedTrialBefore()
     }
+    
+    // MARK: - Debug Methods
+    #if DEBUG
+    func enableDebugOverride(_ enabled: Bool) {
+        DebugLogger.shared.log("🧪 TRIAL_SUB: Debug override \(enabled ? "enabled" : "disabled")", category: "TRIAL_SUBSCRIPTION")
+        debugOverrideSubscription = enabled
+        
+        // If enabling override, also clear subscription-related data
+        if enabled {
+            userDefaults.removeObject(forKey: "subscriptionStatus")
+            userDefaults.removeObject(forKey: "subscriptionProductId")
+            userDefaults.removeObject(forKey: "subscriptionPurchaseDate")
+            userDefaults.synchronize()
+        }
+        
+        Task {
+            await determineSubscriptionStatus()
+        }
+    }
+    #endif
 }
 
 // MARK: - Error Types

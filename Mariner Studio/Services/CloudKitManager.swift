@@ -172,12 +172,10 @@ final class CloudKitManager: ObservableObject {
     }
     
     // MARK: - Development Helpers
-    #if DEBUG
     func printCloudKitStatus() {
         DebugLogger.shared.log("🔍 CLOUDKIT_STATUS: Account Status = \(accountStatus)", category: "CLOUDKIT_DEBUG")
         DebugLogger.shared.log("🔍 CLOUDKIT_STATUS: Available = \(isCloudKitAvailable)", category: "CLOUDKIT_DEBUG")
         DebugLogger.shared.log("🔍 CLOUDKIT_STATUS: Last Sync = \(lastSyncDate?.description ?? "Never")", category: "CLOUDKIT_DEBUG")
         DebugLogger.shared.log("🔍 CLOUDKIT_STATUS: Network = \(isNetworkAvailable)", category: "CLOUDKIT_DEBUG")
     }
-    #endif
 }

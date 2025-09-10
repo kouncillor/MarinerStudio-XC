@@ -25,15 +25,11 @@ class AppConfiguration {
 
     /// Detect current environment
     var currentEnvironment: Environment {
-        #if DEBUG
-            return .debug
-        #else
-            if isTestFlightBuild {
-                return .testFlight
-            } else {
-                return .production
-            }
-        #endif
+        if isTestFlightBuild {
+            return .testFlight
+        } else {
+            return .production
+        }
     }
 
     /// Detects if app is running from TestFlight
@@ -116,9 +112,7 @@ class AppConfiguration {
         }
 
         // Log missing configuration (only in debug)
-        #if DEBUG
         DebugLogger.shared.log("⚠️ AppConfiguration: Missing configuration '\(key)' for \(currentEnvironment)", category: "CONFIG_ERROR")
-        #endif
 
         return nil
     }

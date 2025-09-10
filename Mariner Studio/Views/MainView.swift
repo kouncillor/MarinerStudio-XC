@@ -77,6 +77,18 @@ struct MainView: View {
                     title: "ROUTES"
                 )
             }
+            
+            // TESTING TOOLS - Only visible in debug builds
+            #if DEBUG
+            NavigationLink(destination: TestingToolsView()) {
+                NavigationButtonContent(
+                    icon: "wrench.and.screwdriver",
+                    title: "TESTING",
+                    isSystemIcon: true,
+                    iconColor: .orange
+                )
+            }
+            #endif
         }
     }
     
@@ -112,73 +124,6 @@ struct MainView: View {
                     .foregroundColor(.primary)
             }
         }
-        
-        #if DEBUG
-        // Development tools for testing
-        ToolbarItem(placement: .topBarLeading) {
-            Menu("Dev Tools") {
-                Button("CloudKit Status") {
-                    Task {
-                        await cloudKitManager.checkAccountStatus()
-                    }
-                }
-                
-                Button("Check Subscription") {
-                    Task {
-                        await subscriptionService.determineSubscriptionStatus()
-                    }
-                }
-                
-                Button("Restore Purchases") {
-                    Task {
-                        await subscriptionService.restorePurchases()
-                    }
-                }
-                
-                Button("Reset to First Launch") {
-                    UserDefaults.standard.removeObject(forKey: "hasUsedTrial")
-                    UserDefaults.standard.removeObject(forKey: "trialStartDate")
-                    UserDefaults.standard.synchronize()
-                    
-                    // Force app to restart by exiting (dev only)
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        exit(0)
-                    }
-                }
-                
-                Button("Simulate Day 10 (Banner Appears)") {
-                    let day10Date = Calendar.current.date(byAdding: .day, value: -10, to: Date())!
-                    UserDefaults.standard.set(day10Date, forKey: "trialStartDate")
-                    Task {
-                        await subscriptionService.determineSubscriptionStatus()
-                    }
-                }
-                
-                Button("Simulate Day 14 (Last Day)") {
-                    let day14Date = Calendar.current.date(byAdding: .day, value: -13, to: Date())!
-                    UserDefaults.standard.set(day14Date, forKey: "trialStartDate")
-                    Task {
-                        await subscriptionService.determineSubscriptionStatus()
-                    }
-                }
-                
-                Button("Simulate Trial Expired") {
-                    let expiredDate = Calendar.current.date(byAdding: .day, value: -15, to: Date())!
-                    UserDefaults.standard.set(expiredDate, forKey: "trialStartDate")
-                    Task {
-                        await subscriptionService.determineSubscriptionStatus()
-                    }
-                }
-                
-                Divider()
-                
-                NavigationLink("Core Data + CloudKit Test") {
-                    CoreDataTestView()
-                }
-            }
-            .tint(.blue)
-        }
-        #endif
     }
 
     var body: some View {

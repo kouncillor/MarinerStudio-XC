@@ -14,10 +14,8 @@ struct Mariner_StudioApp: App {
         DebugLogger.shared.log("🚀 Mariner_StudioApp: App initialization started", category: "APP_INIT")
         DebugLogger.shared.log("🔧 Mariner_StudioApp: Core Data + CloudKit replaces Supabase", category: "APP_INIT")
 
-        // Test obfuscated keys (debug only) - Still needed for legacy services
-        #if DEBUG
+        // Test obfuscated keys - Still needed for legacy services
         SecureKeys.verifyKeys()
-        #endif
     }
 
     var body: some Scene {

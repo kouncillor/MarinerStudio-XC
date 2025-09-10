@@ -9,8 +9,7 @@ class DebugLogger {
     private let fileManager = FileManager.default
 
     private init() {
-        #if DEBUG
-        // In development/simulator, try to write to project directory for easy access
+        // Try to write to project directory for easy access
         if let projectPath = Self.getProjectPath() {
             logDirectory = projectPath.appendingPathComponent("LOGS").appendingPathComponent("DEBUG")
         } else {
@@ -23,12 +22,6 @@ class DebugLogger {
 
         // Create directories if they don't exist
         createLogsDirectory()
-        #else
-        // In release mode, set dummy paths (won't be used)
-        let documentsDirectory = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
-        logDirectory = documentsDirectory
-        logFileURL = documentsDirectory.appendingPathComponent("dummy.log")
-        #endif
     }
 
     private static func getProjectPath() -> URL? {
@@ -59,17 +52,14 @@ class DebugLogger {
     }
 
     private func createLogsDirectory() {
-        #if DEBUG
         do {
             try fileManager.createDirectory(at: logDirectory, withIntermediateDirectories: true, attributes: nil)
         } catch {
             print("Failed to create logs directory: \(error)")
         }
-        #endif
     }
 
     func log(_ message: String, category: String = "DEBUG") {
-        #if DEBUG
         let timestamp = ISO8601DateFormatter().string(from: Date())
         let logEntry = "\(timestamp) [\(category)] \(message)\n"
 
@@ -78,8 +68,6 @@ class DebugLogger {
 
         // Write to file
         writeToFile(logEntry)
-        #endif
-        // In release mode, do nothing - no logging at all
     }
 
     private func writeToFile(_ message: String) {
@@ -103,13 +91,11 @@ class DebugLogger {
     }
 
     func clearLogs() {
-        #if DEBUG
         do {
             try fileManager.removeItem(at: logFileURL)
         } catch {
             print("Failed to clear log file: \(error)")
         }
-        #endif
     }
 
     func getLogFileURL() -> URL {
@@ -117,10 +103,8 @@ class DebugLogger {
     }
 
     func printLogLocation() {
-        #if DEBUG
         print("🗂️ DEBUG LOGGER: Writing logs to: \(logFileURL.path)")
         print("🗂️ DEBUG LOGGER: Directory exists: \(fileManager.fileExists(atPath: logDirectory.path))")
-        #endif
     }
 
 }

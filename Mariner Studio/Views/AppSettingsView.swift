@@ -626,7 +626,7 @@ struct UpgradeToProButton: View {
         Button(action: {
             Task {
                 do {
-                    try await subscriptionService.subscribe(to: "mariner_pro_monthly")
+                    try await subscriptionService.subscribe(to: "mariner_pro_monthly14")
                 } catch {
                     DebugLogger.shared.log("❌ SUBSCRIPTION: Upgrade failed: \(error)", category: "SUBSCRIPTION_SETTINGS")
                 }
