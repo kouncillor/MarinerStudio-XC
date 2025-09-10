@@ -3,48 +3,123 @@ import SwiftUI
 struct WeatherMenuView: View {
     // We'll use environment objects for service dependencies
     @EnvironmentObject var serviceProvider: ServiceProvider
+    @EnvironmentObject var subscriptionService: SimpleSubscription
+    @State private var showSubscriptionPrompt = false
+    @State private var showLocalWeatherView = false
 
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
-                // Favorites - Star Icon
-                NavigationLink(destination: WeatherFavoritesView(
-                    coreDataManager: serviceProvider.coreDataManager
-                )) {
-                    MenuButtonContent(
-                        iconType: .system("star.fill"), // Star icon for favorites
-                        title: "FAVORITES",
-                        color: .yellow
-                    )
+                // Favorites - Premium feature
+                if subscriptionService.hasAppAccess {
+                    NavigationLink(destination: WeatherFavoritesView(
+                        coreDataManager: serviceProvider.coreDataManager
+                    )) {
+                        MenuButtonContent(
+                            iconType: .system("star.fill"), // Star icon for favorites
+                            title: "FAVORITES",
+                            color: .yellow
+                        )
+                    }
+                } else {
+                    Button(action: {
+                        showSubscriptionPrompt = true
+                    }) {
+                        MenuButtonContent(
+                            iconType: .system("star.fill"),
+                            title: "FAVORITES",
+                            color: .yellow,
+                            isPremium: true
+                        )
+                    }
+                    .buttonStyle(PlainButtonStyle())
                 }
 
-                // Local Weather - System Icon
-                NavigationLink(destination: CurrentLocalWeatherView()) {
-                    MenuButtonContent(
-                        iconType: .system("location.fill"), // Specify system icon
-                        title: "LOCAL",
-                        color: .green
-                    )
+                // Local Weather - Free with daily limit
+                if subscriptionService.hasAppAccess {
+                    // Unlimited access for subscribed/trial users
+                    NavigationLink(destination: CurrentLocalWeatherView()) {
+                        MenuButtonContent(
+                            iconType: .system("location.fill"),
+                            title: "LOCAL",
+                            color: .green
+                        )
+                    }
+                } else if subscriptionService.canUseLocalWeatherToday {
+                    // Free user with usage available - record usage and navigate
+                    Button(action: {
+                        subscriptionService.recordLocalWeatherUsage()
+                        showLocalWeatherView = true
+                    }) {
+                        MenuButtonContent(
+                            iconType: .system("location.fill"),
+                            title: "LOCAL",
+                            color: .green,
+                            isDailyLimited: true
+                        )
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                } else {
+                    // Free user has used today - show subscription prompt
+                    Button(action: {
+                        showSubscriptionPrompt = true
+                    }) {
+                        MenuButtonContent(
+                            iconType: .system("location.fill"),
+                            title: "LOCAL",
+                            color: .green,
+                            isUsedToday: true
+                        )
+                    }
+                    .buttonStyle(PlainButtonStyle())
                 }
 
-                // Weather Map - System Icon
-                NavigationLink(destination: WeatherMapView()) {
-                    MenuButtonContent(
-                        iconType: .system("map.fill"), // Specify system icon for map
-                        title: "MAP",
-                        color: .blue
-                    )
+                // Weather Map - Premium feature
+                if subscriptionService.hasAppAccess {
+                    NavigationLink(destination: WeatherMapView()) {
+                        MenuButtonContent(
+                            iconType: .system("map.fill"), // Specify system icon for map
+                            title: "MAP",
+                            color: .blue
+                        )
+                    }
+                } else {
+                    Button(action: {
+                        showSubscriptionPrompt = true
+                    }) {
+                        MenuButtonContent(
+                            iconType: .system("map.fill"),
+                            title: "MAP",
+                            color: .blue,
+                            isPremium: true
+                        )
+                    }
+                    .buttonStyle(PlainButtonStyle())
                 }
 
-                // Radar - System Icon
-                Button(action: {
-                    openRadarWebsite()
-                }) {
-                    MenuButtonContent(
-                        iconType: .system("antenna.radiowaves.left.and.right"), // Specify system icon
-                        title: "RADAR",
-                        color: .orange
-                    )
+                // Radar - Premium feature
+                if subscriptionService.hasAppAccess {
+                    Button(action: {
+                        openRadarWebsite()
+                    }) {
+                        MenuButtonContent(
+                            iconType: .system("antenna.radiowaves.left.and.right"), // Specify system icon
+                            title: "RADAR",
+                            color: .orange
+                        )
+                    }
+                } else {
+                    Button(action: {
+                        showSubscriptionPrompt = true
+                    }) {
+                        MenuButtonContent(
+                            iconType: .system("antenna.radiowaves.left.and.right"),
+                            title: "RADAR",
+                            color: .orange,
+                            isPremium: true
+                        )
+                    }
+                    .buttonStyle(PlainButtonStyle())
                 }
             }
             .padding()
@@ -54,7 +129,19 @@ struct WeatherMenuView: View {
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbarBackground(Color(red: 0.53, green: 0.81, blue: 0.98), for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
-        .withHomeButton()    }
+        .withHomeButton()
+        .sheet(isPresented: $showSubscriptionPrompt) {
+            // Show different prompts based on subscription status
+            if case .firstLaunch = subscriptionService.subscriptionStatus {
+                TrialExplanationView()
+            } else {
+                EnhancedPaywallView()
+            }
+        }
+        .navigationDestination(isPresented: $showLocalWeatherView) {
+            CurrentLocalWeatherView()
+        }
+    }
 
     // Opens the NOAA radar website using Safari
     private func openRadarWebsite() {
@@ -102,6 +189,18 @@ struct MenuButtonContent: View {
     let iconType: IconType // Use the enum
     let title: String
     let color: Color
+    let isPremium: Bool
+    let isDailyLimited: Bool
+    let isUsedToday: Bool
+    
+    init(iconType: IconType, title: String, color: Color, isPremium: Bool = false, isDailyLimited: Bool = false, isUsedToday: Bool = false) {
+        self.iconType = iconType
+        self.title = title
+        self.color = color
+        self.isPremium = isPremium
+        self.isDailyLimited = isDailyLimited
+        self.isUsedToday = isUsedToday
+    }
 
     var body: some View {
         HStack {
@@ -112,36 +211,131 @@ struct MenuButtonContent: View {
                      Image(systemName: name)
                          .resizable() // Apply modifiers directly to Image
                          .aspectRatio(contentMode: .fit)
-                         .foregroundColor(color) // Apply color
+                         .foregroundColor(getIconColor()) 
                  case .custom(let name):
                      Image(name)
                          .resizable() // Apply modifiers directly to Image
                          .aspectRatio(contentMode: .fit)
-                         // Conditionally apply foregroundColor ONLY if it's a template image.
-                         // For simplicity now, we apply it, but it might need adjustment
-                         // based on your asset settings.
-                         .foregroundColor(color) // Attempt to apply color
+                         .foregroundColor(getIconColor())
                  }
             }
             .frame(width: 40, height: 40) // Apply frame AFTER creating/modifying the image
             .padding(.horizontal, 20)
 
-            Text(title)
-                .font(.title2)
-                .fontWeight(.semibold)
-                .foregroundColor(.primary)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                    .foregroundColor(getTextColor())
+                
+                if isPremium {
+                    HStack(spacing: 4) {
+                        Image(systemName: "lock.fill")
+                            .font(.caption)
+                            .foregroundColor(.pink)
+                        
+                        Text("PREMIUM")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.pink)
+                    }
+                } else if isDailyLimited && !isUsedToday {
+                    HStack(spacing: 4) {
+                        Image(systemName: "clock.fill")
+                            .font(.caption)
+                            .foregroundColor(.blue)
+                        
+                        Text("1 USE/DAY")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.blue)
+                    }
+                } else if isUsedToday {
+                    HStack(spacing: 4) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                        
+                        Text("USED TODAY")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.gray)
+                    }
+                }
+            }
 
             Spacer()
 
-            Image(systemName: "chevron.right")
-                .foregroundColor(.secondary)
-                .padding(.trailing, 10)
+            if isPremium {
+                Image(systemName: "crown.fill")
+                    .font(.title2)
+                    .foregroundColor(.pink)
+                    .padding(.trailing, 10)
+            } else if isUsedToday {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.title2)
+                    .foregroundColor(.gray)
+                    .padding(.trailing, 10)
+            } else {
+                Image(systemName: "chevron.right")
+                    .foregroundColor(.secondary)
+                    .padding(.trailing, 10)
+            }
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 16)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color(UIColor.secondarySystemBackground))
+                .fill(getBackgroundColor())
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(getBorderColor(), lineWidth: getBorderWidth())
+                )
         )
+    }
+    
+    // MARK: - Helper Methods
+    
+    private func getIconColor() -> Color {
+        if isPremium || isUsedToday {
+            return color.opacity(0.5)
+        }
+        return color
+    }
+    
+    private func getTextColor() -> Color {
+        if isPremium || isUsedToday {
+            return .primary.opacity(0.7)
+        }
+        return .primary
+    }
+    
+    private func getBackgroundColor() -> Color {
+        if isPremium {
+            return Color.pink.opacity(0.08)
+        } else if isUsedToday {
+            return Color.gray.opacity(0.05)
+        } else if isDailyLimited {
+            return Color.blue.opacity(0.05)
+        }
+        return Color(UIColor.secondarySystemBackground)
+    }
+    
+    private func getBorderColor() -> Color {
+        if isPremium {
+            return Color.pink.opacity(0.4)
+        } else if isUsedToday {
+            return Color.gray.opacity(0.3)
+        } else if isDailyLimited {
+            return Color.blue.opacity(0.3)
+        }
+        return Color.clear
+    }
+    
+    private func getBorderWidth() -> CGFloat {
+        if isPremium || isUsedToday || isDailyLimited {
+            return 2
+        }
+        return 0
     }
 }

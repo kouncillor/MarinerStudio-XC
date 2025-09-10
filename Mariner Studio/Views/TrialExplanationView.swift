@@ -243,20 +243,20 @@ struct TrialExplanationView: View {
                         isLast: false
                     )
                     
-                    // Day 10: Trial Reminder
+                    // Day 2: Trial Reminder
                     TimelineItem(
                         icon: "bell",
                         iconColor: .blue,
-                        title: "Day 10: Reminder",
-                        description: "We'll remind you that billing begins in 4 days. Cancel anytime in Settings if you change your mind.",
+                        title: "Day 2: Reminder",
+                        description: "We'll remind you that billing begins in 1 day. Cancel anytime in Settings if you change your mind.",
                         isLast: false
                     )
                     
-                    // Day 14: Trial Ends
+                    // Day 3: Trial Ends
                     TimelineItem(
                         icon: "star",
                         iconColor: .blue,
-                        title: "Day 14: Billing Begins",
+                        title: "Day 3: Billing Begins",
                         description: "Your subscription starts billing at $2.99/month. Cancel anytime before then to avoid charges.",
                         isLast: true
                     )

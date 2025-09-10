@@ -12,12 +12,17 @@ class SimpleSubscription: ObservableObject {
     
     // MARK: - Constants
     private let monthlyTrialProductID = "mariner_pro_monthly14"
-    private let trialDurationDays = 14
+    private let trialDurationDays = 3
     
     // MARK: - Private Properties
     private let userDefaults = UserDefaults.standard
     private let trialStartDateKey = "trialStartDate"
     private let hasUsedTrialKey = "hasUsedTrial"
+    private let localWeatherUsageKey = "localWeatherUsageDate"
+    private let localTideUsageKey = "localTideUsageDate"
+    private let localCurrentUsageKey = "localCurrentUsageDate"
+    private let localNavUnitUsageKey = "localNavUnitUsageDate"
+    private let localBuoyUsageKey = "localBuoyUsageDate"
     
     // MARK: - Debug Properties
     #if DEBUG
@@ -255,8 +260,8 @@ class SimpleSubscription: ObservableObject {
     }
     
     private func updateTrialBannerVisibility() {
-        // Show banner in last 5 days of trial
-        showTrialBanner = trialDaysRemaining <= 5 && trialDaysRemaining > 0
+        // Show banner on day 2 of 3-day trial (1 day remaining)
+        showTrialBanner = trialDaysRemaining <= 1 && trialDaysRemaining > 0
         DebugLogger.shared.log("🎌 TRIAL_SUB: Trial banner visibility: \(showTrialBanner)", category: "TRIAL_SUBSCRIPTION")
     }
     
@@ -292,6 +297,161 @@ class SimpleSubscription: ObservableObject {
     func skipTrial() {
         DebugLogger.shared.log("⏭️ TRIAL_SUB: User skipped trial - limited access mode", category: "TRIAL_SUBSCRIPTION")
         subscriptionStatus = .skippedTrial
+    }
+    
+    // MARK: - Daily Usage Tracking
+    
+    var canUseLocalWeatherToday: Bool {
+        // Subscribed and trial users have unlimited access
+        if hasAppAccess {
+            return true
+        }
+        
+        // For free users, check if they've used it today
+        return !hasUsedLocalWeatherToday()
+    }
+    
+    private func hasUsedLocalWeatherToday() -> Bool {
+        guard let lastUsageDate = userDefaults.object(forKey: localWeatherUsageKey) as? Date else {
+            return false
+        }
+        
+        let calendar = Calendar.current
+        return calendar.isDate(lastUsageDate, inSameDayAs: Date())
+    }
+    
+    func recordLocalWeatherUsage() {
+        userDefaults.set(Date(), forKey: localWeatherUsageKey)
+        DebugLogger.shared.log("📍 TRIAL_SUB: Local weather usage recorded for today", category: "TRIAL_SUBSCRIPTION")
+        
+        // Force a UI update by triggering objectWillChange
+        DispatchQueue.main.async {
+            self.objectWillChange.send()
+        }
+    }
+    
+    // MARK: - Local Tides Usage Tracking
+    
+    var canUseLocalTidesToday: Bool {
+        // Subscribed and trial users have unlimited access
+        if hasAppAccess {
+            return true
+        }
+        
+        // For free users, check if they've used it today
+        return !hasUsedLocalTidesToday()
+    }
+    
+    private func hasUsedLocalTidesToday() -> Bool {
+        guard let lastUsageDate = userDefaults.object(forKey: localTideUsageKey) as? Date else {
+            return false
+        }
+        
+        let calendar = Calendar.current
+        return calendar.isDate(lastUsageDate, inSameDayAs: Date())
+    }
+    
+    func recordLocalTideUsage() {
+        userDefaults.set(Date(), forKey: localTideUsageKey)
+        DebugLogger.shared.log("🌊 TRIAL_SUB: Local tide usage recorded for today", category: "TRIAL_SUBSCRIPTION")
+        
+        // Force a UI update by triggering objectWillChange
+        DispatchQueue.main.async {
+            self.objectWillChange.send()
+        }
+    }
+    
+    // MARK: - Local Currents Usage Tracking
+    
+    var canUseLocalCurrentsToday: Bool {
+        // Subscribed and trial users have unlimited access
+        if hasAppAccess {
+            return true
+        }
+        
+        // For free users, check if they've used it today
+        return !hasUsedLocalCurrentsToday()
+    }
+    
+    private func hasUsedLocalCurrentsToday() -> Bool {
+        guard let lastUsageDate = userDefaults.object(forKey: localCurrentUsageKey) as? Date else {
+            return false
+        }
+        
+        let calendar = Calendar.current
+        return calendar.isDate(lastUsageDate, inSameDayAs: Date())
+    }
+    
+    func recordLocalCurrentUsage() {
+        userDefaults.set(Date(), forKey: localCurrentUsageKey)
+        DebugLogger.shared.log("🌊 TRIAL_SUB: Local current usage recorded for today", category: "TRIAL_SUBSCRIPTION")
+        
+        // Force a UI update by triggering objectWillChange
+        DispatchQueue.main.async {
+            self.objectWillChange.send()
+        }
+    }
+    
+    // MARK: - Local Nav Units Usage Tracking
+    
+    var canUseLocalNavUnitsToday: Bool {
+        // Subscribed and trial users have unlimited access
+        if hasAppAccess {
+            return true
+        }
+        
+        // For free users, check if they've used it today
+        return !hasUsedLocalNavUnitsToday()
+    }
+    
+    private func hasUsedLocalNavUnitsToday() -> Bool {
+        guard let lastUsageDate = userDefaults.object(forKey: localNavUnitUsageKey) as? Date else {
+            return false
+        }
+        
+        let calendar = Calendar.current
+        return calendar.isDate(lastUsageDate, inSameDayAs: Date())
+    }
+    
+    func recordLocalNavUnitUsage() {
+        userDefaults.set(Date(), forKey: localNavUnitUsageKey)
+        DebugLogger.shared.log("🧭 TRIAL_SUB: Local nav unit usage recorded for today", category: "TRIAL_SUBSCRIPTION")
+        
+        // Force a UI update by triggering objectWillChange
+        DispatchQueue.main.async {
+            self.objectWillChange.send()
+        }
+    }
+    
+    // MARK: - Local Buoys Usage Tracking
+    
+    var canUseLocalBuoysToday: Bool {
+        // Subscribed and trial users have unlimited access
+        if hasAppAccess {
+            return true
+        }
+        
+        // For free users, check if they've used it today
+        return !hasUsedLocalBuoysToday()
+    }
+    
+    private func hasUsedLocalBuoysToday() -> Bool {
+        guard let lastUsageDate = userDefaults.object(forKey: localBuoyUsageKey) as? Date else {
+            return false
+        }
+        
+        let calendar = Calendar.current
+        return calendar.isDate(lastUsageDate, inSameDayAs: Date())
+    }
+    
+    func recordLocalBuoyUsage() {
+        userDefaults.set(Date(), forKey: localBuoyUsageKey)
+        DebugLogger.shared.log("⚓ TRIAL_SUB: Local buoy usage recorded for today", category: "TRIAL_SUBSCRIPTION")
+        
+        // Force a UI update by triggering objectWillChange
+        DispatchQueue.main.async {
+            self.objectWillChange.send()
+        }
     }
     
     // MARK: - Debug Methods

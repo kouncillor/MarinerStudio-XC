@@ -27,113 +27,48 @@ struct MainView: View {
                 )
             }
 
-            // WEATHER - Premium feature
-            if subscriptionService.hasAppAccess {
-                NavigationLink(destination: WeatherMenuView()) {
-                    NavigationButtonContent(
-                        icon: "weathersunsixseven",
-                        title: "WEATHER"
-                    )
-                }
-            } else {
-                Button(action: {
-                    showSubscriptionPrompt = true
-                }) {
-                    NavigationButtonContent(
-                        icon: "weathersunsixseven",
-                        title: "WEATHER",
-                        isPremium: true
-                    )
-                }
-                .buttonStyle(PlainButtonStyle())
+            // WEATHER - Free feature
+            NavigationLink(destination: WeatherMenuView()) {
+                NavigationButtonContent(
+                    icon: "weathersunsixseven",
+                    title: "WEATHER"
+                )
             }
 
-            // TIDES - Premium feature  
-            if subscriptionService.hasAppAccess {
-                NavigationLink(destination: TideMenuView()) {
-                    NavigationButtonContent(
-                        icon: "tsixseven",
-                        title: "TIDES"
-                    )
-                }
-            } else {
-                Button(action: {
-                    showSubscriptionPrompt = true
-                }) {
-                    NavigationButtonContent(
-                        icon: "tsixseven",
-                        title: "TIDES",
-                        isPremium: true
-                    )
-                }
-                .buttonStyle(PlainButtonStyle())
+            // TIDES - Free feature
+            NavigationLink(destination: TideMenuView()) {
+                NavigationButtonContent(
+                    icon: "tsixseven",
+                    title: "TIDES"
+                )
             }
         }
     }
     
     private var additionalNavigationButtons: some View {
         Group {
-            // CURRENTS - Premium feature
-            if subscriptionService.hasAppAccess {
-                NavigationLink(destination: CurrentMenuView()) {
-                    NavigationButtonContent(
-                        icon: "csixseven",
-                        title: "CURRENTS"
-                    )
-                }
-            } else {
-                Button(action: {
-                    showSubscriptionPrompt = true
-                }) {
-                    NavigationButtonContent(
-                        icon: "csixseven",
-                        title: "CURRENTS",
-                        isPremium: true
-                    )
-                }
-                .buttonStyle(PlainButtonStyle())
+            // CURRENTS - Free feature
+            NavigationLink(destination: CurrentMenuView()) {
+                NavigationButtonContent(
+                    icon: "csixseven",
+                    title: "CURRENTS"
+                )
             }
 
-            // NAV UNITS - Premium feature
-            if subscriptionService.hasAppAccess {
-                NavigationLink(destination: NavUnitMenuView()) {
-                    NavigationButtonContent(
-                        icon: "nsixseven",
-                        title: "NAV UNITS"
-                    )
-                }
-            } else {
-                Button(action: {
-                    showSubscriptionPrompt = true
-                }) {
-                    NavigationButtonContent(
-                        icon: "nsixseven",
-                        title: "NAV UNITS",
-                        isPremium: true
-                    )
-                }
-                .buttonStyle(PlainButtonStyle())
+            // NAV UNITS - Free feature
+            NavigationLink(destination: NavUnitMenuView()) {
+                NavigationButtonContent(
+                    icon: "nsixseven",
+                    title: "NAV UNITS"
+                )
             }
 
-            // BUOYS - Premium feature
-            if subscriptionService.hasAppAccess {
-                NavigationLink(destination: BuoyMenuView()) {
-                    NavigationButtonContent(
-                        icon: "bsixseven",
-                        title: "BUOYS"
-                    )
-                }
-            } else {
-                Button(action: {
-                    showSubscriptionPrompt = true
-                }) {
-                    NavigationButtonContent(
-                        icon: "bsixseven",
-                        title: "BUOYS",
-                        isPremium: true
-                    )
-                }
-                .buttonStyle(PlainButtonStyle())
+            // BUOYS - Free feature
+            NavigationLink(destination: BuoyMenuView()) {
+                NavigationButtonContent(
+                    icon: "bsixseven",
+                    title: "BUOYS"
+                )
             }
 
             // ROUTES - Premium feature

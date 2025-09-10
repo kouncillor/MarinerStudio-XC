@@ -32,7 +32,7 @@ enum SubscriptionStatus: Equatable {
         case .unknown:
             return "Checking subscription status..."
         case .firstLaunch:
-            return "Welcome! Your 14-day trial starts now."
+            return "Welcome! Your 3-day trial starts now."
         case .skippedTrial:
             return "Limited access - Subscribe for full features"
         case .inTrial(let days):

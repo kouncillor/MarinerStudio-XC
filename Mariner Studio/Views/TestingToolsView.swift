@@ -60,6 +60,11 @@ struct TestingToolsView: View {
                         UserDefaults.standard.removeObject(forKey: "subscriptionProductId")
                         UserDefaults.standard.removeObject(forKey: "subscriptionPurchaseDate")
                         UserDefaults.standard.removeObject(forKey: "debugOverrideSubscription")
+                        UserDefaults.standard.removeObject(forKey: "localWeatherUsageDate")
+                        UserDefaults.standard.removeObject(forKey: "localTideUsageDate")
+                        UserDefaults.standard.removeObject(forKey: "localCurrentUsageDate")
+                        UserDefaults.standard.removeObject(forKey: "localNavUnitUsageDate")
+                        UserDefaults.standard.removeObject(forKey: "localBuoyUsageDate")
                         UserDefaults.standard.synchronize()
                         
                         // Enable debug override to bypass StoreKit subscription check
@@ -76,6 +81,42 @@ struct TestingToolsView: View {
                         }
                     }
                     .foregroundColor(.red)
+                    
+                    Button("Reset Local Weather Usage") {
+                        UserDefaults.standard.removeObject(forKey: "localWeatherUsageDate")
+                        UserDefaults.standard.synchronize()
+                        subscriptionService.objectWillChange.send()
+                        alertMessage = "Local weather usage reset - can be used again today"
+                        showingAlert = true
+                    }
+                    .foregroundColor(.blue)
+                    
+                    Button("Reset Local Tide Usage") {
+                        UserDefaults.standard.removeObject(forKey: "localTideUsageDate")
+                        UserDefaults.standard.synchronize()
+                        subscriptionService.objectWillChange.send()
+                        alertMessage = "Local tide usage reset - can be used again today"
+                        showingAlert = true
+                    }
+                    .foregroundColor(.blue)
+                    
+                    Button("Reset Local Current Usage") {
+                        UserDefaults.standard.removeObject(forKey: "localCurrentUsageDate")
+                        UserDefaults.standard.synchronize()
+                        subscriptionService.objectWillChange.send()
+                        alertMessage = "Local current usage reset - can be used again today"
+                        showingAlert = true
+                    }
+                    .foregroundColor(.blue)
+                    
+                    Button("Reset Local Nav Unit Usage") {
+                        UserDefaults.standard.removeObject(forKey: "localNavUnitUsageDate")
+                        UserDefaults.standard.synchronize()
+                        subscriptionService.objectWillChange.send()
+                        alertMessage = "Local nav unit usage reset - can be used again today"
+                        showingAlert = true
+                    }
+                    .foregroundColor(.blue)
                     
                     #if DEBUG
                     Button("Disable Debug Override") {
@@ -104,23 +145,23 @@ struct TestingToolsView: View {
                     }
                     .foregroundColor(.red)
                     
-                    Button("Simulate Day 10 (Banner Appears)") {
-                        let day10Date = Calendar.current.date(byAdding: .day, value: -10, to: Date())!
-                        UserDefaults.standard.set(day10Date, forKey: "trialStartDate")
+                    Button("Simulate Day 2 (Banner Appears)") {
+                        let day2Date = Calendar.current.date(byAdding: .day, value: -2, to: Date())!
+                        UserDefaults.standard.set(day2Date, forKey: "trialStartDate")
                         UserDefaults.standard.set(true, forKey: "hasUsedTrial")
                         Task {
                             await subscriptionService.determineSubscriptionStatus()
                             await MainActor.run {
-                                alertMessage = "Trial set to day 10 - banner should appear"
+                                alertMessage = "Trial set to day 2 - banner should appear"
                                 showingAlert = true
                             }
                         }
                     }
                     .foregroundColor(.orange)
                     
-                    Button("Simulate Day 14 (Last Day)") {
-                        let day14Date = Calendar.current.date(byAdding: .day, value: -13, to: Date())!
-                        UserDefaults.standard.set(day14Date, forKey: "trialStartDate")
+                    Button("Simulate Day 3 (Last Day)") {
+                        let day3Date = Calendar.current.date(byAdding: .day, value: -2, to: Date())!
+                        UserDefaults.standard.set(day3Date, forKey: "trialStartDate")
                         UserDefaults.standard.set(true, forKey: "hasUsedTrial")
                         Task {
                             await subscriptionService.determineSubscriptionStatus()
@@ -133,7 +174,7 @@ struct TestingToolsView: View {
                     .foregroundColor(.orange)
                     
                     Button("Simulate Trial Expired") {
-                        let expiredDate = Calendar.current.date(byAdding: .day, value: -15, to: Date())!
+                        let expiredDate = Calendar.current.date(byAdding: .day, value: -4, to: Date())!
                         UserDefaults.standard.set(expiredDate, forKey: "trialStartDate")
                         UserDefaults.standard.set(true, forKey: "hasUsedTrial")
                         Task {
