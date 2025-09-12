@@ -106,12 +106,6 @@ struct SubscriptionOptionCard: View {
                         .fontWeight(.medium)
                 }
                 
-                if case .firstLaunch = subscriptionService.subscriptionStatus {
-                    Text("14-day free trial included")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                        .fontWeight(.regular)
-                }
             }
             
             if subscriptionService.isLoading {
@@ -146,8 +140,6 @@ struct SubscriptionOptionCard: View {
     private var buttonText: String {
         switch subscriptionService.subscriptionStatus {
         case .firstLaunch, .unknown:
-            return "Start Free Trial"
-        case .trialExpired:
             return "Subscribe Now"
         case .expired:
             return "Reactivate"

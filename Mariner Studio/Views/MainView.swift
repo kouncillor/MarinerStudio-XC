@@ -152,12 +152,7 @@ struct MainView: View {
                     }
                 }
                 .sheet(isPresented: $showSubscriptionPrompt) {
-                    // Show different prompts based on subscription status
-                    if case .firstLaunch = subscriptionService.subscriptionStatus {
-                        TrialExplanationView()
-                    } else {
-                        EnhancedPaywallView()
-                    }
+                    EnhancedPaywallView()
                 }
         }
     }

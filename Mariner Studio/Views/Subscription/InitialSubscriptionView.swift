@@ -1,8 +1,7 @@
-
 import SwiftUI
 import StoreKit
 
-struct EnhancedPaywallView: View {
+struct InitialSubscriptionView: View {
     @EnvironmentObject var subscriptionService: SimpleSubscription
     @State private var availableProducts: [Product] = []
     @State private var isLoading = true
@@ -39,11 +38,15 @@ struct EnhancedPaywallView: View {
                     ProgressView("Loading subscription options...")
                         .padding()
                 } else {
-                    AppleCompliantSubscriptionView(products: availableProducts)
+                    InitialAppleCompliantSubscriptionView(products: availableProducts)
                 }
                 
                 // Apple-Style Legal Footer
                 VStack(spacing: 16) {
+                    Text("Cancel anytime. Subscription auto-renews.")
+                        .font(.subheadline)
+                        .foregroundColor(.primary)
+                        .multilineTextAlignment(.center)
                     
                     VStack(spacing: 8) {
                         HStack(spacing: 0) {
@@ -113,11 +116,11 @@ struct EnhancedPaywallView: View {
     }
     
     private var headerTitle: String {
-        return "Subscription Required"
+        return "Mariner Studio Pro"
     }
     
     private var headerSubtitle: String {
-        return "You've reached your daily limit for this feature.\nSubscribe to continue with unlimited access."
+        return "All features.\nNo restrictions."
     }
     
     private func loadProducts() async {
@@ -132,82 +135,30 @@ struct EnhancedPaywallView: View {
     }
 }
 
-struct FeatureCard: View {
-    let icon: String
-    let title: String
-    let description: String
-    
-    var body: some View {
-        VStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 30))
-                .foregroundColor(.blue)
-            
-            Text(title)
-                .font(.headline)
-            
-            Text(description)
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-        }
-        .padding()
-        .background(.regularMaterial)
-        .cornerRadius(12)
-    }
-}
-
-struct PremiumFeatureRow: View {
-    let icon: String
-    let title: String
-    let description: String
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 18))
-                .foregroundColor(.blue)
-                .frame(width: 24)
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                
-                Text(description)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-            
-            Spacer()
-        }
-    }
-}
-
 // MARK: - Apple-Compliant Subscription View
 
-struct AppleCompliantSubscriptionView: View {
+struct InitialAppleCompliantSubscriptionView: View {
     let products: [Product]
     @EnvironmentObject var subscriptionService: SimpleSubscription
     
     var body: some View {
         VStack(spacing: 24) {
             ForEach(products, id: \.id) { product in
-                AppleCompliantSubscriptionCard(product: product)
+                InitialAppleCompliantSubscriptionCard(product: product)
             }
         }
         .padding(.horizontal)
     }
 }
 
-struct AppleCompliantSubscriptionCard: View {
+struct InitialAppleCompliantSubscriptionCard: View {
     let product: Product
     @EnvironmentObject var subscriptionService: SimpleSubscription
     
     var body: some View {
         VStack(spacing: 20) {
             // Product title
-            Text("Get Pro Now")
+            Text(product.displayName)
                 .font(.title2)
                 .fontWeight(.semibold)
                 .multilineTextAlignment(.center)
@@ -223,7 +174,7 @@ struct AppleCompliantSubscriptionCard: View {
                     .fontWeight(.semibold)
                     .foregroundColor(.primary)
                 
-                Text("Auto renews • Cancel anytime")
+                Text("Billed monthly • Cancel anytime")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }

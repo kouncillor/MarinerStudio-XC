@@ -46,7 +46,7 @@ struct NavUnitMenuView: View {
                             color: .green
                         )
                     }
-                } else if subscriptionService.canUseLocalNavUnitsToday {
+                } else if subscriptionService.canAccessLocalNavUnits() {
                     // Free user with usage available - record usage and navigate
                     Button(action: {
                         subscriptionService.recordLocalNavUnitUsage()
@@ -85,12 +85,7 @@ struct NavUnitMenuView: View {
         .toolbarBackground(.visible, for: .navigationBar)
         .withHomeButton()
         .sheet(isPresented: $showSubscriptionPrompt) {
-            // Show different prompts based on subscription status
-            if case .firstLaunch = subscriptionService.subscriptionStatus {
-                TrialExplanationView()
-            } else {
-                EnhancedPaywallView()
-            }
+            EnhancedPaywallView()
         }
         .navigationDestination(isPresented: $showLocalNavUnitView) {
             NavUnitsView(

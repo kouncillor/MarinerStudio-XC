@@ -47,7 +47,7 @@ struct TideMenuView: View {
                             color: .green
                         )
                     }
-                } else if subscriptionService.canUseLocalTidesToday {
+                } else if subscriptionService.canAccessLocalTides() {
                     // Free user with usage available - record usage and navigate
                     Button(action: {
                         subscriptionService.recordLocalTideUsage()
@@ -86,12 +86,7 @@ struct TideMenuView: View {
         .toolbarBackground(.visible, for: .navigationBar)
         .withHomeButton()
         .sheet(isPresented: $showSubscriptionPrompt) {
-            // Show different prompts based on subscription status
-            if case .firstLaunch = subscriptionService.subscriptionStatus {
-                TrialExplanationView()
-            } else {
-                EnhancedPaywallView()
-            }
+            EnhancedPaywallView()
         }
         .navigationDestination(isPresented: $showLocalTideView) {
             TidalHeightStationsView(

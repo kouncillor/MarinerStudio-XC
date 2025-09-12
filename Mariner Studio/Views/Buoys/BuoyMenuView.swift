@@ -56,7 +56,7 @@ struct BuoyMenuView: View {
                             color: .green
                         )
                     }
-                } else if subscriptionService.canUseLocalBuoysToday {
+                } else if subscriptionService.canAccessLocalBuoys() {
                     // Free user with usage available - record usage and navigate
                     Button(action: {
                         subscriptionService.recordLocalBuoyUsage()
@@ -94,12 +94,7 @@ struct BuoyMenuView: View {
         .toolbarBackground(.visible, for: .navigationBar)
         .withHomeButton()
         .sheet(isPresented: $showSubscriptionPrompt) {
-            // Show different prompts based on subscription status
-            if case .firstLaunch = subscriptionService.subscriptionStatus {
-                TrialExplanationView()
-            } else {
-                EnhancedPaywallView()
-            }
+            EnhancedPaywallView()
         }
         .navigationDestination(isPresented: $showLocalBuoyView) {
             BuoyStationsView(

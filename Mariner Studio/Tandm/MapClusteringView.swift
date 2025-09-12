@@ -52,6 +52,8 @@ struct MapClusteringView: View {
    @State private var showBuoyStationDetails = false
 
    @EnvironmentObject var serviceProvider: ServiceProvider
+   @EnvironmentObject var subscriptionService: SimpleSubscription
+   @State private var showSubscriptionPrompt = false
 
    // MARK: - Initialization
    init() {
@@ -182,29 +184,85 @@ struct MapClusteringView: View {
                mapType: mapType,
                onNavUnitSelected: { navUnitId in
                    resetAllNavigationState()
-                   selectedNavUnitId = navUnitId
-                   showNavUnitDetails = true
+                   
+                   // Check subscription access for nav units
+                   if subscriptionService.hasAppAccess {
+                       // Unlimited access for subscribers/trial users
+                       selectedNavUnitId = navUnitId
+                       showNavUnitDetails = true
+                   } else if subscriptionService.canAccessLocalNavUnits() {
+                       // Free user with usage available - record usage and navigate
+                       subscriptionService.recordLocalNavUnitUsage()
+                       selectedNavUnitId = navUnitId
+                       showNavUnitDetails = true
+                   } else {
+                       // Free user has used today - show subscription prompt
+                       showSubscriptionPrompt = true
+                   }
                },
 
                onTidalHeightStationSelected: { stationId, stationName in
                    resetAllNavigationState()
-                   selectedTidalHeightStationId = stationId
-                   selectedTidalHeightStationName = stationName
-                   showTidalHeightDetails = true
+                   
+                   // Check subscription access for tidal height stations
+                   if subscriptionService.hasAppAccess {
+                       // Unlimited access for subscribers/trial users
+                       selectedTidalHeightStationId = stationId
+                       selectedTidalHeightStationName = stationName
+                       showTidalHeightDetails = true
+                   } else if subscriptionService.canAccessLocalTides() {
+                       // Free user with usage available - record usage and navigate
+                       subscriptionService.recordLocalTideUsage()
+                       selectedTidalHeightStationId = stationId
+                       selectedTidalHeightStationName = stationName
+                       showTidalHeightDetails = true
+                   } else {
+                       // Free user has used today - show subscription prompt
+                       showSubscriptionPrompt = true
+                   }
                },
 
                onTidalCurrentStationSelected: { stationId, bin, stationName in
                    resetAllNavigationState()
-                   selectedTidalCurrentStationId = stationId
-                   selectedTidalCurrentStationBin = bin
-                   selectedTidalCurrentStationName = stationName
-                   showTidalCurrentDetails = true
+                   
+                   // Check subscription access for tidal current stations
+                   if subscriptionService.hasAppAccess {
+                       // Unlimited access for subscribers/trial users
+                       selectedTidalCurrentStationId = stationId
+                       selectedTidalCurrentStationBin = bin
+                       selectedTidalCurrentStationName = stationName
+                       showTidalCurrentDetails = true
+                   } else if subscriptionService.canAccessLocalCurrents() {
+                       // Free user with usage available - record usage and navigate
+                       subscriptionService.recordLocalCurrentUsage()
+                       selectedTidalCurrentStationId = stationId
+                       selectedTidalCurrentStationBin = bin
+                       selectedTidalCurrentStationName = stationName
+                       showTidalCurrentDetails = true
+                   } else {
+                       // Free user has used today - show subscription prompt
+                       showSubscriptionPrompt = true
+                   }
                },
                onBuoyStationSelected: { stationId, stationName in
                    resetAllNavigationState()
-                   selectedBuoyStationId = stationId
-                   selectedBuoyStationName = stationName
-                   showBuoyStationDetails = true
+                   
+                   // Check subscription access for buoy stations
+                   if subscriptionService.hasAppAccess {
+                       // Unlimited access for subscribers/trial users
+                       selectedBuoyStationId = stationId
+                       selectedBuoyStationName = stationName
+                       showBuoyStationDetails = true
+                   } else if subscriptionService.canAccessLocalBuoys() {
+                       // Free user with usage available - record usage and navigate
+                       subscriptionService.recordLocalBuoyUsage()
+                       selectedBuoyStationId = stationId
+                       selectedBuoyStationName = stationName
+                       showBuoyStationDetails = true
+                   } else {
+                       // Free user has used today - show subscription prompt
+                       showSubscriptionPrompt = true
+                   }
                }
            )
            .edgesIgnoringSafeArea(.all)
@@ -373,6 +431,9 @@ struct MapClusteringView: View {
        }
        .sheet(isPresented: $showChartOptions) {
            chartLayersView
+       }
+       .sheet(isPresented: $showSubscriptionPrompt) {
+           EnhancedPaywallView()
        }
        .background(
            ZStack {

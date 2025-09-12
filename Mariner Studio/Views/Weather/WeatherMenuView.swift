@@ -45,7 +45,7 @@ struct WeatherMenuView: View {
                             color: .green
                         )
                     }
-                } else if subscriptionService.canUseLocalWeatherToday {
+                } else if subscriptionService.canAccessLocalWeather() {
                     // Free user with usage available - record usage and navigate
                     Button(action: {
                         subscriptionService.recordLocalWeatherUsage()
@@ -131,12 +131,7 @@ struct WeatherMenuView: View {
         .toolbarBackground(.visible, for: .navigationBar)
         .withHomeButton()
         .sheet(isPresented: $showSubscriptionPrompt) {
-            // Show different prompts based on subscription status
-            if case .firstLaunch = subscriptionService.subscriptionStatus {
-                TrialExplanationView()
-            } else {
-                EnhancedPaywallView()
-            }
+            EnhancedPaywallView()
         }
         .navigationDestination(isPresented: $showLocalWeatherView) {
             CurrentLocalWeatherView()

@@ -47,7 +47,7 @@ struct CurrentMenuView: View {
                             color: .green
                         )
                     }
-                } else if subscriptionService.canUseLocalCurrentsToday {
+                } else if subscriptionService.canAccessLocalCurrents() {
                     // Free user with usage available - record usage and navigate
                     Button(action: {
                         subscriptionService.recordLocalCurrentUsage()
@@ -86,12 +86,7 @@ struct CurrentMenuView: View {
         .toolbarBackground(.visible, for: .navigationBar)
         .withHomeButton()
         .sheet(isPresented: $showSubscriptionPrompt) {
-            // Show different prompts based on subscription status
-            if case .firstLaunch = subscriptionService.subscriptionStatus {
-                TrialExplanationView()
-            } else {
-                EnhancedPaywallView()
-            }
+            EnhancedPaywallView()
         }
         .navigationDestination(isPresented: $showLocalCurrentView) {
             TidalCurrentStationsView(

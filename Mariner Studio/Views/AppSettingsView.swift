@@ -455,9 +455,6 @@ struct SubscriptionManagementSection: View {
                 SubscriptionActionsGrid()
                     .environmentObject(subscriptionService)
                 
-                if case .inTrial(let daysRemaining) = subscriptionService.subscriptionStatus {
-                    TrialInformationCard(daysRemaining: daysRemaining)
-                }
                 
                 if case .subscribed = subscriptionService.subscriptionStatus {
                     SubscriptionDetailsCard()
@@ -508,13 +505,10 @@ struct SubscriptionStatusCard: View {
             case .subscribed:
                 Image(systemName: "crown.fill")
                     .foregroundColor(.yellow)
-            case .inTrial:
-                Image(systemName: "clock.fill")
-                    .foregroundColor(.blue)
             case .firstLaunch:
                 Image(systemName: "gift.fill")
                     .foregroundColor(.green)
-            case .trialExpired, .expired:
+            case .expired:
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundColor(.red)
             default:
@@ -528,12 +522,8 @@ struct SubscriptionStatusCard: View {
         switch subscriptionService.subscriptionStatus {
         case .subscribed:
             return "Mariner Studio Pro"
-        case .inTrial(let days):
-            return "Free Trial Active"
         case .firstLaunch:
             return "Welcome to Mariner Studio"
-        case .trialExpired:
-            return "Trial Expired"
         case .expired:
             return "Subscription Expired"
         default:
@@ -545,12 +535,8 @@ struct SubscriptionStatusCard: View {
         switch subscriptionService.subscriptionStatus {
         case .subscribed:
             return "Full access to all features"
-        case .inTrial(let days):
-            return "\(days) days remaining"
         case .firstLaunch:
-            return "Start your 14-day free trial"
-        case .trialExpired:
-            return "Subscribe to continue using the app"
+            return "Subscribe for full access"
         case .expired:
             return "Renew to restore access"
         default:
@@ -569,9 +555,6 @@ struct SubscriptionStatusCard: View {
                     .padding(.vertical, 4)
                     .background(Color.yellow)
                     .clipShape(Capsule())
-            case .inTrial:
-                Text("TRIAL")
-                    .font(.caption.bold())
                     .foregroundColor(.white)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
@@ -587,9 +570,9 @@ struct SubscriptionStatusCard: View {
         switch subscriptionService.subscriptionStatus {
         case .subscribed:
             return Color.yellow.opacity(0.1)
-        case .inTrial, .firstLaunch:
+        case .firstLaunch:
             return Color.blue.opacity(0.1)
-        case .trialExpired, .expired:
+        case .expired:
             return Color.red.opacity(0.1)
         default:
             return Color.gray.opacity(0.1)
@@ -748,7 +731,7 @@ struct SubscriptionDetailsCard: View {
                 SubscriptionDetailRow(label: "Plan", value: "Mariner Studio Pro")
                 SubscriptionDetailRow(label: "Price", value: "$2.99 per month")
                 SubscriptionDetailRow(label: "Billing", value: "Auto-renewing")
-                SubscriptionDetailRow(label: "Status", value: subscriptionService.getSubscriptionStatusMessage())
+                SubscriptionDetailRow(label: "Status", value: subscriptionService.subscriptionStatusMessage)
             }
             
             Text("Manage billing and cancellation through the App Store")

@@ -10,7 +10,11 @@ struct SubscriptionGateView: View {
         Group {
             if isCheckingStatus {
                 // Loading screen while checking subscription status
-                TrialLoadingView(message: "Checking subscription status...")
+                ProgressView("Checking subscription status...")
+                    .progressViewStyle(CircularProgressViewStyle())
+                    .scaleEffect(1.2)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color(.systemBackground))
             } else {
                 // Determine what to show based on subscription status
                 switch subscriptionService.subscriptionStatus {
@@ -18,28 +22,14 @@ struct SubscriptionGateView: View {
                     // User has active subscription - allow access
                     MainView()
                 
-                case .inTrial(let daysRemaining):
-                    // User has active trial - allow access with banner
-                    MainView()
-                        .overlay(alignment: .top) {
-                            if subscriptionService.showTrialBanner {
-                                TrialBannerView()
-                                    .transition(.move(edge: .top))
-                            }
-                        }
-                
                 case .firstLaunch:
-                    // First time user - show simple welcome that leads to explanation
+                    // First time user - show simple welcome
                     FirstTimeWelcomeView()
                         .fullScreenCover(isPresented: $showTrialExplanation) {
-                            TrialExplanationView()
+                            EnhancedPaywallView()
                         }
                 
-                case .skippedTrial:
-                    // User skipped trial - limited access to MainView (only MAP accessible)
-                    MainView()
-                
-                case .trialExpired, .expired, .unknown:
+                case .expired, .unknown:
                     // No valid access - show paywall
                     EnhancedPaywallView()
                 }
@@ -89,7 +79,7 @@ struct FirstTimeWelcomeView: View {
                     GridItem(.flexible())
                 ], spacing: 20) {
                     WelcomeFeatureCard(icon: "cloud.sun.fill", title: "Live Weather", description: "Real-time maritime conditions and forecasts")
-                    WelcomeFeatureCard(icon: "waveform.path", title: "Tidal Data", description: "Accurate tidal predictions and heights")
+                    WelcomeFeatureCard(icon: "map.fill", title: "Navigation", description: "Professional maritime tools")
                     WelcomeFeatureCard(icon: "map.fill", title: "Navigation", description: "Professional maritime tools")
                     WelcomeFeatureCard(icon: "icloud.fill", title: "iCloud Sync", description: "Seamless sync across devices")
                     WelcomeFeatureCard(icon: "location.fill", title: "GPS Tracking", description: "Precise position tracking")
@@ -99,30 +89,30 @@ struct FirstTimeWelcomeView: View {
                 
                 // Call to action buttons
                 VStack(spacing: 16) {
+                    // Premium text
+                    Text("$2.99/month • Cancel anytime")
+                        .font(.subheadline)
+                        .foregroundColor(.primary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                    
                     // Premium button
                     Button(action: {
                         showTrialExplanation = true
                     }) {
-                        VStack(spacing: 4) {
-                            Text("Try Premium")
-                                .font(.headline)
-                                .fontWeight(.bold)
-                                .foregroundColor(.white)
-                            
-                            Text("3-day free trial, then $2.99/month")
-                                .font(.caption)
-                                .foregroundColor(.white.opacity(0.9))
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.blue)
-                        .cornerRadius(12)
+                        Text("Subscribe Now")
+                            .font(.headline)
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.blue)
+                            .cornerRadius(12)
                     }
                     .padding(.horizontal)
                     
                     // Free button
                     Button(action: {
-                        subscriptionService.skipTrial()
                         showMainApp = true
                     }) {
                         Text("Continue with Free Version")
@@ -144,7 +134,7 @@ struct FirstTimeWelcomeView: View {
             }
         }
         .fullScreenCover(isPresented: $showTrialExplanation) {
-            TrialExplanationView()
+            InitialSubscriptionView()
         }
         .fullScreenCover(isPresented: $showMainApp) {
             MainView()
