@@ -39,7 +39,9 @@ class SimpleSubscription: ObservableObject {
     
     // MARK: - Initialization
     init() {
-        DebugLogger.shared.log("💰 SIMPLE_SUB: Initializing simple subscription service", category: "SUBSCRIPTION")
+        DebugLogger.shared.log("🔍 TEST_CORE_STATUS: ========== SUBSCRIPTION SERVICE INIT ==========", category: "TEST_CORE_STATUS")
+        DebugLogger.shared.log("🔍 TEST_CORE_STATUS: Initial status: \(subscriptionStatus)", category: "TEST_CORE_STATUS")
+        DebugLogger.shared.log("🔍 TEST_CORE_STATUS: Starting async status determination", category: "TEST_CORE_STATUS")
         Task {
             await determineSubscriptionStatus()
         }
@@ -47,31 +49,55 @@ class SimpleSubscription: ObservableObject {
     
     // MARK: - Subscription Status
     func determineSubscriptionStatus() async {
-        DebugLogger.shared.log("💰 SIMPLE_SUB: Determining subscription status", category: "SUBSCRIPTION")
+        DebugLogger.shared.log("🔍 TEST_CORE_STATUS: Starting subscription status determination", category: "TEST_CORE_STATUS")
+        DebugLogger.shared.log("🔍 TEST_CORE_STATUS: Current status before check: \(subscriptionStatus)", category: "TEST_CORE_STATUS")
         
         #if DEBUG
-        if debugOverrideSubscription {
-            DebugLogger.shared.log("🧪 SIMPLE_SUB: Debug override enabled - ignoring StoreKit subscriptions", category: "SUBSCRIPTION")
-            subscriptionStatus = .firstLaunch
-            return
-        }
+        // NUCLEAR FIX: Always disable debug override on startup
+        let wasDebugOverrideOn = debugOverrideSubscription
+        debugOverrideSubscription = false
+        DebugLogger.shared.log("🔍 TEST_CORE_STATUS: Debug override was: \(wasDebugOverrideOn), now disabled", category: "TEST_CORE_STATUS")
+        #else
+        // RELEASE BUILD: Always ignore sandbox subscriptions for production
+        UserDefaults.standard.set(true, forKey: "ignoreSandboxSubscriptions")
+        DebugLogger.shared.log("🚀 RELEASE: Auto-setting ignoreSandboxSubscriptions = true", category: "TEST_CORE_STATUS")
         #endif
         
         // Check for active StoreKit subscriptions
         await checkActiveSubscriptions()
+        
+        DebugLogger.shared.log("🔍 TEST_CORE_STATUS: Final status after check: \(subscriptionStatus)", category: "TEST_CORE_STATUS")
     }
     
     private func checkActiveSubscriptions() async {
-        DebugLogger.shared.log("💰 SIMPLE_SUB: Checking for active subscriptions", category: "SUBSCRIPTION")
+        DebugLogger.shared.log("🔍 TEST_CORE_STATUS: Checking StoreKit for active subscriptions", category: "TEST_CORE_STATUS")
         
+        var foundTransactions = 0
         for await result in Transaction.currentEntitlements {
+            foundTransactions += 1
             do {
                 let transaction = try checkVerified(result)
-                DebugLogger.shared.log("✅ SIMPLE_SUB: Active subscription found: \(transaction.productID)", category: "SUBSCRIPTION")
+                
+                // DETECT SANDBOX vs PRODUCTION
+                let environment = transaction.environment == .sandbox ? "SANDBOX" : "PRODUCTION"
+                let purchaseDate = transaction.purchaseDate
+                let expiryDate = transaction.expirationDate
+                
+                DebugLogger.shared.log("🔍 SIMPLE_SUB: Found transaction - Product: \(transaction.productID)", category: "SUBSCRIPTION")
+                DebugLogger.shared.log("🔍 SIMPLE_SUB: Environment: \(environment)", category: "SUBSCRIPTION")
+                DebugLogger.shared.log("🔍 SIMPLE_SUB: Purchase Date: \(purchaseDate)", category: "SUBSCRIPTION")
+                DebugLogger.shared.log("🔍 SIMPLE_SUB: Expiry Date: \(expiryDate?.description ?? "None")", category: "SUBSCRIPTION")
+                DebugLogger.shared.log("🔍 SIMPLE_SUB: Transaction ID: \(transaction.id)", category: "SUBSCRIPTION")
+                
+                // Option to ignore sandbox subscriptions for testing (works in all builds)
+                if UserDefaults.standard.bool(forKey: "ignoreSandboxSubscriptions") && transaction.environment == .sandbox {
+                    DebugLogger.shared.log("🧪 DEBUG: Ignoring sandbox subscription for testing", category: "SUBSCRIPTION")
+                    continue
+                }
                 
                 if transaction.productID == monthlyProductID {
                     subscriptionStatus = .subscribed(expiryDate: transaction.expirationDate)
-                    DebugLogger.shared.log("✅ SIMPLE_SUB: Active subscription found", category: "SUBSCRIPTION")
+                    DebugLogger.shared.log("✅ SIMPLE_SUB: Active subscription found (\(environment))", category: "SUBSCRIPTION")
                     return
                 }
             } catch {
@@ -80,12 +106,16 @@ class SimpleSubscription: ObservableObject {
         }
         
         // No active subscription found - first time user
-        DebugLogger.shared.log("🎉 SIMPLE_SUB: No active subscription - first time user", category: "SUBSCRIPTION")
+        DebugLogger.shared.log("🔍 TEST_CORE_STATUS: No active subscriptions found in StoreKit (checked \(foundTransactions) transactions)", category: "TEST_CORE_STATUS")
+        DebugLogger.shared.log("🔍 TEST_CORE_STATUS: Setting status to .firstLaunch", category: "TEST_CORE_STATUS")
         subscriptionStatus = .firstLaunch
     }
     
     func subscribe(to productID: String) async throws {
-        DebugLogger.shared.log("💰 SIMPLE_SUB: Starting subscription purchase for \(productID)", category: "SUBSCRIPTION")
+        DebugLogger.shared.log("🛒 TEST_PURCHASE: ========== STARTING PURCHASE FLOW ==========", category: "TEST_PURCHASE")
+        DebugLogger.shared.log("🛒 TEST_PURCHASE: Product ID: \(productID)", category: "TEST_PURCHASE")
+        DebugLogger.shared.log("🛒 TEST_PURCHASE: Current status before purchase: \(subscriptionStatus)", category: "TEST_PURCHASE")
+        DebugLogger.shared.log("🛒 TEST_PURCHASE: Setting isLoading = true", category: "TEST_PURCHASE")
         isLoading = true
         
         do {
@@ -103,21 +133,29 @@ class SimpleSubscription: ObservableObject {
             
             switch result {
             case .success(let verification):
+                DebugLogger.shared.log("🛒 TEST_PURCHASE: Purchase successful - processing transaction", category: "TEST_PURCHASE")
                 DebugLogger.shared.log("🎉 SIMPLE_SUB: Purchase successful", category: "SUBSCRIPTION")
                 await processTransaction(verification.unsafePayloadValue)
+                DebugLogger.shared.log("🛒 TEST_PURCHASE: Transaction processed successfully", category: "TEST_PURCHASE")
             case .userCancelled:
+                DebugLogger.shared.log("🛒 TEST_PURCHASE: User cancelled purchase", category: "TEST_PURCHASE")
                 DebugLogger.shared.log("❌ SIMPLE_SUB: User cancelled purchase", category: "SUBSCRIPTION")
             case .pending:
+                DebugLogger.shared.log("🛒 TEST_PURCHASE: Purchase pending (awaiting approval)", category: "TEST_PURCHASE")
                 DebugLogger.shared.log("⏳ SIMPLE_SUB: Purchase pending", category: "SUBSCRIPTION")
             @unknown default:
+                DebugLogger.shared.log("🛒 TEST_PURCHASE: Unknown purchase result", category: "TEST_PURCHASE")
                 DebugLogger.shared.log("❓ SIMPLE_SUB: Unknown purchase result", category: "SUBSCRIPTION")
             }
             
         } catch {
+            DebugLogger.shared.log("🛒 TEST_PURCHASE: Purchase failed with error: \(error)", category: "TEST_PURCHASE")
             DebugLogger.shared.log("❌ SIMPLE_SUB: Purchase failed: \(error)", category: "SUBSCRIPTION")
             throw error
         }
         
+        DebugLogger.shared.log("🛒 TEST_PURCHASE: Setting isLoading = false", category: "TEST_PURCHASE")
+        DebugLogger.shared.log("🛒 TEST_PURCHASE: ========== PURCHASE FLOW COMPLETE ==========", category: "TEST_PURCHASE")
         isLoading = false
     }
     
@@ -154,6 +192,12 @@ class SimpleSubscription: ObservableObject {
     
     private func processTransaction(_ transaction: Transaction) async {
         if transaction.productID == monthlyProductID {
+            #if DEBUG
+            // Disable debug override when real purchase happens
+            debugOverrideSubscription = false
+            DebugLogger.shared.log("🧪 SIMPLE_SUB: Debug override disabled due to real purchase", category: "SUBSCRIPTION")
+            #endif
+            
             subscriptionStatus = .subscribed(expiryDate: transaction.expirationDate)
             DebugLogger.shared.log("🎉 SIMPLE_SUB: Subscription activated", category: "SUBSCRIPTION")
         }

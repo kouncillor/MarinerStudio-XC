@@ -20,15 +20,11 @@ struct EnhancedPaywallView: View {
                         .foregroundColor(.blue)
                     
                     VStack(spacing: 12) {
-                        Text(headerTitle)
-                            .font(.largeTitle)
-                            .fontWeight(.bold)
-                            .multilineTextAlignment(.center)
-                        
                         Text(headerSubtitle)
-                            .font(.title3)
-                            .foregroundColor(.secondary)
+                            .font(.title2)
+                            .fontWeight(.medium)
                             .multilineTextAlignment(.center)
+                            .foregroundColor(.primary)
                     }
                 }
                 .padding(.top, 20)
@@ -112,12 +108,8 @@ struct EnhancedPaywallView: View {
         }
     }
     
-    private var headerTitle: String {
-        return "Subscription Required"
-    }
-    
     private var headerSubtitle: String {
-        return "You've reached your daily limit for this feature.\nSubscribe to continue with unlimited access."
+        return "Daily limit reached. Upgrade now for unlimited access."
     }
     
     private func loadProducts() async {
@@ -216,15 +208,16 @@ struct AppleCompliantSubscriptionCard: View {
             VStack(spacing: 4) {
                 Text(product.displayPrice)
                     .font(.system(size: 48, weight: .bold, design: .default))
-                    .foregroundColor(.primary)
+                    .foregroundColor(.blue)
                 
                 Text("per month")
                     .font(.title2)
                     .fontWeight(.semibold)
-                    .foregroundColor(.primary)
+                    .foregroundColor(.blue)
                 
-                Text("Auto renews • Cancel anytime")
+                Text("Subscription auto-renews • Cancel anytime")
                     .font(.caption)
+                    .fontWeight(.bold)
                     .foregroundColor(.secondary)
             }
             
@@ -263,13 +256,6 @@ struct AppleCompliantSubscriptionCard: View {
     }
     
     private var buttonText: String {
-        switch subscriptionService.subscriptionStatus {
-        case .expired:
-            return "Reactivate Subscription"
-        case .firstLaunch, .unknown:
-            return "Subscribe Now"
-        default:
-            return "Subscribe Now"
-        }
+        return "Subscribe Now"
     }
 }

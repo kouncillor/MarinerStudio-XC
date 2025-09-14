@@ -6,6 +6,7 @@ struct NavUnitMenuView: View {
     @EnvironmentObject var subscriptionService: SimpleSubscription
     @State private var showSubscriptionPrompt = false
     @State private var showLocalNavUnitView = false
+    @State private var refreshTrigger = false
 
     var body: some View {
         ScrollView {
@@ -92,6 +93,13 @@ struct NavUnitMenuView: View {
                 navUnitService: serviceProvider.navUnitService,
                 locationService: serviceProvider.locationService
             )
+        }
+        .onAppear {
+            // Force view refresh when returning to detect updated usage status
+            refreshTrigger.toggle()
+        }
+        .onChange(of: refreshTrigger) { _ in
+            // This will trigger a UI update when refreshTrigger changes
         }
 
     }

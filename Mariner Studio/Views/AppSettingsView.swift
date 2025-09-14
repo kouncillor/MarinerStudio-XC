@@ -2,7 +2,7 @@ import SwiftUI
 
 struct AppSettingsView: View {
     @EnvironmentObject var cloudKitManager: CloudKitManager
-    @StateObject private var subscriptionService = SimpleSubscription()
+    @EnvironmentObject var subscriptionService: SimpleSubscription
     @State private var showingAbout = false
     @State private var showingSubscription = false
     
@@ -592,11 +592,16 @@ struct SubscriptionActionsGrid: View {
             if subscriptionService.needsPaywall {
                 UpgradeToProButton()
                     .environmentObject(subscriptionService)
+                
+                RestorePurchasesButton()
+                    .environmentObject(subscriptionService)
             }
-            
             
             if case .subscribed = subscriptionService.subscriptionStatus {
                 CancelSubscriptionButton()
+                
+                RestorePurchasesButton()
+                    .environmentObject(subscriptionService)
             }
         }
     }
@@ -642,6 +647,40 @@ struct UpgradeToProButton: View {
 
 
 
+struct RestorePurchasesButton: View {
+    @EnvironmentObject var subscriptionService: SimpleSubscription
+    
+    var body: some View {
+        Button(action: {
+            Task {
+                await subscriptionService.restorePurchases()
+            }
+        }) {
+            VStack(spacing: 4) {
+                Image(systemName: "arrow.clockwise.circle")
+                    .foregroundColor(.blue)
+                    .font(.title3)
+                
+                Text("Restore")
+                    .font(.caption.bold())
+                    .foregroundColor(.primary)
+                
+                Text("Purchases")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.blue.opacity(0.1))
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+        .disabled(subscriptionService.isLoading)
+    }
+}
+
 struct CancelSubscriptionButton: View {
     var body: some View {
         Button(action: {
@@ -677,41 +716,6 @@ struct CancelSubscriptionButton: View {
     }
 }
 
-struct TrialInformationCard: View {
-    let daysRemaining: Int
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Image(systemName: "info.circle.fill")
-                    .foregroundColor(.blue)
-                
-                Text("Trial Information")
-                    .font(.subheadline.bold())
-                    .foregroundColor(.primary)
-            }
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text("• Full access to all maritime features")
-                Text("• Weather data, tides, currents, and navigation")
-                Text("• Cloud sync across all your devices")
-                
-                if daysRemaining <= 3 {
-                    Text("• Subscribe before trial ends to continue")
-                        .foregroundColor(.red)
-                        .fontWeight(.medium)
-                }
-            }
-            .font(.caption)
-            .foregroundColor(.secondary)
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color.blue.opacity(0.05))
-        )
-    }
-}
 
 struct SubscriptionDetailsCard: View {
     @EnvironmentObject var subscriptionService: SimpleSubscription

@@ -13,6 +13,7 @@ struct BuoyMenuView: View {
     @EnvironmentObject var subscriptionService: SimpleSubscription
     @State private var showSubscriptionPrompt = false
     @State private var showLocalBuoyView = false
+    @State private var refreshTrigger = false
 
     var body: some View {
         ScrollView {
@@ -102,6 +103,13 @@ struct BuoyMenuView: View {
                 locationService: serviceProvider.locationService,
                 coreDataManager: serviceProvider.coreDataManager
             )
+        }
+        .onAppear {
+            // Force view refresh when returning to detect updated usage status
+            refreshTrigger.toggle()
+        }
+        .onChange(of: refreshTrigger) { _ in
+            // This will trigger a UI update when refreshTrigger changes
         }
     }
 }

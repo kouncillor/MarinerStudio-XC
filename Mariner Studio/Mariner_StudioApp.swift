@@ -8,6 +8,9 @@ struct Mariner_StudioApp: App {
 
     // Create a shared service provider at app startup
     @StateObject private var serviceProvider = ServiceProvider()
+    
+    // Create a single subscription service instance for the entire app (Dependency Injection)
+    @StateObject private var subscriptionService = SimpleSubscription()
 
     init() {
         DebugLogger.shared.printLogLocation()
@@ -21,8 +24,9 @@ struct Mariner_StudioApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
-                // Inject the service provider into the environment
+                // Inject dependencies into the environment (Dependency Injection)
                 .environmentObject(serviceProvider)
+                .environmentObject(subscriptionService)
                 .preferredColorScheme(.light) // Force light mode
         }
     }

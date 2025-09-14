@@ -133,7 +133,9 @@ struct MainView: View {
     private var toolbarContent: some ToolbarContent {
         // Settings button - Always available
         ToolbarItem(placement: .topBarTrailing) {
-            NavigationLink(destination: AppSettingsView()) {
+            NavigationLink(destination: AppSettingsView()
+                .environmentObject(subscriptionService)
+                .environmentObject(cloudKitManager)) {
                 Image(systemName: "gear")
                     .foregroundColor(.primary)
             }

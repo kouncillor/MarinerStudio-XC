@@ -6,6 +6,7 @@ struct TideMenuView: View {
     @EnvironmentObject var subscriptionService: SimpleSubscription
     @State private var showSubscriptionPrompt = false
     @State private var showLocalTideView = false
+    @State private var refreshTrigger = false
 
     var body: some View {
         ScrollView {
@@ -94,6 +95,13 @@ struct TideMenuView: View {
                 locationService: serviceProvider.locationService,
                 coreDataManager: serviceProvider.coreDataManager
             )
+        }
+        .onAppear {
+            // Force view refresh when returning to detect updated usage status
+            refreshTrigger.toggle()
+        }
+        .onChange(of: refreshTrigger) { _ in
+            // This will trigger a UI update when refreshTrigger changes
         }
     }
 }

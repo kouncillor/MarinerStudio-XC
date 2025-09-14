@@ -2,7 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var serviceProvider: ServiceProvider
-    @StateObject private var subscriptionService = SimpleSubscription()
+    @EnvironmentObject var subscriptionService: SimpleSubscription
     @StateObject private var cloudKitManager = CloudKitManager.shared
     
     var body: some View {
