@@ -45,6 +45,11 @@ class SimpleSubscription: ObservableObject {
         Task {
             await determineSubscriptionStatus()
         }
+
+        // Start listening for transaction updates
+        Task {
+            await listenForTransactions()
+        }
     }
     
     // MARK: - Subscription Status
@@ -299,6 +304,33 @@ class SimpleSubscription: ObservableObject {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.string(from: Date())
+    }
+
+    // MARK: - Transaction Listener
+    private func listenForTransactions() async {
+        DebugLogger.shared.log("👂 SIMPLE_SUB: Starting transaction listener", category: "SUBSCRIPTION")
+
+        for await result in Transaction.updates {
+            do {
+                let transaction = try checkVerified(result)
+
+                // Only process transactions for our current product ID to avoid infinite loops
+                guard transaction.productID == monthlyProductID else {
+                    DebugLogger.shared.log("👂 SIMPLE_SUB: Ignoring transaction for legacy product: \(transaction.productID)", category: "SUBSCRIPTION")
+                    continue
+                }
+
+                DebugLogger.shared.log("👂 SIMPLE_SUB: Processing transaction update - Product: \(transaction.productID)", category: "SUBSCRIPTION")
+
+                await processTransaction(transaction)
+
+                // Only update subscription status if we actually processed a relevant transaction
+                DebugLogger.shared.log("👂 SIMPLE_SUB: Transaction processed, refreshing subscription status", category: "SUBSCRIPTION")
+
+            } catch {
+                DebugLogger.shared.log("❌ SIMPLE_SUB: Failed to process transaction update: \(error)", category: "SUBSCRIPTION")
+            }
+        }
     }
     
     // MARK: - Debug Functions
