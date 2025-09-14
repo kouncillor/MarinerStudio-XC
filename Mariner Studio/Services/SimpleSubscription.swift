@@ -111,6 +111,10 @@ class SimpleSubscription: ObservableObject {
         subscriptionStatus = .firstLaunch
     }
     
+    func subscribeToMonthly() async throws {
+        try await subscribe(to: monthlyProductID)
+    }
+
     func subscribe(to productID: String) async throws {
         DebugLogger.shared.log("🛒 TEST_PURCHASE: ========== STARTING PURCHASE FLOW ==========", category: "TEST_PURCHASE")
         DebugLogger.shared.log("🛒 TEST_PURCHASE: Product ID: \(productID)", category: "TEST_PURCHASE")

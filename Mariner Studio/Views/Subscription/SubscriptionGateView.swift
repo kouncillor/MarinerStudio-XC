@@ -107,7 +107,7 @@ struct FirstTimeWelcomeView: View {
                     Button(action: {
                         Task {
                             do {
-                                try await subscriptionService.subscribe(to: "mariner_pro_monthly15")
+                                try await subscriptionService.subscribeToMonthly()
                             } catch {
                                 DebugLogger.shared.log("❌ SUBSCRIPTION: Purchase failed: \(error)", category: "SUBSCRIPTION")
                             }
