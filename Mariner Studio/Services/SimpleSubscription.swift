@@ -9,7 +9,7 @@ class SimpleSubscription: ObservableObject {
     @Published var isLoading: Bool = false
     
     // MARK: - Constants
-    private let monthlyProductID = "mariner_pro_monthly14"
+    private let monthlyProductID = "mariner_pro_monthly15"
     
     // MARK: - Private Properties
     private let userDefaults = UserDefaults.standard

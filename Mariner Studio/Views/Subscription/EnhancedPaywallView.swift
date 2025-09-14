@@ -1,4 +1,3 @@
-
 import SwiftUI
 import StoreKit
 
@@ -8,17 +7,17 @@ struct EnhancedPaywallView: View {
     @State private var isLoading = true
     @State private var showingError = false
     @State private var errorMessage = ""
-    
+
     var body: some View {
         ScrollView {
             VStack(spacing: 30) {
-                
+
                 // Header section
                 VStack(spacing: 20) {
                     Image(systemName: "anchor.fill")
                         .font(.system(size: 80))
                         .foregroundColor(.blue)
-                    
+
                     VStack(spacing: 12) {
                         Text(headerSubtitle)
                             .font(.title2)
@@ -28,8 +27,8 @@ struct EnhancedPaywallView: View {
                     }
                 }
                 .padding(.top, 20)
-                
-                
+
+
                 // Subscription options with prominent pricing
                 if isLoading {
                     ProgressView("Loading subscription options...")
@@ -37,45 +36,45 @@ struct EnhancedPaywallView: View {
                 } else {
                     AppleCompliantSubscriptionView(products: availableProducts)
                 }
-                
+
                 // Apple-Style Legal Footer
                 VStack(spacing: 16) {
-                    
+
                     VStack(spacing: 8) {
                         HStack(spacing: 0) {
                             Text("By joining you agree to our ")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
-                            
+
                             Link("privacy policy", destination: URL(string: "https://your-app-website.com/privacy")!)
                                 .font(.caption)
                                 .foregroundColor(.blue)
                                 .underline()
-                            
+
                             Text(" and ")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
-                            
+
                             Link("terms of use", destination: URL(string: "https://your-app-website.com/terms")!)
                                 .font(.caption)
                                 .foregroundColor(.blue)
                                 .underline()
-                            
+
                             Text(".")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
-                        
+
                         HStack(spacing: 0) {
                             Text("Upon payment, you agree to Apple's ")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
-                            
+
                             Link("terms and conditions", destination: URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!)
                                 .font(.caption)
                                 .foregroundColor(.blue)
                                 .underline()
-                            
+
                             Text(".")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
@@ -83,7 +82,7 @@ struct EnhancedPaywallView: View {
                     }
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
-                    
+
                     // Restore purchases button
                     Button(action: {
                         Task {
@@ -107,11 +106,11 @@ struct EnhancedPaywallView: View {
             Text(errorMessage)
         }
     }
-    
+
     private var headerSubtitle: String {
         return "Daily limit reached. Upgrade now for unlimited access."
     }
-    
+
     private func loadProducts() async {
         do {
             availableProducts = try await subscriptionService.getAvailableProducts()
@@ -128,16 +127,16 @@ struct FeatureCard: View {
     let icon: String
     let title: String
     let description: String
-    
+
     var body: some View {
         VStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.system(size: 30))
                 .foregroundColor(.blue)
-            
+
             Text(title)
                 .font(.headline)
-            
+
             Text(description)
                 .font(.caption)
                 .foregroundColor(.secondary)
@@ -153,24 +152,24 @@ struct PremiumFeatureRow: View {
     let icon: String
     let title: String
     let description: String
-    
+
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.system(size: 18))
                 .foregroundColor(.blue)
                 .frame(width: 24)
-            
+
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.subheadline)
                     .fontWeight(.medium)
-                
+
                 Text(description)
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
-            
+
             Spacer()
         }
     }
@@ -181,7 +180,7 @@ struct PremiumFeatureRow: View {
 struct AppleCompliantSubscriptionView: View {
     let products: [Product]
     @EnvironmentObject var subscriptionService: SimpleSubscription
-    
+
     var body: some View {
         VStack(spacing: 24) {
             ForEach(products, id: \.id) { product in
@@ -195,7 +194,7 @@ struct AppleCompliantSubscriptionView: View {
 struct AppleCompliantSubscriptionCard: View {
     let product: Product
     @EnvironmentObject var subscriptionService: SimpleSubscription
-    
+
     var body: some View {
         VStack(spacing: 20) {
             // Product title
@@ -203,24 +202,24 @@ struct AppleCompliantSubscriptionCard: View {
                 .font(.title2)
                 .fontWeight(.semibold)
                 .multilineTextAlignment(.center)
-            
+
             // PRICING DISPLAY
             VStack(spacing: 4) {
                 Text(product.displayPrice)
                     .font(.system(size: 48, weight: .bold, design: .default))
                     .foregroundColor(.blue)
-                
+
                 Text("per month")
                     .font(.title2)
                     .fontWeight(.semibold)
                     .foregroundColor(.blue)
-                
+
                 Text("Subscription auto-renews • Cancel anytime")
                     .font(.caption)
                     .fontWeight(.bold)
                     .foregroundColor(.secondary)
             }
-            
+
             // Subscribe button
             Button(action: {
                 Task {
@@ -240,7 +239,7 @@ struct AppleCompliantSubscriptionCard: View {
                     .cornerRadius(12)
             }
             .disabled(subscriptionService.isLoading)
-            
+
             if subscriptionService.isLoading {
                 ProgressView()
                     .progressViewStyle(CircularProgressViewStyle(tint: .blue))
@@ -254,7 +253,7 @@ struct AppleCompliantSubscriptionCard: View {
                 .stroke(Color.blue.opacity(0.3), lineWidth: 1)
         )
     }
-    
+
     private var buttonText: String {
         return "Subscribe Now"
     }
