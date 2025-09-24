@@ -105,8 +105,6 @@ struct MapClusteringView: View {
        case .standard:
            mapType = .satellite
        case .satellite:
-           mapType = .hybrid
-       case .hybrid:
            mapType = .standard
        default:
            mapType = .standard
@@ -124,8 +122,6 @@ struct MapClusteringView: View {
            return "Standard"
        case .satellite:
            return "Satellite"
-       case .hybrid:
-           return "Hybrid"
        default:
            return "Standard"
        }
@@ -137,9 +133,7 @@ struct MapClusteringView: View {
        case .standard:
            return "map"
        case .satellite:
-           return "globe"
-       case .hybrid:
-           return "map.fill"
+           return "dot.radiowaves.left.and.right"
        default:
            return "map"
        }
@@ -340,33 +334,6 @@ struct MapClusteringView: View {
                .padding(.top)
            }
 
-           // Map type toggle button (top-right)
-           VStack {
-               HStack {
-                   Spacer()
-                   Button(action: {
-                       toggleMapType()
-                   }) {
-                       VStack(spacing: 2) {
-                           Image(systemName: mapTypeIcon())
-                               .font(.system(size: 20))
-                               .foregroundColor(.white)
-                           Text(mapTypeDisplayName())
-                               .font(.caption2)
-                               .foregroundColor(.white)
-                       }
-                       .padding(.horizontal, 8)
-                       .padding(.vertical, 6)
-                       .background(Color.green.opacity(0.7))
-                       .cornerRadius(8)
-                       .shadow(radius: 2)
-                   }
-               }
-               .padding(.top, 16)
-               .padding(.trailing, 16)
-               
-               Spacer()
-           }
            
            // Floating buttons - now with location, filter, and chart TOGGLE buttons
            VStack {
@@ -375,21 +342,7 @@ struct MapClusteringView: View {
                HStack {
                    Spacer()
 
-                   // Chart overlay TOGGLE button - now uses map/map.fill icons
-                   Button(action: {
-                       viewModel.toggleChartOverlay()
-                   }) {
-                       Image(systemName: viewModel.isChartOverlayEnabled ? "map.fill" : "map")
-                           .font(.system(size: 24))
-                           .foregroundColor(.white)
-                           .padding(12)
-                           .background(viewModel.isChartOverlayEnabled ? Color.blue : Color.gray)
-                           .clipShape(Circle())
-                           .shadow(radius: 4)
-                   }
-                   .padding(.trailing, 8)
-
-                   // Location button (unchanged)
+                   // Location button (1st)
                    Button(action: {
                        if let mapView = TandmMapViewProxy.shared.mapView,
                           let coordinator = TandmMapViewProxy.shared.coordinator {
@@ -407,7 +360,35 @@ struct MapClusteringView: View {
                    }
                    .padding(.trailing, 8)
 
-                   // Filter button (unchanged)
+                   // Chart overlay TOGGLE button (2nd) - nautical overlay
+                   Button(action: {
+                       viewModel.toggleChartOverlay()
+                   }) {
+                       Image(systemName: viewModel.isChartOverlayEnabled ? "map.fill" : "map")
+                           .font(.system(size: 24))
+                           .foregroundColor(.white)
+                           .padding(12)
+                           .background(Color(red: 0.1, green: 0.5, blue: 0.9))
+                           .clipShape(Circle())
+                           .shadow(radius: 4)
+                   }
+                   .padding(.trailing, 8)
+
+                   // Map type toggle button (3rd) - satellite/hybrid
+                   Button(action: {
+                       toggleMapType()
+                   }) {
+                       Image(systemName: mapTypeIcon())
+                           .font(.system(size: 24))
+                           .foregroundColor(.white)
+                           .padding(12)
+                           .background(Color.green)
+                           .clipShape(Circle())
+                           .shadow(radius: 4)
+                   }
+                   .padding(.trailing, 8)
+
+                   // Filter button (4th) - settings/chart overlay selections
                    Button(action: {
                        showFilterOptions.toggle()
                    }) {
@@ -415,7 +396,7 @@ struct MapClusteringView: View {
                            .font(.system(size: 24))
                            .foregroundColor(.white)
                            .padding(12)
-                           .background(Color.blue)
+                           .background(Color.purple)
                            .clipShape(Circle())
                            .shadow(radius: 4)
                    }
