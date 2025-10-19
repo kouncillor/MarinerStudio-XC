@@ -6,6 +6,7 @@ struct MainView: View {
     @EnvironmentObject var serviceProvider: ServiceProvider
     @State private var navigationPath = NavigationPath()
     @State private var showSubscriptionPrompt = false
+    @State private var showFeedback = false
 
     let shouldClearNavigation: Bool
 
@@ -131,7 +132,17 @@ struct MainView: View {
     
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
-        // Settings button - Always available
+        // Feedback button (leftmost of the two)
+        ToolbarItem(placement: .topBarTrailing) {
+            Button(action: {
+                showFeedback = true
+            }) {
+                Image(systemName: "pencil.and.list.clipboard")
+                    .foregroundColor(.primary)
+            }
+        }
+
+        // Settings button - Always available (rightmost)
         ToolbarItem(placement: .topBarTrailing) {
             NavigationLink(destination: AppSettingsView()
                 .environmentObject(subscriptionService)
@@ -155,6 +166,9 @@ struct MainView: View {
                 }
                 .sheet(isPresented: $showSubscriptionPrompt) {
                     EnhancedPaywallView()
+                }
+                .sheet(isPresented: $showFeedback) {
+                    FeedbackView(sourceView: "Main Menu")
                 }
         }
     }

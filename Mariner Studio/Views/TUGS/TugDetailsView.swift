@@ -92,7 +92,7 @@ struct TugDetailsView: View {
             }
         }
         .navigationTitle("Tug Details")
-        .withHomeButton()
+        .withNotificationAndHome(sourceView: "Tug Details")
 
     }
 

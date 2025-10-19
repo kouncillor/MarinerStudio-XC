@@ -37,7 +37,7 @@ struct BargesView: View {
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbarBackground(Color(red: 0.53, green: 0.81, blue: 0.98), for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
-        .withHomeButton()
+        .withNotificationAndHome(sourceView: "Barges")
 
         .task {
             await viewModel.loadBarges()

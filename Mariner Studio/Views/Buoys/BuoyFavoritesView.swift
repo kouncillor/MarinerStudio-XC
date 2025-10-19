@@ -105,7 +105,7 @@ struct BuoyFavoritesView: View {
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbarBackground(.purple, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
-        .withHomeButton()
+        .withNotificationAndHome(sourceView: "Buoy Favorites")
 
         .onAppear {
             viewModel.initialize(

@@ -133,7 +133,7 @@ struct CreateRouteView: View {
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbarBackground(.orange, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
-        .withHomeButton()
+        .withNotificationAndHome(sourceView: "Create Route")
         .navigationDestination(isPresented: $showingMapView) {
             RouteCreationMapView(routeName: routeName, serviceProvider: serviceProvider)
         }

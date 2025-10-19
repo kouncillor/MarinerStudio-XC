@@ -57,7 +57,7 @@ struct NavUnitsView: View {
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbarBackground(.blue, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
-        .withHomeButton()
+        .withNotificationAndHome(sourceView: "Nav Units List")
         .onAppear {
             Task {
                 await viewModel.loadNavUnits()

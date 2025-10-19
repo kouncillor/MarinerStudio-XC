@@ -845,14 +845,18 @@ struct NavUnitDetailsView: View {
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbarBackground(.blue, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
-        .withHomeButton()
+        .withNotificationAndHome(sourceView: "Nav Unit Details")
         .onAppear {
             Task {
                 await viewModel.loadNavUnitIfNeeded()
                 await loadPhotos()
             }
         }
-        .sheet(isPresented: $showingPhotoGallery) {
+        .sheet(isPresented: $showingPhotoGallery, onDismiss: {
+            Task {
+                await loadPhotos()
+            }
+        }) {
             if let navUnit = viewModel.unit {
                 NavUnitPhotoGalleryView(
                     navUnitId: navUnit.navUnitId,

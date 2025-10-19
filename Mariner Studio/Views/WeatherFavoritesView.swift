@@ -120,7 +120,7 @@ struct WeatherFavoritesView: View {
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbarBackground(Color(red: 0.53, green: 0.81, blue: 0.98), for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
-        .withHomeButton()
+        .withNotificationAndHome(sourceView: "Weather Favorites")
         .sheet(isPresented: $viewModel.isEditingName) {
             // Reset values when sheet is dismissed
             viewModel.favoriteToEdit = nil

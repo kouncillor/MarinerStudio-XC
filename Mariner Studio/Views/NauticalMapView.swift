@@ -144,7 +144,7 @@ struct NauticalMapView: View {
                 }
             }
         }
-        .withHomeButton()
+        .withNotificationAndHome(sourceView: "Map")
         .onAppear {
             setupChartDisplay()
         }

@@ -48,7 +48,7 @@ struct AllRoutesView: View {
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbarBackground(.orange, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
-            .withHomeButton()
+            .withNotificationAndHome(sourceView: "All Routes")
             .onAppear {
                 viewModel.loadRoutes()
             }

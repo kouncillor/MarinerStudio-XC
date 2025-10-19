@@ -43,7 +43,7 @@ struct TidalHeightStationsView: View {
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbarBackground(.green, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
-        .withHomeButton()
+        .withNotificationAndHome(sourceView: "Tidal Height Stations")
 
         .task {
             await viewModel.loadStations()

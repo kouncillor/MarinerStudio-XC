@@ -85,7 +85,7 @@ struct TideMenuView: View {
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbarBackground(.green, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
-        .withHomeButton()
+        .withNotificationAndHome(sourceView: "Tides Menu")
         .sheet(isPresented: $showSubscriptionPrompt) {
             EnhancedPaywallView()
         }

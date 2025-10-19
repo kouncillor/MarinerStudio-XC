@@ -53,7 +53,7 @@ struct TidalHeightPredictionView: View {
             .padding()
         }
         .navigationTitle("Tide Predictions")
-        .withHomeButton()
+        .withNotificationAndHome(sourceView: "Tidal Height Prediction")
 
         .task {
             await viewModel.loadPredictions()

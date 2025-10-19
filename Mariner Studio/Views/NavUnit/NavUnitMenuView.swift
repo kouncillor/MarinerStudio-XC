@@ -84,7 +84,7 @@ struct NavUnitMenuView: View {
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbarBackground(.blue, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
-        .withHomeButton()
+        .withNotificationAndHome(sourceView: "Nav Units Menu")
         .sheet(isPresented: $showSubscriptionPrompt) {
             EnhancedPaywallView()
         }

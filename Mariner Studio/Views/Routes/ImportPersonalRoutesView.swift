@@ -42,7 +42,7 @@ struct ImportPersonalRoutesView: View {
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbarBackground(.orange, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
-            .withHomeButton()
+            .withNotificationAndHome(sourceView: "Import Routes")
         }
     }
 

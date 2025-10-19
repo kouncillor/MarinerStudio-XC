@@ -43,7 +43,7 @@ struct VoyagePlanRoutesView: View {
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbarBackground(.green, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
-            .withHomeButton()
+            .withNotificationAndHome(sourceView: "Voyage Plan Routes")
             .onAppear {
                 viewModel.loadRoutes()
             }

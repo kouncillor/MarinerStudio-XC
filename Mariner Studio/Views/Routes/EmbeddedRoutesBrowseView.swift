@@ -40,11 +40,7 @@ struct EmbeddedRoutesBrowseView: View {
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbarBackground(.orange, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    HomeButton()
-                }
-            }
+            .withNotificationAndHome(sourceView: "Browse Public Routes")
             .onAppear {
                 viewModel.loadRoutes()
             }

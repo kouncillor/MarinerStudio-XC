@@ -43,6 +43,8 @@ struct TestingToolsView: View {
                     }
                     .foregroundColor(.red)
                 }
+
+                // TODO: Add UI testing section when feedback view is complete
             }
             .navigationTitle("Testing Tools")
             .alert("Debug Info", isPresented: $showingAlert) {

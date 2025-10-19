@@ -28,7 +28,7 @@ struct TideFavoritesView: View {
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbarBackground(.green, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
-        .withHomeButton()
+        .withNotificationAndHome(sourceView: "Tide Favorites")
         // ❌ REMOVED: Sync button - no longer needed with cloud-only approach
 
         .onAppear {

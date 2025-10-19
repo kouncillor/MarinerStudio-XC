@@ -157,7 +157,7 @@ struct RouteMenuView: View {
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbarBackground(.orange, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
-        .withHomeButton()
+        .withNotificationAndHome(sourceView: "Routes Menu")
         .navigationDestination(isPresented: $showingGpxView) {
             if let gpxFile = loadedGpxFile {
                 GpxView(

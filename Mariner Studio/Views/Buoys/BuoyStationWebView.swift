@@ -40,7 +40,7 @@ struct BuoyStationWebView: View {
             }
         }
         .navigationTitle(station.name)
-        .withHomeButton()
+        .withNotificationAndHome(sourceView: "Buoy Station Details")
 
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

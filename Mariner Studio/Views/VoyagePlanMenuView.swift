@@ -57,7 +57,7 @@ struct VoyagePlanMenuView: View {
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbarBackground(.green, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
-        .withHomeButton()
+        .withNotificationAndHome(sourceView: "Voyage Plan Menu")
         .onAppear {
             print("🗺️ VOYAGE_PLAN_MENU: View appeared")
         }
@@ -89,7 +89,7 @@ struct VoyagePlanMenuView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.large)
-        .withHomeButton()
+        .withNotificationAndHome(sourceView: "Voyage Plan")
     }
 }
 

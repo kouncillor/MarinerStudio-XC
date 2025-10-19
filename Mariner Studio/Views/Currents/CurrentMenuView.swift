@@ -85,7 +85,7 @@ struct CurrentMenuView: View {
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbarBackground(.red, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
-        .withHomeButton()
+        .withNotificationAndHome(sourceView: "Currents Menu")
         .sheet(isPresented: $showSubscriptionPrompt) {
             EnhancedPaywallView()
         }

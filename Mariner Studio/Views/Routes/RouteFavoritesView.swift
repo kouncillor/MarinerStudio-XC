@@ -130,7 +130,7 @@ struct RouteFavoritesView: View {
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbarBackground(.orange, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
-            .withHomeButton()
+            .withNotificationAndHome(sourceView: "Route Favorites")
             .onAppear {
                 Task {
                     await loadFavorites()

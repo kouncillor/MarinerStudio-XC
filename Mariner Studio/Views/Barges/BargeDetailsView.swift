@@ -102,7 +102,7 @@ struct BargeDetailsView: View {
             }
         }
         .navigationTitle("Barge Details")
-        .withHomeButton()
+        .withNotificationAndHome(sourceView: "Barge Details")
 
     }
 

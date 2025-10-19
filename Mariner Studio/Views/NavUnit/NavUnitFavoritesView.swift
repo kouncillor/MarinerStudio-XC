@@ -38,7 +38,7 @@ struct NavUnitFavoritesView: View {
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbarBackground(.blue, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
-        .withHomeButton()
+        .withNotificationAndHome(sourceView: "Nav Unit Favorites")
         .onAppear {
             DebugLogger.shared.log("🎨 NAVUNIT_FAVORITES_VIEW: View appeared", category: "NAVUNIT_FAVORITES")
             viewModel.initialize(

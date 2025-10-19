@@ -26,7 +26,7 @@ struct CurrentFavoritesView: View {
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbarBackground(.red, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
-        .withHomeButton()
+        .withNotificationAndHome(sourceView: "Current Favorites")
 
         .onAppear {
             print("🌊 VIEW: CurrentFavoritesView appeared (CORE DATA + CLOUDKIT)")

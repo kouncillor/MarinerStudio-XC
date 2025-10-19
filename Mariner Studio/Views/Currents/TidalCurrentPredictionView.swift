@@ -65,7 +65,7 @@ struct TidalCurrentPredictionView: View {
             .padding()
         }
         .navigationTitle("Current Predictions")
-        .withHomeButton()
+        .withNotificationAndHome(sourceView: "Tidal Current Prediction")
 
         .overlay {
             if viewModel.isLoading {

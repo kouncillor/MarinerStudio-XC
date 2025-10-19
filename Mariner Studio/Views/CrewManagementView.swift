@@ -36,7 +36,7 @@ struct CrewManagementView: View {
         }
         .padding()
         .navigationTitle("Crew Management")
-        .withHomeButton()
+        .withNotificationAndHome(sourceView: "Crew Management")
     }
 }
 

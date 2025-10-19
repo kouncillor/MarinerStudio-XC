@@ -32,7 +32,7 @@ struct TidalCurrentStationsView: View {
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbarBackground(.red, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
-            .withHomeButton()
+            .withNotificationAndHome(sourceView: "Tidal Current Stations")
             .onAppear {
                 print("\n👁️ VIEW: ===== VIEW APPEARED =====")
                 print("👁️ VIEW: TidalCurrentStationsView appeared at \(Date())")

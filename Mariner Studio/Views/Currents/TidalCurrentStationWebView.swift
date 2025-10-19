@@ -41,7 +41,7 @@ struct TidalCurrentStationWebView: View {
             }
         }
         .navigationTitle("Station Details")
-        .withHomeButton()
+        .withNotificationAndHome(sourceView: "Tidal Current Station Details")
 
         .navigationBarTitleDisplayMode(.inline)
     }

@@ -5,16 +5,30 @@ struct AppSettingsView: View {
     @EnvironmentObject var subscriptionService: SimpleSubscription
     @State private var showingAbout = false
     @State private var showingSubscription = false
+    @State private var showFeedback = false
     
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
                 // Header
-                Text("Settings")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                    .padding(.top, 20)
-                    .padding(.bottom, 30)
+                HStack {
+                    Text("Settings")
+                        .font(.largeTitle)
+                        .fontWeight(.bold)
+
+                    Spacer()
+
+                    Button(action: {
+                        showFeedback = true
+                    }) {
+                        Image(systemName: "pencil.and.list.clipboard")
+                            .font(.title2)
+                            .foregroundColor(.primary)
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+                .padding(.bottom, 30)
                 
                 // Menu Options
                 VStack(spacing: 1) {
@@ -75,6 +89,9 @@ struct AppSettingsView: View {
         .sheet(isPresented: $showingSubscription) {
             SubscriptionSheet()
                 .environmentObject(subscriptionService)
+        }
+        .sheet(isPresented: $showFeedback) {
+            FeedbackView(sourceView: "App Settings")
         }
     }
     

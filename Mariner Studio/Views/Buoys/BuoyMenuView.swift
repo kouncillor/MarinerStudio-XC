@@ -93,7 +93,7 @@ struct BuoyMenuView: View {
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbarBackground(.purple, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
-        .withHomeButton()
+        .withNotificationAndHome(sourceView: "Buoys Menu")
         .sheet(isPresented: $showSubscriptionPrompt) {
             EnhancedPaywallView()
         }
