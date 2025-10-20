@@ -72,25 +72,12 @@ struct MainView: View {
                 )
             }
 
-            // ROUTES - Premium feature
-            if subscriptionService.hasAppAccess {
-                NavigationLink(destination: RouteMenuView()) {
-                    NavigationButtonContent(
-                        icon: "rsixseven",
-                        title: "ROUTES"
-                    )
-                }
-            } else {
-                Button(action: {
-                    showSubscriptionPrompt = true
-                }) {
-                    NavigationButtonContent(
-                        icon: "rsixseven",
-                        title: "ROUTES",
-                        isPremium: true
-                    )
-                }
-                .buttonStyle(PlainButtonStyle())
+            // ROUTES - Free feature
+            NavigationLink(destination: RouteMenuView()) {
+                NavigationButtonContent(
+                    icon: "rsixseven",
+                    title: "ROUTES"
+                )
             }
             
             // TESTING TOOLS - Only visible in debug builds, always accessible
@@ -243,13 +230,17 @@ struct NavigationButtonContent: View {
     let isSystemIcon: Bool
     let iconColor: Color?
     let isPremium: Bool
+    let isDailyLimited: Bool
+    let isUsedToday: Bool
 
-    init(icon: String, title: String, isSystemIcon: Bool = false, iconColor: Color? = nil, isPremium: Bool = false) {
+    init(icon: String, title: String, isSystemIcon: Bool = false, iconColor: Color? = nil, isPremium: Bool = false, isDailyLimited: Bool = false, isUsedToday: Bool = false) {
         self.icon = icon
         self.title = title
         self.isSystemIcon = isSystemIcon
         self.iconColor = iconColor
         self.isPremium = isPremium
+        self.isDailyLimited = isDailyLimited
+        self.isUsedToday = isUsedToday
     }
 
     var body: some View {
@@ -260,13 +251,13 @@ struct NavigationButtonContent: View {
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .frame(width: 50, height: 50)
-                        .foregroundColor(isPremium ? .gray.opacity(0.5) : (iconColor ?? .accentColor))
+                        .foregroundColor(getIconColor())
                 } else {
                     Image(icon)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .frame(width: 50, height: 50)
-                        .opacity(isPremium ? 0.5 : 1.0)
+                        .opacity(getIconOpacity())
                 }
             }
 
@@ -274,38 +265,106 @@ struct NavigationButtonContent: View {
                 Text(title)
                     .font(.largeTitle)
                     .multilineTextAlignment(.leading)
-                    .foregroundColor(isPremium ? .gray.opacity(0.7) : .primary)
-                
+                    .foregroundColor(getTextColor())
+
                 if isPremium {
                     HStack(spacing: 4) {
                         Image(systemName: "lock.fill")
                             .font(.caption)
                             .foregroundColor(.orange)
-                        
+
                         Text("PREMIUM")
                             .font(.caption)
                             .fontWeight(.semibold)
                             .foregroundColor(.orange)
                     }
+                } else if isDailyLimited {
+                    HStack(spacing: 4) {
+                        Image(systemName: "clock.fill")
+                            .font(.caption)
+                            .foregroundColor(.blue)
+
+                        Text("1 USE/DAY")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.blue)
+                    }
+                } else if isUsedToday {
+                    HStack(spacing: 4) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+
+                        Text("USED TODAY")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.gray)
+                    }
                 }
             }
 
             Spacer()
-            
+
             if isPremium {
                 Image(systemName: "crown.fill")
                     .font(.title2)
                     .foregroundColor(.orange)
+            } else if isUsedToday {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.title2)
+                    .foregroundColor(.gray)
             }
         }
         .frame(maxWidth: .infinity)
         .padding(27)
         .background(
             RoundedRectangle(cornerRadius: 10)
-                .strokeBorder(isPremium ? Color.orange.opacity(0.3) : Color.gray.opacity(0.4), lineWidth: isPremium ? 2 : 1)
-                .background(RoundedRectangle(cornerRadius: 10).fill(isPremium ? Color.orange.opacity(0.05) : Color.white))
+                .strokeBorder(getBorderColor(), lineWidth: getBorderWidth())
+                .background(RoundedRectangle(cornerRadius: 10).fill(getBackgroundColor()))
         )
         .frame(minHeight: 110)
+    }
+
+    // Helper methods for styling
+    private func getIconColor() -> Color {
+        if isPremium || isUsedToday {
+            return (iconColor ?? .accentColor).opacity(0.5)
+        }
+        return iconColor ?? .accentColor
+    }
+
+    private func getIconOpacity() -> Double {
+        return (isPremium || isUsedToday) ? 0.5 : 1.0
+    }
+
+    private func getTextColor() -> Color {
+        return (isPremium || isUsedToday) ? .primary.opacity(0.7) : .primary
+    }
+
+    private func getBorderColor() -> Color {
+        if isPremium {
+            return Color.orange.opacity(0.3)
+        } else if isUsedToday {
+            return Color.gray.opacity(0.3)
+        } else if isDailyLimited {
+            return Color.blue.opacity(0.3)
+        }
+        return Color.gray.opacity(0.4)
+    }
+
+    private func getBorderWidth() -> CGFloat {
+        return (isPremium || isDailyLimited || isUsedToday) ? 2 : 1
+    }
+
+    private func getBackgroundColor() -> Color {
+        if isPremium {
+            return Color.orange.opacity(0.05)
+        } else if isUsedToday {
+            return Color.gray.opacity(0.05)
+        } else if isDailyLimited {
+            return Color.blue.opacity(0.05)
+        }
+        return Color.white
     }
 }
 

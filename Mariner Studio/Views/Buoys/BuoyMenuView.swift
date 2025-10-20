@@ -13,12 +13,13 @@ struct BuoyMenuView: View {
     @EnvironmentObject var subscriptionService: SimpleSubscription
     @State private var showSubscriptionPrompt = false
     @State private var showLocalBuoyView = false
+    @State private var showBuoyFavoritesView = false
     @State private var refreshTrigger = false
 
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
-                // Favorites - Premium feature
+                // Favorites - Daily limited
                 if subscriptionService.hasAppAccess {
                     NavigationLink(destination: BuoyFavoritesView(
                         coreDataManager: serviceProvider.coreDataManager
@@ -29,6 +30,18 @@ struct BuoyMenuView: View {
                             color: .yellow
                         )
                     }
+                } else if subscriptionService.canAccessBuoyFavorites() {
+                    Button(action: {
+                        subscriptionService.recordBuoyFavoritesUsage()
+                        showBuoyFavoritesView = true
+                    }) {
+                        MenuButtonContentBuoy(
+                            iconType: .system("star.fill"),
+                            title: "FAVORITES",
+                            color: .yellow
+                        )
+                    }
+                    .buttonStyle(PlainButtonStyle())
                 } else {
                     Button(action: {
                         showSubscriptionPrompt = true
@@ -37,7 +50,7 @@ struct BuoyMenuView: View {
                             iconType: .system("star.fill"),
                             title: "FAVORITES",
                             color: .yellow,
-                            isPremium: true
+                            isUsedToday: true
                         )
                     }
                     .buttonStyle(PlainButtonStyle())
@@ -103,6 +116,9 @@ struct BuoyMenuView: View {
                 locationService: serviceProvider.locationService,
                 coreDataManager: serviceProvider.coreDataManager
             )
+        }
+        .navigationDestination(isPresented: $showBuoyFavoritesView) {
+            BuoyFavoritesView(coreDataManager: serviceProvider.coreDataManager)
         }
         .onAppear {
             // Force view refresh when returning to detect updated usage status

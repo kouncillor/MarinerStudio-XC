@@ -6,12 +6,13 @@ struct NavUnitMenuView: View {
     @EnvironmentObject var subscriptionService: SimpleSubscription
     @State private var showSubscriptionPrompt = false
     @State private var showLocalNavUnitView = false
+    @State private var showNavUnitFavoritesView = false
     @State private var refreshTrigger = false
 
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
-                // Favorites - Premium feature
+                // Favorites - Daily limited
                 if subscriptionService.hasAppAccess {
                     NavigationLink(destination: NavUnitFavoritesView(coreDataManager: CoreDataManager.shared)) {
                         MenuButtonContentNavUnit(
@@ -20,6 +21,18 @@ struct NavUnitMenuView: View {
                             color: .yellow
                         )
                     }
+                } else if subscriptionService.canAccessNavUnitFavorites() {
+                    Button(action: {
+                        subscriptionService.recordNavUnitFavoritesUsage()
+                        showNavUnitFavoritesView = true
+                    }) {
+                        MenuButtonContentNavUnit(
+                            iconType: .system("star.fill"),
+                            title: "FAVORITES",
+                            color: .yellow
+                        )
+                    }
+                    .buttonStyle(PlainButtonStyle())
                 } else {
                     Button(action: {
                         showSubscriptionPrompt = true
@@ -28,7 +41,7 @@ struct NavUnitMenuView: View {
                             iconType: .system("star.fill"),
                             title: "FAVORITES",
                             color: .yellow,
-                            isPremium: true
+                            isUsedToday: true
                         )
                     }
                     .buttonStyle(PlainButtonStyle())
@@ -93,6 +106,9 @@ struct NavUnitMenuView: View {
                 navUnitService: serviceProvider.navUnitService,
                 locationService: serviceProvider.locationService
             )
+        }
+        .navigationDestination(isPresented: $showNavUnitFavoritesView) {
+            NavUnitFavoritesView(coreDataManager: CoreDataManager.shared)
         }
         .onAppear {
             // Force view refresh when returning to detect updated usage status

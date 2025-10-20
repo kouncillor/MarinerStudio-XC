@@ -6,22 +6,36 @@ struct WeatherMenuView: View {
     @EnvironmentObject var subscriptionService: SimpleSubscription
     @State private var showSubscriptionPrompt = false
     @State private var showLocalWeatherView = false
+    @State private var showWeatherFavoritesView = false
+    @State private var showWeatherMapView = false
     @State private var refreshTrigger = false
 
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
-                // Favorites - Premium feature
+                // Favorites - Daily limited
                 if subscriptionService.hasAppAccess {
                     NavigationLink(destination: WeatherFavoritesView(
                         coreDataManager: serviceProvider.coreDataManager
                     )) {
                         MenuButtonContent(
-                            iconType: .system("star.fill"), // Star icon for favorites
+                            iconType: .system("star.fill"),
                             title: "FAVORITES",
                             color: .yellow
                         )
                     }
+                } else if subscriptionService.canAccessWeatherFavorites() {
+                    Button(action: {
+                        subscriptionService.recordWeatherFavoritesUsage()
+                        showWeatherFavoritesView = true
+                    }) {
+                        MenuButtonContent(
+                            iconType: .system("star.fill"),
+                            title: "FAVORITES",
+                            color: .yellow
+                        )
+                    }
+                    .buttonStyle(PlainButtonStyle())
                 } else {
                     Button(action: {
                         showSubscriptionPrompt = true
@@ -30,7 +44,7 @@ struct WeatherMenuView: View {
                             iconType: .system("star.fill"),
                             title: "FAVORITES",
                             color: .yellow,
-                            isPremium: true
+                            isUsedToday: true
                         )
                     }
                     .buttonStyle(PlainButtonStyle())
@@ -75,15 +89,27 @@ struct WeatherMenuView: View {
                     .buttonStyle(PlainButtonStyle())
                 }
 
-                // Weather Map - Premium feature
+                // Weather Map - Daily limited
                 if subscriptionService.hasAppAccess {
                     NavigationLink(destination: WeatherMapView()) {
                         MenuButtonContent(
-                            iconType: .system("map.fill"), // Specify system icon for map
+                            iconType: .system("map.fill"),
                             title: "MAP",
                             color: .blue
                         )
                     }
+                } else if subscriptionService.canAccessWeatherMap() {
+                    Button(action: {
+                        subscriptionService.recordWeatherMapUsage()
+                        showWeatherMapView = true
+                    }) {
+                        MenuButtonContent(
+                            iconType: .system("map.fill"),
+                            title: "MAP",
+                            color: .blue
+                        )
+                    }
+                    .buttonStyle(PlainButtonStyle())
                 } else {
                     Button(action: {
                         showSubscriptionPrompt = true
@@ -92,23 +118,35 @@ struct WeatherMenuView: View {
                             iconType: .system("map.fill"),
                             title: "MAP",
                             color: .blue,
-                            isPremium: true
+                            isUsedToday: true
                         )
                     }
                     .buttonStyle(PlainButtonStyle())
                 }
 
-                // Radar - Premium feature
+                // Radar - Daily limited
                 if subscriptionService.hasAppAccess {
                     Button(action: {
                         openRadarWebsite()
                     }) {
                         MenuButtonContent(
-                            iconType: .system("antenna.radiowaves.left.and.right"), // Specify system icon
+                            iconType: .system("antenna.radiowaves.left.and.right"),
                             title: "RADAR",
                             color: .orange
                         )
                     }
+                } else if subscriptionService.canAccessWeatherRadar() {
+                    Button(action: {
+                        subscriptionService.recordWeatherRadarUsage()
+                        openRadarWebsite()
+                    }) {
+                        MenuButtonContent(
+                            iconType: .system("antenna.radiowaves.left.and.right"),
+                            title: "RADAR",
+                            color: .orange
+                        )
+                    }
+                    .buttonStyle(PlainButtonStyle())
                 } else {
                     Button(action: {
                         showSubscriptionPrompt = true
@@ -117,7 +155,7 @@ struct WeatherMenuView: View {
                             iconType: .system("antenna.radiowaves.left.and.right"),
                             title: "RADAR",
                             color: .orange,
-                            isPremium: true
+                            isUsedToday: true
                         )
                     }
                     .buttonStyle(PlainButtonStyle())
@@ -136,6 +174,12 @@ struct WeatherMenuView: View {
         }
         .navigationDestination(isPresented: $showLocalWeatherView) {
             CurrentLocalWeatherView()
+        }
+        .navigationDestination(isPresented: $showWeatherFavoritesView) {
+            WeatherFavoritesView(coreDataManager: serviceProvider.coreDataManager)
+        }
+        .navigationDestination(isPresented: $showWeatherMapView) {
+            WeatherMapView()
         }
         .onAppear {
             // Force view refresh when returning to detect updated usage status

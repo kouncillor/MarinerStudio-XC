@@ -108,7 +108,7 @@ struct EnhancedPaywallView: View {
     }
 
     private var headerSubtitle: String {
-        return "Daily limit reached. Upgrade now for unlimited access."
+        return "Daily limit reached. Subscribe for unlimited access to all features."
     }
 
     private func loadProducts() async {

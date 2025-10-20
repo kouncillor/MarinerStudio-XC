@@ -6,20 +6,33 @@ struct TideMenuView: View {
     @EnvironmentObject var subscriptionService: SimpleSubscription
     @State private var showSubscriptionPrompt = false
     @State private var showLocalTideView = false
+    @State private var showTideFavoritesView = false
     @State private var refreshTrigger = false
 
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
-                // Favorites - Premium feature
+                // Favorites - Daily limited
                 if subscriptionService.hasAppAccess {
                     NavigationLink(destination: TideFavoritesView(coreDataManager: serviceProvider.coreDataManager)) {
                         MenuButtonContentTide(
-                            iconType: .system("star.fill"), // Using star instead of heart to differentiate from weather
+                            iconType: .system("star.fill"),
                             title: "FAVORITES",
                             color: .yellow
                         )
                     }
+                } else if subscriptionService.canAccessTideFavorites() {
+                    Button(action: {
+                        subscriptionService.recordTideFavoritesUsage()
+                        showTideFavoritesView = true
+                    }) {
+                        MenuButtonContentTide(
+                            iconType: .system("star.fill"),
+                            title: "FAVORITES",
+                            color: .yellow
+                        )
+                    }
+                    .buttonStyle(PlainButtonStyle())
                 } else {
                     Button(action: {
                         showSubscriptionPrompt = true
@@ -28,7 +41,7 @@ struct TideMenuView: View {
                             iconType: .system("star.fill"),
                             title: "FAVORITES",
                             color: .yellow,
-                            isPremium: true
+                            isUsedToday: true
                         )
                     }
                     .buttonStyle(PlainButtonStyle())
@@ -95,6 +108,9 @@ struct TideMenuView: View {
                 locationService: serviceProvider.locationService,
                 coreDataManager: serviceProvider.coreDataManager
             )
+        }
+        .navigationDestination(isPresented: $showTideFavoritesView) {
+            TideFavoritesView(coreDataManager: serviceProvider.coreDataManager)
         }
         .onAppear {
             // Force view refresh when returning to detect updated usage status

@@ -6,12 +6,13 @@ struct CurrentMenuView: View {
     @EnvironmentObject var subscriptionService: SimpleSubscription
     @State private var showSubscriptionPrompt = false
     @State private var showLocalCurrentView = false
+    @State private var showCurrentFavoritesView = false
     @State private var refreshTrigger = false
 
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
-                // Favorites - Premium feature
+                // Favorites - Daily limited
                 if subscriptionService.hasAppAccess {
                     NavigationLink(destination: CurrentFavoritesView(coreDataManager: serviceProvider.coreDataManager)) {
                         MenuButtonContentCurrent(
@@ -20,6 +21,18 @@ struct CurrentMenuView: View {
                             color: .yellow
                         )
                     }
+                } else if subscriptionService.canAccessCurrentFavorites() {
+                    Button(action: {
+                        subscriptionService.recordCurrentFavoritesUsage()
+                        showCurrentFavoritesView = true
+                    }) {
+                        MenuButtonContentCurrent(
+                            iconType: .system("star.fill"),
+                            title: "FAVORITES",
+                            color: .yellow
+                        )
+                    }
+                    .buttonStyle(PlainButtonStyle())
                 } else {
                     Button(action: {
                         showSubscriptionPrompt = true
@@ -28,7 +41,7 @@ struct CurrentMenuView: View {
                             iconType: .system("star.fill"),
                             title: "FAVORITES",
                             color: .yellow,
-                            isPremium: true
+                            isUsedToday: true
                         )
                     }
                     .buttonStyle(PlainButtonStyle())
@@ -95,6 +108,9 @@ struct CurrentMenuView: View {
                 locationService: serviceProvider.locationService,
                 coreDataManager: serviceProvider.coreDataManager
             )
+        }
+        .navigationDestination(isPresented: $showCurrentFavoritesView) {
+            CurrentFavoritesView(coreDataManager: serviceProvider.coreDataManager)
         }
         .onAppear {
             // Force view refresh when returning to detect updated usage status

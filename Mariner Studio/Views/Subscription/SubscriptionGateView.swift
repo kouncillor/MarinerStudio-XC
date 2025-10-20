@@ -90,7 +90,7 @@ struct FirstTimeWelcomeView: View {
                 VStack(spacing: 16) {
                     // Premium text
                     VStack(spacing: 4) {
-                        Text("Get unlimited access for $2.99/month")
+                        Text("Get unlimited daily uses for $2.99/month")
                             .font(.title3)
                             .fontWeight(.bold)
                             .foregroundColor(.blue)
@@ -128,7 +128,7 @@ struct FirstTimeWelcomeView: View {
                     Button(action: {
                         showMainApp = true
                     }) {
-                        Text("Continue with Free Version")
+                        Text("Try Free Version (1 use per feature/day)")
                             .font(.subheadline)
                             .fontWeight(.medium)
                             .foregroundColor(.blue)
@@ -138,8 +138,8 @@ struct FirstTimeWelcomeView: View {
                             .cornerRadius(12)
                     }
                     .padding(.horizontal)
-                    
-                    Text("Limited features • Upgrade anytime")
+
+                    Text("1 use per feature daily • Unlimited with subscription")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }

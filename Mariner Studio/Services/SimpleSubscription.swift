@@ -18,7 +18,17 @@ class SimpleSubscription: ObservableObject {
     private let localCurrentUsageKey = "localCurrentUsageDate"
     private let localNavUnitUsageKey = "localNavUnitUsageDate"
     private let localBuoyUsageKey = "localBuoyUsageDate"
-    
+
+    // New daily-limited features
+    private let weatherFavoritesUsageKey = "weatherFavoritesUsageDate"
+    private let weatherMapUsageKey = "weatherMapUsageDate"
+    private let weatherRadarUsageKey = "weatherRadarUsageDate"
+    private let tideFavoritesUsageKey = "tideFavoritesUsageDate"
+    private let currentFavoritesUsageKey = "currentFavoritesUsageDate"
+    private let navUnitFavoritesUsageKey = "navUnitFavoritesUsageDate"
+    private let buoyFavoritesUsageKey = "buoyFavoritesUsageDate"
+    private let routesUsageKey = "routesUsageDate"
+
     // MARK: - Debug Properties
     #if DEBUG
     private let debugOverrideSubscriptionKey = "debugOverrideSubscription"
@@ -287,7 +297,93 @@ class SimpleSubscription: ObservableObject {
         recordDailyFeatureUsage(key: localBuoyUsageKey)
         DebugLogger.shared.log("🎯 SIMPLE_SUB: Local buoy usage recorded for today", category: "SUBSCRIPTION")
     }
-    
+
+    // MARK: - Weather Feature Access
+    func canAccessWeatherFavorites() -> Bool {
+        if subscriptionStatus.hasAccess { return true }
+        return canUseDailyFeature(key: weatherFavoritesUsageKey)
+    }
+
+    func recordWeatherFavoritesUsage() {
+        recordDailyFeatureUsage(key: weatherFavoritesUsageKey)
+        DebugLogger.shared.log("⭐ SIMPLE_SUB: Weather favorites usage recorded for today", category: "SUBSCRIPTION")
+    }
+
+    func canAccessWeatherMap() -> Bool {
+        if subscriptionStatus.hasAccess { return true }
+        return canUseDailyFeature(key: weatherMapUsageKey)
+    }
+
+    func recordWeatherMapUsage() {
+        recordDailyFeatureUsage(key: weatherMapUsageKey)
+        DebugLogger.shared.log("🗺️ SIMPLE_SUB: Weather map usage recorded for today", category: "SUBSCRIPTION")
+    }
+
+    func canAccessWeatherRadar() -> Bool {
+        if subscriptionStatus.hasAccess { return true }
+        return canUseDailyFeature(key: weatherRadarUsageKey)
+    }
+
+    func recordWeatherRadarUsage() {
+        recordDailyFeatureUsage(key: weatherRadarUsageKey)
+        DebugLogger.shared.log("📡 SIMPLE_SUB: Weather radar usage recorded for today", category: "SUBSCRIPTION")
+    }
+
+    // MARK: - Tide Feature Access
+    func canAccessTideFavorites() -> Bool {
+        if subscriptionStatus.hasAccess { return true }
+        return canUseDailyFeature(key: tideFavoritesUsageKey)
+    }
+
+    func recordTideFavoritesUsage() {
+        recordDailyFeatureUsage(key: tideFavoritesUsageKey)
+        DebugLogger.shared.log("⭐ SIMPLE_SUB: Tide favorites usage recorded for today", category: "SUBSCRIPTION")
+    }
+
+    // MARK: - Current Feature Access
+    func canAccessCurrentFavorites() -> Bool {
+        if subscriptionStatus.hasAccess { return true }
+        return canUseDailyFeature(key: currentFavoritesUsageKey)
+    }
+
+    func recordCurrentFavoritesUsage() {
+        recordDailyFeatureUsage(key: currentFavoritesUsageKey)
+        DebugLogger.shared.log("⭐ SIMPLE_SUB: Current favorites usage recorded for today", category: "SUBSCRIPTION")
+    }
+
+    // MARK: - Nav Unit Feature Access
+    func canAccessNavUnitFavorites() -> Bool {
+        if subscriptionStatus.hasAccess { return true }
+        return canUseDailyFeature(key: navUnitFavoritesUsageKey)
+    }
+
+    func recordNavUnitFavoritesUsage() {
+        recordDailyFeatureUsage(key: navUnitFavoritesUsageKey)
+        DebugLogger.shared.log("⚓ SIMPLE_SUB: Nav unit favorites usage recorded for today", category: "SUBSCRIPTION")
+    }
+
+    // MARK: - Buoy Feature Access
+    func canAccessBuoyFavorites() -> Bool {
+        if subscriptionStatus.hasAccess { return true }
+        return canUseDailyFeature(key: buoyFavoritesUsageKey)
+    }
+
+    func recordBuoyFavoritesUsage() {
+        recordDailyFeatureUsage(key: buoyFavoritesUsageKey)
+        DebugLogger.shared.log("⭐ SIMPLE_SUB: Buoy favorites usage recorded for today", category: "SUBSCRIPTION")
+    }
+
+    // MARK: - Routes Feature Access
+    func canAccessRoutes() -> Bool {
+        if subscriptionStatus.hasAccess { return true }
+        return canUseDailyFeature(key: routesUsageKey)
+    }
+
+    func recordRoutesUsage() {
+        recordDailyFeatureUsage(key: routesUsageKey)
+        DebugLogger.shared.log("🗺️ SIMPLE_SUB: Routes usage recorded for today", category: "SUBSCRIPTION")
+    }
+
     // MARK: - Daily Usage Tracking
     private func canUseDailyFeature(key: String) -> Bool {
         let today = getTodayString()
@@ -356,12 +452,22 @@ class SimpleSubscription: ObservableObject {
         userDefaults.removeObject(forKey: localCurrentUsageKey)
         userDefaults.removeObject(forKey: localNavUnitUsageKey)
         userDefaults.removeObject(forKey: localBuoyUsageKey)
-        
+
+        // Clear new feature usage tracking
+        userDefaults.removeObject(forKey: weatherFavoritesUsageKey)
+        userDefaults.removeObject(forKey: weatherMapUsageKey)
+        userDefaults.removeObject(forKey: weatherRadarUsageKey)
+        userDefaults.removeObject(forKey: tideFavoritesUsageKey)
+        userDefaults.removeObject(forKey: currentFavoritesUsageKey)
+        userDefaults.removeObject(forKey: navUnitFavoritesUsageKey)
+        userDefaults.removeObject(forKey: buoyFavoritesUsageKey)
+        userDefaults.removeObject(forKey: routesUsageKey)
+
         // ENABLE debug override to force first launch behavior
         debugOverrideSubscription = true
-        
+
         DebugLogger.shared.log("🔄 SIMPLE_SUB: Subscription state reset - forcing first launch", category: "SUBSCRIPTION")
-        
+
         Task {
             await determineSubscriptionStatus()
         }
