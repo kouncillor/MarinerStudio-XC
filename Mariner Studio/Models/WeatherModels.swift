@@ -304,6 +304,11 @@ struct HourlyForecastItem: Identifiable {
     let waveHeight: Double
     let waveDirection: Double
     let wavePeriod: Double
+    let swellHeight: Double
+    let swellDirection: Double
+    let swellPeriod: Double
+    let windWaveHeight: Double
+    let windWaveDirection: Double
 
     var visibility: String {
         return formatVisibility()
@@ -328,6 +333,30 @@ struct HourlyForecastItem: Identifiable {
         let directions = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
                           "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]
         let index = Int(((waveDirection + 11.25) / 22.5).truncatingRemainder(dividingBy: 16))
+        return directions[index]
+    }
+
+    var swellHeightDisplay: String {
+        return marineDataAvailable ? "\(String(format: "%.1f", swellHeight)) ft" : "N/A"
+    }
+
+    var swellDirectionCardinal: String {
+        guard marineDataAvailable else { return "N/A" }
+        let directions = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
+                          "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]
+        let index = Int(((swellDirection + 11.25) / 22.5).truncatingRemainder(dividingBy: 16))
+        return directions[index]
+    }
+
+    var windWaveHeightDisplay: String {
+        return marineDataAvailable ? "\(String(format: "%.1f", windWaveHeight)) ft" : "N/A"
+    }
+
+    var windWaveDirectionCardinal: String {
+        guard marineDataAvailable else { return "N/A" }
+        let directions = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
+                          "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]
+        let index = Int(((windWaveDirection + 11.25) / 22.5).truncatingRemainder(dividingBy: 16))
         return directions[index]
     }
 

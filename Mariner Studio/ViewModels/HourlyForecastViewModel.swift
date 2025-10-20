@@ -318,6 +318,11 @@ class HourlyForecastViewModel: ObservableObject {
             let waveHeight: Double
             let waveDirection: Double
             let wavePeriod: Double
+            let swellHeight: Double
+            let swellDirection: Double
+            let swellPeriod: Double
+            let windWaveHeight: Double
+            let windWaveDirection: Double
 
             if let marine = marineData,
                i < marine.hourly.time.count,
@@ -326,11 +331,21 @@ class HourlyForecastViewModel: ObservableObject {
                 waveHeight = marine.hourly.waveHeightFeet[i]  // Already converted to feet
                 waveDirection = i < marine.hourly.waveDirection.count ? marine.hourly.waveDirection[i] : 0.0
                 wavePeriod = i < marine.hourly.wavePeriod.count ? marine.hourly.wavePeriod[i] : 0.0
+                swellHeight = i < marine.hourly.swellWaveHeightFeet.count ? marine.hourly.swellWaveHeightFeet[i] : 0.0
+                swellDirection = i < marine.hourly.swellWaveDirection.count ? marine.hourly.swellWaveDirection[i] : 0.0
+                swellPeriod = i < marine.hourly.swellWavePeriod.count ? marine.hourly.swellWavePeriod[i] : 0.0
+                windWaveHeight = i < marine.hourly.windWaveHeightFeet.count ? marine.hourly.windWaveHeightFeet[i] : 0.0
+                windWaveDirection = i < marine.hourly.windWaveDirection.count ? marine.hourly.windWaveDirection[i] : 0.0
             } else {
                 marineDataAvailable = false
                 waveHeight = 0.0
                 waveDirection = 0.0
                 wavePeriod = 0.0
+                swellHeight = 0.0
+                swellDirection = 0.0
+                swellPeriod = 0.0
+                windWaveHeight = 0.0
+                windWaveDirection = 0.0
             }
 
             // Create the item
@@ -357,7 +372,12 @@ class HourlyForecastViewModel: ObservableObject {
                 marineDataAvailable: marineDataAvailable,
                 waveHeight: waveHeight,
                 waveDirection: waveDirection,
-                wavePeriod: wavePeriod
+                wavePeriod: wavePeriod,
+                swellHeight: swellHeight,
+                swellDirection: swellDirection,
+                swellPeriod: swellPeriod,
+                windWaveHeight: windWaveHeight,
+                windWaveDirection: windWaveDirection
             )
 
             items.append(item)

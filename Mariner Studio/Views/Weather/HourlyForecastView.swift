@@ -3,6 +3,8 @@ import SwiftUI
 struct HourlyForecastView: View {
     @StateObject private var viewModel: HourlyForecastViewModel
     @Environment(\.presentationMode) var presentationMode
+    @State private var showingWaveDetail = false
+    @State private var selectedHourIndex: Int?
 
     init(viewModel: HourlyForecastViewModel) {
         _viewModel = StateObject(wrappedValue: viewModel)
@@ -79,7 +81,11 @@ struct HourlyForecastView: View {
                         ForEach(Array(viewModel.currentDayHourlyForecasts.enumerated()), id: \.element.id) { index, forecast in
                             HourlyForecastRow(
                                 forecast: forecast,
-                                isEvenRow: index % 2 == 0
+                                isEvenRow: index % 2 == 0,
+                                onWaveTap: {
+                                    selectedHourIndex = index
+                                    showingWaveDetail = true
+                                }
                             )
 
                             Divider()
@@ -97,6 +103,19 @@ struct HourlyForecastView: View {
 
         .navigationBarBackButtonHidden(false)
         .background(Color(UIColor.systemGroupedBackground))
+        .navigationDestination(isPresented: $showingWaveDetail) {
+            if let hourIndex = selectedHourIndex,
+               viewModel.availableDates.count > viewModel.currentDayIndex {
+                let currentDate = viewModel.availableDates[viewModel.currentDayIndex]
+                let waveViewModel = HourlyWaveDetailViewModel(
+                    hourlyForecasts: viewModel.currentDayHourlyForecasts,
+                    selectedHourIndex: hourIndex,
+                    locationName: viewModel.locationDisplay,
+                    date: currentDate
+                )
+                HourlyWaveDetailView(viewModel: waveViewModel)
+            }
+        }
         .onAppear {
             // Each time the view appears, reload data
             print("🕐 HourlyForecastView appeared - loading forecasts for day \(viewModel.currentDayIndex) - \(viewModel.currentDayDisplay)")
@@ -145,6 +164,7 @@ struct HeaderColumn: View {
 struct HourlyForecastRow: View {
     let forecast: HourlyForecastItem
     let isEvenRow: Bool
+    let onWaveTap: () -> Void
 
     var body: some View {
         HStack(alignment: .center, spacing: 0) {
@@ -197,27 +217,35 @@ struct HourlyForecastRow: View {
             }
             .frame(maxWidth: .infinity)
 
-            // Wave Column
-            VStack(alignment: .center, spacing: 2) {
+            // Wave Column (Tappable)
+            Button(action: {
                 if forecast.marineDataAvailable {
-                    Text(forecast.waveDirectionCardinal)
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.teal)
-
-                    Text("\(String(format: "%.1f", forecast.waveHeight)) ft")
-                        .font(.system(size: 14))
-                        .foregroundColor(.teal)
-
-                    Text("\(Int(forecast.wavePeriod.rounded()))s")
-                        .font(.system(size: 12))
-                        .foregroundColor(.secondary)
-                } else {
-                    Text("N/A")
-                        .font(.system(size: 14))
-                        .foregroundColor(.secondary)
+                    onWaveTap()
                 }
+            }) {
+                VStack(alignment: .center, spacing: 2) {
+                    if forecast.marineDataAvailable {
+                        Text(forecast.waveDirectionCardinal)
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.teal)
+
+                        Text("\(String(format: "%.1f", forecast.waveHeight)) ft")
+                            .font(.system(size: 14))
+                            .foregroundColor(.teal)
+
+                        Text("\(Int(forecast.wavePeriod.rounded()))s")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                    } else {
+                        Text("N/A")
+                            .font(.system(size: 14))
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .frame(maxWidth: .infinity)
             }
-            .frame(maxWidth: .infinity)
+            .buttonStyle(PlainButtonStyle())
+            .disabled(!forecast.marineDataAvailable)
 
             // Precipitation Column
             VStack(alignment: .center, spacing: 4) {
