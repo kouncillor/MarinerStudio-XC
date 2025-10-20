@@ -106,7 +106,9 @@ struct HourlyWaveDetailView: View {
                                 LocationMapView(
                                     latitude: viewModel.latitude,
                                     longitude: viewModel.longitude,
-                                    locationName: viewModel.locationDisplay
+                                    locationName: viewModel.locationDisplay,
+                                    windDirection: forecast.windDirection,
+                                    waveDirection: forecast.waveDirection
                                 )
                                 .frame(height: 300)
                                 .cornerRadius(12)
@@ -201,13 +203,17 @@ struct LocationMapView: View {
     let latitude: Double
     let longitude: Double
     let locationName: String
+    let windDirection: Double
+    let waveDirection: Double
 
     @State private var region: MKCoordinateRegion
 
-    init(latitude: Double, longitude: Double, locationName: String) {
+    init(latitude: Double, longitude: Double, locationName: String, windDirection: Double, waveDirection: Double) {
         self.latitude = latitude
         self.longitude = longitude
         self.locationName = locationName
+        self.windDirection = windDirection
+        self.waveDirection = waveDirection
 
         // Initialize region centered on the coordinates
         _region = State(initialValue: MKCoordinateRegion(
@@ -217,13 +223,96 @@ struct LocationMapView: View {
     }
 
     var body: some View {
-        Map(coordinateRegion: $region, annotationItems: [MapLocation(coordinate: CLLocationCoordinate2D(latitude: latitude, longitude: longitude), name: locationName)]) { location in
-            MapMarker(coordinate: location.coordinate, tint: .blue)
+        GeometryReader { geometry in
+            ZStack {
+                Map(coordinateRegion: $region, annotationItems: [MapLocation(coordinate: CLLocationCoordinate2D(latitude: latitude, longitude: longitude), name: locationName)]) { location in
+                    MapMarker(coordinate: location.coordinate, tint: .blue)
+                }
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                )
+
+                // Wind Direction Arrow
+                DirectionArrow(
+                    direction: windDirection,
+                    label: "WIND",
+                    color: .green,
+                    mapSize: geometry.size
+                )
+
+                // Wave Direction Arrow
+                DirectionArrow(
+                    direction: waveDirection,
+                    label: "WAVE",
+                    color: .blue,
+                    mapSize: geometry.size
+                )
+            }
         }
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-        )
+    }
+}
+
+// MARK: - Direction Arrow Component
+struct DirectionArrow: View {
+    let direction: Double  // 0-360 degrees, 0 = North
+    let label: String      // "WIND" or "WAVE"
+    let color: Color
+    let mapSize: CGSize
+
+    // Convert degrees to cardinal direction
+    private var cardinalDirection: String {
+        let directions = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
+                          "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]
+        let index = Int(((direction + 11.25) / 22.5).truncatingRemainder(dividingBy: 16))
+        return directions[index]
+    }
+
+    // Calculate position on map perimeter based on direction
+    private var arrowPosition: CGPoint {
+        let centerX = mapSize.width / 2
+        let centerY = mapSize.height / 2
+        let radius = min(mapSize.width, mapSize.height) / 2 - 40 // 40pt padding from edge
+
+        // Convert degrees to radians
+        let radians = direction * .pi / 180
+
+        // Calculate position (0° = North = top)
+        let x = centerX + radius * sin(radians)
+        let y = centerY - radius * cos(radians)
+
+        return CGPoint(x: x, y: y)
+    }
+
+    // Arrow rotation to point toward center
+    private var arrowRotation: Double {
+        return direction + 180  // Point toward center (opposite of source direction)
+    }
+
+    var body: some View {
+        VStack(spacing: 4) {
+            // Arrow pointing toward center
+            Image(systemName: "arrow.down")
+                .font(.system(size: 24, weight: .bold))
+                .foregroundColor(color)
+                .rotationEffect(.degrees(arrowRotation))
+
+            // Label with direction
+            VStack(spacing: 2) {
+                Text(label)
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(color)
+                Text("from \(cardinalDirection)")
+                    .font(.system(size: 8, weight: .medium))
+                    .foregroundColor(color.opacity(0.8))
+            }
+            .padding(.horizontal, 6)
+            .padding(.vertical, 4)
+            .background(Color.white.opacity(0.9))
+            .cornerRadius(6)
+            .shadow(color: .black.opacity(0.2), radius: 2, x: 0, y: 1)
+        }
+        .position(arrowPosition)
     }
 }
 
@@ -236,10 +325,41 @@ struct MapLocation: Identifiable {
 
 // MARK: - Preview
 #Preview {
+    let sampleForecast = HourlyForecastItem(
+        time: Date(),
+        hour: "2:00 PM",
+        timeDisplay: "Oct 20, 2025 at 2:00 PM",
+        temperature: 68.0,
+        humidity: 65,
+        precipitation: 0.0,
+        precipitationChance: 10.0,
+        windSpeed: 12.0,
+        windDirection: 270.0,  // From West
+        windGusts: 18.0,
+        dewPoint: 55.0,
+        pressure: 1013.0,
+        previousPressure: 1012.5,
+        visibilityMeters: 16000.0,
+        weatherCode: 1,
+        isNightTime: false,
+        cardinalDirection: "W",
+        weatherIcon: "cloud.sun.fill",
+        moonPhase: "moon.fill",
+        marineDataAvailable: true,
+        waveHeight: 2.5,
+        waveDirection: 180.0,  // From South
+        wavePeriod: 6.0,
+        swellHeight: 1.8,
+        swellDirection: 190.0,
+        swellPeriod: 8.0,
+        windWaveHeight: 0.8,
+        windWaveDirection: 270.0
+    )
+
     NavigationStack {
         HourlyWaveDetailView(
             viewModel: HourlyWaveDetailViewModel(
-                hourlyForecasts: [],
+                hourlyForecasts: [sampleForecast],
                 selectedHourIndex: 0,
                 locationName: "Boston Harbor",
                 date: Date(),
