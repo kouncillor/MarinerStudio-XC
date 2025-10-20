@@ -3,7 +3,6 @@ import SwiftUI
 struct HourlyForecastView: View {
     @StateObject private var viewModel: HourlyForecastViewModel
     @Environment(\.presentationMode) var presentationMode
-    @EnvironmentObject var serviceProvider: ServiceProvider
     @State private var showingWaveDetail = false
     @State private var selectedHourIndex: Int?
     @State private var selectedDate: Date?
@@ -129,8 +128,8 @@ struct HourlyForecastView: View {
                     date: date,
                     latitude: selectedLatitude,
                     longitude: selectedLongitude,
-                    tidalCurrentService: serviceProvider.tidalCurrentService,
-                    tidalCurrentPredictionService: serviceProvider.tidalCurrentPredictionService
+                    tidalCurrentService: TidalCurrentServiceImpl(),
+                    tidalCurrentPredictionService: TidalCurrentPredictionServiceImpl()
                 )
                 HourlyWaveDetailView(viewModel: waveViewModel)
             }
