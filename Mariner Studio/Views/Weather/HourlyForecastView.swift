@@ -8,6 +8,8 @@ struct HourlyForecastView: View {
     @State private var selectedDate: Date?
     @State private var selectedLocationName: String?
     @State private var selectedForecasts: [HourlyForecastItem] = []
+    @State private var selectedLatitude: Double = 0.0
+    @State private var selectedLongitude: Double = 0.0
 
     init(viewModel: HourlyForecastViewModel) {
         _viewModel = StateObject(wrappedValue: viewModel)
@@ -90,6 +92,8 @@ struct HourlyForecastView: View {
                                     selectedHourIndex = index
                                     selectedForecasts = viewModel.currentDayHourlyForecasts
                                     selectedLocationName = viewModel.locationDisplay
+                                    selectedLatitude = viewModel.latitude
+                                    selectedLongitude = viewModel.longitude
                                     if viewModel.currentDayIndex < viewModel.availableDates.count {
                                         selectedDate = viewModel.availableDates[viewModel.currentDayIndex]
                                     }
@@ -121,7 +125,9 @@ struct HourlyForecastView: View {
                     hourlyForecasts: selectedForecasts,
                     selectedHourIndex: hourIndex,
                     locationName: locationName,
-                    date: date
+                    date: date,
+                    latitude: selectedLatitude,
+                    longitude: selectedLongitude
                 )
                 HourlyWaveDetailView(viewModel: waveViewModel)
             }

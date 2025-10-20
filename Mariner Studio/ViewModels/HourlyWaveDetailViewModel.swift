@@ -7,6 +7,8 @@ class HourlyWaveDetailViewModel: ObservableObject {
     @Published var hourlyForecasts: [HourlyForecastItem]
     @Published var locationDisplay: String
     @Published var dateDisplay: String
+    @Published var latitude: Double
+    @Published var longitude: Double
 
     // MARK: - Computed Properties
     var currentForecast: HourlyForecastItem? {
@@ -39,10 +41,12 @@ class HourlyWaveDetailViewModel: ObservableObject {
     }
 
     // MARK: - Initialization
-    init(hourlyForecasts: [HourlyForecastItem], selectedHourIndex: Int, locationName: String, date: Date) {
+    init(hourlyForecasts: [HourlyForecastItem], selectedHourIndex: Int, locationName: String, date: Date, latitude: Double, longitude: Double) {
         self.hourlyForecasts = hourlyForecasts
         self.currentHourIndex = selectedHourIndex
         self.locationDisplay = locationName
+        self.latitude = latitude
+        self.longitude = longitude
 
         // Format date display
         let formatter = DateFormatter()
@@ -50,6 +54,7 @@ class HourlyWaveDetailViewModel: ObservableObject {
         self.dateDisplay = formatter.string(from: date)
 
         print("🌊 HourlyWaveDetailViewModel: Initialized with \(hourlyForecasts.count) forecasts, starting at index \(selectedHourIndex)")
+        print("🗺️ HourlyWaveDetailViewModel: Location coordinates: \(latitude), \(longitude)")
     }
 
     // MARK: - Public Methods

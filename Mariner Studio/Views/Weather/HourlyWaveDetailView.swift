@@ -1,4 +1,5 @@
 import SwiftUI
+import MapKit
 
 struct HourlyWaveDetailView: View {
     @StateObject private var viewModel: HourlyWaveDetailViewModel
@@ -87,6 +88,31 @@ struct HourlyWaveDetailView: View {
                             // Wind Wave Card
                             WindWaveCard(forecast: forecast)
                                 .padding(.horizontal)
+
+                            // Location Map
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack {
+                                    Image(systemName: "map")
+                                        .foregroundColor(.orange)
+                                        .font(.caption)
+                                    Text("Location")
+                                        .font(.caption)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(.primary)
+                                    Spacer()
+                                }
+                                .padding(.horizontal)
+
+                                LocationMapView(
+                                    latitude: viewModel.latitude,
+                                    longitude: viewModel.longitude,
+                                    locationName: viewModel.locationDisplay
+                                )
+                                .frame(height: 300)
+                                .cornerRadius(12)
+                                .padding(.horizontal)
+                            }
+                            .padding(.top, 8)
                         }
                         .padding(.bottom, 20)
                     } else {
@@ -170,6 +196,44 @@ struct WindWaveCard: View {
     }
 }
 
+// MARK: - Location Map View
+struct LocationMapView: View {
+    let latitude: Double
+    let longitude: Double
+    let locationName: String
+
+    @State private var region: MKCoordinateRegion
+
+    init(latitude: Double, longitude: Double, locationName: String) {
+        self.latitude = latitude
+        self.longitude = longitude
+        self.locationName = locationName
+
+        // Initialize region centered on the coordinates
+        _region = State(initialValue: MKCoordinateRegion(
+            center: CLLocationCoordinate2D(latitude: latitude, longitude: longitude),
+            span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1)
+        ))
+    }
+
+    var body: some View {
+        Map(coordinateRegion: $region, annotationItems: [MapLocation(coordinate: CLLocationCoordinate2D(latitude: latitude, longitude: longitude), name: locationName)]) { location in
+            MapMarker(coordinate: location.coordinate, tint: .blue)
+        }
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+        )
+    }
+}
+
+// MARK: - Map Location Helper
+struct MapLocation: Identifiable {
+    let id = UUID()
+    let coordinate: CLLocationCoordinate2D
+    let name: String
+}
+
 // MARK: - Preview
 #Preview {
     NavigationStack {
@@ -178,7 +242,9 @@ struct WindWaveCard: View {
                 hourlyForecasts: [],
                 selectedHourIndex: 0,
                 locationName: "Boston Harbor",
-                date: Date()
+                date: Date(),
+                latitude: 42.3601,
+                longitude: -71.0589
             )
         )
     }
