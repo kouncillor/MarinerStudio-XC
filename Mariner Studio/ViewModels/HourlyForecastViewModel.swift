@@ -102,6 +102,7 @@ class HourlyForecastViewModel: ObservableObject {
                        let month = components.month,
                        let day = components.day {
 
+                        // Fetch hourly weather data
                         let hourlyData = try await weatherService.getHourlyForecast(
                             year: year,
                             month: month,
@@ -112,7 +113,18 @@ class HourlyForecastViewModel: ObservableObject {
 
                         if Task.isCancelled { break }
 
-                        let hourlyForecasts = try await processHourlyData(hourlyData, for: date)
+                        // Fetch marine data (may be nil for inland locations)
+                        let marineData = try? await weatherService.getMarineForecast(
+                            year: year,
+                            month: month,
+                            day: day,
+                            latitude: latitude,
+                            longitude: longitude
+                        )
+
+                        if Task.isCancelled { break }
+
+                        let hourlyForecasts = try await processHourlyData(hourlyData, marineData: marineData, for: date)
 
                         if Task.isCancelled { break }
 
@@ -230,7 +242,7 @@ class HourlyForecastViewModel: ObservableObject {
     }
 
     /// Process hourly data from the API
-    private func processHourlyData(_ hourlyData: OpenMeteoHourlyResponse, for date: Date) async throws -> [HourlyForecastItem] {
+    private func processHourlyData(_ hourlyData: OpenMeteoHourlyResponse, marineData: OpenMeteoMarineResponse?, for date: Date) async throws -> [HourlyForecastItem] {
         var items: [HourlyForecastItem] = []
         var previousPressure: Double?
 
@@ -301,6 +313,26 @@ class HourlyForecastViewModel: ObservableObject {
              let dewPoint = hourlyData.hourly.dewPoint?.count ?? 0 > i ?
                  hourlyData.hourly.dewPoint?[i] ?? 0.0 : 0.0 // Use 0.0 as default if nil
 
+            // Get marine data (if available)
+            let marineDataAvailable: Bool
+            let waveHeight: Double
+            let waveDirection: Double
+            let wavePeriod: Double
+
+            if let marine = marineData,
+               i < marine.hourly.time.count,
+               i < marine.hourly.waveHeight.count {
+                marineDataAvailable = true
+                waveHeight = marine.hourly.waveHeightFeet[i]  // Already converted to feet
+                waveDirection = i < marine.hourly.waveDirection.count ? marine.hourly.waveDirection[i] : 0.0
+                wavePeriod = i < marine.hourly.wavePeriod.count ? marine.hourly.wavePeriod[i] : 0.0
+            } else {
+                marineDataAvailable = false
+                waveHeight = 0.0
+                waveDirection = 0.0
+                wavePeriod = 0.0
+            }
+
             // Create the item
             let item = HourlyForecastItem(
                 time: hourTime,
@@ -321,7 +353,11 @@ class HourlyForecastViewModel: ObservableObject {
                 isNightTime: isNightTime,
                 cardinalDirection: cardinalDirection,
                 weatherIcon: WeatherIconMapper.mapWeatherCode(weatherCode, isNight: isNightTime),
-                moonPhase: moonPhaseIcon
+                moonPhase: moonPhaseIcon,
+                marineDataAvailable: marineDataAvailable,
+                waveHeight: waveHeight,
+                waveDirection: waveDirection,
+                wavePeriod: wavePeriod
             )
 
             items.append(item)

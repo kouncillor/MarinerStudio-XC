@@ -299,6 +299,12 @@ struct HourlyForecastItem: Identifiable {
     let weatherIcon: String
     let moonPhase: String
 
+    // Marine data properties
+    let marineDataAvailable: Bool
+    let waveHeight: Double
+    let waveDirection: Double
+    let wavePeriod: Double
+
     var visibility: String {
         return formatVisibility()
     }
@@ -311,6 +317,18 @@ struct HourlyForecastItem: Identifiable {
             return "minus"
         }
         return difference > 0 ? "arrow.up" : "arrow.down"
+    }
+
+    var waveHeightDisplay: String {
+        return marineDataAvailable ? "\(String(format: "%.1f", waveHeight)) ft" : "N/A"
+    }
+
+    var waveDirectionCardinal: String {
+        guard marineDataAvailable else { return "N/A" }
+        let directions = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
+                          "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]
+        let index = Int(((waveDirection + 11.25) / 22.5).truncatingRemainder(dividingBy: 16))
+        return directions[index]
     }
 
     private func formatVisibility() -> String {

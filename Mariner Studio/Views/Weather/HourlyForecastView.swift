@@ -53,9 +53,9 @@ struct HourlyForecastView: View {
             HStack(spacing: 0) {
                 HeaderColumn(iconSource: .system("clock", .orange), title: "Time")
                 HeaderColumn(iconSource: .system("thermometer", .red), title: "Temp")
-                HeaderColumn(iconSource: .system("wind", .blue), title: "Wind")
                 HeaderColumn(iconSource: .custom("visibilitysixseven", .green), title: "Vis")
-                HeaderColumn(iconSource: .custom("pressuresixseven", .purple), title: "Press")
+                HeaderColumn(iconSource: .system("wind", .blue), title: "Wind")
+                HeaderColumn(iconSource: .system("water.waves", .teal), title: "Wave")
                 HeaderColumn(iconSource: .system("drop", .cyan), title: "Precip")
             }
             .padding(.vertical, 8)
@@ -171,6 +171,18 @@ struct HourlyForecastRow: View {
             }
             .frame(maxWidth: .infinity)
 
+            // Visibility Column
+            VStack(alignment: .center, spacing: 4) {
+                Text(forecast.visibility)
+                    .font(.system(size: 14))
+
+                // Weather icon
+                Image(systemName: weatherIconForCode(forecast.weatherCode, isNight: forecast.isNightTime))
+                    .font(.system(size: 16))
+                    .foregroundColor(colorForWeatherCode(forecast.weatherCode))
+            }
+            .frame(maxWidth: .infinity)
+
             // Wind Column
             VStack(alignment: .center, spacing: 2) {
                 Text("\(forecast.cardinalDirection)")
@@ -185,28 +197,24 @@ struct HourlyForecastRow: View {
             }
             .frame(maxWidth: .infinity)
 
-            // Visibility Column
-            VStack(alignment: .center, spacing: 4) {
-                Text(forecast.visibility)
-                    .font(.system(size: 14))
+            // Wave Column
+            VStack(alignment: .center, spacing: 2) {
+                if forecast.marineDataAvailable {
+                    Text(forecast.waveDirectionCardinal)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.teal)
 
-                // Weather icon
-                Image(systemName: weatherIconForCode(forecast.weatherCode, isNight: forecast.isNightTime))
-                    .font(.system(size: 16))
-                    .foregroundColor(colorForWeatherCode(forecast.weatherCode))
-            }
-            .frame(maxWidth: .infinity)
-
-            // Pressure Column
-            VStack(alignment: .center, spacing: 4) {
-                Text(String(format: "%.2f", forecast.pressure))
-                    .font(.system(size: 14))
-
-                if let _ = forecast.previousPressure {
-                    Image(systemName: forecast.pressureTrendIcon)
+                    Text("\(String(format: "%.1f", forecast.waveHeight)) ft")
                         .font(.system(size: 14))
-                        .foregroundColor(forecast.pressureTrendIcon == "arrow.up" ? .green :
-                                         forecast.pressureTrendIcon == "arrow.down" ? .red : .gray)
+                        .foregroundColor(.teal)
+
+                    Text("\(Int(forecast.wavePeriod.rounded()))s")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                } else {
+                    Text("N/A")
+                        .font(.system(size: 14))
+                        .foregroundColor(.secondary)
                 }
             }
             .frame(maxWidth: .infinity)
