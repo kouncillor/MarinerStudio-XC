@@ -286,31 +286,41 @@ struct DirectionArrow: View {
 
     // Arrow rotation to point toward center
     private var arrowRotation: Double {
-        return direction + 180  // Point toward center (opposite of source direction)
+        return direction  // Arrow positioned at source, points toward center
     }
 
     var body: some View {
-        VStack(spacing: 4) {
-            // Arrow pointing toward center
-            Image(systemName: "arrow.down")
-                .font(.system(size: 24, weight: .bold))
-                .foregroundColor(color)
+        ZStack {
+            VStack(spacing: 2) {
+                // Arrow pointing toward center (larger, like voyage plan)
+                VStack(spacing: 0) {
+                    // Arrow Head
+                    Image(systemName: "arrowtriangle.down.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(color)
+
+                    // Arrow Shaft
+                    Rectangle()
+                        .frame(width: 4, height: 45)
+                        .foregroundColor(color)
+                }
                 .rotationEffect(.degrees(arrowRotation))
 
-            // Label with direction
-            VStack(spacing: 2) {
-                Text(label)
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(color)
-                Text("from \(cardinalDirection)")
-                    .font(.system(size: 8, weight: .medium))
-                    .foregroundColor(color.opacity(0.8))
+                // Label with direction
+                VStack(spacing: 2) {
+                    Text(label)
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(color)
+                    Text("from \(cardinalDirection)")
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundColor(color.opacity(0.9))
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color.white.opacity(0.95))
+                .cornerRadius(6)
+                .shadow(color: .black.opacity(0.3), radius: 3, x: 0, y: 2)
             }
-            .padding(.horizontal, 6)
-            .padding(.vertical, 4)
-            .background(Color.white.opacity(0.9))
-            .cornerRadius(6)
-            .shadow(color: .black.opacity(0.2), radius: 2, x: 0, y: 1)
         }
         .position(arrowPosition)
     }
