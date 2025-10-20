@@ -108,7 +108,8 @@ struct HourlyWaveDetailView: View {
                                     longitude: viewModel.longitude,
                                     locationName: viewModel.locationDisplay,
                                     windDirection: forecast.windDirection,
-                                    waveDirection: forecast.waveDirection
+                                    waveDirection: forecast.waveDirection,
+                                    viewModel: viewModel
                                 )
                                 .frame(height: 300)
                                 .cornerRadius(12)
@@ -205,29 +206,20 @@ struct LocationMapView: View {
     let locationName: String
     let windDirection: Double
     let waveDirection: Double
-
-    @State private var region: MKCoordinateRegion
-
-    init(latitude: Double, longitude: Double, locationName: String, windDirection: Double, waveDirection: Double) {
-        self.latitude = latitude
-        self.longitude = longitude
-        self.locationName = locationName
-        self.windDirection = windDirection
-        self.waveDirection = waveDirection
-
-        // Initialize region centered on the coordinates
-        _region = State(initialValue: MKCoordinateRegion(
-            center: CLLocationCoordinate2D(latitude: latitude, longitude: longitude),
-            span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1)
-        ))
-    }
+    @ObservedObject var viewModel: HourlyWaveDetailViewModel
 
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                Map(coordinateRegion: $region, annotationItems: [MapLocation(coordinate: CLLocationCoordinate2D(latitude: latitude, longitude: longitude), name: locationName)]) { location in
-                    MapMarker(coordinate: location.coordinate, tint: .blue)
-                }
+                WaveDetailMapViewRepresentable(
+                    centerCoordinate: CLLocationCoordinate2D(latitude: latitude, longitude: longitude),
+                    currentStations: viewModel.nearestCurrentStations,
+                    onStationTapped: { station in
+                        Task {
+                            await viewModel.selectCurrentStation(station)
+                        }
+                    }
+                )
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
                         .stroke(Color.gray.opacity(0.3), lineWidth: 1)
@@ -248,8 +240,101 @@ struct LocationMapView: View {
                     color: .blue,
                     mapSize: geometry.size
                 )
+
+                // Current Direction Arrow (if station selected)
+                if let currentDir = viewModel.currentDirection {
+                    DirectionArrow(
+                        direction: currentDir,
+                        label: "CURRENT",
+                        color: .orange,
+                        mapSize: geometry.size
+                    )
+                }
             }
         }
+    }
+}
+
+// MARK: - Wave Detail Map View Representable
+struct WaveDetailMapViewRepresentable: UIViewRepresentable {
+    let centerCoordinate: CLLocationCoordinate2D
+    let currentStations: [TidalCurrentStation]
+    let onStationTapped: (TidalCurrentStation) -> Void
+
+    func makeUIView(context: Context) -> MKMapView {
+        let mapView = MKMapView()
+        mapView.delegate = context.coordinator
+        mapView.mapType = .standard
+        mapView.showsUserLocation = false
+
+        // Register annotation view
+        mapView.register(TidalCurrentStationAnnotationView.self, forAnnotationViewWithReuseIdentifier: TidalCurrentStationAnnotationView.ReuseID)
+
+        // Set initial region
+        mapView.setRegion(MKCoordinateRegion(
+            center: centerCoordinate,
+            span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1)
+        ), animated: false)
+
+        // Add center marker
+        let centerAnnotation = MKPointAnnotation()
+        centerAnnotation.coordinate = centerCoordinate
+        centerAnnotation.title = "Weather Location"
+        mapView.addAnnotation(centerAnnotation)
+
+        return mapView
+    }
+
+    func updateUIView(_ mapView: MKMapView, context: Context) {
+        // Update current station annotations
+        let existingAnnotations = mapView.annotations.compactMap { $0 as? CurrentStationAnnotation }
+        mapView.removeAnnotations(existingAnnotations)
+
+        let newAnnotations = currentStations.compactMap { station -> CurrentStationAnnotation? in
+            guard let lat = station.latitude, let lon = station.longitude else { return nil }
+            return CurrentStationAnnotation(station: station, coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon))
+        }
+        mapView.addAnnotations(newAnnotations)
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onStationTapped: onStationTapped)
+    }
+
+    class Coordinator: NSObject, MKMapViewDelegate {
+        let onStationTapped: (TidalCurrentStation) -> Void
+
+        init(onStationTapped: @escaping (TidalCurrentStation) -> Void) {
+            self.onStationTapped = onStationTapped
+        }
+
+        func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
+            if annotation is CurrentStationAnnotation {
+                return mapView.dequeueReusableAnnotationView(withIdentifier: TidalCurrentStationAnnotationView.ReuseID, for: annotation)
+            }
+            return nil
+        }
+
+        func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
+            if let annotation = view.annotation as? CurrentStationAnnotation {
+                onStationTapped(annotation.station)
+            }
+        }
+    }
+}
+
+// MARK: - Current Station Annotation
+class CurrentStationAnnotation: NSObject, MKAnnotation {
+    let station: TidalCurrentStation
+    let coordinate: CLLocationCoordinate2D
+
+    var title: String? {
+        return station.name
+    }
+
+    init(station: TidalCurrentStation, coordinate: CLLocationCoordinate2D) {
+        self.station = station
+        self.coordinate = coordinate
     }
 }
 
@@ -274,8 +359,12 @@ struct DirectionArrow: View {
         let centerY = mapSize.height / 2
         let radius = min(mapSize.width, mapSize.height) / 2 - 40 // 40pt padding from edge
 
+        // For CURRENT, position is opposite of flow direction (showing where it's coming from)
+        // For WIND/WAVE, position is at the source direction
+        let positionDirection = label == "CURRENT" ? direction + 180 : direction
+
         // Convert degrees to radians
-        let radians = direction * .pi / 180
+        let radians = positionDirection * .pi / 180
 
         // Calculate position (0° = North = top)
         let x = centerX + radius * sin(radians)
@@ -284,9 +373,11 @@ struct DirectionArrow: View {
         return CGPoint(x: x, y: y)
     }
 
-    // Arrow rotation to point toward center
+    // Arrow rotation to point toward center (for wind/wave) or toward flow direction (for current)
     private var arrowRotation: Double {
-        return direction  // Arrow positioned at source, points toward center
+        // For CURRENT, arrow points in the flow direction
+        // For WIND/WAVE, arrow points toward center (from source)
+        return label == "CURRENT" ? direction - 180 : direction
     }
 
     var body: some View {
