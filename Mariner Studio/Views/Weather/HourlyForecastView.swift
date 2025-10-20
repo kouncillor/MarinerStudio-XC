@@ -5,6 +5,9 @@ struct HourlyForecastView: View {
     @Environment(\.presentationMode) var presentationMode
     @State private var showingWaveDetail = false
     @State private var selectedHourIndex: Int?
+    @State private var selectedDate: Date?
+    @State private var selectedLocationName: String?
+    @State private var selectedForecasts: [HourlyForecastItem] = []
 
     init(viewModel: HourlyForecastViewModel) {
         _viewModel = StateObject(wrappedValue: viewModel)
@@ -83,7 +86,13 @@ struct HourlyForecastView: View {
                                 forecast: forecast,
                                 isEvenRow: index % 2 == 0,
                                 onWaveTap: {
+                                    // Capture data before navigation (before cleanup can run)
                                     selectedHourIndex = index
+                                    selectedForecasts = viewModel.currentDayHourlyForecasts
+                                    selectedLocationName = viewModel.locationDisplay
+                                    if viewModel.currentDayIndex < viewModel.availableDates.count {
+                                        selectedDate = viewModel.availableDates[viewModel.currentDayIndex]
+                                    }
                                     showingWaveDetail = true
                                 }
                             )
@@ -105,13 +114,14 @@ struct HourlyForecastView: View {
         .background(Color(UIColor.systemGroupedBackground))
         .navigationDestination(isPresented: $showingWaveDetail) {
             if let hourIndex = selectedHourIndex,
-               viewModel.availableDates.count > viewModel.currentDayIndex {
-                let currentDate = viewModel.availableDates[viewModel.currentDayIndex]
+               let date = selectedDate,
+               let locationName = selectedLocationName,
+               !selectedForecasts.isEmpty {
                 let waveViewModel = HourlyWaveDetailViewModel(
-                    hourlyForecasts: viewModel.currentDayHourlyForecasts,
+                    hourlyForecasts: selectedForecasts,
                     selectedHourIndex: hourIndex,
-                    locationName: viewModel.locationDisplay,
-                    date: currentDate
+                    locationName: locationName,
+                    date: date
                 )
                 HourlyWaveDetailView(viewModel: waveViewModel)
             }
