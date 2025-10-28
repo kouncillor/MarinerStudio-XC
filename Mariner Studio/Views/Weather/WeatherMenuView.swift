@@ -3,162 +3,48 @@ import SwiftUI
 struct WeatherMenuView: View {
     // We'll use environment objects for service dependencies
     @EnvironmentObject var serviceProvider: ServiceProvider
-    @EnvironmentObject var subscriptionService: SimpleSubscription
-    @State private var showSubscriptionPrompt = false
-    @State private var showLocalWeatherView = false
-    @State private var showWeatherFavoritesView = false
-    @State private var showWeatherMapView = false
-    @State private var refreshTrigger = false
 
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
-                // Favorites - Daily limited
-                if subscriptionService.hasAppAccess {
-                    NavigationLink(destination: WeatherFavoritesView(
-                        coreDataManager: serviceProvider.coreDataManager
-                    )) {
-                        MenuButtonContent(
-                            iconType: .system("star.fill"),
-                            title: "FAVORITES",
-                            color: .yellow
-                        )
-                    }
-                } else if subscriptionService.canAccessWeatherFavorites() {
-                    Button(action: {
-                        subscriptionService.recordWeatherFavoritesUsage()
-                        showWeatherFavoritesView = true
-                    }) {
-                        MenuButtonContent(
-                            iconType: .system("star.fill"),
-                            title: "FAVORITES",
-                            color: .yellow
-                        )
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                } else {
-                    Button(action: {
-                        showSubscriptionPrompt = true
-                    }) {
-                        MenuButtonContent(
-                            iconType: .system("star.fill"),
-                            title: "FAVORITES",
-                            color: .yellow,
-                            isUsedToday: true
-                        )
-                    }
-                    .buttonStyle(PlainButtonStyle())
+                // Favorites
+                NavigationLink(destination: WeatherFavoritesView(
+                    coreDataManager: serviceProvider.coreDataManager
+                )) {
+                    MenuButtonContent(
+                        iconType: .system("star.fill"),
+                        title: "FAVORITES",
+                        color: .yellow
+                    )
                 }
 
-                // Local Weather - Free with daily limit
-                if subscriptionService.hasAppAccess {
-                    // Unlimited access for subscribed/trial users
-                    NavigationLink(destination: CurrentLocalWeatherView()) {
-                        MenuButtonContent(
-                            iconType: .system("location.fill"),
-                            title: "LOCAL",
-                            color: .green
-                        )
-                    }
-                } else if subscriptionService.canAccessLocalWeather() {
-                    // Free user with usage available - record usage and navigate
-                    Button(action: {
-                        subscriptionService.recordLocalWeatherUsage()
-                        showLocalWeatherView = true
-                    }) {
-                        MenuButtonContent(
-                            iconType: .system("location.fill"),
-                            title: "LOCAL",
-                            color: .green,
-                            isDailyLimited: true
-                        )
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                } else {
-                    // Free user has used today - show subscription prompt
-                    Button(action: {
-                        showSubscriptionPrompt = true
-                    }) {
-                        MenuButtonContent(
-                            iconType: .system("location.fill"),
-                            title: "LOCAL",
-                            color: .green,
-                            isUsedToday: true
-                        )
-                    }
-                    .buttonStyle(PlainButtonStyle())
+                // Local Weather
+                NavigationLink(destination: CurrentLocalWeatherView()) {
+                    MenuButtonContent(
+                        iconType: .system("location.fill"),
+                        title: "LOCAL",
+                        color: .green
+                    )
                 }
 
-                // Weather Map - Daily limited
-                if subscriptionService.hasAppAccess {
-                    NavigationLink(destination: WeatherMapView()) {
-                        MenuButtonContent(
-                            iconType: .system("map.fill"),
-                            title: "MAP",
-                            color: .blue
-                        )
-                    }
-                } else if subscriptionService.canAccessWeatherMap() {
-                    Button(action: {
-                        subscriptionService.recordWeatherMapUsage()
-                        showWeatherMapView = true
-                    }) {
-                        MenuButtonContent(
-                            iconType: .system("map.fill"),
-                            title: "MAP",
-                            color: .blue
-                        )
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                } else {
-                    Button(action: {
-                        showSubscriptionPrompt = true
-                    }) {
-                        MenuButtonContent(
-                            iconType: .system("map.fill"),
-                            title: "MAP",
-                            color: .blue,
-                            isUsedToday: true
-                        )
-                    }
-                    .buttonStyle(PlainButtonStyle())
+                // Weather Map
+                NavigationLink(destination: WeatherMapView()) {
+                    MenuButtonContent(
+                        iconType: .system("map.fill"),
+                        title: "MAP",
+                        color: .blue
+                    )
                 }
 
-                // Radar - Daily limited
-                if subscriptionService.hasAppAccess {
-                    Button(action: {
-                        openRadarWebsite()
-                    }) {
-                        MenuButtonContent(
-                            iconType: .system("antenna.radiowaves.left.and.right"),
-                            title: "RADAR",
-                            color: .orange
-                        )
-                    }
-                } else if subscriptionService.canAccessWeatherRadar() {
-                    Button(action: {
-                        subscriptionService.recordWeatherRadarUsage()
-                        openRadarWebsite()
-                    }) {
-                        MenuButtonContent(
-                            iconType: .system("antenna.radiowaves.left.and.right"),
-                            title: "RADAR",
-                            color: .orange
-                        )
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                } else {
-                    Button(action: {
-                        showSubscriptionPrompt = true
-                    }) {
-                        MenuButtonContent(
-                            iconType: .system("antenna.radiowaves.left.and.right"),
-                            title: "RADAR",
-                            color: .orange,
-                            isUsedToday: true
-                        )
-                    }
-                    .buttonStyle(PlainButtonStyle())
+                // Radar
+                Button(action: {
+                    openRadarWebsite()
+                }) {
+                    MenuButtonContent(
+                        iconType: .system("antenna.radiowaves.left.and.right"),
+                        title: "RADAR",
+                        color: .orange
+                    )
                 }
             }
             .padding()
@@ -169,25 +55,6 @@ struct WeatherMenuView: View {
         .toolbarBackground(Color(red: 0.53, green: 0.81, blue: 0.98), for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .withNotificationAndHome(sourceView: "Weather Menu")
-        .sheet(isPresented: $showSubscriptionPrompt) {
-            EnhancedPaywallView()
-        }
-        .navigationDestination(isPresented: $showLocalWeatherView) {
-            CurrentLocalWeatherView()
-        }
-        .navigationDestination(isPresented: $showWeatherFavoritesView) {
-            WeatherFavoritesView(coreDataManager: serviceProvider.coreDataManager)
-        }
-        .navigationDestination(isPresented: $showWeatherMapView) {
-            WeatherMapView()
-        }
-        .onAppear {
-            // Force view refresh when returning to detect updated usage status
-            refreshTrigger.toggle()
-        }
-        .onChange(of: refreshTrigger) { _ in
-            // This will trigger a UI update when refreshTrigger changes
-        }
     }
 
     // Opens the NOAA radar website using Safari

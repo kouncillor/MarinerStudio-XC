@@ -384,18 +384,166 @@ class SimpleSubscription: ObservableObject {
         DebugLogger.shared.log("🗺️ SIMPLE_SUB: Routes usage recorded for today", category: "SUBSCRIPTION")
     }
 
-    // MARK: - Daily Usage Tracking
-    private func canUseDailyFeature(key: String) -> Bool {
-        let today = getTodayString()
-        let lastUsage = userDefaults.string(forKey: key)
-        return lastUsage != today
+    // MARK: - Main Menu Access Control
+    private let mapMenuUsageKey = "mapMenuUsageDate"
+    private let weatherMenuUsageKey = "weatherMenuUsageDate"
+    private let tideMenuUsageKey = "tideMenuUsageDate"
+    private let currentMenuUsageKey = "currentMenuUsageDate"
+    private let navUnitMenuUsageKey = "navUnitMenuUsageDate"
+    private let buoyMenuUsageKey = "buoyMenuUsageDate"
+    private let routeMenuUsageKey = "routeMenuUsageDate"
+
+    func canAccessMapMenu() -> Bool {
+        if subscriptionStatus.hasAccess { return true }
+        return canUseDailyFeature(key: mapMenuUsageKey, limit: 2)
     }
-    
+
+    func recordMapMenuUsage() {
+        recordDailyFeatureUsage(key: mapMenuUsageKey)
+        DebugLogger.shared.log("🗺️ SIMPLE_SUB: Map menu usage recorded for today", category: "SUBSCRIPTION")
+    }
+
+    func canAccessWeatherMenu() -> Bool {
+        if subscriptionStatus.hasAccess { return true }
+        return canUseDailyFeature(key: weatherMenuUsageKey, limit: 2)
+    }
+
+    func recordWeatherMenuUsage() {
+        recordDailyFeatureUsage(key: weatherMenuUsageKey)
+        DebugLogger.shared.log("☀️ SIMPLE_SUB: Weather menu usage recorded for today", category: "SUBSCRIPTION")
+    }
+
+    func canAccessTideMenu() -> Bool {
+        if subscriptionStatus.hasAccess { return true }
+        return canUseDailyFeature(key: tideMenuUsageKey, limit: 2)
+    }
+
+    func recordTideMenuUsage() {
+        recordDailyFeatureUsage(key: tideMenuUsageKey)
+        DebugLogger.shared.log("🌊 SIMPLE_SUB: Tide menu usage recorded for today", category: "SUBSCRIPTION")
+    }
+
+    func canAccessCurrentMenu() -> Bool {
+        if subscriptionStatus.hasAccess { return true }
+        return canUseDailyFeature(key: currentMenuUsageKey, limit: 2)
+    }
+
+    func recordCurrentMenuUsage() {
+        recordDailyFeatureUsage(key: currentMenuUsageKey)
+        DebugLogger.shared.log("💨 SIMPLE_SUB: Current menu usage recorded for today", category: "SUBSCRIPTION")
+    }
+
+    func canAccessNavUnitMenu() -> Bool {
+        if subscriptionStatus.hasAccess { return true }
+        return canUseDailyFeature(key: navUnitMenuUsageKey, limit: 2)
+    }
+
+    func recordNavUnitMenuUsage() {
+        recordDailyFeatureUsage(key: navUnitMenuUsageKey)
+        DebugLogger.shared.log("⚓ SIMPLE_SUB: Nav unit menu usage recorded for today", category: "SUBSCRIPTION")
+    }
+
+    func canAccessBuoyMenu() -> Bool {
+        if subscriptionStatus.hasAccess { return true }
+        return canUseDailyFeature(key: buoyMenuUsageKey, limit: 2)
+    }
+
+    func recordBuoyMenuUsage() {
+        recordDailyFeatureUsage(key: buoyMenuUsageKey)
+        DebugLogger.shared.log("🎯 SIMPLE_SUB: Buoy menu usage recorded for today", category: "SUBSCRIPTION")
+    }
+
+    func canAccessRouteMenu() -> Bool {
+        if subscriptionStatus.hasAccess { return true }
+        return canUseDailyFeature(key: routeMenuUsageKey, limit: 3)
+    }
+
+    func recordRouteMenuUsage() {
+        recordDailyFeatureUsage(key: routeMenuUsageKey)
+        DebugLogger.shared.log("🛤️ SIMPLE_SUB: Route menu usage recorded for today", category: "SUBSCRIPTION")
+    }
+
+    func getRemainingMapMenuUses() -> Int {
+        return getRemainingUses(key: mapMenuUsageKey, limit: 2)
+    }
+
+    func getRemainingWeatherMenuUses() -> Int {
+        return getRemainingUses(key: weatherMenuUsageKey, limit: 2)
+    }
+
+    func getRemainingTideMenuUses() -> Int {
+        return getRemainingUses(key: tideMenuUsageKey, limit: 2)
+    }
+
+    func getRemainingCurrentMenuUses() -> Int {
+        return getRemainingUses(key: currentMenuUsageKey, limit: 2)
+    }
+
+    func getRemainingNavUnitMenuUses() -> Int {
+        return getRemainingUses(key: navUnitMenuUsageKey, limit: 2)
+    }
+
+    func getRemainingBuoyMenuUses() -> Int {
+        return getRemainingUses(key: buoyMenuUsageKey, limit: 2)
+    }
+
+    func getRemainingRouteMenuUses() -> Int {
+        return getRemainingUses(key: routeMenuUsageKey, limit: 3)
+    }
+
+    // MARK: - Daily Usage Tracking
+    private func canUseDailyFeature(key: String, limit: Int = 1) -> Bool {
+        let today = getTodayString()
+        let dateKey = key
+        let countKey = "\(key)Count"
+
+        let storedDate = userDefaults.string(forKey: dateKey)
+        let count = userDefaults.integer(forKey: countKey)
+
+        // If it's a new day, reset count
+        if storedDate != today {
+            return true
+        }
+
+        // Check if we've reached the limit for today
+        return count < limit
+    }
+
+    private func getRemainingUses(key: String, limit: Int) -> Int {
+        let today = getTodayString()
+        let dateKey = key
+        let countKey = "\(key)Count"
+
+        let storedDate = userDefaults.string(forKey: dateKey)
+        let count = userDefaults.integer(forKey: countKey)
+
+        // If it's a new day, return full limit
+        if storedDate != today {
+            return limit
+        }
+
+        // Return remaining uses
+        return max(0, limit - count)
+    }
+
     private func recordDailyFeatureUsage(key: String) {
         let today = getTodayString()
-        userDefaults.set(today, forKey: key)
+        let dateKey = key
+        let countKey = "\(key)Count"
+
+        let storedDate = userDefaults.string(forKey: dateKey)
+
+        // If it's a new day, reset to 1
+        if storedDate != today {
+            userDefaults.set(today, forKey: dateKey)
+            userDefaults.set(1, forKey: countKey)
+        } else {
+            // Increment the count
+            let currentCount = userDefaults.integer(forKey: countKey)
+            userDefaults.set(currentCount + 1, forKey: countKey)
+        }
     }
-    
+
     private func getTodayString() -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
@@ -446,6 +594,8 @@ class SimpleSubscription: ObservableObject {
     }
     
     func resetSubscriptionState() {
+        DebugLogger.shared.log("🔄 DEBUG RESET: Starting subscription state reset", category: "DEBUG")
+        
         // Clear all subscription-related UserDefaults
         userDefaults.removeObject(forKey: localWeatherUsageKey)
         userDefaults.removeObject(forKey: localTideUsageKey)
@@ -463,13 +613,48 @@ class SimpleSubscription: ObservableObject {
         userDefaults.removeObject(forKey: buoyFavoritesUsageKey)
         userDefaults.removeObject(forKey: routesUsageKey)
 
-        // ENABLE debug override to force first launch behavior
-        debugOverrideSubscription = true
+        // Clear main menu usage tracking (dates and counts)
+        userDefaults.removeObject(forKey: mapMenuUsageKey)
+        userDefaults.removeObject(forKey: "\(mapMenuUsageKey)Count")
+        userDefaults.removeObject(forKey: weatherMenuUsageKey)
+        userDefaults.removeObject(forKey: "\(weatherMenuUsageKey)Count")
+        userDefaults.removeObject(forKey: tideMenuUsageKey)
+        userDefaults.removeObject(forKey: "\(tideMenuUsageKey)Count")
+        userDefaults.removeObject(forKey: currentMenuUsageKey)
+        userDefaults.removeObject(forKey: "\(currentMenuUsageKey)Count")
+        userDefaults.removeObject(forKey: navUnitMenuUsageKey)
+        userDefaults.removeObject(forKey: "\(navUnitMenuUsageKey)Count")
+        userDefaults.removeObject(forKey: buoyMenuUsageKey)
+        userDefaults.removeObject(forKey: "\(buoyMenuUsageKey)Count")
+        userDefaults.removeObject(forKey: routeMenuUsageKey)
+        userDefaults.removeObject(forKey: "\(routeMenuUsageKey)Count")
 
-        DebugLogger.shared.log("🔄 SIMPLE_SUB: Subscription state reset - forcing first launch", category: "SUBSCRIPTION")
+        // Clear debug override first
+        debugOverrideSubscription = false
+        
+        // Enable sandbox ignore to force paywall behavior
+        userDefaults.set(true, forKey: "ignoreSandboxSubscriptions")
+        
+        DebugLogger.shared.log("🔄 DEBUG RESET: All usage data cleared, sandbox subscriptions ignored", category: "DEBUG")
 
         Task {
             await determineSubscriptionStatus()
+            DebugLogger.shared.log("🔄 DEBUG RESET: Status refreshed - app should show paywall now", category: "DEBUG")
+        }
+    }
+    
+    func restoreNormalOperation() {
+        DebugLogger.shared.log("🔄 DEBUG RESTORE: Restoring normal operation", category: "DEBUG")
+        
+        // Clear debug override
+        debugOverrideSubscription = false
+        
+        // Stop ignoring sandbox subscriptions
+        userDefaults.removeObject(forKey: "ignoreSandboxSubscriptions")
+        
+        Task {
+            await determineSubscriptionStatus()
+            DebugLogger.shared.log("🔄 DEBUG RESTORE: Normal operation restored", category: "DEBUG")
         }
     }
     #endif

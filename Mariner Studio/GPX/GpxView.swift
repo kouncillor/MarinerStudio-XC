@@ -97,19 +97,6 @@ struct GpxView: View {
                     // Route Planning Form - Only show if route is loaded
                     if viewModel.hasRoute {
                         VStack(spacing: 15) {
-                            // Show route source info for pre-loaded routes
-                            if viewModel.isPreLoaded {
-                                HStack {
-                                    Image(systemName: "star.fill")
-                                        .foregroundColor(.yellow)
-                                    Text("Loaded from Favorites")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                    Spacer()
-                                }
-                                .padding(.bottom, 5)
-                            }
-
                             // Row 1: Start Date
                             HStack {
                                 Text("Start Date:")
@@ -148,7 +135,44 @@ struct GpxView: View {
                                     .frame(width: 80)
                             }
 
-                            // Row 4: Calculate ETAs Button
+                            // Row 4: Starting Waypoint
+                            VStack {
+                                HStack {
+                                    Spacer()
+
+                                    Picker("", selection: $viewModel.selectedStartingWaypointIndex) {
+                                        ForEach(0..<viewModel.waypointNames.count, id: \.self) { index in
+                                            Text(viewModel.waypointNames[index])
+                                                .tag(index)
+                                        }
+                                    }
+                                    .pickerStyle(MenuPickerStyle())
+                                    .onChange(of: viewModel.selectedStartingWaypointIndex) { _, _ in
+                                        // Reset ETAs when starting waypoint changes
+                                        viewModel.etasCalculated = false
+                                    }
+
+                                    Spacer()
+                                }
+                                .frame(minHeight: 30)
+                            }
+                            .padding(18)
+                            .background(Color(UIColor.systemBackground))
+                            .cornerRadius(8)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                            )
+                            .overlay(
+                                Text("Starting Waypoint")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .padding(.horizontal, 8)
+                                    .background(Color(UIColor.secondarySystemBackground))
+                                    .offset(y: -32)
+                            )
+
+                            // Row 5: Calculate ETAs Button
                             Button(action: {
                                 viewModel.calculateETAs()
                             }) {
@@ -162,7 +186,7 @@ struct GpxView: View {
                             }
                             .disabled(!viewModel.canCalculateETAs)
 
-                            // Row 5: View Route Details Button
+                            // Row 6: View Route Details Button
                             Button(action: {
                                 navigateToRouteDetails()
                             }) {
@@ -237,7 +261,7 @@ struct GpxView: View {
                     checkFavoriteStatus()
                 }
             }
-            .withHomeButton()
+            .withNotificationAndHome(sourceView: "Voyage Plan")
             .navigationTitle("Voyage Plan")
             .navigationBarTitleDisplayMode(.large)
             .navigationDestination(isPresented: $showingRouteDetails) {
@@ -345,8 +369,15 @@ struct GpxView: View {
     private func navigateToRouteDetails() {
         guard viewModel.etasCalculated else { return }
 
+        // Convert picker index to actual array index
+        // Picker index 0 = "Current Location", picker index 1+ = waypoint (array index 0+)
+        let actualStartIndex = viewModel.selectedStartingWaypointIndex > 0 ? viewModel.selectedStartingWaypointIndex - 1 : 0
+
+        // Only include waypoints from the selected starting index forward
+        let routePointsToShow = Array(viewModel.routePoints.dropFirst(actualStartIndex))
+
         // Convert RoutePoints to GpxRoutePoints for the route details
-        let gpxRoutePoints = viewModel.routePoints.map { point -> GpxRoutePoint in
+        let gpxRoutePoints = routePointsToShow.map { point -> GpxRoutePoint in
             var gpxPoint = GpxRoutePoint(
                 latitude: point.latitude,
                 longitude: point.longitude,

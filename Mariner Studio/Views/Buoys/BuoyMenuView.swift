@@ -10,93 +10,32 @@ import SwiftUI
 struct BuoyMenuView: View {
     // We'll use environment objects for service dependencies
     @EnvironmentObject var serviceProvider: ServiceProvider
-    @EnvironmentObject var subscriptionService: SimpleSubscription
-    @State private var showSubscriptionPrompt = false
-    @State private var showLocalBuoyView = false
-    @State private var showBuoyFavoritesView = false
-    @State private var refreshTrigger = false
 
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
-                // Favorites - Daily limited
-                if subscriptionService.hasAppAccess {
-                    NavigationLink(destination: BuoyFavoritesView(
-                        coreDataManager: serviceProvider.coreDataManager
-                    )) {
-                        MenuButtonContentBuoy(
-                            iconType: .system("star.fill"),
-                            title: "FAVORITES",
-                            color: .yellow
-                        )
-                    }
-                } else if subscriptionService.canAccessBuoyFavorites() {
-                    Button(action: {
-                        subscriptionService.recordBuoyFavoritesUsage()
-                        showBuoyFavoritesView = true
-                    }) {
-                        MenuButtonContentBuoy(
-                            iconType: .system("star.fill"),
-                            title: "FAVORITES",
-                            color: .yellow
-                        )
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                } else {
-                    Button(action: {
-                        showSubscriptionPrompt = true
-                    }) {
-                        MenuButtonContentBuoy(
-                            iconType: .system("star.fill"),
-                            title: "FAVORITES",
-                            color: .yellow,
-                            isUsedToday: true
-                        )
-                    }
-                    .buttonStyle(PlainButtonStyle())
+                // Favorites
+                NavigationLink(destination: BuoyFavoritesView(
+                    coreDataManager: serviceProvider.coreDataManager
+                )) {
+                    MenuButtonContentBuoy(
+                        iconType: .system("star.fill"),
+                        title: "FAVORITES",
+                        color: .yellow
+                    )
                 }
 
-                // Local Buoys - Free with daily limit
-                if subscriptionService.hasAppAccess {
-                    // Unlimited access for subscribed/trial users
-                    NavigationLink(destination: BuoyStationsView(
-                        buoyService: BuoyServiceImpl(),
-                        locationService: serviceProvider.locationService,
-                        coreDataManager: serviceProvider.coreDataManager
-                    )) {
-                        MenuButtonContentBuoy(
-                            iconType: .system("location.fill"),
-                            title: "LOCAL",
-                            color: .green
-                        )
-                    }
-                } else if subscriptionService.canAccessLocalBuoys() {
-                    // Free user with usage available - record usage and navigate
-                    Button(action: {
-                        subscriptionService.recordLocalBuoyUsage()
-                        showLocalBuoyView = true
-                    }) {
-                        MenuButtonContentBuoy(
-                            iconType: .system("location.fill"),
-                            title: "LOCAL",
-                            color: .green,
-                            isDailyLimited: true
-                        )
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                } else {
-                    // Free user has used today - show subscription prompt
-                    Button(action: {
-                        showSubscriptionPrompt = true
-                    }) {
-                        MenuButtonContentBuoy(
-                            iconType: .system("location.fill"),
-                            title: "LOCAL",
-                            color: .green,
-                            isUsedToday: true
-                        )
-                    }
-                    .buttonStyle(PlainButtonStyle())
+                // Local Buoys
+                NavigationLink(destination: BuoyStationsView(
+                    buoyService: BuoyServiceImpl(),
+                    locationService: serviceProvider.locationService,
+                    coreDataManager: serviceProvider.coreDataManager
+                )) {
+                    MenuButtonContentBuoy(
+                        iconType: .system("location.fill"),
+                        title: "LOCAL",
+                        color: .green
+                    )
                 }
             }
             .padding()
@@ -107,26 +46,6 @@ struct BuoyMenuView: View {
         .toolbarBackground(.purple, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .withNotificationAndHome(sourceView: "Buoys Menu")
-        .sheet(isPresented: $showSubscriptionPrompt) {
-            EnhancedPaywallView()
-        }
-        .navigationDestination(isPresented: $showLocalBuoyView) {
-            BuoyStationsView(
-                buoyService: BuoyServiceImpl(),
-                locationService: serviceProvider.locationService,
-                coreDataManager: serviceProvider.coreDataManager
-            )
-        }
-        .navigationDestination(isPresented: $showBuoyFavoritesView) {
-            BuoyFavoritesView(coreDataManager: serviceProvider.coreDataManager)
-        }
-        .onAppear {
-            // Force view refresh when returning to detect updated usage status
-            refreshTrigger.toggle()
-        }
-        .onChange(of: refreshTrigger) { _ in
-            // This will trigger a UI update when refreshTrigger changes
-        }
     }
 }
 

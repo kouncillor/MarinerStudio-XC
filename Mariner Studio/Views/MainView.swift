@@ -7,6 +7,14 @@ struct MainView: View {
     @State private var navigationPath = NavigationPath()
     @State private var showSubscriptionPrompt = false
     @State private var showFeedback = false
+    @State private var showMapView = false
+    @State private var showWeatherMenu = false
+    @State private var showTideMenu = false
+    @State private var showCurrentMenu = false
+    @State private var showNavUnitMenu = false
+    @State private var showBuoyMenu = false
+    @State private var showRouteMenu = false
+    @State private var refreshTrigger = false
 
     let shouldClearNavigation: Bool
 
@@ -20,64 +28,246 @@ struct MainView: View {
 
     private var coreNavigationButtons: some View {
         Group {
-            // MAP - Free feature
-            NavigationLink(destination: MapClusteringView()) {
-                NavigationButtonContent(
-                    icon: "earthsixfour",
-                    title: "MAP"
-                )
+            // MAP
+            if subscriptionService.hasAppAccess {
+                NavigationLink(destination: MapClusteringView()) {
+                    NavigationButtonContent(
+                        icon: "earthsixfour",
+                        title: "MAP"
+                    )
+                }
+            } else if subscriptionService.canAccessMapMenu() {
+                Button(action: {
+                    subscriptionService.recordMapMenuUsage()
+                    showMapView = true
+                }) {
+                    NavigationButtonContent(
+                        icon: "earthsixfour",
+                        title: "MAP",
+                        isDailyLimited: true,
+                        dailyUsageLimit: subscriptionService.getRemainingMapMenuUses()
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
+            } else {
+                Button(action: {
+                    showSubscriptionPrompt = true
+                }) {
+                    NavigationButtonContent(
+                        icon: "earthsixfour",
+                        title: "MAP",
+                        isUsedToday: true
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
             }
 
-            // WEATHER - Free feature
-            NavigationLink(destination: WeatherMenuView()) {
-                NavigationButtonContent(
-                    icon: "weathersunsixseven",
-                    title: "WEATHER"
-                )
+            // WEATHER
+            if subscriptionService.hasAppAccess {
+                NavigationLink(destination: WeatherMenuView()) {
+                    NavigationButtonContent(
+                        icon: "weathersunsixseven",
+                        title: "WEATHER"
+                    )
+                }
+            } else if subscriptionService.canAccessWeatherMenu() {
+                Button(action: {
+                    subscriptionService.recordWeatherMenuUsage()
+                    showWeatherMenu = true
+                }) {
+                    NavigationButtonContent(
+                        icon: "weathersunsixseven",
+                        title: "WEATHER",
+                        isDailyLimited: true,
+                        dailyUsageLimit: subscriptionService.getRemainingWeatherMenuUses()
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
+            } else {
+                Button(action: {
+                    showSubscriptionPrompt = true
+                }) {
+                    NavigationButtonContent(
+                        icon: "weathersunsixseven",
+                        title: "WEATHER",
+                        isUsedToday: true
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
             }
 
-            // TIDES - Free feature
-            NavigationLink(destination: TideMenuView()) {
-                NavigationButtonContent(
-                    icon: "tsixseven",
-                    title: "TIDES"
-                )
+            // TIDES
+            if subscriptionService.hasAppAccess {
+                NavigationLink(destination: TideMenuView()) {
+                    NavigationButtonContent(
+                        icon: "tsixseven",
+                        title: "TIDES"
+                    )
+                }
+            } else if subscriptionService.canAccessTideMenu() {
+                Button(action: {
+                    subscriptionService.recordTideMenuUsage()
+                    showTideMenu = true
+                }) {
+                    NavigationButtonContent(
+                        icon: "tsixseven",
+                        title: "TIDES",
+                        isDailyLimited: true,
+                        dailyUsageLimit: subscriptionService.getRemainingTideMenuUses()
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
+            } else {
+                Button(action: {
+                    showSubscriptionPrompt = true
+                }) {
+                    NavigationButtonContent(
+                        icon: "tsixseven",
+                        title: "TIDES",
+                        isUsedToday: true
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
             }
         }
     }
     
     private var additionalNavigationButtons: some View {
         Group {
-            // CURRENTS - Free feature
-            NavigationLink(destination: CurrentMenuView()) {
-                NavigationButtonContent(
-                    icon: "csixseven",
-                    title: "CURRENTS"
-                )
+            // CURRENTS
+            if subscriptionService.hasAppAccess {
+                NavigationLink(destination: CurrentMenuView()) {
+                    NavigationButtonContent(
+                        icon: "csixseven",
+                        title: "CURRENTS"
+                    )
+                }
+            } else if subscriptionService.canAccessCurrentMenu() {
+                Button(action: {
+                    subscriptionService.recordCurrentMenuUsage()
+                    showCurrentMenu = true
+                }) {
+                    NavigationButtonContent(
+                        icon: "csixseven",
+                        title: "CURRENTS",
+                        isDailyLimited: true,
+                        dailyUsageLimit: subscriptionService.getRemainingCurrentMenuUses()
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
+            } else {
+                Button(action: {
+                    showSubscriptionPrompt = true
+                }) {
+                    NavigationButtonContent(
+                        icon: "csixseven",
+                        title: "CURRENTS",
+                        isUsedToday: true
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
             }
 
-            // NAV UNITS - Free feature
-            NavigationLink(destination: NavUnitMenuView()) {
-                NavigationButtonContent(
-                    icon: "nsixseven",
-                    title: "NAV UNITS"
-                )
+            // NAV UNITS
+            if subscriptionService.hasAppAccess {
+                NavigationLink(destination: NavUnitMenuView()) {
+                    NavigationButtonContent(
+                        icon: "nsixseven",
+                        title: "NAV UNITS"
+                    )
+                }
+            } else if subscriptionService.canAccessNavUnitMenu() {
+                Button(action: {
+                    subscriptionService.recordNavUnitMenuUsage()
+                    showNavUnitMenu = true
+                }) {
+                    NavigationButtonContent(
+                        icon: "nsixseven",
+                        title: "NAV UNITS",
+                        isDailyLimited: true,
+                        dailyUsageLimit: subscriptionService.getRemainingNavUnitMenuUses()
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
+            } else {
+                Button(action: {
+                    showSubscriptionPrompt = true
+                }) {
+                    NavigationButtonContent(
+                        icon: "nsixseven",
+                        title: "NAV UNITS",
+                        isUsedToday: true
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
             }
 
-            // BUOYS - Free feature
-            NavigationLink(destination: BuoyMenuView()) {
-                NavigationButtonContent(
-                    icon: "bsixseven",
-                    title: "BUOYS"
-                )
+            // BUOYS
+            if subscriptionService.hasAppAccess {
+                NavigationLink(destination: BuoyMenuView()) {
+                    NavigationButtonContent(
+                        icon: "bsixseven",
+                        title: "BUOYS"
+                    )
+                }
+            } else if subscriptionService.canAccessBuoyMenu() {
+                Button(action: {
+                    subscriptionService.recordBuoyMenuUsage()
+                    showBuoyMenu = true
+                }) {
+                    NavigationButtonContent(
+                        icon: "bsixseven",
+                        title: "BUOYS",
+                        isDailyLimited: true,
+                        dailyUsageLimit: subscriptionService.getRemainingBuoyMenuUses()
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
+            } else {
+                Button(action: {
+                    showSubscriptionPrompt = true
+                }) {
+                    NavigationButtonContent(
+                        icon: "bsixseven",
+                        title: "BUOYS",
+                        isUsedToday: true
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
             }
 
-            // ROUTES - Free feature
-            NavigationLink(destination: RouteMenuView()) {
-                NavigationButtonContent(
-                    icon: "rsixseven",
-                    title: "ROUTES"
-                )
+            // ROUTES
+            if subscriptionService.hasAppAccess {
+                NavigationLink(destination: RouteMenuView()) {
+                    NavigationButtonContent(
+                        icon: "rsixseven",
+                        title: "ROUTES"
+                    )
+                }
+            } else if subscriptionService.canAccessRouteMenu() {
+                Button(action: {
+                    subscriptionService.recordRouteMenuUsage()
+                    showRouteMenu = true
+                }) {
+                    NavigationButtonContent(
+                        icon: "rsixseven",
+                        title: "ROUTES",
+                        isDailyLimited: true,
+                        dailyUsageLimit: subscriptionService.getRemainingRouteMenuUses()
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
+            } else {
+                Button(action: {
+                    showSubscriptionPrompt = true
+                }) {
+                    NavigationButtonContent(
+                        icon: "rsixseven",
+                        title: "ROUTES",
+                        isUsedToday: true
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
             }
             
             // TESTING TOOLS - Only visible in debug builds, always accessible
@@ -119,7 +309,37 @@ struct MainView: View {
     
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
-        // Feedback button (leftmost of the two)
+        #if DEBUG
+        // Debug paywall toggle button (leftmost)
+        ToolbarItem(placement: .topBarTrailing) {
+            Menu {
+                Button("Reset & Show Paywall") {
+                    subscriptionService.resetSubscriptionState()
+                }
+                
+                Button("Restore Normal Operation") {
+                    subscriptionService.restoreNormalOperation()
+                }
+                
+                Divider()
+                
+                if subscriptionService.hasAppAccess {
+                    Button("Disable Subscription") {
+                        subscriptionService.disableDebugSubscription()
+                    }
+                } else {
+                    Button("Enable Subscription") {
+                        subscriptionService.enableDebugSubscription()
+                    }
+                }
+            } label: {
+                Image(systemName: "wrench.and.screwdriver")
+                    .foregroundColor(.orange)
+            }
+        }
+        #endif
+        
+        // Feedback button
         ToolbarItem(placement: .topBarTrailing) {
             Button(action: {
                 showFeedback = true
@@ -150,12 +370,38 @@ struct MainView: View {
                     if shouldClearNavigation {
                         clearNavigationStack()
                     }
+                    // Force view refresh when returning to detect updated usage status
+                    refreshTrigger.toggle()
+                }
+                .onChange(of: refreshTrigger) { _ in
+                    // This will trigger a UI update when refreshTrigger changes
                 }
                 .sheet(isPresented: $showSubscriptionPrompt) {
                     EnhancedPaywallView()
                 }
                 .sheet(isPresented: $showFeedback) {
                     FeedbackView(sourceView: "Main Menu")
+                }
+                .navigationDestination(isPresented: $showMapView) {
+                    MapClusteringView()
+                }
+                .navigationDestination(isPresented: $showWeatherMenu) {
+                    WeatherMenuView()
+                }
+                .navigationDestination(isPresented: $showTideMenu) {
+                    TideMenuView()
+                }
+                .navigationDestination(isPresented: $showCurrentMenu) {
+                    CurrentMenuView()
+                }
+                .navigationDestination(isPresented: $showNavUnitMenu) {
+                    NavUnitMenuView()
+                }
+                .navigationDestination(isPresented: $showBuoyMenu) {
+                    BuoyMenuView()
+                }
+                .navigationDestination(isPresented: $showRouteMenu) {
+                    RouteMenuView()
                 }
         }
     }
@@ -232,8 +478,9 @@ struct NavigationButtonContent: View {
     let isPremium: Bool
     let isDailyLimited: Bool
     let isUsedToday: Bool
+    let dailyUsageLimit: Int
 
-    init(icon: String, title: String, isSystemIcon: Bool = false, iconColor: Color? = nil, isPremium: Bool = false, isDailyLimited: Bool = false, isUsedToday: Bool = false) {
+    init(icon: String, title: String, isSystemIcon: Bool = false, iconColor: Color? = nil, isPremium: Bool = false, isDailyLimited: Bool = false, isUsedToday: Bool = false, dailyUsageLimit: Int = 1) {
         self.icon = icon
         self.title = title
         self.isSystemIcon = isSystemIcon
@@ -241,6 +488,7 @@ struct NavigationButtonContent: View {
         self.isPremium = isPremium
         self.isDailyLimited = isDailyLimited
         self.isUsedToday = isUsedToday
+        self.dailyUsageLimit = dailyUsageLimit
     }
 
     var body: some View {
@@ -284,7 +532,7 @@ struct NavigationButtonContent: View {
                             .font(.caption)
                             .foregroundColor(.blue)
 
-                        Text("1 USE/DAY")
+                        Text("\(dailyUsageLimit) \(dailyUsageLimit == 1 ? "USE" : "USES")/DAY")
                             .font(.caption)
                             .fontWeight(.semibold)
                             .foregroundColor(.blue)

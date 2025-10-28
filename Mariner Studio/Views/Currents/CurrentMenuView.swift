@@ -3,91 +3,30 @@ import SwiftUI
 struct CurrentMenuView: View {
     // We'll use environment objects for service dependencies
     @EnvironmentObject var serviceProvider: ServiceProvider
-    @EnvironmentObject var subscriptionService: SimpleSubscription
-    @State private var showSubscriptionPrompt = false
-    @State private var showLocalCurrentView = false
-    @State private var showCurrentFavoritesView = false
-    @State private var refreshTrigger = false
 
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
-                // Favorites - Daily limited
-                if subscriptionService.hasAppAccess {
-                    NavigationLink(destination: CurrentFavoritesView(coreDataManager: serviceProvider.coreDataManager)) {
-                        MenuButtonContentCurrent(
-                            iconType: .system("star.fill"),
-                            title: "FAVORITES",
-                            color: .yellow
-                        )
-                    }
-                } else if subscriptionService.canAccessCurrentFavorites() {
-                    Button(action: {
-                        subscriptionService.recordCurrentFavoritesUsage()
-                        showCurrentFavoritesView = true
-                    }) {
-                        MenuButtonContentCurrent(
-                            iconType: .system("star.fill"),
-                            title: "FAVORITES",
-                            color: .yellow
-                        )
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                } else {
-                    Button(action: {
-                        showSubscriptionPrompt = true
-                    }) {
-                        MenuButtonContentCurrent(
-                            iconType: .system("star.fill"),
-                            title: "FAVORITES",
-                            color: .yellow,
-                            isUsedToday: true
-                        )
-                    }
-                    .buttonStyle(PlainButtonStyle())
+                // Favorites
+                NavigationLink(destination: CurrentFavoritesView(coreDataManager: serviceProvider.coreDataManager)) {
+                    MenuButtonContentCurrent(
+                        iconType: .system("star.fill"),
+                        title: "FAVORITES",
+                        color: .yellow
+                    )
                 }
 
-                // Local Currents - Free with daily limit
-                if subscriptionService.hasAppAccess {
-                    // Unlimited access for subscribed/trial users
-                    NavigationLink(destination: TidalCurrentStationsView(
-                        tidalCurrentService: TidalCurrentServiceImpl(),
-                        locationService: serviceProvider.locationService,
-                        coreDataManager: serviceProvider.coreDataManager
-                    )) {
-                        MenuButtonContentCurrent(
-                            iconType: .system("location.fill"),
-                            title: "LOCAL",
-                            color: .green
-                        )
-                    }
-                } else if subscriptionService.canAccessLocalCurrents() {
-                    // Free user with usage available - record usage and navigate
-                    Button(action: {
-                        subscriptionService.recordLocalCurrentUsage()
-                        showLocalCurrentView = true
-                    }) {
-                        MenuButtonContentCurrent(
-                            iconType: .system("location.fill"),
-                            title: "LOCAL",
-                            color: .green,
-                            isDailyLimited: true
-                        )
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                } else {
-                    // Free user has used today - show subscription prompt
-                    Button(action: {
-                        showSubscriptionPrompt = true
-                    }) {
-                        MenuButtonContentCurrent(
-                            iconType: .system("location.fill"),
-                            title: "LOCAL",
-                            color: .green,
-                            isUsedToday: true
-                        )
-                    }
-                    .buttonStyle(PlainButtonStyle())
+                // Local Currents
+                NavigationLink(destination: TidalCurrentStationsView(
+                    tidalCurrentService: TidalCurrentServiceImpl(),
+                    locationService: serviceProvider.locationService,
+                    coreDataManager: serviceProvider.coreDataManager
+                )) {
+                    MenuButtonContentCurrent(
+                        iconType: .system("location.fill"),
+                        title: "LOCAL",
+                        color: .green
+                    )
                 }
 
             }
@@ -99,26 +38,6 @@ struct CurrentMenuView: View {
         .toolbarBackground(.red, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .withNotificationAndHome(sourceView: "Currents Menu")
-        .sheet(isPresented: $showSubscriptionPrompt) {
-            EnhancedPaywallView()
-        }
-        .navigationDestination(isPresented: $showLocalCurrentView) {
-            TidalCurrentStationsView(
-                tidalCurrentService: TidalCurrentServiceImpl(),
-                locationService: serviceProvider.locationService,
-                coreDataManager: serviceProvider.coreDataManager
-            )
-        }
-        .navigationDestination(isPresented: $showCurrentFavoritesView) {
-            CurrentFavoritesView(coreDataManager: serviceProvider.coreDataManager)
-        }
-        .onAppear {
-            // Force view refresh when returning to detect updated usage status
-            refreshTrigger.toggle()
-        }
-        .onChange(of: refreshTrigger) { _ in
-            // This will trigger a UI update when refreshTrigger changes
-        }
     }
 }
 

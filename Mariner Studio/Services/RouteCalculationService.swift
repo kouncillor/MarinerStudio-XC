@@ -9,7 +9,7 @@ import Foundation
 import CoreLocation
 
 protocol RouteCalculationService {
-    func calculateDistanceAndBearing(routePoints: [RoutePoint], averageSpeed: Double) -> [RoutePoint]
+    func calculateDistanceAndBearing(routePoints: [RoutePoint], averageSpeed: Double, startingIndex: Int) -> [RoutePoint]
     func calculateDistance(from: CLLocationCoordinate2D, to: CLLocationCoordinate2D) -> Double
     func calculateBearing(from: CLLocationCoordinate2D, to: CLLocationCoordinate2D) -> Double
     func formatDuration(_ duration: TimeInterval) -> String
@@ -20,13 +20,15 @@ protocol RouteCalculationService {
 class RouteCalculationServiceImpl: RouteCalculationService {
     private let earthRadius: Double = 3440.065 // Earth's radius in nautical miles
 
-    func calculateDistanceAndBearing(routePoints: [RoutePoint], averageSpeed: Double) -> [RoutePoint] {
+    func calculateDistanceAndBearing(routePoints: [RoutePoint], averageSpeed: Double, startingIndex: Int = 0) -> [RoutePoint] {
         guard routePoints.count >= 2 else { return routePoints }
+        guard startingIndex >= 0 && startingIndex < routePoints.count else { return routePoints }
 
         var updatedPoints = routePoints
-        var currentTime = updatedPoints[0].eta
+        var currentTime = updatedPoints[startingIndex].eta
 
-        for i in 0..<updatedPoints.count - 1 {
+        // Calculate from the starting index forward
+        for i in startingIndex..<updatedPoints.count - 1 {
             let currentPoint = updatedPoints[i]
             let nextPoint = updatedPoints[i + 1]
 

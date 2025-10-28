@@ -17,6 +17,7 @@ class GpxViewModel: ObservableObject {
     @Published var isReversed = false
     @Published var directionButtonText = "Reverse Route"
     @Published var isPreLoaded = false // New property to track if route was pre-loaded
+    @Published var selectedStartingWaypointIndex = 1 // Index of waypoint to start from (1 = first waypoint, 0 = Current Location)
 
     // MARK: - Services
     private let gpxService: GpxServiceProtocol
@@ -25,6 +26,14 @@ class GpxViewModel: ObservableObject {
     // MARK: - Computed Properties
     var canCalculateETAs: Bool {
         return hasRoute && !averageSpeed.isEmpty && Double(averageSpeed) != nil
+    }
+
+    var waypointNames: [String] {
+        var names = ["📍 Current Location"]
+        names.append(contentsOf: routePoints.enumerated().map { index, point in
+            "\(index + 1). \(point.name)"
+        })
+        return names
     }
 
     // MARK: - Event handlers
@@ -43,6 +52,35 @@ class GpxViewModel: ObservableObject {
     }
 
     // MARK: - Public Methods
+
+    /// Find the closest waypoint to the user's current location
+    func findClosestWaypointIndex() -> Int? {
+        guard !routePoints.isEmpty else { return nil }
+
+        // Get current location from LocationManager
+        guard let currentLocation = LocationManager.shared.currentLocation else {
+            print("⚠️ GpxViewModel: No current location available")
+            return nil
+        }
+
+        let currentCoord = currentLocation.coordinate
+        var closestIndex = 0
+        var shortestDistance = Double.infinity
+
+        // Calculate distance to each waypoint
+        for (index, waypoint) in routePoints.enumerated() {
+            let waypointCoord = CLLocationCoordinate2D(latitude: waypoint.latitude, longitude: waypoint.longitude)
+            let distance = routeCalculationService.calculateDistance(from: currentCoord, to: waypointCoord)
+
+            if distance < shortestDistance {
+                shortestDistance = distance
+                closestIndex = index
+            }
+        }
+
+        print("📍 GpxViewModel: Closest waypoint to current location is #\(closestIndex + 1) '\(routePoints[closestIndex].name)' at \(String(format: "%.2f", shortestDistance)) nm")
+        return closestIndex
+    }
 
     /// Load a route that already exists (from favorites, etc.)
     func loadPreExistingRoute(_ gpxFile: GpxFile) {
@@ -80,6 +118,28 @@ class GpxViewModel: ObservableObject {
     func calculateETAs() {
         guard canCalculateETAs, routePoints.count >= 2 else { return }
 
+        // Determine the actual starting waypoint index
+        var actualStartingIndex = selectedStartingWaypointIndex
+
+        // If user selected "Current Location" (index 0), find the closest waypoint
+        if selectedStartingWaypointIndex == 0 {
+            if let closestIndex = findClosestWaypointIndex() {
+                actualStartingIndex = closestIndex
+                // Update the selected index to show which waypoint was auto-selected
+                // Add 1 because "Current Location" is at index 0
+                selectedStartingWaypointIndex = closestIndex + 1
+                print("📍 GpxViewModel: Auto-selected waypoint #\(closestIndex + 1) based on current location")
+            } else {
+                errorMessage = "Unable to determine current location"
+                return
+            }
+        } else {
+            // Subtract 1 because "Current Location" is at index 0, shifting all waypoints by 1
+            actualStartingIndex = selectedStartingWaypointIndex - 1
+        }
+
+        guard actualStartingIndex < routePoints.count else { return }
+
         // Create date from startDate + startTime
         let calendar = Calendar.current
         let startDateComponents = calendar.dateComponents([.year, .month, .day], from: startDate)
@@ -93,14 +153,18 @@ class GpxViewModel: ObservableObject {
         combinedComponents.minute = startTimeComponents.minute
 
         if let startDateTime = calendar.date(from: combinedComponents) {
-            // Set the ETA of the first point to the start date/time
-            routePoints[0].eta = startDateTime
+            // Set the ETA of the selected starting waypoint to the start date/time
+            routePoints[actualStartingIndex].eta = startDateTime
 
             // Get the speed in knots
             guard let speed = Double(averageSpeed) else { return }
 
-            // Calculate distances, bearings, and ETAs
-            routePoints = routeCalculationService.calculateDistanceAndBearing(routePoints: routePoints, averageSpeed: speed)
+            // Calculate distances, bearings, and ETAs from the selected starting waypoint forward
+            routePoints = routeCalculationService.calculateDistanceAndBearing(
+                routePoints: routePoints,
+                averageSpeed: speed,
+                startingIndex: actualStartingIndex
+            )
 
             etasCalculated = true
         }
@@ -123,6 +187,9 @@ class GpxViewModel: ObservableObject {
             routeName = "\(firstPoint.name) - \(lastPoint.name)"
         }
 
+        // Reset starting waypoint to first waypoint after reversal
+        selectedStartingWaypointIndex = 1
+
         // Reset ETAs since they need to be recalculated
         etasCalculated = false
 
@@ -139,5 +206,6 @@ class GpxViewModel: ObservableObject {
         isReversed = false
         directionButtonText = "Reverse Route"
         isPreLoaded = false
+        selectedStartingWaypointIndex = 1
     }
 }

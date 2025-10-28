@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		2E2B9A862EB1672D007C3C2E /* DebugSubscriptionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E2B9A852EB1672D007C3C2E /* DebugSubscriptionView.swift */; };
+		2E2B9A8A2EB168C6007C3C2E /* PaywallTestingGuide.md in Resources */ = {isa = PBXBuildFile; fileRef = 2E2B9A892EB168C6007C3C2E /* PaywallTestingGuide.md */; };
 		2E2F40E02DBF09510005CB80 /* SQLite in Frameworks */ = {isa = PBXBuildFile; productRef = 2E2F40DF2DBF09510005CB80 /* SQLite */; };
 		2E540EA72DE2BDDD00D8A826 /* CoreGPX in Frameworks */ = {isa = PBXBuildFile; productRef = 2E540EA62DE2BDDD00D8A826 /* CoreGPX */; };
 		2E5E9FA42DCBD39D00F97B95 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 2E5E9FA32DCBD39D00F97B95 /* RevenueCat */; };
@@ -20,6 +22,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		2E2B9A852EB1672D007C3C2E /* DebugSubscriptionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugSubscriptionView.swift; sourceTree = "<group>"; };
+		2E2B9A892EB168C6007C3C2E /* PaywallTestingGuide.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = PaywallTestingGuide.md; sourceTree = "<group>"; };
 		2EB41CD02DBC80CC009FC129 /* Mariner Studio.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Mariner Studio.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -74,6 +78,8 @@
 				2EB41CD22DBC80CC009FC129 /* Mariner Studio */,
 				2EDB80DF2E03B3DD00E2A998 /* Frameworks */,
 				2EB41CD12DBC80CC009FC129 /* Products */,
+				2E2B9A852EB1672D007C3C2E /* DebugSubscriptionView.swift */,
+				2E2B9A892EB168C6007C3C2E /* PaywallTestingGuide.md */,
 			);
 			sourceTree = "<group>";
 		};
@@ -172,6 +178,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2E2B9A8A2EB168C6007C3C2E /* PaywallTestingGuide.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -182,6 +189,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2E2B9A862EB1672D007C3C2E /* DebugSubscriptionView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
