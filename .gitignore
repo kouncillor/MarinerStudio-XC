@@ -110,4 +110,4 @@ iOSInjectionProject/
 *.temp
 
 # Build artifacts
-*.xcarchive
+*.xcarchive.mcp.json
