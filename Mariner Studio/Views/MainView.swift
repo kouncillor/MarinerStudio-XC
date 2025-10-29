@@ -1,8 +1,10 @@
 import SwiftUI
+import RevenueCat
+import RevenueCatUI
 
 struct MainView: View {
     @EnvironmentObject var cloudKitManager: CloudKitManager
-    @EnvironmentObject var subscriptionService: SimpleSubscription
+    @EnvironmentObject var subscriptionService: RevenueCatSubscription
     @EnvironmentObject var serviceProvider: ServiceProvider
     @State private var navigationPath = NavigationPath()
     @State private var showSubscriptionPrompt = false
@@ -313,23 +315,25 @@ struct MainView: View {
         // Debug paywall toggle button (leftmost)
         ToolbarItem(placement: .topBarTrailing) {
             Menu {
-                Button("Reset & Show Paywall") {
-                    subscriptionService.resetSubscriptionState()
-                }
-                
-                Button("Restore Normal Operation") {
-                    subscriptionService.restoreNormalOperation()
-                }
-                
-                Divider()
-                
-                if subscriptionService.hasAppAccess {
-                    Button("Disable Subscription") {
-                        subscriptionService.disableDebugSubscription()
+                Button("Reset for Testing (Logout)") {
+                    Purchases.shared.logOut { customerInfo, error in
+                        Task { @MainActor in
+                            await subscriptionService.determineSubscriptionStatus()
+                        }
                     }
-                } else {
-                    Button("Enable Subscription") {
-                        subscriptionService.enableDebugSubscription()
+                }
+
+                Divider()
+
+                Button("Refresh Status") {
+                    Task {
+                        await subscriptionService.determineSubscriptionStatus()
+                    }
+                }
+
+                Button("Restore Purchases") {
+                    Task {
+                        await subscriptionService.restorePurchases()
                     }
                 }
             } label: {
@@ -377,7 +381,10 @@ struct MainView: View {
                     // This will trigger a UI update when refreshTrigger changes
                 }
                 .sheet(isPresented: $showSubscriptionPrompt) {
-                    EnhancedPaywallView()
+                    PaywallView()
+                        .onPurchaseCompleted { customerInfo in
+                            showSubscriptionPrompt = false
+                        }
                 }
                 .sheet(isPresented: $showFeedback) {
                     FeedbackView(sourceView: "Main Menu")

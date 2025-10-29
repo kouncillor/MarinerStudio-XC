@@ -8,9 +8,9 @@ struct Mariner_StudioApp: App {
 
     // Create a shared service provider at app startup
     @StateObject private var serviceProvider = ServiceProvider()
-    
+
     // Create a single subscription service instance for the entire app (Dependency Injection)
-    @StateObject private var subscriptionService = SimpleSubscription()
+    @StateObject private var subscriptionService = RevenueCatSubscription()
 
     init() {
         DebugLogger.shared.printLogLocation()

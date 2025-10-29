@@ -1,5 +1,6 @@
 import SwiftUI
 import MapKit
+import RevenueCatUI
 
 // Proxy to access the MapView from the overlay button
 class TandmMapViewProxy {
@@ -52,7 +53,7 @@ struct MapClusteringView: View {
    @State private var showBuoyStationDetails = false
 
    @EnvironmentObject var serviceProvider: ServiceProvider
-   @EnvironmentObject var subscriptionService: SimpleSubscription
+   @EnvironmentObject var subscriptionService: RevenueCatSubscription
    @State private var showSubscriptionPrompt = false
 
    // MARK: - Initialization
@@ -414,7 +415,10 @@ struct MapClusteringView: View {
            chartLayersView
        }
        .sheet(isPresented: $showSubscriptionPrompt) {
-           EnhancedPaywallView()
+           PaywallView()
+               .onPurchaseCompleted { customerInfo in
+                   showSubscriptionPrompt = false
+               }
        }
        .background(
            ZStack {

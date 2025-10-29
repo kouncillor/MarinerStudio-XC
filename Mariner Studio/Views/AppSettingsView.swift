@@ -1,8 +1,9 @@
 import SwiftUI
+import RevenueCatUI
 
 struct AppSettingsView: View {
     @EnvironmentObject var cloudKitManager: CloudKitManager
-    @EnvironmentObject var subscriptionService: SimpleSubscription
+    @EnvironmentObject var subscriptionService: RevenueCatSubscription
     @State private var showingAbout = false
     @State private var showingSubscription = false
     @State private var showFeedback = false
@@ -210,7 +211,7 @@ struct AboutSheet: View {
 
 struct SubscriptionSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject var subscriptionService: SimpleSubscription
+    @EnvironmentObject var subscriptionService: RevenueCatSubscription
     
     var body: some View {
         NavigationView {
@@ -456,7 +457,7 @@ struct AppInfoRow: View {
 // MARK: - Subscription Management Section
 
 struct SubscriptionManagementSection: View {
-    @EnvironmentObject var subscriptionService: SimpleSubscription
+    @EnvironmentObject var subscriptionService: RevenueCatSubscription
     @State private var showingSubscriptionDetails = false
     
     var body: some View {
@@ -484,7 +485,7 @@ struct SubscriptionManagementSection: View {
 }
 
 struct SubscriptionStatusCard: View {
-    @EnvironmentObject var subscriptionService: SimpleSubscription
+    @EnvironmentObject var subscriptionService: RevenueCatSubscription
     
     var body: some View {
         HStack {
@@ -598,7 +599,7 @@ struct SubscriptionStatusCard: View {
 }
 
 struct SubscriptionActionsGrid: View {
-    @EnvironmentObject var subscriptionService: SimpleSubscription
+    @EnvironmentObject var subscriptionService: RevenueCatSubscription
     
     var body: some View {
         LazyVGrid(columns: [
@@ -625,27 +626,22 @@ struct SubscriptionActionsGrid: View {
 }
 
 struct UpgradeToProButton: View {
-    @EnvironmentObject var subscriptionService: SimpleSubscription
-    
+    @EnvironmentObject var subscriptionService: RevenueCatSubscription
+    @State private var showPaywall = false
+
     var body: some View {
         Button(action: {
-            Task {
-                do {
-                    try await subscriptionService.subscribeToMonthly()
-                } catch {
-                    DebugLogger.shared.log("❌ SUBSCRIPTION: Upgrade failed: \(error)", category: "SUBSCRIPTION_SETTINGS")
-                }
-            }
+            showPaywall = true
         }) {
             VStack(spacing: 4) {
                 Image(systemName: "crown.fill")
                     .foregroundColor(.yellow)
                     .font(.title3)
-                
+
                 Text("Upgrade")
                     .font(.caption.bold())
                     .foregroundColor(.primary)
-                
+
                 Text("$2.99/month")
                     .font(.caption2)
                     .foregroundColor(.secondary)
@@ -658,14 +654,19 @@ struct UpgradeToProButton: View {
             )
         }
         .buttonStyle(PlainButtonStyle())
-        .disabled(subscriptionService.isLoading)
+        .sheet(isPresented: $showPaywall) {
+            PaywallView()
+                .onPurchaseCompleted { customerInfo in
+                    showPaywall = false
+                }
+        }
     }
 }
 
 
 
 struct RestorePurchasesButton: View {
-    @EnvironmentObject var subscriptionService: SimpleSubscription
+    @EnvironmentObject var subscriptionService: RevenueCatSubscription
     
     var body: some View {
         Button(action: {
@@ -735,7 +736,7 @@ struct CancelSubscriptionButton: View {
 
 
 struct SubscriptionDetailsCard: View {
-    @EnvironmentObject var subscriptionService: SimpleSubscription
+    @EnvironmentObject var subscriptionService: RevenueCatSubscription
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
