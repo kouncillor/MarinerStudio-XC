@@ -1,4 +1,5 @@
 import SwiftUI
+import RevenueCat
 import RevenueCatUI
 
 struct AppSettingsView: View {
@@ -628,6 +629,7 @@ struct SubscriptionActionsGrid: View {
 struct UpgradeToProButton: View {
     @EnvironmentObject var subscriptionService: RevenueCatSubscription
     @State private var showPaywall = false
+    @State private var testOffering: Offering?
 
     var body: some View {
         Button(action: {
@@ -655,10 +657,28 @@ struct UpgradeToProButton: View {
         }
         .buttonStyle(PlainButtonStyle())
         .sheet(isPresented: $showPaywall) {
-            PaywallView()
-                .onPurchaseCompleted { customerInfo in
-                    showPaywall = false
+            Group {
+                if let offering = testOffering {
+                    PaywallView(offering: offering)
+                        .onPurchaseCompleted { customerInfo in
+                            showPaywall = false
+                        }
+                } else {
+                    PaywallView()
+                        .onPurchaseCompleted { customerInfo in
+                            showPaywall = false
+                        }
                 }
+            }
+        }
+        .task {
+            // Load the new paywall offering
+            do {
+                let offerings = try await Purchases.shared.offerings()
+                testOffering = offerings.offering(identifier: "rev_cat_template")
+            } catch {
+                // Silently fail, will fall back to default offering
+            }
         }
     }
 }

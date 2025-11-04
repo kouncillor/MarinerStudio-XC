@@ -1,0 +1,20 @@
+{
+  "mcpServers": {
+    "revenuecat": {
+      "type": "http",
+      "url": "https://mcp.revenuecat.ai/mcp",
+      "headers": {
+        "Authorization": "Bearer sk_PspYIixWfbmzUCSJvIuXumimqHtux"
+      }
+    },
+    "app-store-connect": {
+      "command": "npx",
+      "args": ["-y", "appstore-connect-mcp-server"],
+      "env": {
+        "APP_STORE_CONNECT_KEY_ID": "844LL28A6M",
+        "APP_STORE_CONNECT_ISSUER_ID": "485bde4b-db6f-4050-a818-67ea2e7b9ad2",
+        "APP_STORE_CONNECT_P8_PATH": "/Users/timothyrussell/Downloads/AuthKey_844LL28A6M.p8"
+      }
+    }
+  }
+}

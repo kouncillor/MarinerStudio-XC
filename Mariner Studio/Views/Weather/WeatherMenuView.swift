@@ -27,6 +27,17 @@ struct WeatherMenuView: View {
                     )
                 }
 
+                // Forecast
+                Button(action: {
+                    openForecastWebsite()
+                }) {
+                    MenuButtonContent(
+                        iconType: .system("calendar"),
+                        title: "FORECAST",
+                        color: .purple
+                    )
+                }
+
                 // Weather Map
                 NavigationLink(destination: WeatherMapView()) {
                     MenuButtonContent(
@@ -87,6 +98,26 @@ struct WeatherMenuView: View {
             } else {
                 // Fallback to standard radar URL if location is unavailable
                 if let defaultURL = URL(string: "https://radar.weather.gov/") { UIApplication.shared.open(defaultURL) }
+            }
+        }
+    }
+
+    // Opens the NOAA forecast website using Safari with user's location
+    private func openForecastWebsite() {
+        Task {
+            if let location = serviceProvider.locationService.currentLocation {
+                let lat = location.coordinate.latitude
+                let lon = location.coordinate.longitude
+                let urlString = "https://forecast.weather.gov/MapClick.php?lat=\(lat)&lon=\(lon)"
+
+                if let forecastURL = URL(string: urlString) {
+                    UIApplication.shared.open(forecastURL)
+                }
+            } else {
+                // Fallback to default location if user location is unavailable
+                if let defaultURL = URL(string: "https://forecast.weather.gov/MapClick.php?lat=38.186373&lon=-76.432046") {
+                    UIApplication.shared.open(defaultURL)
+                }
             }
         }
     }

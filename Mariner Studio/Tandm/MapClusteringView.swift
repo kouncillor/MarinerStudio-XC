@@ -1,5 +1,6 @@
 import SwiftUI
 import MapKit
+import RevenueCat
 import RevenueCatUI
 
 // Proxy to access the MapView from the overlay button
@@ -54,7 +55,6 @@ struct MapClusteringView: View {
 
    @EnvironmentObject var serviceProvider: ServiceProvider
    @EnvironmentObject var subscriptionService: RevenueCatSubscription
-   @State private var showSubscriptionPrompt = false
 
    // MARK: - Initialization
    init() {
@@ -179,85 +179,29 @@ struct MapClusteringView: View {
                mapType: mapType,
                onNavUnitSelected: { navUnitId in
                    resetAllNavigationState()
-                   
-                   // Check subscription access for nav units
-                   if subscriptionService.hasAppAccess {
-                       // Unlimited access for subscribers/trial users
-                       selectedNavUnitId = navUnitId
-                       showNavUnitDetails = true
-                   } else if subscriptionService.canAccessLocalNavUnits() {
-                       // Free user with usage available - record usage and navigate
-                       subscriptionService.recordLocalNavUnitUsage()
-                       selectedNavUnitId = navUnitId
-                       showNavUnitDetails = true
-                   } else {
-                       // Free user has used today - show subscription prompt
-                       showSubscriptionPrompt = true
-                   }
+                   selectedNavUnitId = navUnitId
+                   showNavUnitDetails = true
                },
 
                onTidalHeightStationSelected: { stationId, stationName in
                    resetAllNavigationState()
-                   
-                   // Check subscription access for tidal height stations
-                   if subscriptionService.hasAppAccess {
-                       // Unlimited access for subscribers/trial users
-                       selectedTidalHeightStationId = stationId
-                       selectedTidalHeightStationName = stationName
-                       showTidalHeightDetails = true
-                   } else if subscriptionService.canAccessLocalTides() {
-                       // Free user with usage available - record usage and navigate
-                       subscriptionService.recordLocalTideUsage()
-                       selectedTidalHeightStationId = stationId
-                       selectedTidalHeightStationName = stationName
-                       showTidalHeightDetails = true
-                   } else {
-                       // Free user has used today - show subscription prompt
-                       showSubscriptionPrompt = true
-                   }
+                   selectedTidalHeightStationId = stationId
+                   selectedTidalHeightStationName = stationName
+                   showTidalHeightDetails = true
                },
 
                onTidalCurrentStationSelected: { stationId, bin, stationName in
                    resetAllNavigationState()
-                   
-                   // Check subscription access for tidal current stations
-                   if subscriptionService.hasAppAccess {
-                       // Unlimited access for subscribers/trial users
-                       selectedTidalCurrentStationId = stationId
-                       selectedTidalCurrentStationBin = bin
-                       selectedTidalCurrentStationName = stationName
-                       showTidalCurrentDetails = true
-                   } else if subscriptionService.canAccessLocalCurrents() {
-                       // Free user with usage available - record usage and navigate
-                       subscriptionService.recordLocalCurrentUsage()
-                       selectedTidalCurrentStationId = stationId
-                       selectedTidalCurrentStationBin = bin
-                       selectedTidalCurrentStationName = stationName
-                       showTidalCurrentDetails = true
-                   } else {
-                       // Free user has used today - show subscription prompt
-                       showSubscriptionPrompt = true
-                   }
+                   selectedTidalCurrentStationId = stationId
+                   selectedTidalCurrentStationBin = bin
+                   selectedTidalCurrentStationName = stationName
+                   showTidalCurrentDetails = true
                },
                onBuoyStationSelected: { stationId, stationName in
                    resetAllNavigationState()
-                   
-                   // Check subscription access for buoy stations
-                   if subscriptionService.hasAppAccess {
-                       // Unlimited access for subscribers/trial users
-                       selectedBuoyStationId = stationId
-                       selectedBuoyStationName = stationName
-                       showBuoyStationDetails = true
-                   } else if subscriptionService.canAccessLocalBuoys() {
-                       // Free user with usage available - record usage and navigate
-                       subscriptionService.recordLocalBuoyUsage()
-                       selectedBuoyStationId = stationId
-                       selectedBuoyStationName = stationName
-                       showBuoyStationDetails = true
-                   } else {
-                       // Free user has used today - show subscription prompt
-                       showSubscriptionPrompt = true
-                   }
+                   selectedBuoyStationId = stationId
+                   selectedBuoyStationName = stationName
+                   showBuoyStationDetails = true
                }
            )
            .edgesIgnoringSafeArea(.all)
@@ -413,12 +357,6 @@ struct MapClusteringView: View {
        }
        .sheet(isPresented: $showChartOptions) {
            chartLayersView
-       }
-       .sheet(isPresented: $showSubscriptionPrompt) {
-           PaywallView()
-               .onPurchaseCompleted { customerInfo in
-                   showSubscriptionPrompt = false
-               }
        }
        .background(
            ZStack {
