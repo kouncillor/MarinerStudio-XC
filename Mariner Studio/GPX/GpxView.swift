@@ -12,6 +12,7 @@ struct GpxView: View {
     @State private var isFavorite = false
     @State private var showingFavoriteSuccess = false
     @State private var favoriteMessage = ""
+    @FocusState private var isSpeedFieldFocused: Bool
 
     // MARK: - Initializers
 
@@ -133,6 +134,20 @@ struct GpxView: View {
                                     .keyboardType(.decimalPad)
                                     .textFieldStyle(RoundedBorderTextFieldStyle())
                                     .frame(width: 80)
+                                    .focused($isSpeedFieldFocused)
+                                    .toolbar {
+                                        ToolbarItemGroup(placement: .keyboard) {
+                                            Spacer()
+                                            Button("Done") {
+                                                isSpeedFieldFocused = false
+                                            }
+                                            .foregroundColor(.white)
+                                            .padding(.horizontal, 16)
+                                            .padding(.vertical, 8)
+                                            .background(Color.blue)
+                                            .cornerRadius(8)
+                                        }
+                                    }
                             }
 
                             // Row 4: Starting Waypoint
@@ -369,9 +384,8 @@ struct GpxView: View {
     private func navigateToRouteDetails() {
         guard viewModel.etasCalculated else { return }
 
-        // Convert picker index to actual array index
-        // Picker index 0 = "Current Location", picker index 1+ = waypoint (array index 0+)
-        let actualStartIndex = viewModel.selectedStartingWaypointIndex > 0 ? viewModel.selectedStartingWaypointIndex - 1 : 0
+        // selectedStartingWaypointIndex is now a direct index into routePoints array
+        let actualStartIndex = viewModel.selectedStartingWaypointIndex
 
         // Only include waypoints from the selected starting index forward
         let routePointsToShow = Array(viewModel.routePoints.dropFirst(actualStartIndex))

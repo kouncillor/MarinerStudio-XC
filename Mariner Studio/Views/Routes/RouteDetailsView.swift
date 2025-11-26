@@ -222,16 +222,16 @@ struct WaypointView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             // Header
-            HStack {
-                Text("#\(waypoint.index)")
-                    .font(.headline)
-                    .foregroundColor(.primary)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text("#\(waypoint.index)")
+                        .font(.headline)
+                        .foregroundColor(.primary)
 
-                Text(waypoint.name)
-                    .font(.headline)
-                    .foregroundColor(.primary)
-
-                Spacer()
+                    Text(waypoint.name)
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                }
 
                 Text(formatDate(waypoint.eta))
                     .font(.subheadline)
@@ -454,8 +454,7 @@ struct WaypointView: View {
     private func formatDate(_ date: Date?) -> String {
         guard let date = date else { return "Unknown" }
         let formatter = DateFormatter()
-        formatter.dateStyle = .none
-        formatter.timeStyle = .short
+        formatter.dateFormat = "EEE M/d h:mm a"
         return formatter.string(from: date)
     }
 }
