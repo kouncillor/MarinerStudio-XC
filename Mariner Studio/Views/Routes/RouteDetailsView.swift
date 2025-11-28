@@ -11,7 +11,15 @@ struct RouteDetailsView: View {
     @ObservedObject var viewModel: RouteDetailsViewModel
     @State private var scrollToWaypointIndex: Int?
     @State private var emphasizedWaypointIndex: Int?
+    @State private var selectedInterval: IntermediatePointInterval = .oneHour
     @EnvironmentObject var serviceProvider: ServiceProvider
+
+    enum IntermediatePointInterval: String, CaseIterable {
+        case thirtyMinutes = "30 min"
+        case oneHour = "1 hour"
+        case sixHours = "6 hours"
+        case twelveHours = "12 hours"
+    }
 
     var body: some View {
         GeometryReader { _ in
@@ -64,6 +72,37 @@ struct RouteDetailsView: View {
                                     text: "Lowest Visibility: \(viewModel.lowestVisibility) at \(viewModel.minVisibilityWaypoint?.name ?? "Unknown")",
                                     action: { scrollToWaypoint(viewModel.minVisibilityWaypoint) }
                                 )
+                            }
+                            .padding()
+                            .background(Color(UIColor.systemBackground))
+                            .cornerRadius(10)
+                            .shadow(radius: 2)
+
+                            // Intermediate Points Section
+                            VStack(spacing: 12) {
+                                HStack {
+                                    Text("Interval:")
+                                        .font(.subheadline)
+
+                                    Picker("Interval", selection: $selectedInterval) {
+                                        ForEach(IntermediatePointInterval.allCases, id: \.self) { interval in
+                                            Text(interval.rawValue).tag(interval)
+                                        }
+                                    }
+                                    .pickerStyle(SegmentedPickerStyle())
+                                }
+
+                                Button(action: {
+                                    addIntermediatePoints()
+                                }) {
+                                    Text("Add Intermediate Points")
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 16)
+                                        .padding(.vertical, 10)
+                                        .frame(maxWidth: .infinity)
+                                        .background(Color.orange)
+                                        .cornerRadius(8)
+                                }
                             }
                             .padding()
                             .background(Color(UIColor.systemBackground))
@@ -151,6 +190,21 @@ struct RouteDetailsView: View {
         if viewModel.isSummaryVisible {
             viewModel.toggleSummary()
         }
+    }
+
+    private func addIntermediatePoints() {
+        let intervalMinutes: Int
+        switch selectedInterval {
+        case .thirtyMinutes:
+            intervalMinutes = 30
+        case .oneHour:
+            intervalMinutes = 60
+        case .sixHours:
+            intervalMinutes = 360
+        case .twelveHours:
+            intervalMinutes = 720
+        }
+        viewModel.addIntermediatePoints(intervalMinutes: intervalMinutes)
     }
 }
 

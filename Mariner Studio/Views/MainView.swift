@@ -29,27 +29,19 @@ struct MainView: View {
                 )
             }
 
-            // ROUTES
-            NavigationLink(destination: RouteMenuView()) {
-                NavigationButtonContent(
-                    icon: "rsixseven",
-                    title: "ROUTES"
-                )
-            }
-
-            // SEA PLAN
-            NavigationLink(destination: AllRoutesView(allRoutesService: serviceProvider.allRoutesService)) {
-                NavigationButtonContent(
-                    icon: "voyageplansixseven",
-                    title: "SEA PLAN"
-                )
-            }
-
             // MARINE WEATHER
             NavigationLink(destination: WeatherMenuView()) {
                 NavigationButtonContent(
                     icon: "weathersunsixseven",
                     title: "MARINE WEATHER"
+                )
+            }
+
+            // ROUTES
+            NavigationLink(destination: RouteMenuView()) {
+                NavigationButtonContent(
+                    icon: "rsixseven",
+                    title: "ROUTES"
                 )
             }
 
@@ -89,6 +81,16 @@ struct MainView: View {
                 )
             }
 
+            // AIS MAP - Live vessel tracking
+            NavigationLink(destination: AISMapView()) {
+                NavigationButtonContent(
+                    icon: "ferry.fill",
+                    title: "AIS MAP",
+                    isSystemIcon: true,
+                    iconColor: .blue
+                )
+            }
+
             // TESTING TOOLS - Only visible in debug builds, always accessible
             #if DEBUG
             NavigationLink(destination: TestingToolsView()) {
@@ -124,6 +126,7 @@ struct MainView: View {
         }
         .background(backgroundGradient)
         .navigationTitle("Mariner Studio")
+                .navigationBarTitleDisplayMode(.inline)
     }
     
     @ToolbarContentBuilder
@@ -297,9 +300,9 @@ struct NavigationButtonContent: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
-                    .font(.largeTitle)
-                    .fontWeight(.light)
-                    .multilineTextAlignment(.leading)
+                    .font(.title2)
+                    .fontWeight(.regular)
+                    .fixedSize(horizontal: true, vertical: false)
                     .foregroundColor(getTextColor())
 
                 if isPremium {

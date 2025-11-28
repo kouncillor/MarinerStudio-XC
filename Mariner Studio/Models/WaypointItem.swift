@@ -19,6 +19,7 @@ class WaypointItem: ObservableObject, Identifiable {
     @Published var coordinates: String = ""
     @Published var distanceToNext: Double = 0.0
     @Published var bearingToNext: Double = 0.0
+    @Published var isIntermediate: Bool = false
 
     // Reference to all waypoints
     var waypoints: [WaypointItem] = []

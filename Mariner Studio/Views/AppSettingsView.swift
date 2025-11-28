@@ -7,6 +7,7 @@ struct AppSettingsView: View {
     @EnvironmentObject var subscriptionService: RevenueCatSubscription
     @State private var showingAbout = false
     @State private var showingSubscription = false
+    @State private var showingVesselSettings = false
     @State private var showFeedback = false
     
     var body: some View {
@@ -43,13 +44,13 @@ struct AppSettingsView: View {
                     }
                     
                     SettingsMenuRow(
-                        icon: "crown.fill",
-                        title: "Subscription",
-                        iconColor: .yellow
+                        icon: "ferry.fill",
+                        title: "Vessel",
+                        iconColor: .orange
                     ) {
-                        showingSubscription = true
+                        showingVesselSettings = true
                     }
-                    
+
                     SettingsMenuRow(
                         icon: "doc.text.fill",
                         title: "Legal",
@@ -91,6 +92,9 @@ struct AppSettingsView: View {
         .sheet(isPresented: $showingSubscription) {
             SubscriptionSheet()
                 .environmentObject(subscriptionService)
+        }
+        .sheet(isPresented: $showingVesselSettings) {
+            VesselSettingsSheet()
         }
         .sheet(isPresented: $showFeedback) {
             FeedbackView(sourceView: "App Settings")
@@ -159,32 +163,12 @@ struct AboutSheet: View {
                         Text("About Mariner Studio")
                             .font(.title2)
                             .fontWeight(.bold)
-                        
+
                         Text("Mariner Studio provides comprehensive maritime weather data, tidal information, and navigation tools for maritime professionals and enthusiasts.")
                             .font(.body)
                             .foregroundColor(.secondary)
                     }
-                    
-                    Divider()
-                    
-                    VStack(spacing: 12) {
-                        HStack {
-                            Text("Version")
-                                .foregroundColor(.secondary)
-                            Spacer()
-                            Text(getAppVersion())
-                                .foregroundColor(.primary)
-                        }
-                        
-                        HStack {
-                            Text("Build")
-                                .foregroundColor(.secondary)
-                            Spacer()
-                            Text(getBuildNumber())
-                                .foregroundColor(.primary)
-                        }
-                    }
-                    
+
                     Spacer()
                 }
                 .padding()
@@ -792,15 +776,15 @@ struct SubscriptionDetailsCard: View {
 struct SubscriptionDetailRow: View {
     let label: String
     let value: String
-    
+
     var body: some View {
         HStack {
             Text(label + ":")
                 .font(.caption)
                 .foregroundColor(.secondary)
-            
+
             Spacer()
-            
+
             Text(value)
                 .font(.caption)
                 .foregroundColor(.primary)
@@ -808,4 +792,123 @@ struct SubscriptionDetailRow: View {
     }
 }
 
+// MARK: - Vessel Settings Sheet
+
+struct VesselSettingsSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var vesselSettings = VesselSettings.shared
+
+    @State private var vesselName: String = ""
+    @State private var lengthText: String = ""
+    @State private var widthText: String = ""
+    @State private var draftText: String = ""
+    @State private var speedText: String = ""
+
+    var body: some View {
+        NavigationView {
+            Form {
+                Section(header: Text("Vessel Information")) {
+                    HStack {
+                        Text("Name")
+                            .foregroundColor(.secondary)
+                        TextField("My Vessel", text: $vesselName)
+                            .multilineTextAlignment(.trailing)
+                    }
+                }
+
+                Section(header: Text("Dimensions (feet)")) {
+                    HStack {
+                        Text("Length")
+                            .foregroundColor(.secondary)
+                        TextField("0", text: $lengthText)
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                    }
+
+                    HStack {
+                        Text("Width (Beam)")
+                            .foregroundColor(.secondary)
+                        TextField("0", text: $widthText)
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                    }
+
+                    HStack {
+                        Text("Draft")
+                            .foregroundColor(.secondary)
+                        TextField("0", text: $draftText)
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                    }
+                }
+
+                Section(header: Text("Performance"), footer: Text("Default speed used for route ETA calculations")) {
+                    HStack {
+                        Text("Average Speed (knots)")
+                            .foregroundColor(.secondary)
+                        TextField("10", text: $speedText)
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                    }
+                }
+
+                Section {
+                    Button(action: {
+                        resetToDefaults()
+                    }) {
+                        HStack {
+                            Spacer()
+                            Text("Reset to Defaults")
+                                .foregroundColor(.red)
+                            Spacer()
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Vessel Settings")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
+                        saveSettings()
+                        dismiss()
+                    }
+                }
+            }
+            .onAppear {
+                loadCurrentSettings()
+            }
+        }
+    }
+
+    private func loadCurrentSettings() {
+        vesselName = vesselSettings.vesselName
+        lengthText = vesselSettings.vesselLength > 0 ? String(format: "%.1f", vesselSettings.vesselLength) : ""
+        widthText = vesselSettings.vesselWidth > 0 ? String(format: "%.1f", vesselSettings.vesselWidth) : ""
+        draftText = vesselSettings.vesselDraft > 0 ? String(format: "%.1f", vesselSettings.vesselDraft) : ""
+        speedText = vesselSettings.averageSpeed > 0 ? String(format: "%.1f", vesselSettings.averageSpeed) : ""
+    }
+
+    private func saveSettings() {
+        vesselSettings.vesselName = vesselName
+        vesselSettings.vesselLength = Double(lengthText) ?? 0
+        vesselSettings.vesselWidth = Double(widthText) ?? 0
+        vesselSettings.vesselDraft = Double(draftText) ?? 0
+        vesselSettings.averageSpeed = Double(speedText) ?? 0
+        print("🚢 VesselSettings: Saved - Name: '\(vesselName)', Length: \(lengthText), Width: \(widthText), Draft: \(draftText), Speed: \(speedText)")
+    }
+
+    private func resetToDefaults() {
+        vesselName = ""
+        lengthText = ""
+        widthText = ""
+        draftText = ""
+        speedText = ""
+    }
+}
 

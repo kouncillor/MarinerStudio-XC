@@ -141,35 +141,77 @@ struct GpxView: View {
                                             Button("Done") {
                                                 isSpeedFieldFocused = false
                                             }
-                                            .foregroundColor(.white)
-                                            .padding(.horizontal, 16)
-                                            .padding(.vertical, 8)
-                                            .background(Color.blue)
-                                            .cornerRadius(8)
                                         }
                                     }
                             }
 
-                            // Row 4: Starting Waypoint
+                            // Row 4: Starting Waypoint with Current Location option
                             VStack {
-                                HStack {
-                                    Spacer()
-
-                                    Picker("", selection: $viewModel.selectedStartingWaypointIndex) {
-                                        ForEach(0..<viewModel.waypointNames.count, id: \.self) { index in
-                                            Text(viewModel.waypointNames[index])
-                                                .tag(index)
+                                if viewModel.isLoadingLocation {
+                                    // Loading state
+                                    HStack {
+                                        ProgressView()
+                                            .scaleEffect(0.8)
+                                        Text("Getting location...")
+                                            .foregroundColor(.secondary)
+                                    }
+                                    .frame(minHeight: 30)
+                                } else {
+                                    // Show current selection label when current location is active
+                                    if viewModel.useCurrentLocation, let label = viewModel.currentLocationLabel {
+                                        HStack {
+                                            Image(systemName: "location.fill")
+                                                .foregroundColor(.green)
+                                            Text(label)
+                                                .foregroundColor(.green)
+                                                .font(.subheadline)
                                         }
-                                    }
-                                    .pickerStyle(MenuPickerStyle())
-                                    .onChange(of: viewModel.selectedStartingWaypointIndex) { _, _ in
-                                        // Reset ETAs when starting waypoint changes
-                                        viewModel.etasCalculated = false
+                                        .padding(.bottom, 4)
                                     }
 
-                                    Spacer()
+                                    HStack {
+                                        Spacer()
+
+                                        Menu {
+                                            // Current Location option at the top
+                                            Button(action: {
+                                                viewModel.fetchCurrentLocation()
+                                            }) {
+                                                Label("Current Location", systemImage: "location.fill")
+                                            }
+
+                                            Divider()
+
+                                            // Regular waypoint options
+                                            ForEach(0..<viewModel.waypointNames.count, id: \.self) { index in
+                                                Button(action: {
+                                                    viewModel.selectRegularWaypoint(index)
+                                                }) {
+                                                    Text(viewModel.waypointNames[index])
+                                                }
+                                            }
+                                        } label: {
+                                            HStack {
+                                                if viewModel.useCurrentLocation {
+                                                    Image(systemName: "location.fill")
+                                                        .foregroundColor(.green)
+                                                    Text("Current Location")
+                                                        .foregroundColor(.green)
+                                                } else {
+                                                    Text(viewModel.waypointNames.indices.contains(viewModel.selectedStartingWaypointIndex) ?
+                                                         viewModel.waypointNames[viewModel.selectedStartingWaypointIndex] :
+                                                         "Select Waypoint")
+                                                }
+                                                Image(systemName: "chevron.up.chevron.down")
+                                                    .font(.caption)
+                                                    .foregroundColor(.secondary)
+                                            }
+                                        }
+
+                                        Spacer()
+                                    }
+                                    .frame(minHeight: 30)
                                 }
-                                .frame(minHeight: 30)
                             }
                             .padding(18)
                             .background(Color(UIColor.systemBackground))
@@ -277,8 +319,7 @@ struct GpxView: View {
                 }
             }
             .withNotificationAndHome(sourceView: "Voyage Plan")
-            .navigationTitle("Voyage Plan")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(isPresented: $showingRouteDetails) {
                 if let routeDetailsViewModel = routeDetailsViewModel {
                     RouteDetailsView(viewModel: routeDetailsViewModel)
@@ -384,11 +425,18 @@ struct GpxView: View {
     private func navigateToRouteDetails() {
         guard viewModel.etasCalculated else { return }
 
-        // selectedStartingWaypointIndex is now a direct index into routePoints array
-        let actualStartIndex = viewModel.selectedStartingWaypointIndex
+        // Use modified route points if current location is selected, otherwise use regular route
+        let routePointsToShow: [RoutePoint]
 
-        // Only include waypoints from the selected starting index forward
-        let routePointsToShow = Array(viewModel.routePoints.dropFirst(actualStartIndex))
+        if viewModel.useCurrentLocation, let modifiedPoints = viewModel.modifiedRoutePoints {
+            // Use the modified route (current location + remaining waypoints)
+            routePointsToShow = modifiedPoints
+        } else {
+            // selectedStartingWaypointIndex is a direct index into routePoints array
+            let actualStartIndex = viewModel.selectedStartingWaypointIndex
+            // Only include waypoints from the selected starting index forward
+            routePointsToShow = Array(viewModel.routePoints.dropFirst(actualStartIndex))
+        }
 
         // Convert RoutePoints to GpxRoutePoints for the route details
         let gpxRoutePoints = routePointsToShow.map { point -> GpxRoutePoint in

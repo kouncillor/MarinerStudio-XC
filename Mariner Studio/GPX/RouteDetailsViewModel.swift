@@ -1,6 +1,7 @@
 import Foundation
 import Combine
 import SwiftUI
+import CoreLocation
 
 class RouteDetailsViewModel: ObservableObject {
     // MARK: - Published Properties
@@ -29,6 +30,8 @@ class RouteDetailsViewModel: ObservableObject {
     private let weatherService: WeatherService
     private let routeCalculationService: RouteCalculationService
     private var cancellables = Set<AnyCancellable>()
+    private var originalWaypoints: [WaypointItem] = [] // Store original waypoints for recalculation
+    private var currentAverageSpeed: Double = 0.0
 
     // MARK: - Initialization
     init(weatherService: WeatherService, routeCalculationService: RouteCalculationService) {
@@ -42,11 +45,197 @@ class RouteDetailsViewModel: ObservableObject {
         isSummaryVisible.toggle()
     }
 
+    /// Add intermediate waypoints between original waypoints at the specified time interval
+    func addIntermediatePoints(intervalMinutes: Int) {
+        guard originalWaypoints.count >= 2 else {
+            print("⚠️ RouteDetailsViewModel: Not enough waypoints for intermediate points")
+            return
+        }
+
+        isLoading = true
+        print("📍 RouteDetailsViewModel: Adding intermediate points with \(intervalMinutes) minute interval")
+
+        let intervalSeconds = TimeInterval(intervalMinutes * 60)
+        var allWaypoints: [WaypointItem] = []
+        var waypointIndex = 1
+
+        for i in 0..<originalWaypoints.count - 1 {
+            let startWaypoint = originalWaypoints[i]
+            let endWaypoint = originalWaypoints[i + 1]
+
+            // Add the original start waypoint (with updated index)
+            let originalCopy = copyWaypoint(startWaypoint)
+            originalCopy.index = waypointIndex
+            originalCopy.isIntermediate = false
+            allWaypoints.append(originalCopy)
+            waypointIndex += 1
+
+            // Calculate leg duration
+            let legDuration = endWaypoint.eta.timeIntervalSince(startWaypoint.eta)
+
+            // Calculate how many intermediate points to add
+            let numberOfIntermediates = Int(legDuration / intervalSeconds) - 1
+
+            if numberOfIntermediates > 0 {
+                let startCoord = CLLocationCoordinate2D(latitude: startWaypoint.latitude, longitude: startWaypoint.longitude)
+                let bearing = startWaypoint.bearingToNext
+
+                // Distance per interval (in nautical miles)
+                let distancePerInterval = currentAverageSpeed * (Double(intervalMinutes) / 60.0)
+
+                for j in 1...numberOfIntermediates {
+                    // Calculate intermediate position
+                    let distanceFromStart = distancePerInterval * Double(j)
+                    let intermediateCoord = routeCalculationService.interpolatePosition(
+                        from: startCoord,
+                        bearing: bearing,
+                        distance: distanceFromStart
+                    )
+
+                    // Calculate intermediate ETA
+                    let intermediateETA = startWaypoint.eta.addingTimeInterval(intervalSeconds * Double(j))
+
+                    // Create intermediate waypoint
+                    let intermediateWaypoint = createIntermediateWaypoint(
+                        latitude: intermediateCoord.latitude,
+                        longitude: intermediateCoord.longitude,
+                        eta: intermediateETA,
+                        index: waypointIndex,
+                        bearing: bearing
+                    )
+
+                    allWaypoints.append(intermediateWaypoint)
+                    waypointIndex += 1
+
+                    print("📍 Added intermediate point \(j) between \(startWaypoint.name) and \(endWaypoint.name) at \(intermediateETA)")
+                }
+            }
+        }
+
+        // Add the final original waypoint
+        let finalWaypoint = copyWaypoint(originalWaypoints.last!)
+        finalWaypoint.index = waypointIndex
+        finalWaypoint.isIntermediate = false
+        allWaypoints.append(finalWaypoint)
+
+        print("📍 RouteDetailsViewModel: Created \(allWaypoints.count) total waypoints (\(originalWaypoints.count) original + \(allWaypoints.count - originalWaypoints.count) intermediate)")
+
+        // Set the waypoints reference for each waypoint
+        for waypoint in allWaypoints {
+            waypoint.waypoints = allWaypoints
+        }
+
+        // Fetch weather data for new intermediate waypoints only
+        let intermediateWaypoints = allWaypoints.filter { $0.isIntermediate }
+        fetchWeatherForIntermediateWaypoints(intermediateWaypoints, allWaypoints: allWaypoints)
+    }
+
+    private func copyWaypoint(_ source: WaypointItem) -> WaypointItem {
+        let copy = WaypointItem()
+        copy.index = source.index
+        copy.name = source.name
+        copy.latitude = source.latitude
+        copy.longitude = source.longitude
+        copy.eta = source.eta
+        copy.coordinates = source.coordinates
+        copy.distanceToNext = source.distanceToNext
+        copy.bearingToNext = source.bearingToNext
+        copy.isIntermediate = source.isIntermediate
+        copy.weatherDataAvailable = source.weatherDataAvailable
+        copy.temperature = source.temperature
+        copy.dewPoint = source.dewPoint
+        copy.relativeHumidity = source.relativeHumidity
+        copy.windDirection = source.windDirection
+        copy.windSpeed = source.windSpeed
+        copy.windGusts = source.windGusts
+        copy.weatherCondition = source.weatherCondition
+        copy.weatherIcon = source.weatherIcon
+        copy.visibility = source.visibility
+        copy.marineDataAvailable = source.marineDataAvailable
+        copy.waveHeight = source.waveHeight
+        copy.waveDirection = source.waveDirection
+        copy.wavePeriod = source.wavePeriod
+        copy.swellHeight = source.swellHeight
+        copy.swellDirection = source.swellDirection
+        copy.swellPeriod = source.swellPeriod
+        copy.windWaveHeight = source.windWaveHeight
+        copy.windWaveDirection = source.windWaveDirection
+        copy.relativeWaveDirection = source.relativeWaveDirection
+        return copy
+    }
+
+    private func fetchWeatherForIntermediateWaypoints(_ intermediateWaypoints: [WaypointItem], allWaypoints: [WaypointItem]) {
+        let dispatchGroup = DispatchGroup()
+
+        for waypoint in intermediateWaypoints {
+            dispatchGroup.enter()
+
+            Task {
+                do {
+                    print("🌤️ Fetching data for intermediate waypoint \(waypoint.index)")
+
+                    let weatherTask = Task {
+                        try await fetchWeatherDataForWaypoint(waypoint)
+                    }
+
+                    let marineTask = Task {
+                        try await fetchMarineDataForWaypoint(waypoint)
+                    }
+
+                    _ = try await weatherTask.value
+                    _ = try await marineTask.value
+
+                    dispatchGroup.leave()
+                } catch {
+                    print("❌ Error fetching data for intermediate waypoint \(waypoint.index): \(error.localizedDescription)")
+                    dispatchGroup.leave()
+                }
+            }
+        }
+
+        dispatchGroup.notify(queue: .main) { [weak self] in
+            guard let self = self else { return }
+
+            // Update summary stats with all waypoints
+            self.updateSummaryStats(allWaypoints)
+
+            self.waypoints = allWaypoints
+            self.isLoading = false
+            print("✅ RouteDetailsViewModel: Intermediate points added and weather data fetched")
+        }
+    }
+
+    private func updateSummaryStats(_ waypointItems: [WaypointItem]) {
+        self.maxWindWaypoint = waypointItems.max(by: { $0.windSpeed < $1.windSpeed })
+        if let maxWind = self.maxWindWaypoint {
+            self.maxWindSpeed = "Max Wind: \(String(format: "%.1f", maxWind.windSpeed)) mph @ \(maxWind.name)"
+        }
+
+        self.maxWaveWaypoint = waypointItems.max(by: { $0.waveHeight < $1.waveHeight })
+        if let maxWave = self.maxWaveWaypoint {
+            self.maxWaveHeight = "Max Wave: \(String(format: "%.1f", maxWave.waveHeight)) ft @ \(maxWave.name)"
+        }
+
+        self.maxHumidityWaypoint = waypointItems.max(by: { $0.relativeHumidity < $1.relativeHumidity })
+        if let maxHumidity = self.maxHumidityWaypoint {
+            self.maxHumidity = "Max Humidity: \(maxHumidity.relativeHumidity)% @ \(maxHumidity.name)"
+        }
+
+        self.minVisibilityWaypoint = waypointItems.min(by: { $0.visibility < $1.visibility })
+        if let minVisibility = self.minVisibilityWaypoint {
+            let visibilityMiles = minVisibility.visibility / 1609.34
+            self.lowestVisibility = "Min Visibility: \(String(format: "%.1f", visibilityMiles)) mi @ \(minVisibility.name)"
+        }
+    }
+
     func applyRouteData(_ route: GpxRoute, averageSpeed: String) {
         isLoading = true
         errorMessage = ""
         print("🛣️ RouteDetailsViewModel: Applying route data for route: \(route.name)")
         print("🛣️ RouteDetailsViewModel: Route has \(route.routePoints.count) waypoints")
+
+        // Store average speed for intermediate point calculations
+        currentAverageSpeed = Double(averageSpeed) ?? 10.0
 
         // Set route information
         routeName = route.name
@@ -60,8 +249,11 @@ class RouteDetailsViewModel: ObservableObject {
 
         // Create waypoints from route points
         let waypointItems = route.routePoints.enumerated().map { index, point in
-            createWaypoint(from: point, index: index + 1)
+            createWaypoint(from: point, index: index + 1, isIntermediate: false)
         }
+
+        // Store original waypoints for later intermediate point calculations
+        originalWaypoints = waypointItems
 
         // Set the waypoints reference for each waypoint
         for waypoint in waypointItems {
@@ -170,7 +362,7 @@ class RouteDetailsViewModel: ObservableObject {
     }
 
     // MARK: - Private Methods
-    private func createWaypoint(from point: GpxRoutePoint, index: Int) -> WaypointItem {
+    private func createWaypoint(from point: GpxRoutePoint, index: Int, isIntermediate: Bool) -> WaypointItem {
         let waypoint = WaypointItem()
         waypoint.index = index
         waypoint.name = point.name ?? "Waypoint \(index)"
@@ -180,6 +372,20 @@ class RouteDetailsViewModel: ObservableObject {
         waypoint.distanceToNext = point.distanceToNext
         waypoint.bearingToNext = point.bearingToNext
         waypoint.coordinates = "\(String(format: "%.6f", point.latitude))°, \(String(format: "%.6f", point.longitude))°"
+        waypoint.isIntermediate = isIntermediate
+        return waypoint
+    }
+
+    private func createIntermediateWaypoint(latitude: Double, longitude: Double, eta: Date, index: Int, bearing: Double) -> WaypointItem {
+        let waypoint = WaypointItem()
+        waypoint.index = index
+        waypoint.name = "Intermediate \(index)"
+        waypoint.latitude = latitude
+        waypoint.longitude = longitude
+        waypoint.eta = eta
+        waypoint.bearingToNext = bearing
+        waypoint.coordinates = "\(String(format: "%.6f", latitude))°, \(String(format: "%.6f", longitude))°"
+        waypoint.isIntermediate = true
         return waypoint
     }
 
