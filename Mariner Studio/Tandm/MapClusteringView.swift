@@ -2,6 +2,7 @@ import SwiftUI
 import MapKit
 import RevenueCat
 import RevenueCatUI
+import CoreLocation
 
 // Proxy to access the MapView from the overlay button
 class TandmMapViewProxy {
@@ -32,6 +33,12 @@ struct MapClusteringView: View {
    
    // Map type state
    @State private var mapType: MKMapType = .standard
+
+   // AIS vessel tracking state
+   @State private var showAISVessels = false
+   @StateObject private var aisViewModel = AISMapViewModel()
+   @State private var selectedAISVessel: AISVessel?
+   @State private var showAISVesselDetail = false
 
    // NavUnit navigation state
    @State private var selectedNavUnitId: String?
@@ -202,6 +209,18 @@ struct MapClusteringView: View {
                    selectedBuoyStationId = stationId
                    selectedBuoyStationName = stationName
                    showBuoyStationDetails = true
+               },
+               // AIS vessel support
+               aisVessels: aisViewModel.vessels,
+               showAISVessels: showAISVessels,
+               onAISVesselSelected: { vessel in
+                   selectedAISVessel = vessel
+                   showAISVesselDetail = true
+               },
+               onRegionChanged: { region in
+                   if showAISVessels {
+                       aisViewModel.updateBoundingBoxFromRegion(region)
+                   }
                }
            )
            .edgesIgnoringSafeArea(.all)
@@ -258,6 +277,10 @@ struct MapClusteringView: View {
 
                // Load the data when view appears
                viewModel.loadData()
+           }
+           .onDisappear {
+               // Disconnect AIS when leaving the map
+               aisViewModel.disconnect()
            }
 
            // Loading indicator
@@ -319,7 +342,32 @@ struct MapClusteringView: View {
                    }
                    .padding(.trailing, 8)
 
-                   // Map type toggle button (3rd) - satellite/hybrid
+                   // AIS vessel toggle button (3rd) - pink
+                   Button(action: {
+                       showAISVessels.toggle()
+                       if showAISVessels {
+                           // Connect to AIS stream when enabled
+                           if let mapView = TandmMapViewProxy.shared.mapView {
+                               let region = mapView.region
+                               aisViewModel.updateBoundingBoxFromRegion(region)
+                           }
+                           aisViewModel.connect()
+                       } else {
+                           // Disconnect when disabled
+                           aisViewModel.disconnect()
+                       }
+                   }) {
+                       Image(systemName: "ferry.fill")
+                           .font(.system(size: 24))
+                           .foregroundColor(.white)
+                           .padding(12)
+                           .background(showAISVessels ? Color.pink : Color.pink.opacity(0.5))
+                           .clipShape(Circle())
+                           .shadow(radius: 4)
+                   }
+                   .padding(.trailing, 8)
+
+                   // Map type toggle button (4th) - satellite/hybrid
                    Button(action: {
                        toggleMapType()
                    }) {
@@ -357,6 +405,11 @@ struct MapClusteringView: View {
        }
        .sheet(isPresented: $showChartOptions) {
            chartLayersView
+       }
+       .sheet(isPresented: $showAISVesselDetail) {
+           if let vessel = selectedAISVessel {
+               VesselDetailView(vessel: vessel)
+           }
        }
        .background(
            ZStack {

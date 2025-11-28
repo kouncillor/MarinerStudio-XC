@@ -12,6 +12,12 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
    var onTidalCurrentStationSelected: (String, Int, String) -> Void
    var onBuoyStationSelected: (String, String) -> Void // Added callback for buoy stations
 
+   // AIS vessel support
+   var aisVessels: [AISVessel] = []
+   var showAISVessels: Bool = false
+   var onAISVesselSelected: ((AISVessel) -> Void)?
+   var onRegionChanged: ((MKCoordinateRegion) -> Void)?
+
    func makeUIView(context: Context) -> MKMapView {
        let mapView = MKMapView()
        mapView.delegate = context.coordinator
@@ -41,13 +47,25 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
        if mapView.mapType != mapType {
            mapView.mapType = mapType
        }
-       
-       // Only update the region if it was changed by user interaction, not by code
-       if !context.coordinator.isUpdatingRegion && (mapView.region.center.latitude != region.center.latitude ||
-          mapView.region.center.longitude != region.center.longitude) {
-           context.coordinator.isUpdatingRegion = true
-           mapView.setRegion(region, animated: true)
-           context.coordinator.isUpdatingRegion = false
+
+       // Only update the region if it was explicitly requested via programmatic move
+       // and the change is significant (prevents snapping back during user pan)
+       if !context.coordinator.isUpdatingRegion {
+           let latDiff = abs(mapView.region.center.latitude - region.center.latitude)
+           let lonDiff = abs(mapView.region.center.longitude - region.center.longitude)
+
+           // Only force region update for significant changes (> 0.01 degrees, roughly 1km)
+           // This prevents the snap-back during normal panning while still allowing
+           // programmatic moves like "center on user location" to work
+           if latDiff > 0.01 || lonDiff > 0.01 {
+               // Check if this is likely a programmatic move (large jump)
+               // vs incremental user panning
+               if latDiff > 0.1 || lonDiff > 0.1 {
+                   context.coordinator.isUpdatingRegion = true
+                   mapView.setRegion(region, animated: true)
+                   context.coordinator.isUpdatingRegion = false
+               }
+           }
        }
 
        // Important: Update the callbacks BEFORE handling annotations
@@ -56,7 +74,8 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
            navUnitCallback: onNavUnitSelected,
            tidalHeightCallback: onTidalHeightStationSelected,
            tidalCurrentCallback: onTidalCurrentStationSelected,
-           buoyStationCallback: onBuoyStationSelected // Added buoy station callback
+           buoyStationCallback: onBuoyStationSelected, // Added buoy station callback
+           aisVesselCallback: onAISVesselSelected // AIS vessel callback
        )
 
        // Handle chart overlay updates - now respects the toggle state
@@ -68,6 +87,9 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
 
        // Use efficient annotation updates - only update what changed
        context.coordinator.updateAnnotations(in: mapView, newAnnotations: annotations)
+
+       // Update AIS vessel annotations
+       context.coordinator.updateAISAnnotations(in: mapView, vessels: showAISVessels ? aisVessels : [])
    }
 
    func makeCoordinator() -> Coordinator {
@@ -87,18 +109,21 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
        private var _onTidalHeightStationSelected: ((String, String) -> Void)?
        private var _onTidalCurrentStationSelected: ((String, Int, String) -> Void)?
        private var _onBuoyStationSelected: ((String, String) -> Void)? // Added buoy station callback property
+       private var _onAISVesselSelected: ((AISVessel) -> Void)? // AIS vessel callback property
 
        // Method to safely update callbacks
        func updateCallbacks(
            navUnitCallback: @escaping (String) -> Void,
            tidalHeightCallback: @escaping (String, String) -> Void,
            tidalCurrentCallback: @escaping (String, Int, String) -> Void,
-           buoyStationCallback: @escaping (String, String) -> Void // Added buoy station callback parameter
+           buoyStationCallback: @escaping (String, String) -> Void, // Added buoy station callback parameter
+           aisVesselCallback: ((AISVessel) -> Void)? // AIS vessel callback parameter
        ) {
            self._onNavUnitSelected = navUnitCallback
            self._onTidalHeightStationSelected = tidalHeightCallback
            self._onTidalCurrentStationSelected = tidalCurrentCallback
            self._onBuoyStationSelected = buoyStationCallback // Store buoy station callback
+           self._onAISVesselSelected = aisVesselCallback // Store AIS vessel callback
        }
 
        init(_ parent: TandmMapViewRepresentable) {
@@ -110,6 +135,7 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
            self._onTidalHeightStationSelected = parent.onTidalHeightStationSelected
            self._onTidalCurrentStationSelected = parent.onTidalCurrentStationSelected
            self._onBuoyStationSelected = parent.onBuoyStationSelected // Initialize buoy station callback
+           self._onAISVesselSelected = parent.onAISVesselSelected // Initialize AIS vessel callback
        }
 
        // MARK: - Chart Overlay Management
@@ -220,6 +246,48 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
                return nil
            }
 
+           // Handle AIS VesselAnnotation
+           if let vesselAnnotation = annotation as? VesselAnnotation {
+               let identifier = "AISVesselAnnotation"
+               var annotationView = mapView.dequeueReusableAnnotationView(withIdentifier: identifier) as? MKMarkerAnnotationView
+
+               if annotationView == nil {
+                   annotationView = MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: identifier)
+                   annotationView?.canShowCallout = true
+                   annotationView?.rightCalloutAccessoryView = UIButton(type: .detailDisclosure)
+               } else {
+                   annotationView?.annotation = annotation
+               }
+
+               // Customize marker based on vessel type
+               let vessel = vesselAnnotation.vessel
+               annotationView?.glyphImage = UIImage(systemName: "ferry.fill")
+
+               // Color based on ship type (same as AISMapView)
+               if let shipType = vessel.shipType {
+                   switch shipType {
+                   case 60...69: // Passenger
+                       annotationView?.markerTintColor = .systemBlue
+                   case 70...79: // Cargo
+                       annotationView?.markerTintColor = .systemGreen
+                   case 80...89: // Tanker
+                       annotationView?.markerTintColor = .systemRed
+                   case 30: // Fishing
+                       annotationView?.markerTintColor = .systemOrange
+                   case 36, 37: // Sailing, Pleasure
+                       annotationView?.markerTintColor = .systemPurple
+                   case 50...55: // Special craft
+                       annotationView?.markerTintColor = .systemYellow
+                   default:
+                       annotationView?.markerTintColor = .systemGray
+                   }
+               } else {
+                   annotationView?.markerTintColor = .systemGray
+               }
+
+               return annotationView
+           }
+
            // Handle NavObject annotations
            guard let navObject = annotation as? NavObject else { return nil }
 
@@ -268,6 +336,15 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
        func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
            // Handle when a user taps on an annotation
            guard let annotation = view.annotation else { return }
+
+           // Handle AIS Vessel annotation selection
+           if let vesselAnnotation = annotation as? VesselAnnotation {
+               mapView.deselectAnnotation(annotation, animated: true)
+               DispatchQueue.main.async { [weak self] in
+                   self?._onAISVesselSelected?(vesselAnnotation.vessel)
+               }
+               return
+           }
 
            if let navObject = annotation as? NavObject {
                // Important: Deselect the annotation immediately to ensure fresh selection next time
@@ -319,6 +396,9 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
            if now.timeIntervalSince(lastUpdateTime) >= 0.3 {
                lastUpdateTime = now
                parent.viewModel.updateMapRegion(mapView.region)
+
+               // Notify about region change for AIS updates
+               parent.onRegionChanged?(mapView.region)
            }
        }
 
@@ -388,6 +468,43 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
 
            // Save last annotations
            lastAnnotations = newAnnotations
+       }
+
+       // MARK: - AIS Vessel Annotation Management
+
+       func updateAISAnnotations(in mapView: MKMapView, vessels: [AISVessel]) {
+           // Get existing vessel annotations
+           let existingVesselAnnotations = mapView.annotations.compactMap { $0 as? VesselAnnotation }
+           let existingMMSIs = Set(existingVesselAnnotations.map { $0.vessel.mmsi })
+           let newMMSIs = Set(vessels.map { $0.mmsi })
+
+           // Remove annotations for vessels no longer in the list
+           let toRemove = existingVesselAnnotations.filter { !newMMSIs.contains($0.vessel.mmsi) }
+           if !toRemove.isEmpty {
+               mapView.removeAnnotations(toRemove)
+           }
+
+           // Add new annotations
+           let toAdd = vessels.filter { !existingMMSIs.contains($0.mmsi) }
+           if !toAdd.isEmpty {
+               let newAnnotations = toAdd.map { VesselAnnotation(vessel: $0) }
+               mapView.addAnnotations(newAnnotations)
+           }
+
+           // Update existing annotations (position changes)
+           for annotation in existingVesselAnnotations {
+               if let updatedVessel = vessels.first(where: { $0.mmsi == annotation.vessel.mmsi }) {
+                   // Check if position changed significantly
+                   let latDiff = abs(annotation.coordinate.latitude - updatedVessel.latitude)
+                   let lonDiff = abs(annotation.coordinate.longitude - updatedVessel.longitude)
+
+                   if latDiff > 0.0001 || lonDiff > 0.0001 {
+                       // Remove old and add updated annotation
+                       mapView.removeAnnotation(annotation)
+                       mapView.addAnnotation(VesselAnnotation(vessel: updatedVessel))
+                   }
+               }
+           }
        }
    }
 }
