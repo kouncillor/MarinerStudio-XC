@@ -2,7 +2,11 @@ import SwiftUI
 import MapKit
 
 struct TandmMapViewRepresentable: UIViewRepresentable {
-   @Binding var region: MKCoordinateRegion
+   // One-way binding pattern (like AISMapView) to prevent snap-back during panning
+   var initialRegion: MKCoordinateRegion?
+   var programmaticMoveTarget: MKCoordinateRegion?
+   var onProgrammaticMoveComplete: (() -> Void)?
+
    var annotations: [NavObject]
    var viewModel: MapClusteringViewModel
    var chartOverlay: NOAAChartTileOverlay? // Added chart overlay binding
@@ -22,7 +26,7 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
        let mapView = MKMapView()
        mapView.delegate = context.coordinator
        mapView.showsUserLocation = true
-       
+
        // Set initial map type
        mapView.mapType = mapType
 
@@ -34,6 +38,12 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
        mapView.register(TidalHeightStationAnnotationView.self, forAnnotationViewWithReuseIdentifier: TidalHeightStationAnnotationView.ReuseID)
        mapView.register(TidalCurrentStationAnnotationView.self, forAnnotationViewWithReuseIdentifier: TidalCurrentStationAnnotationView.ReuseID)
        mapView.register(BuoyStationAnnotationView.self, forAnnotationViewWithReuseIdentifier: BuoyStationAnnotationView.ReuseID) // Register buoy annotation view
+
+       // Set initial region if available
+       if let region = initialRegion {
+           mapView.setRegion(region, animated: false)
+           context.coordinator.hasSetInitialRegion = true
+       }
 
        // Store the mapView in our proxy for access from SwiftUI
        TandmMapViewProxy.shared.mapView = mapView
@@ -48,23 +58,18 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
            mapView.mapType = mapType
        }
 
-       // Only update the region if it was explicitly requested via programmatic move
-       // and the change is significant (prevents snapping back during user pan)
-       if !context.coordinator.isUpdatingRegion {
-           let latDiff = abs(mapView.region.center.latitude - region.center.latitude)
-           let lonDiff = abs(mapView.region.center.longitude - region.center.longitude)
+       // Set initial region once when it becomes available
+       if !context.coordinator.hasSetInitialRegion, let region = initialRegion {
+           mapView.setRegion(region, animated: false)
+           context.coordinator.hasSetInitialRegion = true
+       }
 
-           // Only force region update for significant changes (> 0.01 degrees, roughly 1km)
-           // This prevents the snap-back during normal panning while still allowing
-           // programmatic moves like "center on user location" to work
-           if latDiff > 0.01 || lonDiff > 0.01 {
-               // Check if this is likely a programmatic move (large jump)
-               // vs incremental user panning
-               if latDiff > 0.1 || lonDiff > 0.1 {
-                   context.coordinator.isUpdatingRegion = true
-                   mapView.setRegion(region, animated: true)
-                   context.coordinator.isUpdatingRegion = false
-               }
+       // Handle programmatic moves (e.g., location button, center on user)
+       if let target = programmaticMoveTarget {
+           mapView.setRegion(target, animated: true)
+           // Clear the target after applying
+           DispatchQueue.main.async {
+               self.onProgrammaticMoveComplete?()
            }
        }
 
@@ -100,6 +105,7 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
    class Coordinator: NSObject, MKMapViewDelegate {
        var parent: TandmMapViewRepresentable
        var isUpdatingRegion = false
+       var hasSetInitialRegion = false
        var lastAnnotations: [NavObject] = []
        var lastUpdateTime: Date = Date()
        var currentChartOverlay: NOAAChartTileOverlay? // Track current chart overlay
@@ -154,16 +160,12 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
            }
        }
 
-       // This is an improved version of the centerMapOnUserLocation method
-       // to be incorporated into TandmMapViewRepresentable.swift
-
+       // Centers the map on the user's current location
        func centerMapOnUserLocation(_ mapView: MKMapView) {
-
            // Explicitly start location updates
            parent.viewModel.locationService.startUpdatingLocation()
 
            if let userLocation = parent.viewModel.locationService.currentLocation?.coordinate {
-
                let newRegion = MKCoordinateRegion(
                    center: userLocation,
                    span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
@@ -171,32 +173,18 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
 
                // Set flag to prevent feedback loops
                isUpdatingRegion = true
-
-               // Use animated transition for better UX
                mapView.setRegion(newRegion, animated: true)
 
-               // Update the parent's region binding on main thread
                DispatchQueue.main.async {
-                   self.parent.region = newRegion
-
-                   // Update the viewModel's current region
                    self.parent.viewModel.updateMapRegion(newRegion)
-
-                   // Reset flag
                    self.isUpdatingRegion = false
-
                }
            } else {
-               // Try to force location service to update again with a different method
-               parent.viewModel.locationService.startUpdatingLocation()
-
                // Try again after a short delay
                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                   // Force location updates again
                    self.parent.viewModel.locationService.startUpdatingLocation()
 
                    if let userLocation = self.parent.viewModel.locationService.currentLocation?.coordinate {
-
                        let newRegion = MKCoordinateRegion(
                            center: userLocation,
                            span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
@@ -206,34 +194,8 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
                        mapView.setRegion(newRegion, animated: true)
 
                        DispatchQueue.main.async {
-                           self.parent.region = newRegion
                            self.parent.viewModel.updateMapRegion(newRegion)
                            self.isUpdatingRegion = false
-                       }
-                   } else {
-
-                       // One final attempt after a slightly longer delay
-                       DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                           // Force location updates one more time
-                           self.parent.viewModel.locationService.startUpdatingLocation()
-
-                           if let userLocation = self.parent.viewModel.locationService.currentLocation?.coordinate {
-
-                               let newRegion = MKCoordinateRegion(
-                                   center: userLocation,
-                                   span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
-                               )
-
-                               self.isUpdatingRegion = true
-                               mapView.setRegion(newRegion, animated: true)
-
-                               DispatchQueue.main.async {
-                                   self.parent.region = newRegion
-                                   self.parent.viewModel.updateMapRegion(newRegion)
-                                   self.isUpdatingRegion = false
-                               }
-                           } else {
-                           }
                        }
                    }
                }
@@ -387,9 +349,6 @@ struct TandmMapViewRepresentable: UIViewRepresentable {
        func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
            // Avoid feedback loop by checking if we're currently updating
            guard !isUpdatingRegion else { return }
-
-           // Update the region binding for SwiftUI
-           parent.region = mapView.region
 
            // Only call viewModel update if enough time has passed (throttle)
            let now = Date()

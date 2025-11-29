@@ -15,11 +15,11 @@ struct MapClusteringView: View {
    // State for tracking if user location was attempted to be set
    @State private var userLocationUsed = false
 
-   // We'll still have a default region but will prefer not to use it
-   @State private var mapRegion = MKCoordinateRegion(
-       center: CLLocationCoordinate2D(latitude: 37.8050315413548, longitude: -122.413632917219),
-       span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
-   )
+   // Initial region - set once on load, then map is source of truth
+   @State private var initialRegion: MKCoordinateRegion?
+
+   // Programmatic move target - set when user taps location button, then cleared
+   @State private var programmaticMoveTarget: MKCoordinateRegion?
 
    @StateObject private var viewModel: MapClusteringViewModel
    @State private var showFilterOptions = false
@@ -36,6 +36,7 @@ struct MapClusteringView: View {
 
    // AIS vessel tracking state
    @State private var showAISVessels = false
+   @State private var showAISOptions = false
    @StateObject private var aisViewModel = AISMapViewModel()
    @State private var selectedAISVessel: AISVessel?
    @State private var showAISVesselDetail = false
@@ -147,13 +148,12 @@ struct MapClusteringView: View {
        }
    }
    
-   // Helper method to update the map region based on user location
-   private func updateMapToUserLocation() {
+   // Helper method to set initial region based on user location
+   private func setInitialRegionToUserLocation() {
        // Force location service to start updating
        viewModel.locationService.startUpdatingLocation()
 
        if let userLocation = viewModel.locationService.currentLocation?.coordinate {
-
            // Update our state
            userLocationUsed = true
 
@@ -163,23 +163,29 @@ struct MapClusteringView: View {
                span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
            )
 
-           // Update the map region
-           mapRegion = newRegion
+           // Set the initial region (only used once)
+           initialRegion = newRegion
 
            // Also update the viewModel's current region
            viewModel.updateMapRegion(newRegion)
-
        } else {
            // Try to force location service to update again with a different method
            viewModel.locationService.startUpdatingLocation()
        }
    }
 
+   // Helper method to clear programmatic move after it's been applied
+   private func clearProgrammaticMove() {
+       programmaticMoveTarget = nil
+   }
+
    var body: some View {
        ZStack {
            // Use TandmMapViewRepresentable directly
            TandmMapViewRepresentable(
-               region: $mapRegion,
+               initialRegion: initialRegion,
+               programmaticMoveTarget: programmaticMoveTarget,
+               onProgrammaticMoveComplete: clearProgrammaticMove,
                annotations: filteredAnnotations(),
                viewModel: viewModel,
                chartOverlay: viewModel.chartOverlay,
@@ -237,20 +243,18 @@ struct MapClusteringView: View {
                viewModel.locationService.startUpdatingLocation()
 
                // First attempt immediately
-               updateMapToUserLocation()
+               setInitialRegionToUserLocation()
 
                // Schedule multiple attempts with a more aggressive strategy
                for (index, delaySeconds) in [0.3, 0.7, 1.5, 2.5, 4.0, 7.0].enumerated() {
                    DispatchQueue.main.asyncAfter(deadline: .now() + delaySeconds) {
-                       // Only try to update if we haven't successfully used user location yet
+                       // Only try to update if we haven't successfully set initial region yet
                        if !userLocationUsed {
-
                            // Explicitly force location service to update
                            viewModel.locationService.startUpdatingLocation()
 
-                           // Try to get the location - this attempt might work after startUpdatingLocation
+                           // Try to get the location
                            if let userLocation = viewModel.locationService.currentLocation?.coordinate {
-
                                userLocationUsed = true
 
                                let newRegion = MKCoordinateRegion(
@@ -258,17 +262,15 @@ struct MapClusteringView: View {
                                    span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
                                )
 
-                               mapRegion = newRegion
+                               initialRegion = newRegion
                                viewModel.updateMapRegion(newRegion)
-
-                                               } else {
-                               // If we're on the last attempt and still no location, try to use the location button method
+                           } else {
+                               // If we're on the last attempt and still no location, try using the coordinator
                                if index == 5 {
                                    if let mapView = TandmMapViewProxy.shared.mapView,
                                       let coordinator = TandmMapViewProxy.shared.coordinator {
                                        coordinator.centerMapOnUserLocation(mapView)
                                    }
-                               } else {
                                }
                            }
                        }
@@ -312,10 +314,18 @@ struct MapClusteringView: View {
 
                    // Location button (1st)
                    Button(action: {
-                       if let mapView = TandmMapViewProxy.shared.mapView,
-                          let coordinator = TandmMapViewProxy.shared.coordinator {
-                           coordinator.centerMapOnUserLocation(mapView)
+                       // Use programmatic move target pattern
+                       if let userLocation = viewModel.locationService.currentLocation?.coordinate {
+                           programmaticMoveTarget = MKCoordinateRegion(
+                               center: userLocation,
+                               span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+                           )
                        } else {
+                           // Fallback to coordinator method if location not immediately available
+                           if let mapView = TandmMapViewProxy.shared.mapView,
+                              let coordinator = TandmMapViewProxy.shared.coordinator {
+                               coordinator.centerMapOnUserLocation(mapView)
+                           }
                        }
                    }) {
                        Image(systemName: "location.fill")
@@ -342,20 +352,9 @@ struct MapClusteringView: View {
                    }
                    .padding(.trailing, 8)
 
-                   // AIS vessel toggle button (3rd) - pink
+                   // AIS vessel options button (3rd) - pink, opens popover
                    Button(action: {
-                       showAISVessels.toggle()
-                       if showAISVessels {
-                           // Connect to AIS stream when enabled
-                           if let mapView = TandmMapViewProxy.shared.mapView {
-                               let region = mapView.region
-                               aisViewModel.updateBoundingBoxFromRegion(region)
-                           }
-                           aisViewModel.connect()
-                       } else {
-                           // Disconnect when disabled
-                           aisViewModel.disconnect()
-                       }
+                       showAISOptions = true
                    }) {
                        Image(systemName: "ferry.fill")
                            .font(.system(size: 24))
@@ -410,6 +409,9 @@ struct MapClusteringView: View {
            if let vessel = selectedAISVessel {
                VesselDetailView(vessel: vessel)
            }
+       }
+       .sheet(isPresented: $showAISOptions) {
+           aisOptionsView
        }
        .background(
            ZStack {
@@ -592,6 +594,83 @@ struct MapClusteringView: View {
            .navigationBarTitleDisplayMode(.inline)
            .navigationBarItems(trailing: Button("Done") {
                showFilterOptions = false
+           })
+       }
+   }
+
+   // MARK: - AIS options sheet view
+   private var aisOptionsView: some View {
+       NavigationView {
+           VStack(spacing: 0) {
+               List {
+                   Section(header: Text("AIS Vessel Tracking").font(.headline).foregroundColor(.primary)) {
+                       Toggle("Show AIS Vessels", isOn: Binding(
+                           get: { showAISVessels },
+                           set: { newValue in
+                               showAISVessels = newValue
+                               if newValue {
+                                   // Connect to AIS stream when enabled
+                                   if let mapView = TandmMapViewProxy.shared.mapView {
+                                       let region = mapView.region
+                                       aisViewModel.updateBoundingBoxFromRegion(region)
+                                   }
+                                   aisViewModel.connect()
+                               } else {
+                                   // Disconnect when disabled
+                                   aisViewModel.disconnect()
+                               }
+                           }
+                       ))
+                       .padding(.vertical, 4)
+                   }
+
+                   // Live vessel count section
+                   if showAISVessels {
+                       Section(header: Text("Live Status").font(.headline).foregroundColor(.primary)) {
+                           HStack {
+                               Image(systemName: "ferry.fill")
+                                   .foregroundColor(.pink)
+                               Text("Vessels Acquired")
+                               Spacer()
+                               Text("\(aisViewModel.vessels.count)")
+                                   .font(.title2)
+                                   .fontWeight(.semibold)
+                                   .foregroundColor(.pink)
+                           }
+                           .padding(.vertical, 4)
+                       }
+                   }
+
+                   Section {
+                       VStack(alignment: .leading, spacing: 8) {
+                           Text("Live AIS Data")
+                               .font(.subheadline)
+                               .fontWeight(.medium)
+                           Text("When enabled, displays real-time vessel positions from the AIS network. Vessels are shown as annotations on the map and update as they move.")
+                               .font(.caption)
+                               .foregroundColor(.secondary)
+                       }
+                       .padding(.vertical, 4)
+                   }
+               }
+               .listStyle(GroupedListStyle())
+
+               // Close button at bottom
+               VStack {
+                   Button("Close") {
+                       showAISOptions = false
+                   }
+                   .padding()
+                   .background(Color.pink)
+                   .foregroundColor(.white)
+                   .cornerRadius(8)
+                   .padding(.bottom)
+               }
+           }
+           .navigationTitle("AIS Options")
+           .navigationBarTitleDisplayMode(.inline)
+           .navigationBarItems(trailing: Button("Done") {
+               showAISOptions = false
            })
        }
    }

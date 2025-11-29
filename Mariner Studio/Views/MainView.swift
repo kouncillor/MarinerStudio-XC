@@ -81,16 +81,6 @@ struct MainView: View {
                 )
             }
 
-            // AIS MAP - Live vessel tracking
-            NavigationLink(destination: AISMapView()) {
-                NavigationButtonContent(
-                    icon: "ferry.fill",
-                    title: "AIS MAP",
-                    isSystemIcon: true,
-                    iconColor: .blue
-                )
-            }
-
             // TESTING TOOLS - Only visible in debug builds, always accessible
             #if DEBUG
             NavigationLink(destination: TestingToolsView()) {
