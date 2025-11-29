@@ -624,7 +624,7 @@ struct MapClusteringView: View {
                        .padding(.vertical, 4)
                    }
 
-                   // Live vessel count section
+                   // Live vessel count and list section
                    if showAISVessels {
                        Section(header: Text("Live Status").font(.headline).foregroundColor(.primary)) {
                            HStack {
@@ -638,6 +638,58 @@ struct MapClusteringView: View {
                                    .foregroundColor(.pink)
                            }
                            .padding(.vertical, 4)
+                       }
+
+                       // Vessel list sorted by distance
+                       if !aisViewModel.vessels.isEmpty {
+                           Section(header: Text("Nearby Vessels").font(.headline).foregroundColor(.primary)) {
+                               ForEach(vesselsSortedByDistance()) { vessel in
+                                   HStack {
+                                       VStack(alignment: .leading, spacing: 2) {
+                                           Text(vessel.name)
+                                               .font(.subheadline)
+                                               .fontWeight(.medium)
+                                           Text(vessel.shipTypeDescription)
+                                               .font(.caption)
+                                               .foregroundColor(.secondary)
+                                       }
+                                       Spacer()
+                                       if let distance = distanceToVessel(vessel) {
+                                           Text(formatDistance(distance))
+                                               .font(.caption)
+                                               .foregroundColor(.pink)
+                                       }
+                                   }
+                                   .padding(.vertical, 2)
+                                   .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                                       Button {
+                                           selectedAISVessel = vessel
+                                           showAISVesselDetail = true
+                                       } label: {
+                                           Label("Info", systemImage: "info.circle")
+                                       }
+                                       .tint(.blue)
+                                   }
+                                   .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                       Button {
+                                           // Store the vessel location before dismissing
+                                           let targetRegion = MKCoordinateRegion(
+                                               center: vessel.coordinate,
+                                               span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+                                           )
+                                           // Dismiss the sheet
+                                           showAISOptions = false
+                                           // Center map after a short delay
+                                           DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                               programmaticMoveTarget = targetRegion
+                                           }
+                                       } label: {
+                                           Label("Locate", systemImage: "location.circle")
+                                       }
+                                       .tint(.pink)
+                                   }
+                               }
+                           }
                        }
                    }
 
@@ -779,6 +831,46 @@ struct MapClusteringView: View {
               viewModel.isLoadingTideStations ||
               viewModel.isLoadingCurrentStations ||
               viewModel.isLoadingBuoyStations
+   }
+
+   // Get user's current location
+   private func getUserLocation() -> CLLocation? {
+       return viewModel.locationService.currentLocation
+   }
+
+   // Calculate distance from user to a vessel (in meters)
+   private func distanceToVessel(_ vessel: AISVessel) -> Double? {
+       guard let userLocation = getUserLocation() else { return nil }
+       let vesselLocation = CLLocation(latitude: vessel.latitude, longitude: vessel.longitude)
+       return userLocation.distance(from: vesselLocation)
+   }
+
+   // Sort vessels by distance from user
+   private func vesselsSortedByDistance() -> [AISVessel] {
+       guard let userLocation = getUserLocation() else {
+           // If no user location, return sorted by name
+           return aisViewModel.vessels.sorted { $0.name < $1.name }
+       }
+
+       return aisViewModel.vessels.sorted { vessel1, vessel2 in
+           let loc1 = CLLocation(latitude: vessel1.latitude, longitude: vessel1.longitude)
+           let loc2 = CLLocation(latitude: vessel2.latitude, longitude: vessel2.longitude)
+           return userLocation.distance(from: loc1) < userLocation.distance(from: loc2)
+       }
+   }
+
+   // Format distance for display (nautical miles)
+   private func formatDistance(_ meters: Double) -> String {
+       let nauticalMiles = meters / 1852.0
+       if nauticalMiles < 0.1 {
+           // Show in feet for very close vessels
+           let feet = meters * 3.28084
+           return String(format: "%.0f ft", feet)
+       } else if nauticalMiles < 10 {
+           return String(format: "%.1f nm", nauticalMiles)
+       } else {
+           return String(format: "%.0f nm", nauticalMiles)
+       }
    }
 
    // Filter annotations based on user preferences
